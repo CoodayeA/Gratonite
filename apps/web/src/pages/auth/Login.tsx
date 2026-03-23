@@ -15,6 +15,7 @@ const Login = () => {
     const [resetEmail, setResetEmail] = useState('');
     const [mfaRequired, setMfaRequired] = useState(false);
     const [mfaCode, setMfaCode] = useState('');
+    const [useRecoveryCode, setUseRecoveryCode] = useState(false);
     const { addToast } = useToast();
     const navigate = useNavigate();
     const { refetchUser } = useUser();
@@ -34,7 +35,8 @@ const Login = () => {
             return;
         }
         const code = overrideMfaCode ?? mfaCode;
-        if (mfaRequired && code.length !== 6) {
+        const codeReady = useRecoveryCode ? code.replace(/[^a-zA-Z0-9]/g, '').length === 8 : code.length === 6;
+        if (mfaRequired && !codeReady) {
             return;
         }
         setLoading(true);
@@ -54,7 +56,7 @@ const Login = () => {
                 addToast({ title: 'Invalid email/username or password.', variant: 'error' });
                 if (cardRef.current) gsap.to(cardRef.current, { x: [-8, 8, -6, 6, -3, 3, 0], duration: 0.5, ease: 'power2.out' });
             } else if (errCode === 'INVALID_MFA_CODE') {
-                addToast({ title: 'Invalid authenticator code. Please try again.', variant: 'error' });
+                addToast({ title: useRecoveryCode ? 'Invalid recovery code. Please check and try again.' : 'Invalid authenticator code. Try again or use a recovery code.', variant: 'error' });
                 setMfaCode('');
                 if (cardRef.current) gsap.to(cardRef.current, { x: [-8, 8, -6, 6, -3, 3, 0], duration: 0.5, ease: 'power2.out' });
             } else {
@@ -75,7 +77,7 @@ const Login = () => {
             setResetEmail('');
             setShowResetForm(false);
         } catch {
-            addToast({ title: 'Something went wrong. Please try again.', variant: 'error' });
+            addToast({ title: 'Could not send reset email. Please check your connection and try again.', variant: 'error' });
         } finally {
             setLoading(false);
         }
@@ -147,22 +149,50 @@ const Login = () => {
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <ShieldCheck size={16} style={{ color: 'var(--accent-primary)' }} />
-                            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Two-Factor Authentication</span>
+                            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                {useRecoveryCode ? 'Recovery Code' : 'Two-Factor Authentication'}
+                            </span>
                         </div>
                         <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-                            Enter the 6-digit code from your authenticator app.
+                            {useRecoveryCode
+                                ? 'Enter one of the recovery codes you saved when setting up 2FA.'
+                                : 'Enter the 6-digit code from your authenticator app.'}
                         </p>
-                        <input
-                            type="text"
-                            className="auth-input"
-                            placeholder="000000"
-                            maxLength={6}
-                            value={mfaCode}
-                            onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                            onKeyDown={e => { if (e.key === 'Enter' && mfaCode.length === 6) handleLogin(); }}
-                            style={{ textAlign: 'center', letterSpacing: '8px', fontFamily: 'monospace', fontSize: '20px', marginBottom: 0 }}
-                            autoFocus
-                        />
+                        {useRecoveryCode ? (
+                            <input
+                                type="text"
+                                className="auth-input"
+                                placeholder="XXXX-XXXX"
+                                maxLength={9}
+                                value={mfaCode}
+                                onChange={e => {
+                                    const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+                                    setMfaCode(raw.slice(0, 9));
+                                }}
+                                onKeyDown={e => { if (e.key === 'Enter' && mfaCode.replace(/[^A-Z0-9]/g, '').length === 8) handleLogin(); }}
+                                style={{ textAlign: 'center', letterSpacing: '4px', fontFamily: 'monospace', fontSize: '20px', marginBottom: 0 }}
+                                autoFocus
+                            />
+                        ) : (
+                            <input
+                                type="text"
+                                className="auth-input"
+                                placeholder="000000"
+                                maxLength={6}
+                                value={mfaCode}
+                                onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                onKeyDown={e => { if (e.key === 'Enter' && mfaCode.length === 6) handleLogin(); }}
+                                style={{ textAlign: 'center', letterSpacing: '8px', fontFamily: 'monospace', fontSize: '20px', marginBottom: 0 }}
+                                autoFocus
+                            />
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => { setUseRecoveryCode(!useRecoveryCode); setMfaCode(''); }}
+                            style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '13px', padding: 0, alignSelf: 'center' }}
+                        >
+                            {useRecoveryCode ? 'Use authenticator code instead' : 'Use a recovery code instead'}
+                        </button>
                     </div>
                 )}
 
@@ -220,8 +250,8 @@ const Login = () => {
                 <button
                     type="submit"
                     className="auth-button"
-                    disabled={loading || !login.trim() || !password || (mfaRequired && mfaCode.length !== 6)}
-                    style={{ opacity: loading || !login.trim() || !password || (mfaRequired && mfaCode.length !== 6) ? 0.5 : 1 }}
+                    disabled={loading || !login.trim() || !password || (mfaRequired && (useRecoveryCode ? mfaCode.replace(/[^A-Z0-9]/g, '').length !== 8 : mfaCode.length !== 6))}
+                    style={{ opacity: loading || !login.trim() || !password || (mfaRequired && (useRecoveryCode ? mfaCode.replace(/[^A-Z0-9]/g, '').length !== 8 : mfaCode.length !== 6)) ? 0.5 : 1 }}
                 >
                     {loading ? 'Signing in...' : mfaRequired ? 'Verify & Sign In' : 'Sign In'}
                 </button>

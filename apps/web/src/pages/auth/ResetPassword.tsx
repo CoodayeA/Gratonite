@@ -42,8 +42,10 @@ const ResetPassword = () => {
             const code = err?.code || '';
             if (code === 'INVALID_TOKEN') {
                 addToast({ title: 'This reset link is invalid or has expired. Please request a new one.', variant: 'error' });
+            } else if (code === 'VALIDATION_ERROR') {
+                addToast({ title: err?.message || 'Invalid input. Please check your password and try again.', variant: 'error' });
             } else {
-                addToast({ title: 'Something went wrong. Please try again.', variant: 'error' });
+                addToast({ title: 'Could not reset password. Please check your connection and try again, or request a new reset link.', variant: 'error' });
             }
         } finally {
             setLoading(false);
