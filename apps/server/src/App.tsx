@@ -174,6 +174,10 @@ function App() {
             <button onClick={handleStop} className="btn secondary">Stop</button>
           </div>
           <p className="federation">Connected to the Gratonite network — other instances can discover yours</p>
+          <p className="hint" style={{ marginTop: 8, fontSize: '0.75em' }}>
+            Want "Login with Gratonite" SSO? Reinstall with a real domain using the CLI installer
+            so gratonite.chat users can log in with one click.
+          </p>
         </div>
       </main>
     );
