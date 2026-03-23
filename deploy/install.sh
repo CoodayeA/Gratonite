@@ -213,11 +213,13 @@ select_mode() {
   echo ""
   echo -e "    ${BOLD}Where will Gratonite live?${NC}"
   echo ""
-  echo -e "      ${BOLD}1)${NC} ${GREEN}Right here on this computer${NC}"
-  echo -e "         Best for trying it out — no extra setup needed"
+  echo -e "      ${BOLD}1)${NC} ${GREEN}Right here on this computer${NC}  (local mode)"
+  echo -e "         Best for trying it out — no domain needed"
+  echo -e "         ${DIM}Note: \"Login with Gratonite\" SSO requires a domain${NC}"
   echo ""
-  echo -e "      ${BOLD}2)${NC} ${CYAN}On a server with a domain name${NC}"
+  echo -e "      ${BOLD}2)${NC} ${CYAN}On a server with a domain name${NC}  (server mode)"
   echo -e "         Best for sharing with friends or a community"
+  echo -e "         ${DIM}Includes: auto-TLS, federation, \"Login with Gratonite\" SSO${NC}"
   echo ""
   prompt -rp "    Pick one [1/2]: " MODE_CHOICE
   echo ""
@@ -475,6 +477,20 @@ print_success() {
   echo -e "    ${BOLD}Federation:${NC} Enabled — connecting to the Gratonite network"
   echo "    Other Gratonite instances can discover and chat with yours."
   echo "    Your guilds will appear in Discover after 48h."
+
+  if [ "$MODE" = "server" ]; then
+    echo ""
+    echo -e "    ${BOLD}Login with Gratonite:${NC} ${GREEN}Active${NC}"
+    echo "    Users with gratonite.chat accounts can log into your"
+    echo "    instance with one click — no separate registration needed."
+  else
+    echo ""
+    echo -e "    ${BOLD}Login with Gratonite:${NC} ${YELLOW}Requires a domain${NC}"
+    echo "    To let gratonite.chat users log into your instance,"
+    echo "    reinstall with a domain (option 2) so the login"
+    echo "    callback can reach your server."
+  fi
+
   echo ""
   echo -e "    ${BOLD}Voice/Video:${NC} Enable with:"
   echo "      cd $INSTALL_DIR && $COMPOSE --profile voice up -d"
