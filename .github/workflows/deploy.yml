@@ -33,6 +33,7 @@ jobs:
           cd apps/web
           sed -i 's/"@gratonite\/types": "workspace:\*"/"@gratonite\/types": "file:..\/..\/packages\/types"/' package.json
           npm install
+          npm install gsap
           npx vite build
 
       - name: Build Landing Page
