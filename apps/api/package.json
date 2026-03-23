@@ -1,6 +1,7 @@
 {
   "name": "gratonite-api",
   "version": "1.0.0",
+  "description": "Gratonite API server — Node.js/Express backend with federation, real-time messaging, and 134+ REST endpoints",
   "private": true,
   "scripts": {
     "dev": "nodemon",

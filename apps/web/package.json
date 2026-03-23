@@ -1,5 +1,6 @@
 {
-  "name": "webapp",
+  "name": "gratonite-web",
+  "description": "Gratonite web client — React/Vite SPA with real-time chat, voice, and federation support",
   "private": true,
   "version": "1.0.0",
   "type": "module",
