@@ -10,8 +10,8 @@ COPY package.json pnpm-workspace.yaml ./
 COPY apps/web/package.json apps/web/
 COPY packages/types/package.json packages/types/
 
-# Install dependencies
-RUN pnpm install --no-frozen-lockfile
+# Install dependencies (shamefully-hoist ensures all deps are accessible to vite)
+RUN echo "shamefully-hoist=true" > .npmrc && pnpm install --no-frozen-lockfile
 
 # Copy source files
 COPY packages/types/ packages/types/
