@@ -548,7 +548,7 @@ export default function ThemeEditorModal({ onClose, editingThemeId }: ThemeEdito
                   <span style={{ fontSize: '11px', fontWeight: 700, color: activeVars.textPrimary }}># chat</span>
                 </div>
                 <div style={{ flex: 1, padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '8px', justifyContent: 'flex-end' }}>
-                  {/* Mock messages */}
+                  {/* Sample preview messages */}
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                     <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: activeVars.accentPurple, flexShrink: 0 }} />
                     <div>

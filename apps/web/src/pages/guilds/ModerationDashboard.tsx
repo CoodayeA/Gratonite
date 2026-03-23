@@ -119,7 +119,7 @@ export default function ModerationDashboard() {
         { key: 'automod' as const, label: 'Automod', icon: Filter },
     ];
 
-    // Generate mock chart data from recent actions
+    // Generate sample chart series from recent actions
     const last7Days = Array.from({ length: 7 }, (_, i) => {
         const d = new Date();
         d.setDate(d.getDate() - (6 - i));
