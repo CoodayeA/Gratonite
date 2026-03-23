@@ -22,7 +22,14 @@ export function useGsap(
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (prefersReducedMotion || !containerRef.current) return;
+    if (!containerRef.current) return;
+    if (prefersReducedMotion) {
+      // Show all elements immediately when reduced motion is preferred
+      containerRef.current.querySelectorAll<HTMLElement>('[style*="opacity"]').forEach(el => {
+        el.style.opacity = '1';
+      });
+      return;
+    }
     const ctx = gsap.context(callback, containerRef.current);
     return () => ctx.revert();
   }, deps);
