@@ -22,7 +22,8 @@ RUN rm -f apps/web/.env apps/web/.env.production apps/web/.env.local
 
 # Build types first, then web (skip tsc — vite handles transpilation)
 RUN cd packages/types && pnpm run build
-RUN cd apps/web && npx vite build
+# Ensure gsap is installed in the web app's node_modules (pnpm hoisting can miss it)
+RUN cd apps/web && pnpm add gsap && npx vite build
 
 # Stage 2: Serve
 FROM nginx:1.27-alpine
