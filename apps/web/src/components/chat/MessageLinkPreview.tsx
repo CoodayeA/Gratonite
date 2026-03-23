@@ -12,7 +12,7 @@ interface Props {
 
 function parseMessageUrl(url: string): { channelId: string; messageId: string } | null {
   // Match patterns like /channels/channelId/messages/messageId or channelId#messageId
-  const match = url.match(/channels\/([a-f0-9-]+)(?:\/messages\/|\#)([a-f0-9-]+)/i);
+  const match = url.match(/channels\/([a-f0-9-]+)(?:\/messages\/|#)([a-f0-9-]+)/i);
   if (match) return { channelId: match[1], messageId: match[2] };
   return null;
 }

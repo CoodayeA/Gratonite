@@ -30,7 +30,7 @@ export default function CodePlayground() {
         '</head><body><pre id="output"></pre>',
         '<script>',
         code,
-        '<\/script></body></html>',
+        '</script></body></html>',
       ].join('');
     }
     setPreviewHtml(html);

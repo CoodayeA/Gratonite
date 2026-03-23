@@ -4,7 +4,7 @@ import { useTheme, type AppTheme, type ColorMode, type FontFamily, type FontSize
 import { playSound } from '../../../utils/SoundManager';
 import type { SettingsTabProps } from './types';
 
-interface Props extends SettingsTabProps {}
+type Props = SettingsTabProps;
 
 const SettingsAccessibilityTab = ({ addToast }: Props) => {
   const {

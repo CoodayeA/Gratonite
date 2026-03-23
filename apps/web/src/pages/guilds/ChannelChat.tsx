@@ -1984,7 +1984,8 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         }
 
         // Restore URLs
-        result = result.replace(/\x00URL(\d+)\x00/g, (_, idx) => urlPlaceholders[Number(idx)]);
+        const nul = String.fromCharCode(0);
+        result = result.replace(new RegExp(`${nul}URL(\\d+)${nul}`, 'g'), (_, idx) => urlPlaceholders[Number(idx)]);
 
         result = result.replace(/(?<!\\):([a-zA-Z0-9_]+):/g, (match, name) => {
             const found = allEmojis.find(e => e.name === name);

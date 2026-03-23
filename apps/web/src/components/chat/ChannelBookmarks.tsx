@@ -330,7 +330,8 @@ export function ChannelBookmarks({ channelId, canManage }: ChannelBookmarksProps
                 placeholder="https://..."
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
-                    editingId ? updateBookmark(editingId) : addBookmark();
+                    if (editingId) updateBookmark(editingId);
+                    else addBookmark();
                   }
                 }}
                 style={{
