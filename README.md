@@ -28,7 +28,7 @@ Gratonite is a community platform for people who want control over their online 
 curl -fsSL https://gratonite.chat/install | bash
 ```
 
-Or download the [Gratonite Server](https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.0) desktop app — one click, no terminal needed. Available for macOS, Windows, and Linux.
+Or download the [Gratonite Server](https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.2) desktop app — one click, no terminal needed. Available for macOS, Windows, and Linux.
 
 ## At a Glance
 
@@ -105,11 +105,16 @@ Or download the [Gratonite Server](https://github.com/CoodayeA/Gratonite/release
 - Encryption failure warnings when enabled
 
 ### Federation
+- **Federation addresses**: Every user gets `@username@domain` — your portable identity across the network
+- **Login with Gratonite**: Users from gratonite.chat can log into any self-hosted instance with one click (OAuth2 SSO)
+- **Trust & Safety tiers**: New → Trusted (72h + 10 members) → Verified (manual review). Guilds only appear in Discover after verification
+- **Discover badges**: Official (hub guilds), Verified (green checkmark), Community (approved external)
+- **Abuse reporting**: Users report instances, 3+ reports auto-suspends pending review
 - **Protocol**: HTTP Signatures with Ed25519 keys
 - **Inbox handlers**: GuildJoinRequest, MessageCreate, GuildLeave, UserProfileSync, VoiceJoinRequest
 - **Shadow users**: Remote members represented locally with deterministic usernames
 - **Account portability**: Export/import profiles, settings, relationships between instances
-- **Guild discovery**: Federated servers appear in the Discover directory
+- **Guild discovery**: Federated servers appear in the Discover directory after trust review
 - **Relay network**: E2E encrypted envelope routing for instances behind NAT
   - Traffic-padded envelopes (4KB/16KB/64KB buckets) prevent content-size analysis
   - Relay mesh with bloom filter routing (max 2-hop chain)
@@ -258,7 +263,7 @@ curl -fsSL https://gratonite.chat/install | bash
 ```
 The installer handles everything: Docker setup, secret generation, TLS certificates, federation. Works on Mac, Linux, Windows (WSL).
 
-**Option B: Desktop app** — [Download Gratonite Server](https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.0)
+**Option B: Desktop app** — [Download Gratonite Server](https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.2)
 Double-click to run. No terminal needed. Available for macOS (.dmg), Windows (.exe/.msi), and Linux (.deb/.rpm/.AppImage).
 
 **Option C: Manual setup**
@@ -420,7 +425,7 @@ If you discover a security vulnerability, please report it responsibly. Email **
 ## Links
 
 - Website: [gratonite.chat](https://gratonite.chat)
-- Self-Host: [gratonite.chat/deploy](https://gratonite.chat/deploy) | [Installer](https://gratonite.chat/install) | [Desktop App](https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.0)
+- Self-Host: [gratonite.chat/deploy](https://gratonite.chat/deploy) | [Installer](https://gratonite.chat/install) | [Desktop App](https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.2)
 - Federation: [gratonite.chat/federation](https://gratonite.chat/federation)
 - Self-Hosting Docs: [docs/self-hosting.md](docs/self-hosting.md)
 - Relay Operator Guide: [docs/relay](docs/relay/README.md)

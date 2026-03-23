@@ -10,6 +10,23 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-03-23a',
+    date: 'March 23, 2026',
+    title: 'Federation Identity & Trust System',
+    entries: [
+      { type: 'feature', text: 'Federation addresses — every user now has @username@gratonite.chat as their portable identity across the Gratonite network' },
+      { type: 'feature', text: 'Login with Gratonite — self-hosted instances can let gratonite.chat users log in with one click via OAuth SSO' },
+      { type: 'feature', text: 'Trust & Safety tiers — instances earn trust over time (New → Trusted → Verified) before guilds appear in Discover' },
+      { type: 'feature', text: 'Discover badges — Official (purple), Verified (green), and Community (gray) badges on guilds' },
+      { type: 'feature', text: 'Abuse reporting — report federated instances for spam, harassment, or illegal content. 3+ reports auto-suspends' },
+      { type: 'feature', text: 'Admin dashboard at /admin with all admin tools, user promotion, and cosmetics review' },
+      { type: 'feature', text: 'Reserved username blocklist — admin, moderator, system, support, and 30+ other names are now protected' },
+      { type: 'improvement', text: 'Self-hosting installer now guides beginners through getting a free domain (DuckDNS) with step-by-step education' },
+      { type: 'improvement', text: 'Federation address shown in user profile popovers — click to copy' },
+      { type: 'fix', text: 'Self-hosted instances now work correctly: migration fixes, HTTPS, asset loading, and API routing all resolved' },
+    ],
+  },
+  {
     id: '2026-03-22a',
     date: 'March 22, 2026',
     title: 'Notion-Style Document Editor',
