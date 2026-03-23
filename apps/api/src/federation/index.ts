@@ -65,11 +65,13 @@ export async function initFederation(): Promise<void> {
     pollRelayForInstances().catch(console.error); // immediate first poll
   }
 
-  // Non-hub: periodically push discoverable guilds to the hub
+  // Non-hub: handshake with hub to get OAuth credentials, then push guilds
   if (!isHub()) {
-    console.info('[federation] Will push public guilds to hub Discover hourly');
-    // Wait 30s for API to be fully ready, then push
-    setTimeout(() => {
+    // Wait 30s for API to be fully ready
+    setTimeout(async () => {
+      // Handshake with hub to register and get OAuth SSO credentials
+      await handshakeWithHub().catch(err => console.error('[federation] Hub handshake failed:', err));
+      // Push public guilds to hub Discover
       pushGuildsToHub().catch(console.error);
       setInterval(() => pushGuildsToHub().catch(console.error), 3600_000); // 1 hour
     }, 30_000);
@@ -83,6 +85,95 @@ function isHub(): boolean {
     return getInstanceDomain() === hubHost;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Non-hub instances handshake with the hub on startup to:
+ * 1. Register themselves in the hub's known instances
+ * 2. Receive OAuth SSO credentials for "Login with Gratonite"
+ */
+async function handshakeWithHub(): Promise<void> {
+  const hubUrl = getFederationHubUrl();
+  const domain = getInstanceDomain();
+  if (domain === 'localhost') {
+    console.info('[federation] Skipping hub handshake for localhost instance');
+    return;
+  }
+
+  // Don't handshake if we already have OAuth credentials
+  if (process.env.FEDERATION_HUB_CLIENT_ID) {
+    console.info('[federation] Hub OAuth credentials already configured');
+    return;
+  }
+
+  const publicKeyPem = getPublicKeyPem();
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+
+    const resp = await fetch(`${hubUrl}/api/v1/federation/handshake`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        instanceUrl: `https://${domain}`,
+        publicKeyPem,
+        softwareVersion: process.env.npm_package_version || '1.0.0',
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+
+    if (!resp.ok) {
+      console.error(`[federation] Hub handshake failed: ${resp.status} ${resp.statusText}`);
+      return;
+    }
+
+    const data = await resp.json() as {
+      type: string;
+      instanceUrl: string;
+      publicKeyPem: string;
+      oauth?: { clientId: string; clientSecret: string | null };
+    };
+
+    console.info(`[federation] Hub handshake successful with ${data.instanceUrl}`);
+
+    // Store OAuth credentials if received
+    if (data.oauth?.clientId) {
+      // Store in Redis so they persist across restarts (env vars are read-only at runtime)
+      const { redis } = await import('../lib/redis');
+      await redis.set('federation:hub:oauth_client_id', data.oauth.clientId);
+      if (data.oauth.clientSecret) {
+        await redis.set('federation:hub:oauth_client_secret', data.oauth.clientSecret);
+      }
+      // Also set in process.env for immediate use
+      process.env.FEDERATION_HUB_CLIENT_ID = data.oauth.clientId;
+      if (data.oauth.clientSecret) {
+        process.env.FEDERATION_HUB_CLIENT_SECRET = data.oauth.clientSecret;
+      }
+      console.info(`[federation] OAuth SSO credentials received (client_id: ${data.oauth.clientId})`);
+    }
+
+    // Store/update the hub as a known instance
+    const [existing] = await db
+      .select({ id: federatedInstances.id })
+      .from(federatedInstances)
+      .where(eq(federatedInstances.baseUrl, data.instanceUrl))
+      .limit(1);
+
+    if (!existing) {
+      await db.insert(federatedInstances).values({
+        baseUrl: data.instanceUrl,
+        publicKeyPem: data.publicKeyPem,
+        publicKeyId: `${data.instanceUrl}/api/v1/federation/actor#main-key`,
+        trustLevel: 'verified', // The hub is always trusted
+        status: 'active',
+        lastSeenAt: new Date(),
+      });
+    }
+  } catch (err) {
+    console.error('[federation] Hub handshake error:', (err as Error).message);
   }
 }
 
