@@ -214,12 +214,10 @@ select_mode() {
   echo -e "    ${BOLD}Where will Gratonite live?${NC}"
   echo ""
   echo -e "      ${BOLD}1)${NC} ${GREEN}Right here on this computer${NC}  (local mode)"
-  echo -e "         Best for trying it out — no domain needed"
-  echo -e "         ${DIM}Note: \"Login with Gratonite\" SSO requires a domain${NC}"
+  echo -e "         Quick setup, no domain needed, great for trying it out"
   echo ""
   echo -e "      ${BOLD}2)${NC} ${CYAN}On a server with a domain name${NC}  (server mode)"
-  echo -e "         Best for sharing with friends or a community"
-  echo -e "         ${DIM}Includes: auto-TLS, federation, \"Login with Gratonite\" SSO${NC}"
+  echo -e "         Share with friends, automatic HTTPS, \"Login with Gratonite\" SSO"
   echo ""
   prompt -rp "    Pick one [1/2]: " MODE_CHOICE
   echo ""
@@ -235,7 +233,38 @@ select_mode() {
 collect_config() {
   step "Setting up your instance"
   if [ "$MODE" = "server" ]; then
-    prompt -rp "    Domain name (e.g. chat.example.com): " DOMAIN
+
+    # Domain education — help beginners understand and get a domain
+    echo ""
+    echo -e "  ${DIM}  ╭──────────────────────────────────────────────╮${NC}"
+    echo -e "  ${DIM}  │${NC}  ${BOLD}What is a domain name?${NC}                       ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}                                               ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}  A domain is your server's address on the     ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}  internet — like ${CYAN}chat.example.com${NC}.           ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}  People type it in their browser to find      ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}  your Gratonite instance.                     ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}                                               ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}  ${BOLD}Free options (no credit card):${NC}               ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}  ${GREEN}•${NC} ${BOLD}DuckDNS${NC} — duckdns.org (recommended)      ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}    Free subdomain like ${CYAN}mychat.duckdns.org${NC}   ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}    Takes 2 minutes, no sign-up needed        ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}  ${GREEN}•${NC} ${BOLD}Afraid.org FreeDNS${NC} — freedns.afraid.org   ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}    Free subdomain from 100k+ domains         ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}                                               ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}  ${BOLD}Cheap options (\$5-10/year):${NC}                 ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}  ${GREEN}•${NC} ${BOLD}Namecheap${NC} — .xyz from \$1/yr               ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}  ${GREEN}•${NC} ${BOLD}Cloudflare${NC} — at-cost, no markup            ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}  ${GREEN}•${NC} ${BOLD}Porkbun${NC} — .com from \$9/yr                 ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}                                               ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}  After getting a domain, point it to this     ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}  server's IP address (an \"A record\").         ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}  Your domain provider will have a DNS page    ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}  where you add:                               ${DIM}│${NC}"
+    echo -e "  ${DIM}  │${NC}    Type: ${BOLD}A${NC}  Name: ${BOLD}@${NC}  Value: ${BOLD}your.server.ip${NC}    ${DIM}│${NC}"
+    echo -e "  ${DIM}  ╰──────────────────────────────────────────────╯${NC}"
+    echo ""
+
+    prompt -rp "    Domain name (e.g. mychat.duckdns.org): " DOMAIN
     [ -z "${DOMAIN:-}" ] && fail "Domain is required for server mode."
 
     prompt -rp "    Admin email: " ADMIN_EMAIL
