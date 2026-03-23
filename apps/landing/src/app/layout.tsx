@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Manrope } from "next/font/google";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { StarField } from "@/components/ui/StarField";
+import { GsapProvider } from "@/components/GsapProvider";
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_OG_IMAGE,
@@ -154,6 +155,7 @@ export default function RootLayout({
       <body
         className={`${bricolage.variable} ${manrope.variable} antialiased grain-overlay`}
       >
+        <GsapProvider />
         <StarField />
         <Navbar />
         <main className="relative z-[1]">{children}</main>

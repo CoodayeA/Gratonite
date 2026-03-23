@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
 import { Badge } from "@/components/ui/Badge";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 interface PlatformStats {
   guilds: number;
@@ -149,13 +153,42 @@ function StatRow({
   value: string;
   color: string;
 }) {
+  const numRef = useRef<HTMLSpanElement>(null);
+  const numericValue = parseInt(value.replace(/,/g, ''), 10);
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    const el = numRef.current;
+    if (!el || isNaN(numericValue) || hasAnimated.current) return;
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) { el.textContent = value; return; }
+
+    const obj = { val: 0 };
+    const trigger = ScrollTrigger.create({
+      trigger: el,
+      start: 'top 90%',
+      once: true,
+      onEnter: () => {
+        hasAnimated.current = true;
+        gsap.to(obj, {
+          val: numericValue,
+          duration: 1.2,
+          ease: 'power2.out',
+          snap: { val: 1 },
+          onUpdate: () => { el.textContent = obj.val.toLocaleString(); },
+        });
+      },
+    });
+    return () => trigger.kill();
+  }, [numericValue, value]);
+
   return (
     <div className="flex items-center justify-between bg-white/5 rounded-lg px-4 py-3 border border-white/10">
       <div className="flex items-center gap-3">
         <div className={`w-3 h-3 rounded-full ${color}`} />
         <span className="font-medium">{label}</span>
       </div>
-      <span className="text-sm font-bold text-white/80">{value}</span>
+      <span ref={numRef} className="text-sm font-bold text-white/80">0</span>
     </div>
   );
 }

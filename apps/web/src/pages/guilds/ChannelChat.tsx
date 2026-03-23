@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useOutletContext, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion } from 'framer-motion';
+import gsap from 'gsap';
 import {
     Send, Smile, Image as ImageIcon, Reply, X, Play, Hash, Menu, ArrowLeft,
     Volume2, Trash2, Copy, Pin, Share2, Link2, FileText, Download,
@@ -1071,6 +1072,22 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 setIsLoadingMessages(false);
             }
         }
+    }, [channelId]);
+
+    // Channel switch crossfade
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+    const prevChannelIdRef = useRef(channelId);
+    useEffect(() => {
+        if (prevChannelIdRef.current !== channelId && chatContainerRef.current) {
+            const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (!prefersReduced) {
+                gsap.fromTo(chatContainerRef.current,
+                    { opacity: 0, y: 8 },
+                    { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' }
+                );
+            }
+        }
+        prevChannelIdRef.current = channelId;
     }, [channelId]);
 
     // Reset state and fetch messages when channelId changes
@@ -2841,7 +2858,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 zIndex: 0
             }} />
 
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, position: 'relative', zIndex: 1, background: 'transparent', overflow: 'hidden' }}>
+            <div ref={chatContainerRef} style={{ display: 'flex', flexDirection: 'column', flex: 1, position: 'relative', zIndex: 1, background: 'transparent', overflow: 'hidden' }}>
 
             <header className="top-bar">
                 {/* Mobile Toggles */}

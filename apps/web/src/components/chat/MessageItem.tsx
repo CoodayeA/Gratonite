@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { motion } from 'framer-motion';
+import gsap from 'gsap';
 import {
     Reply, Smile, Image as ImageIcon, Share2, FileText,
     Pause, MessageSquare, MoreHorizontal, Plus, Mic, Play,
@@ -312,6 +313,29 @@ export const MemoizedMessageItem = memo(({
     // Check if message is newly added (runtime messages use Date.now() IDs)
     const isNew = msg.id > 100000 && (Date.now() - msg.id < 5000);
     const isCurrentUserMessage = Boolean(msg.authorId && currentUserId && msg.authorId === currentUserId);
+    const msgDivRef = useRef<HTMLDivElement>(null);
+    const isHighlighted = highlightedMessageId === msg.id;
+
+    // GSAP highlight bar slide-in
+    useEffect(() => {
+        const el = msgDivRef.current;
+        if (!el || !isHighlighted) return;
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReduced) return;
+
+        // Create a highlight bar element
+        const bar = document.createElement('div');
+        bar.style.cssText = 'position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent-primary);border-radius:0 2px 2px 0;transform:scaleY(0);transform-origin:top;z-index:1;';
+        el.style.position = 'relative';
+        el.appendChild(bar);
+
+        gsap.to(bar, { scaleY: 1, duration: 0.3, ease: 'power2.out' });
+        gsap.to(el, { backgroundColor: 'var(--accent-primary-alpha)', duration: 0.3, ease: 'power2.out' });
+
+        // Fade out after 1.5s
+        gsap.to(bar, { scaleY: 0, duration: 0.4, ease: 'power2.in', delay: 1.5 });
+        gsap.to(el, { backgroundColor: 'transparent', duration: 0.4, ease: 'power2.in', delay: 1.5, onComplete: () => { bar.remove(); } });
+    }, [isHighlighted]);
 
     return (
         <React.Fragment>
@@ -330,11 +354,12 @@ export const MemoizedMessageItem = memo(({
                 </div>
             )}
             <motion.div
+                ref={msgDivRef}
                 layout
                 initial={isNew ? { opacity: 0, y: 20, scale: 0.98 } : false}
                 animate={{ opacity: msg.sendStatus === 'sending' ? 0.6 : msg.sendStatus === 'failed' ? 0.75 : 1, y: 0, scale: 1 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                className={`message ${isGrouped ? 'grouped message-grouped' : 'message-standalone'} ${highlightedMessageId === msg.id ? 'highlighted-message' : ''} ${activeThreadMessageId === msg.id ? 'active-thread-message' : ''} ${isMentioned ? 'mentioned-message' : ''} ${compactMode ? 'compact-message' : ''}`}
+                className={`message ${isGrouped ? 'grouped message-grouped' : 'message-standalone'} ${isHighlighted ? 'highlighted-message' : ''} ${activeThreadMessageId === msg.id ? 'active-thread-message' : ''} ${isMentioned ? 'mentioned-message' : ''} ${compactMode ? 'compact-message' : ''}`}
                 data-message-id={msg.apiId}
                 style={{
                     position: 'relative',

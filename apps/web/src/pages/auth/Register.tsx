@@ -1,8 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Eye, EyeOff, User, Mail, Lock, X } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
+import gsap from 'gsap';
 
 const TERMS_TEXT = `Terms of Service for Gratonite
 
@@ -54,6 +55,15 @@ const Register = () => {
     const [touched, setTouched] = useState<Record<string, boolean>>({});
     const { addToast } = useToast();
     const navigate = useNavigate();
+    const cardRef = useRef<HTMLDivElement>(null);
+
+    // GSAP entrance animation
+    useEffect(() => {
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReduced || !cardRef.current) return;
+        const els = cardRef.current.querySelectorAll('[data-auth-anim]');
+        gsap.from(els, { y: -16, opacity: 0, stagger: 0.08, duration: 0.5, ease: 'power3.out' });
+    }, []);
 
     const markTouched = (field: string) => setTouched(prev => ({ ...prev, [field]: true }));
 
@@ -85,8 +95,10 @@ const Register = () => {
             } else if (err?.details) {
                 const firstErr = Object.values(err.details).flat()[0] as string;
                 addToast({ title: firstErr || 'Validation error.', variant: 'error' });
+                if (cardRef.current) gsap.to(cardRef.current, { x: [-8, 8, -6, 6, -3, 3, 0], duration: 0.5, ease: 'power2.out' });
             } else {
                 addToast({ title: 'Registration failed. Please try again.', variant: 'error' });
+                if (cardRef.current) gsap.to(cardRef.current, { x: [-8, 8, -6, 6, -3, 3, 0], duration: 0.5, ease: 'power2.out' });
             }
         } finally {
             setLoading(false);
@@ -96,29 +108,29 @@ const Register = () => {
     const canSubmit = email.trim() && username.trim() && password && agreed && !loading;
 
     return (
-        <div className="auth-card">
+        <div className="auth-card" ref={cardRef}>
             {/* Mascot */}
-            <div className="auth-mascot auth-anim-1">
+            <div className="auth-mascot" data-auth-anim>
                 <div className="auth-mascot-glow" />
                 <img src={`${import.meta.env.BASE_URL}splash-icon.png`} alt="Gratonite" />
             </div>
 
             {/* Heading */}
-            <h1 className="auth-heading auth-anim-2">
+            <h1 className="auth-heading" data-auth-anim>
                 {'JOIN THE\n'}
                 <span className="auth-heading-accent">COMMUNITY.</span>
             </h1>
-            <p className="auth-subtext auth-anim-2">Create your account and start chatting</p>
+            <p className="auth-subtext" data-auth-anim>Create your account and start chatting</p>
 
             {/* Pills */}
-            <div className="auth-pill-row auth-anim-3">
+            <div className="auth-pill-row" data-auth-anim>
                 <span className="auth-pill">No Ads</span>
                 <span className="auth-pill auth-pill--highlight">Built by Friends</span>
                 <span className="auth-pill">Your Rules</span>
             </div>
 
             {/* Form */}
-            <form onSubmit={e => { e.preventDefault(); handleRegister(); }} className="auth-form auth-anim-4">
+            <form onSubmit={e => { e.preventDefault(); handleRegister(); }} className="auth-form" data-auth-anim>
                 <div className="auth-input-group">
                     <User size={18} className="auth-input-icon" />
                     <input
@@ -199,7 +211,7 @@ const Register = () => {
             </form>
 
             {/* Rainbow strip */}
-            <div className="auth-rainbow-strip auth-anim-5">
+            <div className="auth-rainbow-strip" data-auth-anim>
                 <span style={{ background: '#6c63ff' }} />
                 <span style={{ background: '#f59e0b' }} />
                 <span style={{ background: '#ef4444' }} />
@@ -209,7 +221,7 @@ const Register = () => {
             </div>
 
             {/* Sign in link */}
-            <p className="auth-anim-6" style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+            <p data-auth-anim style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
                 Already have an account?{' '}
                 <Link to="/login" style={{ color: 'var(--accent-primary)' }}>Sign in</Link>
             </p>
