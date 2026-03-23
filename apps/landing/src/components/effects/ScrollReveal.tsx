@@ -26,18 +26,20 @@ export function ScrollReveal({ children, className = "", delay = 0 }: ScrollReve
       return;
     }
 
-    gsap.from(el, {
-      y: 12,
-      opacity: 0,
-      duration: 0.6,
-      delay,
-      ease: "power2.out",
-      scrollTrigger: {
-        trigger: el,
-        start: "top 92%",
-        once: true,
+    gsap.fromTo(el,
+      { y: 12, opacity: 0 },
+      {
+        y: 0, opacity: 1,
+        duration: 0.6,
+        delay,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: el,
+          start: "top 92%",
+          once: true,
+        },
       },
-    });
+    );
 
     return () => { ScrollTrigger.getAll().forEach(t => { if (t.trigger === el) t.kill(); }); };
   }, [delay]);

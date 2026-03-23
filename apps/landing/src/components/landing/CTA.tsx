@@ -19,10 +19,12 @@ export function CTA() {
     if (!card) return;
 
     // Card entrance: scale from 0.96 with rotation correction
-    gsap.from(card, {
-      scale: 0.96, rotate: 0.5, opacity: 0, duration: 0.6, ease: "power3.out",
-      scrollTrigger: { trigger: card, start: "top 85%", once: true },
-    });
+    gsap.fromTo(card,
+      { scale: 0.96, rotate: 0.5, opacity: 0 },
+      { scale: 1, rotate: 0, opacity: 1, duration: 0.6, ease: "power3.out",
+        scrollTrigger: { trigger: card, start: "top 85%", once: true },
+      },
+    );
 
     // Background glow parallax on scroll
     if (glow) {

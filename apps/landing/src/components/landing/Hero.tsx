@@ -9,17 +9,18 @@ export function Hero() {
     const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
     // Stagger left-side elements: badge → title → subtitle → description → buttons → stats
-    tl.from('[data-hero="badge"]',    { y: 18, opacity: 0, duration: 0.55 })
-      .from('[data-hero="title"]',    { y: 18, opacity: 0, duration: 0.55 }, 0.08)
-      .from('[data-hero="subtitle"]', { y: 18, opacity: 0, duration: 0.55 }, 0.18)
-      .from('[data-hero="desc"]',     { y: 18, opacity: 0, duration: 0.55 }, 0.26)
-      .from('[data-hero="buttons"]',  { y: 18, opacity: 0, duration: 0.55 }, 0.34)
-      .from('[data-hero="stats"]',    { y: 18, opacity: 0, duration: 0.55 }, 0.43);
+    tl.fromTo('[data-hero="badge"]',    { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55 })
+      .fromTo('[data-hero="title"]',    { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55 }, 0.08)
+      .fromTo('[data-hero="subtitle"]', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55 }, 0.18)
+      .fromTo('[data-hero="desc"]',     { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55 }, 0.26)
+      .fromTo('[data-hero="buttons"]',  { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55 }, 0.34)
+      .fromTo('[data-hero="stats"]',    { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55 }, 0.43);
 
     // Preview card enters from right with slight rotation
-    tl.from('[data-hero="preview"]', {
-      x: 20, opacity: 0, rotate: 2, duration: 0.6, ease: 'power3.out',
-    }, 0.2);
+    tl.fromTo('[data-hero="preview"]',
+      { x: 20, opacity: 0, rotate: 2 },
+      { x: 0, opacity: 1, rotate: 0, duration: 0.6, ease: 'power3.out' },
+    0.2);
 
     // Subtle scroll parallax on burst elements
     gsap.utils.toArray<HTMLElement>('.neo-burst').forEach((el) => {
