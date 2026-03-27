@@ -132,6 +132,11 @@ export const channelsApi = {
   getNotificationPrefs: (channelId: string) =>
     apiFetch<{ level: string; mutedUntil: string | null }>(`/channels/${channelId}/notification-prefs`),
 
+  getNotificationPrefsBulk: (channelIds: string[]) => {
+    const params = new URLSearchParams({ channelIds: channelIds.join(',') });
+    return apiFetch<Record<string, { level: string; mutedUntil: string | null }>>(`/channels/notification-prefs/bulk?${params.toString()}`);
+  },
+
   setNotificationPrefs: (channelId: string, data: { level: 'all' | 'mentions' | 'none' | 'default'; mutedUntil?: string | null }) =>
     apiFetch<{ level: string; mutedUntil: string | null }>(`/channels/${channelId}/notification-prefs`, {
       method: 'PUT',

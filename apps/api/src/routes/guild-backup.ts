@@ -12,6 +12,7 @@ import { roles } from '../db/schema/roles';
 import { Permissions } from '../db/schema/roles';
 import { requireAuth } from '../middleware/auth';
 import { hasPermission } from './roles';
+import { normalizeError } from '../lib/errors';
 
 export const guildBackupRouter = Router({ mergeParams: true });
 
@@ -22,14 +23,23 @@ guildBackupRouter.get('/', requireAuth, async (req: Request, res: Response): Pro
     res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_GUILD permission' }); return;
   }
 
-  const backups = await db.select({
-    id: guildBackups.id,
-    name: guildBackups.name,
-    sizeBytes: guildBackups.sizeBytes,
-    createdAt: guildBackups.createdAt,
-  }).from(guildBackups).where(eq(guildBackups.guildId, guildId)).orderBy(desc(guildBackups.createdAt));
+  try {
+    const backups = await db.select({
+      id: guildBackups.id,
+      name: guildBackups.name,
+      sizeBytes: guildBackups.sizeBytes,
+      createdAt: guildBackups.createdAt,
+    }).from(guildBackups).where(eq(guildBackups.guildId, guildId)).orderBy(desc(guildBackups.createdAt));
 
-  res.json(backups);
+    res.json(backups);
+  } catch (err) {
+    const normalized = normalizeError(err);
+    if (normalized.code === 'FEATURE_UNAVAILABLE') {
+      res.json([]);
+      return;
+    }
+    throw err;
+  }
 });
 
 /** POST / — Create backup */

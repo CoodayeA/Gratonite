@@ -9,6 +9,7 @@ import { guildSpamConfig } from '../db/schema/guild-spam-config';
 import { Permissions } from '../db/schema/roles';
 import { requireAuth } from '../middleware/auth';
 import { hasPermission } from './roles';
+import { normalizeError } from '../lib/errors';
 
 export const spamDetectionRouter = Router({ mergeParams: true });
 
@@ -19,12 +20,25 @@ spamDetectionRouter.get('/', requireAuth, async (req: Request, res: Response): P
     res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_GUILD permission' }); return;
   }
 
-  const [config] = await db.select().from(guildSpamConfig).where(eq(guildSpamConfig.guildId, guildId)).limit(1);
-  res.json(config || {
-    guildId, enabled: false, maxDuplicateMessages: 5, duplicateWindowSeconds: 10,
-    maxMentionsPerMessage: 10, maxLinksPerMessage: 5, rapidJoinThreshold: 10,
-    rapidJoinWindowSeconds: 30, action: 'flag', exemptRoles: [],
-  });
+  try {
+    const [config] = await db.select().from(guildSpamConfig).where(eq(guildSpamConfig.guildId, guildId)).limit(1);
+    res.json(config || {
+      guildId, enabled: false, maxDuplicateMessages: 5, duplicateWindowSeconds: 10,
+      maxMentionsPerMessage: 10, maxLinksPerMessage: 5, rapidJoinThreshold: 10,
+      rapidJoinWindowSeconds: 30, action: 'flag', exemptRoles: [],
+    });
+  } catch (err) {
+    const normalized = normalizeError(err);
+    if (normalized.code === 'FEATURE_UNAVAILABLE') {
+      res.json({
+        guildId, enabled: false, maxDuplicateMessages: 5, duplicateWindowSeconds: 10,
+        maxMentionsPerMessage: 10, maxLinksPerMessage: 5, rapidJoinThreshold: 10,
+        rapidJoinWindowSeconds: 30, action: 'flag', exemptRoles: [],
+      });
+      return;
+    }
+    throw err;
+  }
 });
 
 /** PUT / — Update spam config */

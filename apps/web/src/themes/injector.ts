@@ -53,11 +53,21 @@ export function applyThemeSync(vars: ThemeVariables): void {
  * Falls back to instant apply if View Transitions API not supported.
  */
 export function applyThemeWithTransition(vars: ThemeVariables): void {
-  if (typeof document !== 'undefined' && 'startViewTransition' in document) {
+  if (typeof document === 'undefined' || !('startViewTransition' in document)) {
+    applyTheme(vars);
+    return;
+  }
+
+  if (document.visibilityState !== 'visible') {
+    applyTheme(vars);
+    return;
+  }
+
+  try {
     (document as any).startViewTransition(() => {
       applyThemeSync(vars);
     });
-  } else {
+  } catch {
     applyTheme(vars);
   }
 }

@@ -11,11 +11,13 @@ import { eq, and, asc, count, inArray } from 'drizzle-orm';
 
 import { db } from '../db/index';
 import { channels } from '../db/schema/channels';
-import { Permissions } from '../db/schema/roles';
+import { channelPermissionOverrides } from '../db/schema/channel-overrides';
+import { guilds } from '../db/schema/guilds';
+import { Permissions, roles, memberRoles } from '../db/schema/roles';
 import { getIO } from '../lib/socket-io';
 import { logAuditEvent, AuditActionTypes } from '../lib/audit';
 import { requireMember } from '../routes/guilds';
-import { hasPermission, hasChannelPermission } from '../routes/roles';
+import { hasPermission } from '../routes/roles';
 import { ServiceError } from './guild.service';
 
 // ---------------------------------------------------------------------------
@@ -42,12 +44,90 @@ export async function getChannels(guildId: string, userId: string) {
   // Filter channels by VIEW_CHANNEL permission
   const visibleChannelIds = new Set<string>();
   const canManage = await hasPermission(userId, guildId, Permissions.MANAGE_CHANNELS);
+  if (canManage) {
+    return rows;
+  }
+
+  const [guild] = await db.select({ ownerId: guilds.ownerId }).from(guilds).where(eq(guilds.id, guildId)).limit(1);
+  if (guild?.ownerId === userId) {
+    return rows;
+  }
+
+  const [everyoneRole] = await db
+    .select({ id: roles.id, permissions: roles.permissions })
+    .from(roles)
+    .where(and(eq(roles.guildId, guildId), eq(roles.name, '@everyone')))
+    .limit(1);
+
+  const userRoles = await db
+    .select({ id: roles.id, permissions: roles.permissions })
+    .from(memberRoles)
+    .innerJoin(roles, eq(roles.id, memberRoles.roleId))
+    .where(and(eq(memberRoles.userId, userId), eq(memberRoles.guildId, guildId)));
+
+  let basePerms = everyoneRole?.permissions ?? 0n;
+  for (const r of userRoles) {
+    basePerms |= r.permissions;
+  }
+
+  if (basePerms & Permissions.ADMINISTRATOR) {
+    return rows;
+  }
+
+  const channelIds = rows.map((r) => r.id);
+  const allOverrides = channelIds.length > 0
+    ? await db.select().from(channelPermissionOverrides).where(inArray(channelPermissionOverrides.channelId, channelIds))
+    : [];
+
+  const overridesByChannel = new Map<string, Map<string, { allow: bigint; deny: bigint }>>();
+  for (const o of allOverrides) {
+    let byTarget = overridesByChannel.get(o.channelId);
+    if (!byTarget) {
+      byTarget = new Map();
+      overridesByChannel.set(o.channelId, byTarget);
+    }
+    byTarget.set(o.targetId, { allow: o.allow, deny: o.deny });
+  }
+
+  const canViewChannel = (channelId: string) => {
+    let perms = basePerms;
+    const overrideMap = overridesByChannel.get(channelId);
+    if (!overrideMap) return (perms & Permissions.VIEW_CHANNEL) !== 0n;
+
+    let roleAllow = 0n;
+    let roleDeny = 0n;
+
+    if (everyoneRole) {
+      const everyoneOverride = overrideMap.get(everyoneRole.id);
+      if (everyoneOverride) {
+        roleAllow |= everyoneOverride.allow;
+        roleDeny |= everyoneOverride.deny;
+      }
+    }
+
+    for (const r of userRoles) {
+      const override = overrideMap.get(r.id);
+      if (override) {
+        roleAllow |= override.allow;
+        roleDeny |= override.deny;
+      }
+    }
+
+    perms = (perms & ~roleDeny) | roleAllow;
+
+    const memberOverride = overrideMap.get(userId);
+    if (memberOverride) {
+      perms = (perms & ~memberOverride.deny) | memberOverride.allow;
+    }
+
+    return (perms & Permissions.VIEW_CHANNEL) !== 0n;
+  };
+
   for (const ch of rows) {
     if (ch.type === 'GUILD_CATEGORY') {
-      if (canManage) visibleChannelIds.add(ch.id);
       continue;
     }
-    const canView = await hasChannelPermission(userId, guildId, ch.id, Permissions.VIEW_CHANNEL);
+    const canView = canViewChannel(ch.id);
     if (canView) {
       visibleChannelIds.add(ch.id);
       if (ch.parentId) visibleChannelIds.add(ch.parentId); // include parent category

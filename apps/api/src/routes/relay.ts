@@ -12,6 +12,7 @@ import { requireFederationAuth } from '../middleware/federation-auth';
 import { users } from '../db/schema/users';
 import { redis } from '../lib/redis';
 import { logger } from '../lib/logger';
+import { normalizeError } from '../lib/errors';
 
 export const relayRouter = Router();
 
@@ -19,25 +20,34 @@ export const relayRouter = Router();
  * GET /api/v1/relays — List relays with reputation scores (public).
  */
 relayRouter.get('/', async (_req: Request, res: Response) => {
-  const nodes = await db.select({
-    domain: relayNodes.domain,
-    websocketUrl: relayNodes.websocketUrl,
-    reputationScore: relayNodes.reputationScore,
-    connectedInstances: relayNodes.connectedInstances,
-    uptimePercent: relayNodes.uptimePercent,
-    latencyMs: relayNodes.latencyMs,
-    meshPeers: relayNodes.meshPeers,
-    turnSupported: relayNodes.turnSupported,
-    softwareVersion: relayNodes.softwareVersion,
-    registeredAt: relayNodes.registeredAt,
-    lastHealthCheck: relayNodes.lastHealthCheck,
-  })
-    .from(relayNodes)
-    .where(eq(relayNodes.status, 'active'))
-    .orderBy(desc(relayNodes.reputationScore))
-    .limit(100);
+  try {
+    const nodes = await db.select({
+      domain: relayNodes.domain,
+      websocketUrl: relayNodes.websocketUrl,
+      reputationScore: relayNodes.reputationScore,
+      connectedInstances: relayNodes.connectedInstances,
+      uptimePercent: relayNodes.uptimePercent,
+      latencyMs: relayNodes.latencyMs,
+      meshPeers: relayNodes.meshPeers,
+      turnSupported: relayNodes.turnSupported,
+      softwareVersion: relayNodes.softwareVersion,
+      registeredAt: relayNodes.registeredAt,
+      lastHealthCheck: relayNodes.lastHealthCheck,
+    })
+      .from(relayNodes)
+      .where(eq(relayNodes.status, 'active'))
+      .orderBy(desc(relayNodes.reputationScore))
+      .limit(100);
 
-  res.json(nodes);
+    res.json(nodes);
+  } catch (err) {
+    const normalized = normalizeError(err);
+    if (normalized.code === 'FEATURE_UNAVAILABLE') {
+      res.json([]);
+      return;
+    }
+    throw err;
+  }
 });
 
 /**

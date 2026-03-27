@@ -33,6 +33,7 @@ import { isRelayEnabled, getRelayConfig, getRelayClient } from '../relay/index';
 import { assertNotPrivateHost } from '../lib/ssrf-guard';
 import { getIO } from '../lib/socket-io';
 import { logger } from '../lib/logger';
+import { normalizeError } from '../lib/errors';
 
 export const federationRouter = Router();
 
@@ -1243,26 +1244,35 @@ federationRouter.get('/admin/reports', requireAuth, async (req: Request, res: Re
   const [user] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, req.userId!)).limit(1);
   if (!user?.isAdmin) { res.status(403).json({ code: 'FORBIDDEN', message: 'Admin access required' }); return; }
 
-  const results = await db
-    .select({
-      id: instanceReports.id,
-      instanceId: instanceReports.instanceId,
-      reporterId: instanceReports.reporterId,
-      reason: instanceReports.reason,
-      details: instanceReports.details,
-      status: instanceReports.status,
-      createdAt: instanceReports.createdAt,
-      instanceBaseUrl: federatedInstances.baseUrl,
-      instanceTrustLevel: federatedInstances.trustLevel,
-      reporterUsername: users.username,
-    })
-    .from(instanceReports)
-    .innerJoin(federatedInstances, eq(instanceReports.instanceId, federatedInstances.id))
-    .innerJoin(users, eq(instanceReports.reporterId, users.id))
-    .orderBy(desc(instanceReports.createdAt))
-    .limit(200);
+  try {
+    const results = await db
+      .select({
+        id: instanceReports.id,
+        instanceId: instanceReports.instanceId,
+        reporterId: instanceReports.reporterId,
+        reason: instanceReports.reason,
+        details: instanceReports.details,
+        status: instanceReports.status,
+        createdAt: instanceReports.createdAt,
+        instanceBaseUrl: federatedInstances.baseUrl,
+        instanceTrustLevel: federatedInstances.trustLevel,
+        reporterUsername: users.username,
+      })
+      .from(instanceReports)
+      .innerJoin(federatedInstances, eq(instanceReports.instanceId, federatedInstances.id))
+      .innerJoin(users, eq(instanceReports.reporterId, users.id))
+      .orderBy(desc(instanceReports.createdAt))
+      .limit(200);
 
-  res.json(results);
+    res.json(results);
+  } catch (err) {
+    const normalized = normalizeError(err);
+    if (normalized.code === 'FEATURE_UNAVAILABLE') {
+      res.json([]);
+      return;
+    }
+    throw err;
+  }
 });
 
 /**
@@ -1315,12 +1325,21 @@ federationRouter.post('/report', requireAuth, async (req: Request, res: Response
     return;
   }
 
-  // Verify instance exists
-  const [instance] = await db
-    .select({ id: federatedInstances.id, status: federatedInstances.status })
-    .from(federatedInstances)
-    .where(eq(federatedInstances.id, instanceId))
-    .limit(1);
+  let instance: { id: string; status: string } | undefined;
+  try {
+    [instance] = await db
+      .select({ id: federatedInstances.id, status: federatedInstances.status })
+      .from(federatedInstances)
+      .where(eq(federatedInstances.id, instanceId))
+      .limit(1);
+  } catch (err) {
+    const normalized = normalizeError(err);
+    if (normalized.code === 'FEATURE_UNAVAILABLE') {
+      res.status(503).json({ code: 'FEATURE_UNAVAILABLE', message: 'Federation reporting is temporarily unavailable' });
+      return;
+    }
+    throw err;
+  }
 
   if (!instance) {
     res.status(404).json({ code: 'NOT_FOUND', message: 'Instance not found' });
