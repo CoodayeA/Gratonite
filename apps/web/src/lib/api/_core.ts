@@ -294,13 +294,18 @@ export function setWalletRequestPromise(p: typeof walletRequestPromise) {
 }
 
 if (typeof window !== 'undefined') {
-  // Pick up federated login token from URL (from OAuth callback redirect)
-  const urlParams = new URLSearchParams(window.location.search);
-  const federatedToken = urlParams.get('federated_token');
+  // Pick up federated login token from URL fragment (OAuth callback redirect).
+  // Using fragments avoids leaking tokens through query logs / Referer headers.
+  const hash = window.location.hash.startsWith('#')
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+  const hashParams = new URLSearchParams(hash);
+  const federatedToken = hashParams.get('federated_token');
   if (federatedToken) {
     window.localStorage.setItem('gratonite_access_token', federatedToken);
-    // Clean the URL to remove the token
-    const cleanUrl = window.location.pathname + window.location.hash;
+    hashParams.delete('federated_token');
+    const nextHash = hashParams.toString();
+    const cleanUrl = `${window.location.pathname}${window.location.search}${nextHash ? `#${nextHash}` : ''}`;
     window.history.replaceState({}, '', cleanUrl);
     accessToken = federatedToken;
   } else {

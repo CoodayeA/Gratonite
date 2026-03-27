@@ -16,6 +16,8 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "jsx": "react-jsx",
+    "types": ["react", "react-dom", "vite/client"],
+    "typeRoots": ["./node_modules/@types"],
 
     /* Linting */
     "strict": true,

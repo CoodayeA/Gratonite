@@ -20,6 +20,16 @@ const Login = () => {
     const navigate = useNavigate();
     const { refetchUser } = useUser();
     const cardRef = useRef<HTMLDivElement>(null);
+    const shakeCard = () => {
+        if (!cardRef.current) return;
+        gsap.fromTo(cardRef.current, { x: -8 }, {
+            x: 8,
+            repeat: 5,
+            yoyo: true,
+            duration: 0.05,
+            ease: 'power2.inOut',
+        });
+    };
 
     // GSAP entrance animation
     useEffect(() => {
@@ -54,14 +64,14 @@ const Login = () => {
                 setMfaCode('');
             } else if (errCode === 'INVALID_CREDENTIALS') {
                 addToast({ title: 'Invalid email/username or password.', variant: 'error' });
-                if (cardRef.current) gsap.to(cardRef.current, { x: [-8, 8, -6, 6, -3, 3, 0], duration: 0.5, ease: 'power2.out' });
+                shakeCard();
             } else if (errCode === 'INVALID_MFA_CODE') {
                 addToast({ title: useRecoveryCode ? 'Invalid recovery code. Please check and try again.' : 'Invalid authenticator code. Try again or use a recovery code.', variant: 'error' });
                 setMfaCode('');
-                if (cardRef.current) gsap.to(cardRef.current, { x: [-8, 8, -6, 6, -3, 3, 0], duration: 0.5, ease: 'power2.out' });
+                shakeCard();
             } else {
                 addToast({ title: 'Login failed. Please try again.', variant: 'error' });
-                if (cardRef.current) gsap.to(cardRef.current, { x: [-8, 8, -6, 6, -3, 3, 0], duration: 0.5, ease: 'power2.out' });
+                shakeCard();
             }
         } finally {
             setLoading(false);

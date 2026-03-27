@@ -32,6 +32,7 @@ DB_PASSWORD=your-strong-db-password
 # JWT (generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
 JWT_SECRET=generate-a-random-64-char-hex-string
 JWT_REFRESH_SECRET=generate-a-different-random-64-char-hex-string
+BULLBOARD_ADMIN_TOKEN=generate-a-third-random-64-char-hex-string
 
 # SMTP — see docs/SMTP-CONFIGURATION.md
 SMTP_HOST=smtp.example.com
@@ -109,6 +110,10 @@ curl https://api.yourdomain.com/health
 ```
 
 Visit `https://yourdomain.com` — you should see the Gratonite app.
+
+### WebSocket auth requirement
+
+Socket clients must send the access token via the Socket.IO handshake auth payload (`auth: { token }`) or `Authorization: Bearer ...` header. Query-string tokens (`?token=...`) are not accepted.
 
 ## Updating
 

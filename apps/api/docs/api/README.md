@@ -42,7 +42,9 @@ Access tokens are obtained via `POST /api/v1/auth/login` and refreshed via
 
 ## Socket.io Events
 
-Connect with a JWT in the `Authorization: Bearer <token>` header or `?token=<token>` query param.
+Connect with a JWT in either the `Authorization: Bearer <token>` handshake header
+or the Socket.IO auth payload (`auth: { token: "<token>" }`). Query-string token
+authentication is not supported.
 
 | Event | Direction | Payload |
 |-------|-----------|---------|

@@ -1343,8 +1343,9 @@ authRouter.get('/federated/callback', asyncHandler(async (req: Request, res: Res
       path: '/',
     });
 
-    // Redirect to app with access token in URL fragment (not query — safer)
-    res.redirect(`${appBase}/?federated_token=${accessToken}`);
+    // Redirect to app with access token in URL fragment (not query — safer).
+    // Fragments are not sent to the server, proxies, or Referer headers.
+    res.redirect(`${appBase}/#federated_token=${encodeURIComponent(accessToken)}`);
   } catch (err) {
     logger.error('[federated-login] Callback error:', err);
     res.redirect(`${appBase}/login?error=federation_error`);
