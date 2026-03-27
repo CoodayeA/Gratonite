@@ -39,7 +39,7 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../lib/jw
 import { sendVerificationEmail, sendPasswordResetEmail, sendNewDeviceLoginAlert } from '../lib/mailer';
 import { requireAuth } from '../middleware/auth';
 import { redis } from '../lib/redis';
-import { usernameCheckRateLimit, emailVerifyRateLimit, mfaSetupRateLimit } from '../middleware/rateLimit';
+import { authRateLimit, usernameCheckRateLimit, emailVerifyRateLimit, mfaSetupRateLimit } from '../middleware/rateLimit';
 import { referrals as referralsTable } from '../db/schema/referrals';
 import { userDevices } from '../db/schema/user-devices';
 import { ServiceError } from '../services/guild.service';
@@ -421,7 +421,7 @@ const mfaEnableSchema = z.object({
  *   - Inserts a row in `email_verification_tokens`.
  *   - Sends a verification email via the mailer.
  */
-authRouter.post('/register', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+authRouter.post('/register', authRateLimit, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const parseResult = registerSchema.safeParse(req.body);
   if (!parseResult.success) {
     res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Validation failed', details: parseResult.error.issues });
@@ -514,7 +514,7 @@ authRouter.get('/username-available', usernameCheckRateLimit, asyncHandler(async
  *   - Inserts a refresh token hash row in `refresh_tokens`.
  *   - Sets `gratonite_refresh` httpOnly cookie.
  */
-authRouter.post('/login', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+authRouter.post('/login', authRateLimit, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const parseResult = loginSchema.safeParse(req.body);
   if (!parseResult.success) {
     res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Validation failed', details: parseResult.error.issues });
@@ -1015,7 +1015,7 @@ const forgotPasswordSchema = z.object({
   email: z.string().email(),
 });
 
-authRouter.post('/forgot-password', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+authRouter.post('/forgot-password', authRateLimit, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const parse = forgotPasswordSchema.safeParse(req.body);
   if (!parse.success) {
     res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Valid email required' });

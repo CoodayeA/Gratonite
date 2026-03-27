@@ -64,7 +64,7 @@ import { achievementsRouter } from './achievements';
 import { activityRouter } from './activity';
 import { seasonalEventsRouter } from './seasonal-events-route';
 import { statsRouter } from './stats';
-import { authRateLimit, apiRateLimit } from '../middleware/rateLimit';
+import { apiRateLimit } from '../middleware/rateLimit';
 import { registry } from '../lib/metrics';
 
 // Wave 25 imports
@@ -209,7 +209,7 @@ router.use('/client-errors', clientErrorsRouter);
 router.use(apiRateLimit);
 
 // Core feature routers
-router.use('/auth', authRateLimit, authRouter);
+router.use('/auth', authRouter);
 router.use('/users', usersRouter);
 router.use('/users/@me/settings', settingsRouter);
 router.use('/guilds', guildsRouter);
