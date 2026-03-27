@@ -894,14 +894,19 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         if (!activeGuildId || guildChannels.length === 0) { setMutedChannelIds(new Set()); return; }
         const fetchMuted = async () => {
             const muted = new Set<string>();
-            await Promise.all(guildChannels.map(async (ch) => {
-                try {
-                    const prefs = await api.channels.getNotificationPrefs(ch.id);
+            try {
+                const ids = guildChannels.map((ch) => ch.id);
+                const prefsByChannel = await api.channels.getNotificationPrefsBulk(ids);
+                for (const ch of guildChannels) {
+                    const prefs = prefsByChannel[ch.id];
+                    if (!prefs) continue;
                     if (prefs.level === 'none' || (prefs.mutedUntil && new Date(prefs.mutedUntil) > new Date())) {
                         muted.add(ch.id);
                     }
-                } catch { /* ignore */ }
-            }));
+                }
+            } catch {
+                // ignore
+            }
             setMutedChannelIds(muted);
         };
         fetchMuted();

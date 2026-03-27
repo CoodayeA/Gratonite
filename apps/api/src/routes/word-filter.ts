@@ -6,6 +6,7 @@ import { Permissions } from '../db/schema/roles';
 import { requireAuth } from '../middleware/auth';
 import { hasPermission } from './roles';
 import { logger } from '../lib/logger';
+import { normalizeError } from '../lib/errors';
 
 export const wordFilterRouter = Router({ mergeParams: true });
 
@@ -18,18 +19,27 @@ wordFilterRouter.get('/', requireAuth, async (req: Request, res: Response): Prom
     return;
   }
 
-  const [filter] = await db
-    .select()
-    .from(guildWordFilters)
-    .where(eq(guildWordFilters.guildId, guildId))
-    .limit(1);
+  try {
+    const [filter] = await db
+      .select()
+      .from(guildWordFilters)
+      .where(eq(guildWordFilters.guildId, guildId))
+      .limit(1);
 
-  if (!filter) {
-    res.json({ words: [], action: 'block', exemptRoles: [] });
-    return;
+    if (!filter) {
+      res.json({ words: [], action: 'block', exemptRoles: [] });
+      return;
+    }
+
+    res.json(filter);
+  } catch (err) {
+    const normalized = normalizeError(err);
+    if (normalized.code === 'FEATURE_UNAVAILABLE') {
+      res.json({ words: [], action: 'block', exemptRoles: [] });
+      return;
+    }
+    throw err;
   }
-
-  res.json(filter);
 });
 
 /** PUT /api/v1/guilds/:guildId/word-filter */

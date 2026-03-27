@@ -26,4 +26,18 @@ Sentry.init({
   // Session Replay — record on errors only to save quota
   replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 1.0,
+  beforeSend(event) {
+    const message = event.message || event.exception?.values?.[0]?.value || '';
+
+    if (message.includes('View transition was skipped because document visibility state is hidden')) {
+      return null;
+    }
+    if (message.includes('Failed to update a ServiceWorker') && message.includes('Service Worker system has shutdown')) {
+      return null;
+    }
+    if (message.startsWith('Bug Report:')) {
+      return null;
+    }
+    return event;
+  },
 });

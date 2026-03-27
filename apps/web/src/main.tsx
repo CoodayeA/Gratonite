@@ -27,7 +27,14 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/app/sw.js', { scope: '/app/' }).then(reg => {
       // Check for updates every 30 minutes
-      setInterval(() => reg.update(), 30 * 60 * 1000);
+      setInterval(() => {
+        reg.update().catch((err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.includes('Service Worker system has shutdown')) return;
+          if (err instanceof DOMException && err.name === 'AbortError') return;
+          console.warn('[SW] Update failed:', err);
+        });
+      }, 30 * 60 * 1000);
 
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing;

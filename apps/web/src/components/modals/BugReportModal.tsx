@@ -71,11 +71,14 @@ const BugReportModal = ({ onClose }: { onClose: () => void }) => {
                 clientTimestamp: new Date().toISOString(),
                 ...(attachmentUrls.length > 0 ? { attachments: attachmentUrls } : {}),
             });
-            const eventId = Sentry.captureMessage(`Bug Report: ${title}`, 'info');
             Sentry.captureFeedback({
-                associatedEventId: eventId,
                 message: description,
                 name: title,
+                tags: {
+                    category,
+                    surface: 'bug_report_modal',
+                    client: 'web',
+                },
             });
             setIsSubmitting(false);
             setIsSubmitted(true);

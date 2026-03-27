@@ -28,6 +28,8 @@ import { closeAllQueues, allQueues } from './lib/queue';
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
+import * as Sentry from '@sentry/node';
+import { handleAppError, normalizeError } from './lib/errors';
 
 const PLACEHOLDER_PATTERNS = [
   'changeme',
@@ -44,8 +46,8 @@ function isPlaceholderSecret(value: string): boolean {
   return PLACEHOLDER_PATTERNS.some((pattern) => normalized.includes(pattern));
 }
 
-function validateCriticalEnvVars(): void {
-  if (process.env.NODE_ENV !== 'production') return;
+function validateCriticalEnvVars(): string[] {
+  if (process.env.NODE_ENV !== 'production') return [];
 
   const required: Record<string, string | undefined> = {
     REDIS_URL: process.env.REDIS_URL,
@@ -65,17 +67,11 @@ function validateCriticalEnvVars(): void {
     .filter(([, value]) => !value)
     .map(([key]) => key);
 
-  if (missing.length > 0) {
-    throw new Error(
-      `FATAL: Missing critical environment variables in production: ${missing.join(', ')}. ` +
-      'Set these in your .env or environment before starting the server.',
-    );
-  }
+  return missing;
 }
 
-validateCriticalEnvVars();
-
-function validateStartupConfig(): void {
+function validateStartupConfig(): string[] {
+  const errors: string[] = [];
   const env = (process.env.NODE_ENV ?? 'development').toLowerCase();
   const isProdLike = env === 'production' || env === 'staging';
   const jwtSecret = process.env.JWT_SECRET ?? '';
@@ -94,33 +90,54 @@ function validateStartupConfig(): void {
   const corsOrigin = process.env.CORS_ORIGIN ?? '';
 
   if (jwtSecret.length < 32) {
-    throw new Error('FATAL: JWT_SECRET must be at least 32 characters.');
+    errors.push('JWT_SECRET must be at least 32 characters.');
   }
   if (jwtRefreshSecret.length < 32) {
-    throw new Error('FATAL: JWT_REFRESH_SECRET must be at least 32 characters.');
+    errors.push('JWT_REFRESH_SECRET must be at least 32 characters.');
   }
   if (jwtSecret === jwtRefreshSecret) {
-    throw new Error('FATAL: JWT_SECRET and JWT_REFRESH_SECRET must be different.');
+    errors.push('JWT_SECRET and JWT_REFRESH_SECRET must be different.');
   }
 
   if (isProdLike) {
     if (!appUrl || !corsOrigin) {
-      throw new Error('FATAL: APP_URL and CORS_ORIGIN are required in non-dev environments. Set them directly or set INSTANCE_DOMAIN to auto-derive.');
+      errors.push('APP_URL and CORS_ORIGIN are required in non-dev environments. Set them directly or set INSTANCE_DOMAIN to auto-derive.');
     }
     if (isPlaceholderSecret(jwtSecret) || isPlaceholderSecret(jwtRefreshSecret)) {
-      throw new Error('FATAL: Placeholder JWT secrets are not allowed in non-dev environments.');
+      errors.push('Placeholder JWT secrets are not allowed in non-dev environments.');
     }
   }
 
-  if (appUrl && corsOrigin) {
-    const appOrigin = new URL(appUrl).origin;
-    if (corsOrigin !== '*' && corsOrigin !== appOrigin) {
-      throw new Error(`FATAL: APP_URL origin (${appOrigin}) must match CORS_ORIGIN (${corsOrigin}).`);
+  if (appUrl && corsOrigin && corsOrigin !== '*') {
+    try {
+      const appOrigin = new URL(appUrl).origin;
+      if (corsOrigin !== appOrigin) {
+        errors.push(`APP_URL origin (${appOrigin}) must match CORS_ORIGIN (${corsOrigin}).`);
+      }
+    } catch {
+      errors.push('APP_URL must be a valid absolute URL.');
     }
   }
+  return errors;
 }
 
-validateStartupConfig();
+const startupErrors: string[] = [
+  ...validateCriticalEnvVars(),
+  ...validateStartupConfig(),
+];
+
+if (startupErrors.length > 0) {
+  const msg = `FATAL: Startup config invalid. ${startupErrors.join(' ')}`;
+  logger.error(msg);
+  Sentry.withScope((scope) => {
+    scope.setLevel('fatal');
+    scope.setFingerprint(['startup-config-invalid']);
+    scope.setTag('startup_phase', 'config_validation');
+    scope.setContext('startupConfigErrors', { errors: startupErrors });
+    Sentry.captureMessage(msg);
+  });
+  process.exit(1);
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -349,16 +366,19 @@ app.use('/api/v1', router);
 // ---------------------------------------------------------------------------
 // Sentry error handler (must be before custom error handler)
 // ---------------------------------------------------------------------------
-import * as Sentry from '@sentry/node';
-Sentry.setupExpressErrorHandler(app);
+Sentry.setupExpressErrorHandler(app, {
+  shouldHandleError(error) {
+    const normalized = normalizeError(error);
+    return normalized.reportable;
+  },
+});
 
 // ---------------------------------------------------------------------------
 // Global error handler
 // ---------------------------------------------------------------------------
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  logger.error('Unhandled error:', err.message);
-  res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  handleAppError(res, err, 'global');
 });
 
 // ---------------------------------------------------------------------------

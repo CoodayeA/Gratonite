@@ -37,6 +37,13 @@ Sentry.init({
   dsn: 'https://ad17bb4f67fef179cb02bbf241babb25@o4511074273329152.ingest.us.sentry.io/4511074285649920',
   tracesSampleRate: 0.2,
   enabled: !__DEV__,
+  beforeSend(event) {
+    const message = event.message || event.exception?.values?.[0]?.value || '';
+    if (message.includes('Failed to construct \'Response\'') && message.includes('status provided (0)')) {
+      return null;
+    }
+    return event;
+  },
 });
 
 const navigationRef = createNavigationContainerRef();

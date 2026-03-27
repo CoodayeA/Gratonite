@@ -17,6 +17,7 @@ import { publicInviteRateLimit } from '../middleware/rateLimit';
 import { toRows } from '../lib/to-rows.js';
 import crypto from 'crypto';
 import { recordActivity } from './activity';
+import { normalizeError } from '../lib/errors';
 
 export const invitesRouter = Router();
 
@@ -57,14 +58,33 @@ invitesRouter.post(
       code = generateCode();
     }
 
-    const [invite] = await db.insert(guildInvites).values({
-      code,
-      guildId,
-      createdBy: req.userId!,
-      maxUses: maxUses ?? null,
-      expiresAt,
-      temporary: temporary ?? false,
-    }).returning();
+    let invite: typeof guildInvites.$inferSelect | undefined;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        [invite] = await db.insert(guildInvites).values({
+          code,
+          guildId,
+          createdBy: req.userId!,
+          maxUses: maxUses ?? null,
+          expiresAt,
+          temporary: temporary ?? false,
+        }).returning();
+        break;
+      } catch (err) {
+        const normalized = normalizeError(err);
+        const rawCode = (err as { code?: string }).code;
+        if (rawCode === '23505' || normalized.code === 'CONFLICT') {
+          code = generateCode();
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    if (!invite) {
+      res.status(503).json({ code: 'INVITE_CREATE_RETRY_EXHAUSTED', message: 'Could not generate a unique invite code. Please retry.' });
+      return;
+    }
 
     res.status(201).json(invite);
   },

@@ -58,7 +58,7 @@ import { channelDocumentsRouter } from './channel-documents';
 import { mutesRouter } from './mutes';
 import { oauthRouter } from './oauth';
 import { wordFilterRouter } from './word-filter';
-import { channelNotifPrefsRouter } from './channel-notification-prefs';
+import { channelNotifPrefsRouter, channelNotifPrefsBulkRouter } from './channel-notification-prefs';
 import { clipsRouter } from './clips';
 import { achievementsRouter } from './achievements';
 import { activityRouter } from './activity';
@@ -343,6 +343,7 @@ router.use('/guilds/:guildId/word-filter', wordFilterRouter);
 
 // Per-channel notification preferences
 router.use('/channels/:channelId', channelNotifPrefsRouter);
+router.use('/', channelNotifPrefsBulkRouter);
 
 // Clips
 router.use('/guilds/:guildId/clips', clipsRouter);

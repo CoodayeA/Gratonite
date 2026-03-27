@@ -11,6 +11,7 @@ import { channels } from '../db/schema/channels';
 import { users } from '../db/schema/users';
 import { guildMembers } from '../db/schema/guilds';
 import { requireAuth } from '../middleware/auth';
+import { normalizeError } from '../lib/errors';
 
 export const guildHighlightsRouter = Router({ mergeParams: true });
 
@@ -19,12 +20,21 @@ guildHighlightsRouter.get('/', requireAuth, async (req: Request, res: Response):
   const guildId = req.params.guildId as string;
   const limit = Math.min(Number(req.query.limit) || 4, 12);
 
-  const highlights = await db.select().from(guildHighlights)
-    .where(eq(guildHighlights.guildId, guildId))
-    .orderBy(desc(guildHighlights.weekStart))
-    .limit(limit);
+  try {
+    const highlights = await db.select().from(guildHighlights)
+      .where(eq(guildHighlights.guildId, guildId))
+      .orderBy(desc(guildHighlights.weekStart))
+      .limit(limit);
 
-  res.json(highlights);
+    res.json(highlights);
+  } catch (err) {
+    const normalized = normalizeError(err);
+    if (normalized.code === 'FEATURE_UNAVAILABLE') {
+      res.json([]);
+      return;
+    }
+    throw err;
+  }
 });
 
 /** POST /generate — Generate highlights for current week */
