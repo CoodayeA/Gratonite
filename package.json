@@ -4,5 +4,11 @@
   "scripts": {
     "verify:release:all": "npm --prefix apps/web run verify:prod && pnpm --dir apps/api run verify:release && npm --prefix apps/web run smoke:e2e",
     "verify:launch:super-gate": "node tools/verify-launch-super-gate.mjs"
+  },
+  "pnpm": {
+    "overrides": {
+      "@types/react": "18.3.28",
+      "@types/react-dom": "18.3.7"
+    }
   }
 }

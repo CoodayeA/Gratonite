@@ -3,7 +3,7 @@
  *
  * This module is responsible for:
  *   1. Authenticating the connecting Socket.io client via JWT (from the
- *      `Authorization` header or the `token` query param).
+ *      `Authorization` header or `auth.token` in the handshake payload).
  *   2. Joining the socket to all relevant rooms on connect:
  *        - `user:<userId>`       — private room for user-targeted events
  *        - `guild:<guildId>`     — one room per guild the user belongs to
@@ -97,16 +97,14 @@ export function initSocket(io: SocketIOServer): void {
 
   /**
    * Runs before every connection attempt. Extracts the JWT from either the
-   * `Authorization` handshake header or the `token` query parameter (useful
-   * for clients that cannot set custom headers, e.g. browser WebSocket API).
+   * `Authorization` handshake header or `auth.token` on the handshake payload.
    *
    * Rejects the connection with an error if the token is missing or invalid.
    */
   io.use((socket: Socket, next: any) => {
     try {
-      // Accept token from: Authorization header, query param, or auth object.
+      // Accept token from: Authorization header or auth object.
       const authHeader = socket.handshake.headers.authorization as string | undefined;
-      const queryToken = socket.handshake.query.token as string | undefined;
       const authToken = (socket.handshake.auth as Record<string, unknown>)?.token as string | undefined;
 
       let token: string | undefined;
@@ -115,9 +113,6 @@ export function initSocket(io: SocketIOServer): void {
         token = authHeader.slice(7);
       } else if (authToken) {
         token = authToken;
-      } else if (queryToken) {
-        token = queryToken;
-        console.warn(`[socket.io] DEPRECATION: client connected with token via query parameter (socket ${socket.id}). Prefer using the auth handshake object instead.`);
       }
 
       if (!token) {

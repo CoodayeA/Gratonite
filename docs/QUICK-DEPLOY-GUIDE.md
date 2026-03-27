@@ -16,7 +16,7 @@ git clone https://github.com/CoodayeA/Gratonite.git && cd Gratonite
 
 # 2. Configure
 cp deploy/.env.example .env
-# Edit .env: set DB_PASSWORD, JWT_SECRET, JWT_REFRESH_SECRET, SMTP, domain, LiveKit
+# Edit .env: set DB_PASSWORD, JWT_SECRET, JWT_REFRESH_SECRET, BULLBOARD_ADMIN_TOKEN, SMTP, domain, LiveKit
 # Edit deploy/Caddyfile: replace domain names
 
 # 3. Build
@@ -40,6 +40,7 @@ curl https://api.yourdomain.com/health
 DB_PASSWORD=             # PostgreSQL password
 JWT_SECRET=              # node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 JWT_REFRESH_SECRET=      # (generate a different one)
+BULLBOARD_ADMIN_TOKEN=   # dedicated admin/jobs token (do not reuse JWT secrets)
 SMTP_HOST=               # e.g. smtp.sendgrid.net
 SMTP_PORT=587
 SMTP_USER=

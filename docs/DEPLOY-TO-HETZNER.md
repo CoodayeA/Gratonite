@@ -91,7 +91,7 @@ cd ../..
 ```bash
 cp deploy/.env.example .env
 nano .env
-# Fill in DB_PASSWORD, JWT_SECRET, JWT_REFRESH_SECRET, SMTP, domain, LiveKit
+# Fill in DB_PASSWORD, JWT_SECRET, JWT_REFRESH_SECRET, BULLBOARD_ADMIN_TOKEN, SMTP, domain, LiveKit
 # See docs/DEPLOY-TO-OWN-SERVER.md for details on each variable
 ```
 
@@ -153,6 +153,7 @@ docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js"
 - [ ] SSH key authentication (disable password auth)
 - [ ] Firewall enabled (UFW: 22, 80, 443 only)
 - [ ] Strong DB and JWT secrets
+- [ ] Dedicated BULLBOARD_ADMIN_TOKEN (do not reuse JWT secrets)
 - [ ] HTTPS enabled (handled automatically by Caddy)
 - [ ] Automatic security updates: `sudo apt install unattended-upgrades`
 - [ ] Regular database backups

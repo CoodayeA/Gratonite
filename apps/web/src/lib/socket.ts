@@ -956,7 +956,6 @@ export function connectSocket(): GratoniteSocket {
     reconnectionAttempts: Infinity,
     randomizationFactor: 0.25,
     auth: token ? { token } : undefined,
-    query: token ? { token } : undefined,
   });
 
   socket.on('connect', () => {

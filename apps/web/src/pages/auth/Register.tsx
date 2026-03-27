@@ -56,6 +56,16 @@ const Register = () => {
     const { addToast } = useToast();
     const navigate = useNavigate();
     const cardRef = useRef<HTMLDivElement>(null);
+    const shakeCard = () => {
+        if (!cardRef.current) return;
+        gsap.fromTo(cardRef.current, { x: -8 }, {
+            x: 8,
+            repeat: 5,
+            yoyo: true,
+            duration: 0.05,
+            ease: 'power2.inOut',
+        });
+    };
 
     // GSAP entrance animation
     useEffect(() => {
@@ -95,10 +105,10 @@ const Register = () => {
             } else if (err?.details) {
                 const firstErr = Object.values(err.details).flat()[0] as string;
                 addToast({ title: firstErr || 'Validation error.', variant: 'error' });
-                if (cardRef.current) gsap.to(cardRef.current, { x: [-8, 8, -6, 6, -3, 3, 0], duration: 0.5, ease: 'power2.out' });
+                shakeCard();
             } else {
                 addToast({ title: 'Registration failed. Please try again.', variant: 'error' });
-                if (cardRef.current) gsap.to(cardRef.current, { x: [-8, 8, -6, 6, -3, 3, 0], duration: 0.5, ease: 'power2.out' });
+                shakeCard();
             }
         } finally {
             setLoading(false);

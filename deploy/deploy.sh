@@ -4,10 +4,10 @@ set -e
 echo "🚀 Gratonite Deployment Script"
 echo "================================"
 
-# Configuration
-SERVER="gratonite.chat"
-USER="ferdinand"
-SSH_KEY="~/.ssh/codex_gratonite_hetzner"
+# Configuration (override: SERVER, USER, SSH_KEY)
+SERVER="${SERVER:-178.156.253.237}"
+USER="${USER:-ferdinand}"
+SSH_KEY="${SSH_KEY:-$HOME/.ssh/hetzner_key_new}"
 REMOTE_DIR="/home/ferdinand/gratonite-app"
 
 echo ""

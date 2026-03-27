@@ -153,7 +153,7 @@ const UserProfilePopover = ({
                         accentColor: profileRes.accentColor,
                         primaryColor: profileRes.primaryColor,
                         createdAt: profileRes.createdAt,
-                        federationAddress: profileRes.federationAddress ?? null,
+                        federationAddress: (profileRes as any).federationAddress ?? null,
                     });
                     if (profileRes.badges) setBadges(profileRes.badges);
                 }

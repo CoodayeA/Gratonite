@@ -52,6 +52,7 @@ function validateCriticalEnvVars(): void {
     DATABASE_URL: process.env.DATABASE_URL,
     APP_URL: process.env.APP_URL || (process.env.INSTANCE_DOMAIN ? `https://${process.env.INSTANCE_DOMAIN}` : undefined),
     MFA_ENCRYPTION_KEY: process.env.MFA_ENCRYPTION_KEY,
+    BULLBOARD_ADMIN_TOKEN: process.env.BULLBOARD_ADMIN_TOKEN,
   };
 
   // At least one auth secret must be set
@@ -320,7 +321,7 @@ createBullBoard({
 // Auth gate for Bull Board admin dashboard.
 app.use('/admin/jobs', (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const token = (req.headers.authorization || '').replace('Bearer ', '');
-  const expected = process.env.BULLBOARD_ADMIN_TOKEN || process.env.JWT_SECRET;
+  const expected = process.env.BULLBOARD_ADMIN_TOKEN;
   if (!expected || !token) {
     res.status(401).json({ error: 'Unauthorized' });
     return;
