@@ -128,6 +128,12 @@ docker compose -f docker-compose.production.yml up -d --force-recreate api web
 docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js"
 ```
 
+If you use `deploy/deploy.sh` from your laptop, the script now performs a remote preflight before any restart and fails fast when secrets are missing or unsafe:
+- requires non-empty `DB_PASSWORD`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `BULLBOARD_ADMIN_TOKEN`, `MFA_ENCRYPTION_KEY`, `APP_URL`, `CORS_ORIGIN`
+- validates JWT secret length and difference
+- verifies compose passes `BULLBOARD_ADMIN_TOKEN` into the API container
+- preserves remote `.env`/`.env.*` during rsync
+
 ## Data & Backups
 
 Database data is stored in the `postgres_data` Docker volume. To back up:

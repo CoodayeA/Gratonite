@@ -165,12 +165,16 @@ export function createRateLimiter(config: RateLimitConfig) {
 // ---------------------------------------------------------------------------
 
 /**
- * authRateLimit — 5 requests per 60 seconds, keyed by IP.
+ * authRateLimit — 30 requests per 60 seconds, keyed by IP.
  * Apply to login / register endpoints to prevent brute-force attacks.
+ *
+ * Note: this was increased from 5/min after production reconnect/login storms
+ * caused legitimate users behind shared IPs (NAT, office, mobile gateways)
+ * to be temporarily locked out.
  */
 export const authRateLimit = createRateLimiter({
   prefix: 'rl:auth',
-  maxRequests: 5,
+  maxRequests: 30,
   windowSeconds: 60,
   keyFn: (req) => req.ip ?? req.socket.remoteAddress ?? null,
 });

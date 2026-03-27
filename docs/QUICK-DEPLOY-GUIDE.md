@@ -63,6 +63,12 @@ cd deploy && docker compose -f docker-compose.production.yml up -d --force-recre
 docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js"
 ```
 
+If you deploy with `deploy/deploy.sh`, the script now enforces guardrails:
+- protects remote `.env` files during rsync
+- aborts before restart if required env vars are missing/invalid
+- checks Bull Board token passthrough exists in compose
+- waits for `API_HEALTH_URL` (default: `https://api.gratonite.chat/health`) before reporting success
+
 ## Useful Commands
 
 ```bash
