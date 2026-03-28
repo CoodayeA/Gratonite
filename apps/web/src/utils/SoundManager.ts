@@ -4,6 +4,7 @@
 let ctx: AudioContext | null = null;
 let audioUnlocked = false;
 let unlockListenersAttached = false;
+let activeEventGainMultiplier = 1;
 
 const unlockEvents: Array<keyof WindowEventMap> = ['pointerdown', 'touchstart', 'keydown', 'mousedown'];
 
@@ -66,7 +67,7 @@ function playTone(
 ) {
     const c = ensureAudioContextReady();
     if (!c) return;
-    const vol = getVolume();
+    const vol = getVolume() * activeEventGainMultiplier;
     const t = c.currentTime + delay;
     const osc = c.createOscillator();
     const gain = c.createGain();
@@ -86,7 +87,7 @@ function playTone(
 function playNoise(duration: number, gainStart = 0.1, gainEnd = 0, delay = 0) {
     const c = ensureAudioContextReady();
     if (!c) return;
-    const vol = getVolume();
+    const vol = getVolume() * activeEventGainMultiplier;
     const t = c.currentTime + delay;
     const bufferSize = c.sampleRate * duration;
     const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
@@ -176,11 +177,11 @@ const defaultPack: SoundPack = {
         playTone(1108.7, 0.15, 'sine', 0.18, 0, 0.18);
     },
     achievement() {
-        playTone(493.88, 0.06, 'sine', 0.22, 0.05);
-        playTone(659.25, 0.06, 'sine', 0.22, 0.05, 0.08);
-        playTone(987.77, 0.06, 'sine', 0.22, 0.05, 0.16);
-        playTone(1318.5, 0.3, 'sine', 0.25, 0, 0.22);
-        playNoise(0.12, 0.12, 0, 0.22);
+        playTone(493.88, 0.06, 'sine', 0.08, 0.02);
+        playTone(659.25, 0.06, 'sine', 0.08, 0.02, 0.08);
+        playTone(987.77, 0.06, 'sine', 0.08, 0.02, 0.16);
+        playTone(1318.5, 0.3, 'sine', 0.1, 0, 0.22);
+        playNoise(0.1, 0.03, 0, 0.22);
     },
 };
 
@@ -239,10 +240,10 @@ const softPack: SoundPack = {
         playTone(659, 0.35, 'sine', 0.04, 0, 0.4);
     },
     achievement() {
-        playTone(392, 0.2, 'sine', 0.06, 0);
-        playTone(494, 0.2, 'sine', 0.06, 0, 0.15);
-        playTone(587, 0.2, 'sine', 0.06, 0, 0.3);
-        playTone(784, 0.5, 'sine', 0.05, 0, 0.45);
+        playTone(392, 0.2, 'sine', 0.045, 0);
+        playTone(494, 0.2, 'sine', 0.045, 0, 0.15);
+        playTone(587, 0.2, 'sine', 0.045, 0, 0.3);
+        playTone(784, 0.5, 'sine', 0.04, 0, 0.45);
     },
 };
 
@@ -304,8 +305,8 @@ const retroPack: SoundPack = {
         [440, 554, 659, 880].forEach((f, i) => playTone(f, 0.04, 'square', 0.16, 0.01, i * 0.05));
     },
     achievement() {
-        [330, 440, 554, 659, 880].forEach((f, i) => playTone(f, 0.04, 'square', 0.18, 0.01, i * 0.05));
-        playNoise(0.1, 0.1, 0, 0.25);
+        [330, 440, 554, 659, 880].forEach((f, i) => playTone(f, 0.04, 'square', 0.075, 0.005, i * 0.05));
+        playNoise(0.08, 0.03, 0, 0.25);
     },
 };
 
@@ -375,8 +376,19 @@ export function playSound(name: string) {
     if (isSoundMuted()) return;
     setupUnlockListeners();
     if (!audioUnlocked) return;
+    const perEventGainMultiplier: Record<string, number> = {
+        achievement: 0.22,
+    };
     const packName = getSoundPack();
     const pack = packs[packName] || packs.default;
     const fn = pack[name] || defaultPack[name as keyof SoundPack];
-    if (typeof fn === 'function') fn();
+    if (typeof fn === 'function') {
+        const previousGainMultiplier = activeEventGainMultiplier;
+        activeEventGainMultiplier = perEventGainMultiplier[name] ?? 1;
+        try {
+            fn();
+        } finally {
+            activeEventGainMultiplier = previousGainMultiplier;
+        }
+    }
 }

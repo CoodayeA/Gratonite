@@ -66,6 +66,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
     const [copied, setCopied] = useState(false);
     const [leaveConfirm, setLeaveConfirm] = useState(false);
     const [leaving, setLeaving] = useState(false);
+    const [isGuildOwner, setIsGuildOwner] = useState(false);
     const [canModerate, setCanModerate] = useState(false);
     const [members, setMembers] = useState<Array<{ id: string; userId: string; nickname: string | null; username: string; displayName: string | null; timeoutUntil: string | null }>>([]);
     const [timeoutTarget, setTimeoutTarget] = useState('');
@@ -95,6 +96,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
         api.guilds.get(guildId).then((guild: any) => {
             const me = userId || '';
             if (!me) return;
+            if (mountedRef.current) setIsGuildOwner(guild.ownerId === me);
             if (guild.ownerId === me) {
                 if (mountedRef.current) setCanModerate(true);
                 return;
@@ -397,36 +399,40 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
                         </>
                     )}
 
-                    <div style={{ height: '1px', background: 'var(--stroke)', margin: '8px 0' }} />
+                    {!isGuildOwner && (
+                        <>
+                            <div style={{ height: '1px', background: 'var(--stroke)', margin: '8px 0' }} />
 
-                    {/* Leave Server */}
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--error)', marginBottom: '4px' }}>Danger Zone</label>
-                    {leaveConfirm ? (
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            <button
-                                onClick={handleLeave}
-                                disabled={leaving}
-                                className="auth-button"
-                                style={{ margin: 0, flex: 1, background: 'var(--error)', color: '#fff', border: '3px solid #000', fontWeight: 800, opacity: leaving ? 0.7 : 1 }}
-                            >
-                                {leaving ? 'Leaving...' : 'Yes, Leave Server'}
-                            </button>
-                            <button
-                                onClick={() => setLeaveConfirm(false)}
-                                className="auth-button"
-                                style={{ margin: 0, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800 }}
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={handleLeave}
-                            className="auth-button"
-                            style={{ margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'transparent', color: 'var(--error)', border: '2px solid var(--error)', fontWeight: 700 }}
-                        >
-                            <LogOut size={16} /> Leave Server
-                        </button>
+                            {/* Leave Server */}
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--error)', marginBottom: '4px' }}>Danger Zone</label>
+                            {leaveConfirm ? (
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                        onClick={handleLeave}
+                                        disabled={leaving}
+                                        className="auth-button"
+                                        style={{ margin: 0, flex: 1, background: 'var(--error)', color: '#fff', border: '3px solid #000', fontWeight: 800, opacity: leaving ? 0.7 : 1 }}
+                                    >
+                                        {leaving ? 'Leaving...' : 'Yes, Leave Server'}
+                                    </button>
+                                    <button
+                                        onClick={() => setLeaveConfirm(false)}
+                                        className="auth-button"
+                                        style={{ margin: 0, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800 }}
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={handleLeave}
+                                    className="auth-button"
+                                    style={{ margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'transparent', color: 'var(--error)', border: '2px solid var(--error)', fontWeight: 700 }}
+                                >
+                                    <LogOut size={16} /> Leave Server
+                                </button>
+                            )}
+                        </>
                     )}
                 </div>
             </div>

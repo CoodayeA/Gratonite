@@ -172,6 +172,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
     const [importProgress, setImportProgress] = useState(0);
     const [importing, setImporting] = useState(false);
     const [creating, setCreating] = useState(false);
+    const createInFlightRef = useRef(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -232,7 +233,8 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
     };
 
     const handleCreate = async () => {
-        if (!guildName.trim() || creating) return;
+        if (!guildName.trim() || creating || createInFlightRef.current) return;
+        createInFlightRef.current = true;
         setCreating(true);
         try {
             const toChannelSlug = (value: string) =>
@@ -258,20 +260,33 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                 } catch { /* icon upload is non-critical */ }
             }
 
-            // 3. Create default channels based on template
+            // 3. Create default channels based on template (idempotent + deduped)
             const channelNames = selectedTemplate?.channels || ['general'];
-            // Create a "Text Channels" category
+            const uniqueChannelNames = Array.from(
+                new Set(channelNames.map(toChannelSlug).filter(Boolean))
+            );
+            const existingChannels = await api.channels.getGuildChannels(guild.id).catch(() => [] as any[]);
+            const findCategory = (name: string) => existingChannels.find((ch: any) => ch.type === 'GUILD_CATEGORY' && ch.name === name);
+
+            // Create a "Text Channels" category if missing
             let textCategoryId: string | undefined;
-            try {
-                const textCat = await api.channels.create(guild.id, { name: 'text-channels', type: 'GUILD_CATEGORY' });
-                textCategoryId = textCat.id;
-            } catch { /* category creation might not be supported */ }
+            const existingTextCategory = findCategory('text-channels');
+            if (existingTextCategory?.id) {
+                textCategoryId = existingTextCategory.id;
+            } else {
+                try {
+                    const textCat = await api.channels.create(guild.id, { name: 'text-channels', type: 'GUILD_CATEGORY' });
+                    textCategoryId = textCat.id;
+                    existingChannels.push(textCat as any);
+                } catch { /* category creation might not be supported */ }
+            }
 
             // Create text channels
-            for (let i = 0; i < channelNames.length; i++) {
+            for (let i = 0; i < uniqueChannelNames.length; i++) {
                 try {
-                    const channelName = toChannelSlug(channelNames[i]);
+                    const channelName = uniqueChannelNames[i];
                     if (!channelName) continue;
+                    if (existingChannels.some((ch: any) => ch.name === channelName && ch.type === 'GUILD_TEXT')) continue;
                     await api.channels.create(guild.id, {
                         name: channelName,
                         type: 'GUILD_TEXT',
@@ -282,17 +297,25 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
 
             // Create a "Voice Channels" category and a default voice channel
             let voiceCategoryId: string | undefined;
-            try {
-                const voiceCat = await api.channels.create(guild.id, { name: 'voice-channels', type: 'GUILD_CATEGORY' });
-                voiceCategoryId = voiceCat.id;
-            } catch { /* category creation might not be supported */ }
+            const existingVoiceCategory = findCategory('voice-channels');
+            if (existingVoiceCategory?.id) {
+                voiceCategoryId = existingVoiceCategory.id;
+            } else {
+                try {
+                    const voiceCat = await api.channels.create(guild.id, { name: 'voice-channels', type: 'GUILD_CATEGORY' });
+                    voiceCategoryId = voiceCat.id;
+                    existingChannels.push(voiceCat as any);
+                } catch { /* category creation might not be supported */ }
+            }
 
             try {
-                await api.channels.create(guild.id, {
-                    name: 'general',
-                    type: 'GUILD_VOICE',
-                    parentId: voiceCategoryId,
-                });
+                if (!existingChannels.some((ch: any) => ch.name === 'general' && ch.type === 'GUILD_VOICE')) {
+                    await api.channels.create(guild.id, {
+                        name: 'general',
+                        type: 'GUILD_VOICE',
+                        parentId: voiceCategoryId,
+                    });
+                }
             } catch { /* voice channel creation might fail */ }
 
             addToast({
@@ -314,6 +337,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
             });
         } finally {
             setCreating(false);
+            createInFlightRef.current = false;
         }
     };
 
