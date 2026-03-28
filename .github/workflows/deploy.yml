@@ -74,7 +74,8 @@ jobs:
         run: |
           ssh ferdinand@gratonite.chat \
             'cd /home/ferdinand/gratonite-app &&
-             docker compose --env-file .env.production -f docker-compose.production.yml up -d --force-recreate api web &&
+             ENV_FILE=".env.production"; [ -f "$ENV_FILE" ] || ENV_FILE=".env" &&
+             docker compose --env-file "$ENV_FILE" -f docker-compose.production.yml up -d --force-recreate api web &&
              docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js" &&
              docker compose -f docker-compose.production.yml ps'
 
