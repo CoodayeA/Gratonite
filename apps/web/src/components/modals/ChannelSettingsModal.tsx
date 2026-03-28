@@ -218,8 +218,8 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                     display: 'flex',
                     width: '860px',
                     maxWidth: '95vw',
-                    height: '620px',
-                    maxHeight: '90vh',
+                    height: 'min(620px, calc(90vh - var(--desktop-titlebar-inset, 0px)))',
+                    maxHeight: 'calc(90vh - var(--desktop-titlebar-inset, 0px))',
                     overflow: 'hidden',
                 }}
             >

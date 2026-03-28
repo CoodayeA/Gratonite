@@ -167,6 +167,7 @@ const DirectMessage = () => {
     const attachmentInputRef = useRef<HTMLInputElement>(null);
     const [inputValue, setInputValue] = useState('');
     const [dmAttachedFiles, setDmAttachedFiles] = useState<{file: File, name: string, size: string, previewUrl?: string}[]>([]);
+    const recentDmAttachmentFingerprintsRef = useRef<Map<string, number>>(new Map());
     const [isDragOver, setIsDragOver] = useState(false);
     const [infoPanelOpen, setInfoPanelOpen] = useState(false);
     const isMobile = useIsMobile();
@@ -178,6 +179,7 @@ const DirectMessage = () => {
 
     // API 429 rate-limit cooldown with countdown
     const [rateLimitRemaining, setRateLimitRemaining] = useState(0);
+    const [isSendingMessage, setIsSendingMessage] = useState(false);
     useEffect(() => {
         const handler = (e: Event) => {
             const { retryAfter } = (e as CustomEvent).detail ?? {};
@@ -878,8 +880,11 @@ const DirectMessage = () => {
 
         unsubs.push(onMessageCreate((data: MessageCreatePayload) => {
             if (data.channelId !== dmChannelId) return;
-            if (data.authorId === currentUserId) return;
-            const authorName = data.author?.displayName || data.author?.username || data.authorId.slice(0, 8);
+            // Keep system messages (e.g. call/fame events) even when authored by us.
+            if (data.authorId === currentUserId && !data.isSystem) return;
+            const authorName = data.isSystem
+                ? 'System'
+                : (data.author?.displayName || data.author?.username || data.authorId.slice(0, 8));
             const msgId = typeof data.id === 'string' ? parseInt(data.id, 36) || Date.now() : Number(data.id);
             const isEncryptedMsg = (data as any).isEncrypted ?? false;
             const encryptedContent = (data as any).encryptedContent ?? null;
@@ -888,7 +893,7 @@ const DirectMessage = () => {
                 apiId: data.id,
                 authorId: data.authorId,
                 author: authorName,
-                system: false,
+                system: data.isSystem ?? false,
                 avatar: authorName.charAt(0).toUpperCase(),
                 authorAvatarHash: (data as any).author?.avatarHash ?? null,
                 authorNameplateStyle: (data as any).author?.nameplateStyle ?? null,
@@ -1495,7 +1500,7 @@ const DirectMessage = () => {
         return () => { unsubAnswer(); unsubReject(); };
     }, [dmChannelId, userName, connect, addToast]);
 
-    // Auto-start call when navigated with ?call=voice or ?call=video
+    // Auto-start outgoing call when navigated with ?call=voice or ?call=video
     const autoCallHandled = useRef(false);
     useEffect(() => {
         let autoCallTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1516,9 +1521,42 @@ const DirectMessage = () => {
         };
     }, [searchParams, isConnected, isConnecting, dmChannelId]);
 
+    // Auto-join accepted incoming call when navigated with ?join=voice or ?join=video
+    const autoJoinHandled = useRef(false);
+    useEffect(() => {
+        let autoJoinTimer: ReturnType<typeof setTimeout> | null = null;
+        const joinType = searchParams.get('join');
+        if (joinType && !autoJoinHandled.current && !isConnected && !isConnecting && dmChannelId) {
+            autoJoinHandled.current = true;
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('join');
+            setSearchParams(newParams, { replace: true });
+
+            autoJoinTimer = setTimeout(() => {
+                connect()
+                    .then(async () => {
+                        if (joinType === 'video') {
+                            try {
+                                await toggleCamera();
+                            } catch {
+                                // Keep call connected even if camera enabling fails.
+                            }
+                        }
+                    })
+                    .catch((err) => {
+                        showCallErrorToast(err);
+                    });
+            }, 150);
+        }
+        return () => {
+            if (autoJoinTimer) clearTimeout(autoJoinTimer);
+        };
+    }, [searchParams, isConnected, isConnecting, dmChannelId, connect, setSearchParams, toggleCamera, showCallErrorToast]);
+
     // Reset auto-call flag when channel changes
     useEffect(() => {
         autoCallHandled.current = false;
+        autoJoinHandled.current = false;
     }, [dmChannelId]);
 
     // End call
@@ -1540,29 +1578,6 @@ const DirectMessage = () => {
             setParticipantVolume(participants[0].id, volume);
         }
     };
-
-    // Paste image support
-    useEffect(() => {
-        const handlePaste = (e: ClipboardEvent) => {
-            const items = e.clipboardData?.items;
-            if (!items) return;
-            for (const item of items) {
-                if (item.type.startsWith('image/')) {
-                    const file = item.getAsFile();
-                    if (file) {
-                        setDmAttachedFiles(prev => [...prev, {
-                            file,
-                            name: `pasted-image-${Date.now()}.png`,
-                            size: file.size < 1024 ? `${file.size} B` : file.size < 1048576 ? `${(file.size / 1024).toFixed(1)} KB` : `${(file.size / 1048576).toFixed(1)} MB`,
-                            previewUrl: URL.createObjectURL(file)
-                        }]);
-                    }
-                }
-            }
-        };
-        window.addEventListener('paste', handlePaste);
-        return () => window.removeEventListener('paste', handlePaste);
-    }, []);
 
     // Mention autocomplete: filter group participants
     const filteredMentionUsers = groupParticipants.filter(u =>
@@ -1587,6 +1602,43 @@ const DirectMessage = () => {
     }, [isGroupDm, groupParticipants, currentUserId, currentUserName, recipientId, userName, profileData?.displayName]);
 
     const dmCursorPosRef = useRef(0);
+
+    const formatAttachmentSize = useCallback((size: number) => {
+        if (size < 1024) return `${size} B`;
+        if (size < 1048576) return `${(size / 1024).toFixed(1)} KB`;
+        return `${(size / 1048576).toFixed(1)} MB`;
+    }, []);
+
+    const enqueueDmFiles = useCallback((files: File[]) => {
+        if (!files.length) return;
+        const now = Date.now();
+        const recent = recentDmAttachmentFingerprintsRef.current;
+
+        for (const [fingerprint, ts] of recent.entries()) {
+            if (now - ts > 2000) recent.delete(fingerprint);
+        }
+
+        setDmAttachedFiles(prev => {
+            const existingFingerprints = new Set(
+                prev.map(f => `${f.file.name}:${f.file.size}:${f.file.type}:${f.file.lastModified}`)
+            );
+            const next = [...prev];
+
+            for (const file of files) {
+                const fingerprint = `${file.name}:${file.size}:${file.type}:${file.lastModified}`;
+                if (recent.has(fingerprint) || existingFingerprints.has(fingerprint)) continue;
+                recent.set(fingerprint, now);
+                existingFingerprints.add(fingerprint);
+                next.push({
+                    file,
+                    name: file.name || `attachment-${Date.now()}`,
+                    size: formatAttachmentSize(file.size),
+                    previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
+                });
+            }
+            return next;
+        });
+    }, [formatAttachmentSize]);
 
     const handleDmInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = e.target.value;
@@ -1717,6 +1769,7 @@ const DirectMessage = () => {
     };
 
     const handleSendMessage = async () => {
+        if (isSendingMessage) return;
         if (inputValue.trim() === '' && dmAttachedFiles.length === 0) return;
         if (!dmChannelId) {
             addToast({ title: 'Message unavailable', description: 'Conversation is not ready yet. Please retry.', variant: 'error' });
@@ -1731,113 +1784,117 @@ const DirectMessage = () => {
             addToast({ title: `Message too long (${dmWireContent.length}/2000)`, variant: 'error' });
             return;
         }
-
-        // Upload files — encrypt file content if E2E key is available
-        const uploadedFiles: { id: string; url: string; filename: string; mimeType: string; size: number }[] = [];
-        const encryptedFileMeta: Array<{ id: string; iv: string; ef: string; mt: string }> = [];
-        for (const f of dmAttachedFiles) {
-            try {
-                if (e2eEnabled && e2eKey) {
-                    // Encrypt file content and filename before upload
-                    const { encryptedBlob, encryptedFilename, iv } = await encryptFile(e2eKey, f.file);
-                    const encFile = new File([encryptedBlob], 'encrypted.bin', { type: 'application/octet-stream' });
-                    const result = await api.files.upload(encFile);
-                    uploadedFiles.push(result);
-                    encryptedFileMeta.push({ id: result.id, iv, ef: encryptedFilename, mt: f.file.type || 'application/octet-stream' });
-                } else {
-                    const result = await api.files.upload(f.file);
-                    uploadedFiles.push(result);
-                }
-            } catch {
-                addToast({ title: `Failed to upload ${f.name}`, variant: 'error' });
-            }
-        }
-
-        const content = resolveDmWireContent(inputValue).trim() || null;
-        const attachmentIds = uploadedFiles.map(f => f.id);
-
-        if (content || attachmentIds.length > 0) {
-            const optimisticId = Date.now();
-            // Build attachment metadata for the optimistic message
-            const attachments: MessageAttachment[] = uploadedFiles.map((f, idx) => ({
-                id: f.id,
-                filename: encryptedFileMeta[idx] ? dmAttachedFiles[idx]?.name || f.filename : f.filename,
-                url: f.url,
-                contentType: encryptedFileMeta[idx]?.mt || f.mimeType,
-                size: f.size,
-            }));
-
-            // Build the reply reference
-            const replyToApiId = replyingTo?.apiId || undefined;
-            const replyToAuthor = replyingTo?.author || undefined;
-            const replyToContent = replyingTo?.content || undefined;
-
-            // Encrypt only when user has explicitly enabled E2E for this conversation
-            let sendPayload: { content?: string | null; encryptedContent?: string; isEncrypted?: boolean; attachmentIds?: string[]; keyVersion?: number; replyToId?: string };
-            let optimisticContent = content;
-            if (e2eEnabled && e2eKey && (content || encryptedFileMeta.length > 0)) {
+        setIsSendingMessage(true);
+        try {
+            // Upload files — encrypt file content if E2E key is available
+            const uploadedFiles: { id: string; url: string; filename: string; mimeType: string; size: number }[] = [];
+            const encryptedFileMeta: Array<{ id: string; iv: string; ef: string; mt: string }> = [];
+            for (const f of dmAttachedFiles) {
                 try {
-                    // Build structured payload when files are present, plain text otherwise
-                    const plainPayload = encryptedFileMeta.length > 0
-                        ? JSON.stringify({ _e2e: 2, text: content, files: encryptedFileMeta })
-                        : content;
-                    const encryptedContent = await encrypt(e2eKey!, plainPayload ?? '');
-                    sendPayload = { content: null, encryptedContent, isEncrypted: true, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined, ...(groupKeyVersion != null ? { keyVersion: groupKeyVersion } : {}), ...(replyToApiId ? { replyToId: replyToApiId } : {}) };
-                    // Store decrypted version optimistically so sender sees plaintext immediately
-                    setDecryptedContents(prev => { const next = new Map(prev); next.set(optimisticId, content ?? ''); return next; });
+                    if (e2eEnabled && e2eKey) {
+                        // Encrypt file content and filename before upload
+                        const { encryptedBlob, encryptedFilename, iv } = await encryptFile(e2eKey, f.file);
+                        const encFile = new File([encryptedBlob], 'encrypted.bin', { type: 'application/octet-stream' });
+                        const result = await api.files.upload(encFile);
+                        uploadedFiles.push(result);
+                        encryptedFileMeta.push({ id: result.id, iv, ef: encryptedFilename, mt: f.file.type || 'application/octet-stream' });
+                    } else {
+                        const result = await api.files.upload(f.file);
+                        uploadedFiles.push(result);
+                    }
                 } catch {
-                    // Encryption failed — send plaintext as fallback
+                    addToast({ title: `Failed to upload ${f.name}`, variant: 'error' });
+                }
+            }
+
+            const content = resolveDmWireContent(inputValue).trim() || null;
+            const attachmentIds = uploadedFiles.map(f => f.id);
+
+            if (content || attachmentIds.length > 0) {
+                const optimisticId = Date.now();
+                // Build attachment metadata for the optimistic message
+                const attachments: MessageAttachment[] = uploadedFiles.map((f, idx) => ({
+                    id: f.id,
+                    filename: encryptedFileMeta[idx] ? dmAttachedFiles[idx]?.name || f.filename : f.filename,
+                    url: f.url,
+                    contentType: encryptedFileMeta[idx]?.mt || f.mimeType,
+                    size: f.size,
+                }));
+
+                // Build the reply reference
+                const replyToApiId = replyingTo?.apiId || undefined;
+                const replyToAuthor = replyingTo?.author || undefined;
+                const replyToContent = replyingTo?.content || undefined;
+
+                // Encrypt only when user has explicitly enabled E2E for this conversation
+                let sendPayload: { content?: string | null; encryptedContent?: string; isEncrypted?: boolean; attachmentIds?: string[]; keyVersion?: number; replyToId?: string };
+                let optimisticContent = content;
+                if (e2eEnabled && e2eKey && (content || encryptedFileMeta.length > 0)) {
+                    try {
+                        // Build structured payload when files are present, plain text otherwise
+                        const plainPayload = encryptedFileMeta.length > 0
+                            ? JSON.stringify({ _e2e: 2, text: content, files: encryptedFileMeta })
+                            : content;
+                        const encryptedContent = await encrypt(e2eKey!, plainPayload ?? '');
+                        sendPayload = { content: null, encryptedContent, isEncrypted: true, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined, ...(groupKeyVersion != null ? { keyVersion: groupKeyVersion } : {}), ...(replyToApiId ? { replyToId: replyToApiId } : {}) };
+                        // Store decrypted version optimistically so sender sees plaintext immediately
+                        setDecryptedContents(prev => { const next = new Map(prev); next.set(optimisticId, content ?? ''); return next; });
+                    } catch {
+                        // Encryption failed — send plaintext as fallback
+                        sendPayload = { content, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined, ...(replyToApiId ? { replyToId: replyToApiId } : {}) };
+                    }
+                } else {
                     sendPayload = { content, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined, ...(replyToApiId ? { replyToId: replyToApiId } : {}) };
                 }
-            } else {
-                sendPayload = { content, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined, ...(replyToApiId ? { replyToId: replyToApiId } : {}) };
+
+                const isOptimisticEncrypted = e2eEnabled && e2eKey != null && content != null && content.length > 0 && 'encryptedContent' in sendPayload;
+
+                setMessages(prev => [...prev, {
+                    id: optimisticId,
+                    authorId: currentUserId,
+                    author: currentUserName || 'You',
+                    authorAvatarHash: userProfile?.avatarHash ?? null,
+                    system: false,
+                    avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    content: isOptimisticEncrypted ? '' : (optimisticContent ?? ''),
+                    createdAt: new Date().toISOString(),
+                    isEncrypted: isOptimisticEncrypted,
+                    encryptedContent: isOptimisticEncrypted ? sendPayload.encryptedContent ?? null : null,
+                    attachments,
+                    ...(replyToApiId ? { replyToId: replyToApiId, replyToAuthor, replyToContent } : {}),
+                }]);
+
+                api.messages.send(dmChannelId, sendPayload).then((res: any) => {
+                    if (res?.id) {
+                        setMessages(prev => prev.map(m => m.id === optimisticId ? { ...m, apiId: res.id, authorId: res.authorId } : m));
+                        // Move decrypted content to real message id
+                        if (isOptimisticEncrypted) {
+                            setDecryptedContents(prev => {
+                                const text = prev.get(optimisticId);
+                                if (!text) return prev;
+                                const next = new Map(prev);
+                                next.delete(optimisticId);
+                                // We can't use apiId as numeric key; keep optimistic entry for now
+                                return next;
+                            });
+                        }
+                    }
+                }).catch(() => {
+                    setMessages(prev => prev.filter(m => m.id !== optimisticId));
+                    addToast({ title: 'Failed to send message', variant: 'error' });
+                });
             }
 
-            const isOptimisticEncrypted = e2eEnabled && e2eKey != null && content != null && content.length > 0 && 'encryptedContent' in sendPayload;
-
-            setMessages(prev => [...prev, {
-                id: optimisticId,
-                authorId: currentUserId,
-                author: currentUserName || 'You',
-                authorAvatarHash: userProfile?.avatarHash ?? null,
-                system: false,
-                avatar: (currentUserName || 'Y').charAt(0).toUpperCase(),
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                content: isOptimisticEncrypted ? '' : (optimisticContent ?? ''),
-                createdAt: new Date().toISOString(),
-                isEncrypted: isOptimisticEncrypted,
-                encryptedContent: isOptimisticEncrypted ? sendPayload.encryptedContent ?? null : null,
-                attachments,
-                ...(replyToApiId ? { replyToId: replyToApiId, replyToAuthor, replyToContent } : {}),
-            }]);
-
-            api.messages.send(dmChannelId, sendPayload).then((res: any) => {
-                if (res?.id) {
-                    setMessages(prev => prev.map(m => m.id === optimisticId ? { ...m, apiId: res.id, authorId: res.authorId } : m));
-                    // Move decrypted content to real message id
-                    if (isOptimisticEncrypted) {
-                        setDecryptedContents(prev => {
-                            const text = prev.get(optimisticId);
-                            if (!text) return prev;
-                            const next = new Map(prev);
-                            next.delete(optimisticId);
-                            // We can't use apiId as numeric key; keep optimistic entry for now
-                            return next;
-                        });
-                    }
-                }
-            }).catch(() => {
-                setMessages(prev => prev.filter(m => m.id !== optimisticId));
-                addToast({ title: 'Failed to send message', variant: 'error' });
-            });
+            // Cleanup preview URLs
+            dmAttachedFiles.forEach(f => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl); });
+            setInputValue('');
+            dmMentionsMapRef.current.clear();
+            setDmAttachedFiles([]);
+            setReplyingTo(null);
+        } finally {
+            setIsSendingMessage(false);
         }
-
-        // Cleanup preview URLs
-        dmAttachedFiles.forEach(f => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl); });
-        setInputValue('');
-        dmMentionsMapRef.current.clear();
-        setDmAttachedFiles([]);
-        setReplyingTo(null);
     };
 
     const handleSendGif = (url: string, _previewUrl: string) => {
@@ -2376,13 +2433,7 @@ const DirectMessage = () => {
                                 setIsDragOver(false);
                                 const files = e.dataTransfer.files;
                                 if (!files.length) return;
-                                const newFiles = Array.from(files).map(f => ({
-                                    file: f,
-                                    name: f.name,
-                                    size: f.size < 1024 ? `${f.size} B` : f.size < 1048576 ? `${(f.size / 1024).toFixed(1)} KB` : `${(f.size / 1048576).toFixed(1)} MB`,
-                                    previewUrl: f.type.startsWith('image/') ? URL.createObjectURL(f) : undefined
-                                }));
-                                setDmAttachedFiles(prev => [...prev, ...newFiles]);
+                                enqueueDmFiles(Array.from(files));
                             }}
                         >
                             {/* Drag & Drop Overlay */}
@@ -2786,7 +2837,7 @@ const DirectMessage = () => {
                                     </div>
                                     {/* Quick Reaction Picker */}
                                     {reactionPickerMessageId === msg.id && (
-                                        <div ref={reactionPickerRef} style={{ position: 'absolute', top: '-44px', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '20px', padding: '4px 8px', display: 'flex', gap: '2px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 30 }}>
+                                        <div ref={reactionPickerRef} style={{ position: 'absolute', top: isGrouped ? '34px' : '38px', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '20px', padding: '4px 8px', display: 'flex', gap: '2px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 30 }}>
                                             {quickReactions.map(emoji => (
                                                 <button key={emoji} onClick={() => handleReaction(msg.apiId, emoji, false)} className="hover-bg-tertiary" style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 6px', borderRadius: '8px', transition: 'all 0.15s' }}>
                                                     {emoji}
@@ -2796,7 +2847,7 @@ const DirectMessage = () => {
                                     )}
                                     {/* Hover actions */}
                                     {hoveredMessageId === msg.id && !msg.system && (
-                                        <div style={{ position: 'absolute', top: '-12px', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', padding: '4px', display: 'flex', gap: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', zIndex: 10 }}>
+                                        <div style={{ position: 'absolute', top: isGrouped ? '2px' : '6px', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', padding: '4px', display: 'flex', gap: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', zIndex: 20 }}>
                                             <button onClick={() => setReactionPickerMessageId(reactionPickerMessageId === msg.id ? null : msg.id)} className="hover-bg-tertiary" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} title="Add Reaction"><Smile size={16} /></button>
                                             <button onClick={() => setActiveThreadMessage(msg)} className="hover-bg-tertiary" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} title="Create Thread"><MessageSquare size={16} /></button>
                                             <button onClick={() => { if (msg.content) copyToClipboard(msg.content); addToast({ title: 'Copied', variant: 'info' }); }} className="hover-bg-tertiary" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px', borderRadius: '4px' }} title="Copy Text"><Copy size={16} /></button>
@@ -2845,13 +2896,7 @@ const DirectMessage = () => {
                                 onChange={(e) => {
                                     const files = e.target.files;
                                     if (!files) return;
-                                    const newFiles = Array.from(files).map(f => ({
-                                        file: f,
-                                        name: f.name,
-                                        size: f.size < 1024 ? `${f.size} B` : f.size < 1048576 ? `${(f.size / 1024).toFixed(1)} KB` : `${(f.size / 1048576).toFixed(1)} MB`,
-                                        previewUrl: f.type.startsWith('image/') ? URL.createObjectURL(f) : undefined
-                                    }));
-                                    setDmAttachedFiles(prev => [...prev, ...newFiles]);
+                                    enqueueDmFiles(Array.from(files));
                                     e.target.value = '';
                                 }}
                             />
@@ -2962,11 +3007,7 @@ const DirectMessage = () => {
                                                 e.preventDefault();
                                                 const file = item.getAsFile();
                                                 if (file) {
-                                                    setDmAttachedFiles(prev => [...prev, {
-                                                        name: file.name || `pasted-image.${item.type.split('/')[1] || 'png'}`,
-                                                        size: file.size < 1024 ? `${file.size} B` : file.size < 1048576 ? `${(file.size / 1024).toFixed(1)} KB` : `${(file.size / 1048576).toFixed(1)} MB`,
-                                                        file,
-                                                    }]);
+                                                    enqueueDmFiles([file]);
                                                 }
                                                 break;
                                             }
@@ -2985,10 +3026,10 @@ const DirectMessage = () => {
                                     className={`input-icon-btn ${inputValue.trim().length > 0 ? 'primary' : ''}`}
                                     aria-label={rateLimitRemaining > 0 ? `Rate limited, wait ${rateLimitRemaining}s` : 'Send message'}
                                     onClick={editingMessage ? handleEditSubmit : handleSendMessage}
-                                    disabled={rateLimitRemaining > 0 || (inputValue.trim().length === 0 && (!dmAttachedFiles || dmAttachedFiles.length === 0))}
-                                    style={{ opacity: rateLimitRemaining > 0 ? 0.5 : (inputValue.trim().length > 0 || (dmAttachedFiles && dmAttachedFiles.length > 0)) ? 1 : 0.5, cursor: rateLimitRemaining > 0 ? 'not-allowed' : (inputValue.trim().length > 0 || (dmAttachedFiles && dmAttachedFiles.length > 0)) ? 'pointer' : 'default' }}
+                                    disabled={isSendingMessage || rateLimitRemaining > 0 || (inputValue.trim().length === 0 && (!dmAttachedFiles || dmAttachedFiles.length === 0))}
+                                    style={{ opacity: (isSendingMessage || rateLimitRemaining > 0) ? 0.5 : (inputValue.trim().length > 0 || (dmAttachedFiles && dmAttachedFiles.length > 0)) ? 1 : 0.5, cursor: (isSendingMessage || rateLimitRemaining > 0) ? 'not-allowed' : (inputValue.trim().length > 0 || (dmAttachedFiles && dmAttachedFiles.length > 0)) ? 'pointer' : 'default' }}
                                 >
-                                    {rateLimitRemaining > 0 ? <span style={{ fontSize: '12px', fontWeight: 700 }}>{rateLimitRemaining}s</span> : editingMessage ? <Check size={18} /> : <Send size={18} />}
+                                    {isSendingMessage ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> : rateLimitRemaining > 0 ? <span style={{ fontSize: '12px', fontWeight: 700 }}>{rateLimitRemaining}s</span> : editingMessage ? <Check size={18} /> : <Send size={18} />}
                                 </button>
                             </div>
                         </div>

@@ -64,6 +64,8 @@
     --z-modal-nested: 1100;
     --z-toast: 2000;
     --z-context-menu: 2100;
+    --desktop-titlebar-inset: 0px;
+    --desktop-titlebar-auth-offset: 0px;
 }
 
 /* ------------------------
@@ -1657,6 +1659,12 @@ html .main-view.has-custom-bg .input-area {
   position: relative;
 }
 
+body.electron-win .auth-container,
+body.electron-mac .auth-container {
+  padding-top: var(--desktop-titlebar-auth-offset);
+  box-sizing: border-box;
+}
+
 .auth-pattern-bg {
   position: fixed;
   inset: 0;
@@ -3055,6 +3063,10 @@ button:active:not(:disabled) {
 
 
 /* macOS desktop title bar spacing — clear traffic light buttons */
+body.electron-mac {
+  --desktop-titlebar-inset: 28px;
+  --desktop-titlebar-auth-offset: 36px;
+}
 body.electron-mac .guild-rail {
   padding-top: 40px;
 }
@@ -3064,6 +3076,10 @@ body.electron-mac .sidebar-header {
 }
 
 /* Windows desktop — drag region and title bar spacing */
+body.electron-win {
+  --desktop-titlebar-inset: 36px;
+  --desktop-titlebar-auth-offset: 44px;
+}
 body.electron-win .guild-rail {
   padding-top: 36px;
   -webkit-app-region: drag;
@@ -3085,6 +3101,12 @@ body.electron-win [role="button"],
 body.electron-win .guild-icon,
 body.electron-win .context-menu {
   -webkit-app-region: no-drag;
+}
+
+body.electron-win .modal-backdrop,
+body.electron-mac .modal-backdrop {
+  padding-top: var(--desktop-titlebar-inset);
+  box-sizing: border-box;
 }
 
 /* Mobile-optimized chat input (Item 7) */
@@ -4852,4 +4874,3 @@ textarea:focus-visible,
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
-

@@ -356,19 +356,25 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                 api.users.createGuildFolder({ name: 'New Folder', color: '#526df5', guildIds: [guild.id] }).catch(() => { addToast({ title: 'Failed to create folder', variant: 'error' }); });
                 addToast({ title: 'Folder created', variant: 'success' });
             }},
-            { id: 'leave', label: 'Leave Portal', icon: LogOut, color: 'var(--error)', onClick: () => {
-                const guildId = guild.id;
-                onGuildLeave?.(guildId);
-                if (location.pathname.startsWith(`/guild/${guildId}`)) navigate('/');
-                addToast({
-                    title: `Left ${guild.name}`,
-                    variant: 'undo' as const,
-                    onUndo: () => { onGuildsRefresh?.(); },
-                    onExpire: () => {
-                        api.guilds.leave(guildId).catch(() => { onGuildsRefresh?.(); addToast({ title: 'Failed to leave portal', variant: 'error' }); });
-                    },
-                });
-            }},
+            ...(!isOwner ? [{
+                id: 'leave',
+                label: 'Leave Portal',
+                icon: LogOut,
+                color: 'var(--error)',
+                onClick: () => {
+                    const guildId = guild.id;
+                    onGuildLeave?.(guildId);
+                    if (location.pathname.startsWith(`/guild/${guildId}`)) navigate('/');
+                    addToast({
+                        title: `Left ${guild.name}`,
+                        variant: 'undo' as const,
+                        onUndo: () => { onGuildsRefresh?.(); },
+                        onExpire: () => {
+                            api.guilds.leave(guildId).catch(() => { onGuildsRefresh?.(); addToast({ title: 'Failed to leave portal', variant: 'error' }); });
+                        },
+                    });
+                },
+            }] : []),
         ]);
     };
 
@@ -2058,7 +2064,16 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     if (isChannelsLoading && guildChannels.length === 0) return null;
                     // Group channels by category (parentId)
                     const isCategoryType = (type: string) => type === 'category' || type === 'GUILD_CATEGORY';
-                    const categories = guildChannels.filter(c => isCategoryType(c.type)).sort((a, b) => a.position - b.position);
+                    const seenCategoryKeys = new Set<string>();
+                    const categories = guildChannels
+                        .filter(c => isCategoryType(c.type))
+                        .sort((a, b) => a.position - b.position)
+                        .filter((cat) => {
+                            const key = `${cat.type}:${cat.name.toLowerCase()}`;
+                            if (seenCategoryKeys.has(key)) return false;
+                            seenCategoryKeys.add(key);
+                            return true;
+                        });
                     const uncategorized = guildChannels.filter(c => !isCategoryType(c.type) && !c.parentId).sort((a, b) => a.position - b.position);
                     const channelsByParent = new Map<string, typeof guildChannels>();
                     for (const ch of guildChannels) {
@@ -3646,8 +3661,8 @@ export const AppLayout = () => {
         try {
             await api.voice.callAnswer(incomingCall.channelId);
             setIncomingCall(null);
-            // Navigate to the DM channel with call param
-            navigate(`/dm/${incomingCall.callerId}?call=${withVideo ? 'video' : 'voice'}`);
+            // Navigate to the DM and auto-join the accepted call (do not send a new invite).
+            navigate(`/dm/${incomingCall.callerId}?join=${withVideo ? 'video' : 'voice'}`);
         } catch {
             addToast({ title: 'Failed to answer call', variant: 'error' });
             setIncomingCall(null);

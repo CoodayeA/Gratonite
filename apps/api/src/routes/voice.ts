@@ -79,11 +79,28 @@ if (process.env.NODE_ENV !== 'production') {
 
 /** Resolve LiveKit WebSocket URL, enforcing wss:// in production to prevent SecurityError. */
 function getLiveKitEndpoint(): string {
-  const raw = process.env.LIVEKIT_URL || 'ws://localhost:7880';
-  if (process.env.NODE_ENV === 'production' && raw.startsWith('ws://')) {
-    return raw.replace(/^ws:\/\//, 'wss://');
+  const inProduction = process.env.NODE_ENV === 'production';
+  const configured = (process.env.LIVEKIT_URL || '').trim();
+  const fallback = inProduction ? 'wss://localhost:7880' : 'ws://localhost:7880';
+
+  let normalized = configured || fallback;
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(normalized)) {
+    normalized = `${inProduction ? 'wss' : 'ws'}://${normalized}`;
   }
-  return raw;
+
+  try {
+    const url = new URL(normalized);
+    if (url.protocol === 'http:') url.protocol = 'ws:';
+    if (url.protocol === 'https:') url.protocol = 'wss:';
+    if (inProduction && url.protocol === 'ws:') url.protocol = 'wss:';
+    if (url.pathname === '/') url.pathname = '';
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    if (inProduction && normalized.startsWith('ws://')) {
+      return normalized.replace(/^ws:\/\//, 'wss://');
+    }
+    return normalized;
+  }
 }
 
 // ---------------------------------------------------------------------------

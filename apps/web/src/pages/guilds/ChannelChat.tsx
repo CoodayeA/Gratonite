@@ -1570,8 +1570,9 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     typingTimersRef.current.delete(data.authorId);
                 }
             }
-            // Don't duplicate messages we sent optimistically
-            if (data.authorId === currentUserId) return;
+            // Don't duplicate normal messages we sent optimistically.
+            // Keep system events (e.g. FAME announcements) even when authored by us.
+            if (data.authorId === currentUserId && !data.isSystem) return;
             const authorInfo = userCacheRef.current.get(data.authorId);
             const authorName = data.author?.displayName || data.author?.username || authorInfo?.displayName || authorInfo?.username || data.authorId?.slice(0, 8) || 'Unknown';
             // Resolve reply reference if present

@@ -820,7 +820,7 @@ export const MemoizedMessageItem = memo(({
                 </div>
                 {/* Reaction Picker Popup */}
                 {showReactionPicker && (
-                    <div ref={reactionPickerRef} style={{ position: 'absolute', top: '-44px', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '20px', padding: '4px 8px', display: 'flex', gap: '2px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 20 }}>
+                    <div ref={reactionPickerRef} style={{ position: 'absolute', top: isGrouped ? '34px' : '38px', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '20px', padding: '4px 8px', display: 'flex', gap: '2px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 30 }}>
                         {quickReactions.map(qEmoji => (
                             qEmoji === '\u{1F44F}' ? (
                                 <SlowClapReaction key={qEmoji} onClap={() => { onReaction?.(msg.apiId, qEmoji, false); setShowReactionPicker(false); }} />
@@ -835,11 +835,11 @@ export const MemoizedMessageItem = memo(({
                 {/* Interactive Message Toolbar */}
                 {isHovered && (
                     <div style={{
-                        position: 'absolute', top: isGrouped ? '-16px' : '-12px', right: '16px',
+                        position: 'absolute', top: isGrouped ? '2px' : '6px', right: '16px',
                         background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
                         borderRadius: 'var(--radius-sm)', padding: '4px',
                         display: 'flex', gap: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                        zIndex: 10
+                        zIndex: 20
                     }}>
                         <Tooltip content="Add Reaction" position="top">
                             <button className="message-action-btn" onClick={(e) => { e.stopPropagation(); setShowReactionPicker(!showReactionPicker); }}>
