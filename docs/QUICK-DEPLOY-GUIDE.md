@@ -48,7 +48,7 @@ SMTP_PASS=
 SMTP_FROM=noreply@yourdomain.com
 APP_URL=https://yourdomain.com
 CORS_ORIGIN=https://yourdomain.com
-LIVEKIT_URL=wss://livekit.yourdomain.com
+LIVEKIT_URL=wss://api.yourdomain.com
 LIVEKIT_API_KEY=
 LIVEKIT_API_SECRET=
 ```
@@ -59,7 +59,7 @@ LIVEKIT_API_SECRET=
 git pull
 cd apps/api && pnpm install && pnpm run build && cd ../..
 cd apps/web && pnpm install && pnpm run build && cd ../..
-cd deploy && docker compose -f docker-compose.production.yml up -d --force-recreate api web
+cd deploy && docker compose -f docker-compose.production.yml up -d --force-recreate api web caddy livekit
 docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js"
 ```
 
