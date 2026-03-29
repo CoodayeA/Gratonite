@@ -67,6 +67,7 @@ If you deploy with `deploy/deploy.sh`, the script now enforces guardrails:
 - protects remote `.env` files during rsync
 - aborts before restart if required env vars are missing/invalid
 - checks Bull Board token passthrough exists in compose
+- blocks deploys if a legacy public `gratonite-caddy-1` proxy is still bound to ports 80/443
 - waits for `API_HEALTH_URL` (default: `https://api.gratonite.chat/health`) before reporting success
 
 ## Useful Commands

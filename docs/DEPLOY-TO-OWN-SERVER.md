@@ -91,7 +91,7 @@ This starts:
 - **Redis 7** — caching and real-time state
 - **API** — Node.js backend on port 4000
 - **Web** — Nginx serving the built React app
-- **Caddy** — reverse proxy with automatic HTTPS
+- **Caddy** — the only public reverse proxy, bound to ports 80/443 with automatic HTTPS
 
 ### 6. Run database migrations
 
@@ -133,6 +133,17 @@ If you use `deploy/deploy.sh` from your laptop, the script now performs a remote
 - validates JWT secret length and difference
 - verifies compose passes `BULLBOARD_ADMIN_TOKEN` into the API container
 - preserves remote `.env`/`.env.*` during rsync
+- refuses to deploy while a legacy public `gratonite-caddy-1` container is still bound to ports 80/443
+
+## Production Source Of Truth
+
+Production should have exactly one public proxy:
+
+- public proxy container: `gratonite-caddy`
+- public proxy config: `deploy/Caddyfile` in the repo, mounted to `/home/ferdinand/gratonite-app/Caddyfile`
+- public compose file: `deploy/docker-compose.production.yml`
+
+Legacy containers such as `gratonite-caddy-1`, ad hoc `/tmp/Caddyfile.final`, or other public 80/443 proxies should be removed during cleanup and not used for future deploys.
 
 ## Data & Backups
 
