@@ -87,7 +87,7 @@ Voice requires a LiveKit server. You can run one alongside Gratonite:
 docker compose --profile voice up -d
 
 # Or use an external LiveKit server:
-LIVEKIT_URL=wss://livekit.example.com
+LIVEKIT_URL=wss://api.example.com
 LIVEKIT_API_KEY=your-key
 LIVEKIT_API_SECRET=your-secret
 ```

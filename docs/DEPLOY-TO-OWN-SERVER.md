@@ -46,9 +46,11 @@ APP_URL=https://yourdomain.com
 CORS_ORIGIN=https://yourdomain.com
 
 # LiveKit (required for voice/video)
-LIVEKIT_URL=wss://livekit.yourdomain.com
-LIVEKIT_API_KEY=your-livekit-api-key
-LIVEKIT_API_SECRET=your-livekit-api-secret
+# For the bundled self-hosted setup, you can leave these blank and the deploy
+# script will generate the key/secret and default LIVEKIT_URL to api.yourdomain.com.
+LIVEKIT_URL=wss://api.yourdomain.com
+LIVEKIT_API_KEY=
+LIVEKIT_API_SECRET=
 ```
 
 ### 3. Build the application
