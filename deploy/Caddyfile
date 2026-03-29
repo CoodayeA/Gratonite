@@ -25,6 +25,9 @@ gratonite.chat {
 
 # API subdomain
 api.gratonite.chat {
+    handle /rtc* {
+        reverse_proxy gratonite-livekit:7880
+    }
     reverse_proxy gratonite-api:4000
 }
 

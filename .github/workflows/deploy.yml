@@ -74,8 +74,38 @@ jobs:
         run: |
           ssh ferdinand@gratonite.chat \
             'cd /home/ferdinand/gratonite-app &&
+             set -euo pipefail &&
+             set_env() {
+               key="$1"
+               value="$2"
+               tmp_file="$(mktemp)"
+               awk -v key="$key" -v value="$value" '"'"'
+                 BEGIN { done = 0 }
+                 index($0, key "=") == 1 {
+                   print key "=" value
+                   done = 1
+                   next
+                 }
+                 { print }
+                 END {
+                   if (!done) {
+                     print key "=" value
+                   }
+                 }
+               '"'"' .env > "$tmp_file" &&
+               mv "$tmp_file" .env
+             } &&
+             if [ ! -f .env ]; then echo "Missing .env on server" >&2; exit 1; fi &&
+             LIVEKIT_API_KEY="$(grep -E "^LIVEKIT_API_KEY=" .env | head -n1 | cut -d= -f2- || true)" &&
+             LIVEKIT_API_SECRET="$(grep -E "^LIVEKIT_API_SECRET=" .env | head -n1 | cut -d= -f2- || true)" &&
+             LIVEKIT_URL="$(grep -E "^LIVEKIT_URL=" .env | head -n1 | cut -d= -f2- || true)" &&
+             APP_URL_VALUE="$(grep -E "^APP_URL=" .env | head -n1 | cut -d= -f2- || true)" &&
+             if [ -z "$LIVEKIT_API_KEY" ]; then LIVEKIT_API_KEY="gratonite_$(openssl rand -hex 6)"; set_env LIVEKIT_API_KEY "$LIVEKIT_API_KEY"; fi &&
+             if [ -z "$LIVEKIT_API_SECRET" ]; then LIVEKIT_API_SECRET="$(openssl rand -base64 32 | tr -d "\n")"; set_env LIVEKIT_API_SECRET "$LIVEKIT_API_SECRET"; fi &&
+             if [ -z "$LIVEKIT_URL" ]; then APP_HOST="${APP_URL_VALUE#*://}"; APP_HOST="${APP_HOST%%/*}"; BASE_HOST="$APP_HOST"; case "$BASE_HOST" in app.*) BASE_HOST="${BASE_HOST#app.}" ;; esac; LIVEKIT_URL="wss://api.${BASE_HOST}"; set_env LIVEKIT_URL "$LIVEKIT_URL"; fi &&
+             if docker ps --format "{{.Names}} {{.Ports}}" | grep -q "^gratonite-caddy-1 .*0.0.0.0:80->"; then echo "Legacy public proxy gratonite-caddy-1 is still bound to 80/443" >&2; exit 1; fi &&
              ENV_FILE=".env.production"; [ -f "$ENV_FILE" ] || ENV_FILE=".env" &&
-             docker compose --env-file "$ENV_FILE" -f docker-compose.production.yml up -d --force-recreate api web &&
+             docker compose --env-file "$ENV_FILE" -f docker-compose.production.yml up -d --force-recreate api web caddy livekit &&
              docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js" &&
              docker compose -f docker-compose.production.yml ps'
 

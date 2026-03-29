@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
@@ -98,14 +96,37 @@ services:
     depends_on:
       - api
 
+  # Self-hosted LiveKit for voice/video
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: gratonite-livekit
+    restart: unless-stopped
+    command:
+      - --config-body
+      - |
+        port: 7880
+        rtc:
+          tcp_port: 7881
+          udp_port: 7882
+          use_external_ip: true
+        keys:
+          ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+    ports:
+      - "7881:7881"
+      - "7882:7882/udp"
+    networks:
+      - gratonite-network
+    depends_on:
+      - redis
+
   # Caddy Reverse Proxy (integrates with existing setup)
   caddy:
     image: caddy:2.11-alpine
-    container_name: gratonite-caddy-new
+    container_name: gratonite-caddy
     restart: unless-stopped
     ports:
-      - "8080:80"
-      - "8443:443"
+      - "80:80"
+      - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -113,17 +134,24 @@ services:
       - /home/ferdinand/gratonite-releases:/srv/releases:ro
     networks:
       - gratonite-network
+      - landing-network
     depends_on:
       - web
       - api
+      - livekit
 
 volumes:
   postgres_data:
   redis_data:
   api_uploads:
   caddy_data:
+    name: gratonite_caddy_data
   caddy_config:
+    name: gratonite_caddy_config
 
 networks:
   gratonite-network:
     driver: bridge
+  landing-network:
+    external: true
+    name: gratonite_default

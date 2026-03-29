@@ -72,6 +72,27 @@ ssh -i "$SSH_KEY" "$USER@$SERVER" "REMOTE_DIR='$REMOTE_DIR' bash -s" << 'ENDSSH'
 set -euo pipefail
 cd "$REMOTE_DIR"
 
+set_env() {
+  key="$1"
+  value="$2"
+  tmp_file="$(mktemp)"
+  awk -v key="$key" -v value="$value" '
+    BEGIN { done = 0 }
+    index($0, key "=") == 1 {
+      print key "=" value
+      done = 1
+      next
+    }
+    { print }
+    END {
+      if (!done) {
+        print key "=" value
+      }
+    }
+  ' .env > "$tmp_file"
+  mv "$tmp_file" .env
+}
+
 if [[ ! -f .env ]]; then
   echo "❌ Missing $REMOTE_DIR/.env. Aborting deploy before container restart."
   exit 1
@@ -106,6 +127,41 @@ if ! grep -q 'BULLBOARD_ADMIN_TOKEN:' docker-compose.production.yml; then
   exit 1
 fi
 
+if docker ps --format '{{.Names}} {{.Ports}}' | grep -q '^gratonite-caddy-1 .*0.0.0.0:80->'; then
+  echo "❌ Legacy public proxy gratonite-caddy-1 is still running on 80/443."
+  echo "   Clean up the old public Caddy before using the canonical compose-managed proxy."
+  exit 1
+fi
+
+livekit_url="$(grep -E '^LIVEKIT_URL=' .env | head -n1 | cut -d= -f2- || true)"
+livekit_key="$(grep -E '^LIVEKIT_API_KEY=' .env | head -n1 | cut -d= -f2- || true)"
+livekit_secret="$(grep -E '^LIVEKIT_API_SECRET=' .env | head -n1 | cut -d= -f2- || true)"
+app_url="$(grep -E '^APP_URL=' .env | head -n1 | cut -d= -f2- || true)"
+
+if [[ -z "$livekit_key" ]]; then
+  livekit_key="gratonite_$(openssl rand -hex 6)"
+  set_env LIVEKIT_API_KEY "$livekit_key"
+  echo "ℹ️  Generated LIVEKIT_API_KEY in server .env"
+fi
+
+if [[ -z "$livekit_secret" ]]; then
+  livekit_secret="$(openssl rand -base64 32 | tr -d '\n')"
+  set_env LIVEKIT_API_SECRET "$livekit_secret"
+  echo "ℹ️  Generated LIVEKIT_API_SECRET in server .env"
+fi
+
+if [[ -z "$livekit_url" ]]; then
+  app_host="${app_url#*://}"
+  app_host="${app_host%%/*}"
+  base_host="$app_host"
+  if [[ "$base_host" == app.* ]]; then
+    base_host="${base_host#app.}"
+  fi
+  livekit_url="wss://api.${base_host}"
+  set_env LIVEKIT_URL "$livekit_url"
+  echo "ℹ️  Set LIVEKIT_URL=$livekit_url in server .env"
+fi
+
 echo "✅ Preflight checks passed."
 ENDSSH
 
@@ -115,8 +171,8 @@ ssh -i "$SSH_KEY" "$USER@$SERVER" "REMOTE_DIR='$REMOTE_DIR' bash -s" << 'ENDSSH'
 set -euo pipefail
 cd "$REMOTE_DIR"
 
-# Recreate only api and web — leaves postgres/redis/caddy untouched (no downtime on DB)
-docker compose -f docker-compose.production.yml up -d --force-recreate api web
+# Recreate app services, including the canonical public proxy and LiveKit.
+docker compose -f docker-compose.production.yml up -d --force-recreate api web caddy livekit
 
 # Run any new database migrations
 echo "Running database migrations..."

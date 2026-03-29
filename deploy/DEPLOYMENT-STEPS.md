@@ -99,22 +99,13 @@ docker logs gratonite-api
 
 The existing Caddy container needs to be updated to proxy to our new services.
 
-Option A: Update existing Caddy container
+Canonical approach:
 ```bash
-# Find existing Caddy config
-docker exec gratonite-caddy-1 cat /etc/caddy/Caddyfile
-
-# We need to add our new routes to it
+# Use the compose-managed public Caddy only
+docker compose -f docker-compose.production.yml up -d --force-recreate caddy
 ```
 
-Option B: Use our new Caddy container (recommended)
-```bash
-# Stop old Caddy
-docker stop gratonite-caddy-1
-
-# Our new Caddy will handle all routing
-# Edit docker-compose.production.yml to use ports 80 and 443 instead of 8080 and 8443
-```
+Do not keep a second public proxy like `gratonite-caddy-1` or a config mounted from `/tmp/Caddyfile.final`.
 
 ### 8. Configure DNS
 
