@@ -12,7 +12,7 @@ import { requireFederationAuth } from '../middleware/federation-auth';
 import { users } from '../db/schema/users';
 import { redis } from '../lib/redis';
 import { logger } from '../lib/logger';
-import { normalizeError } from '../lib/errors';
+import { handleAppError, normalizeError } from '../lib/errors';
 
 export const relayRouter = Router();
 
@@ -46,7 +46,7 @@ relayRouter.get('/', async (_req: Request, res: Response) => {
       res.json([]);
       return;
     }
-    throw err;
+    handleAppError(res, err, 'relay');
   }
 });
 
@@ -67,29 +67,33 @@ relayRouter.post('/register', requireFederationAuth, async (req: Request, res: R
     return;
   }
 
-  await db.insert(relayNodes).values({
-    domain,
-    websocketUrl,
-    publicKeyPem: publicKeyPem ?? null,
-    softwareVersion: softwareVersion ?? null,
-    turnSupported: turnSupported ?? false,
-    status: 'active',
-    reputationScore: 50, // Start neutral
-    registeredAt: new Date(),
-    lastHealthCheck: new Date(),
-  }).onConflictDoUpdate({
-    target: relayNodes.domain,
-    set: {
-      websocketUrl,
+  try {
+    await db.insert(relayNodes).values({
+      domain: domain.trim().toLowerCase(),
+      websocketUrl: websocketUrl.trim(),
       publicKeyPem: publicKeyPem ?? null,
       softwareVersion: softwareVersion ?? null,
       turnSupported: turnSupported ?? false,
+      status: 'active',
+      reputationScore: 50,
+      registeredAt: new Date(),
       lastHealthCheck: new Date(),
-      updatedAt: new Date(),
-    },
-  });
+    }).onConflictDoUpdate({
+      target: relayNodes.domain,
+      set: {
+        websocketUrl: websocketUrl.trim(),
+        publicKeyPem: publicKeyPem ?? null,
+        softwareVersion: softwareVersion ?? null,
+        turnSupported: turnSupported ?? false,
+        lastHealthCheck: new Date(),
+        updatedAt: new Date(),
+      },
+    });
 
-  res.status(201).json({ status: 'registered', domain });
+    res.status(201).json({ status: 'registered', domain: domain.trim().toLowerCase() });
+  } catch (err) {
+    handleAppError(res, err, 'relay');
+  }
 });
 
 /**
@@ -97,18 +101,21 @@ relayRouter.post('/register', requireFederationAuth, async (req: Request, res: R
  */
 relayRouter.get('/:relayId/status', async (req: Request, res: Response) => {
   const relayId = req.params.relayId as string;
+  try {
+    const [relay] = await db.select()
+      .from(relayNodes)
+      .where(eq(relayNodes.id, relayId))
+      .limit(1);
 
-  const [relay] = await db.select()
-    .from(relayNodes)
-    .where(eq(relayNodes.id, relayId))
-    .limit(1);
+    if (!relay) {
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Relay not found' });
+      return;
+    }
 
-  if (!relay) {
-    res.status(404).json({ code: 'NOT_FOUND', message: 'Relay not found' });
-    return;
+    res.json(relay);
+  } catch (err) {
+    handleAppError(res, err, 'relay');
   }
-
-  res.json(relay);
 });
 
 /**
@@ -123,33 +130,35 @@ relayRouter.post('/:relayId/report', requireAuth, async (req: Request, res: Resp
     return;
   }
 
-  // Rate limit: one report per relay per user per 24h
-  const dedupKey = `relay:report:${req.userId}:${relayId}`;
-  const alreadyReported = await redis.get(dedupKey);
-  if (alreadyReported) {
-    res.status(429).json({ code: 'ALREADY_REPORTED', message: 'You have already reported this relay recently' });
-    return;
+  try {
+    const dedupKey = `relay:report:${req.userId}:${relayId}`;
+    const alreadyReported = await redis.get(dedupKey);
+    if (alreadyReported) {
+      res.status(429).json({ code: 'ALREADY_REPORTED', message: 'You have already reported this relay recently' });
+      return;
+    }
+
+    const [relay] = await db.select({ domain: relayNodes.domain, reputationScore: relayNodes.reputationScore })
+      .from(relayNodes).where(eq(relayNodes.id, relayId)).limit(1);
+
+    if (!relay) {
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Relay not found' });
+      return;
+    }
+
+    await redis.set(dedupKey, '1', 'EX', 86400);
+
+    const newScore = Math.max(0, relay.reputationScore - 2);
+    await db.update(relayNodes)
+      .set({ reputationScore: newScore, updatedAt: new Date() })
+      .where(eq(relayNodes.id, relayId));
+
+    logger.info(`[relay:report] Relay ${relay.domain} reported: ${reason}. Score: ${relay.reputationScore} → ${newScore}`);
+
+    res.json({ status: 'reported', newReputationScore: newScore });
+  } catch (err) {
+    handleAppError(res, err, 'relay');
   }
-
-  const [relay] = await db.select({ domain: relayNodes.domain, reputationScore: relayNodes.reputationScore })
-    .from(relayNodes).where(eq(relayNodes.id, relayId)).limit(1);
-
-  if (!relay) {
-    res.status(404).json({ code: 'NOT_FOUND', message: 'Relay not found' });
-    return;
-  }
-
-  // Mark as reported (24h cooldown)
-  await redis.set(dedupKey, '1', 'EX', 86400);
-
-  const newScore = Math.max(0, relay.reputationScore - 2);
-  await db.update(relayNodes)
-    .set({ reputationScore: newScore, updatedAt: new Date() })
-    .where(eq(relayNodes.id, relayId));
-
-  logger.info(`[relay:report] Relay ${relay.domain} reported: ${reason}. Score: ${relay.reputationScore} → ${newScore}`);
-
-  res.json({ status: 'reported', newReputationScore: newScore });
 });
 
 /**
@@ -157,29 +166,32 @@ relayRouter.post('/:relayId/report', requireAuth, async (req: Request, res: Resp
  */
 relayRouter.get('/reputation/:relayId', async (req: Request, res: Response) => {
   const relayId = req.params.relayId as string;
+  try {
+    const [relay] = await db.select()
+      .from(relayNodes)
+      .where(eq(relayNodes.id, relayId))
+      .limit(1);
 
-  const [relay] = await db.select()
-    .from(relayNodes)
-    .where(eq(relayNodes.id, relayId))
-    .limit(1);
+    if (!relay) {
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Relay not found' });
+      return;
+    }
 
-  if (!relay) {
-    res.status(404).json({ code: 'NOT_FOUND', message: 'Relay not found' });
-    return;
+    res.json({
+      domain: relay.domain,
+      overall: relay.reputationScore,
+      breakdown: {
+        uptime: relay.uptimePercent,
+        latency: relay.latencyMs,
+        connectedInstances: relay.connectedInstances,
+        meshPeers: relay.meshPeers,
+        turnSupported: relay.turnSupported,
+      },
+      status: relay.status,
+      registeredAt: relay.registeredAt,
+      lastHealthCheck: relay.lastHealthCheck,
+    });
+  } catch (err) {
+    handleAppError(res, err, 'relay');
   }
-
-  res.json({
-    domain: relay.domain,
-    overall: relay.reputationScore,
-    breakdown: {
-      uptime: relay.uptimePercent,
-      latency: relay.latencyMs,
-      connectedInstances: relay.connectedInstances,
-      meshPeers: relay.meshPeers,
-      turnSupported: relay.turnSupported,
-    },
-    status: relay.status,
-    registeredAt: relay.registeredAt,
-    lastHealthCheck: relay.lastHealthCheck,
-  });
 });

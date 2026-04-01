@@ -516,7 +516,16 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         setChannelsLoading(true);
         try {
             const chs = await api.channels.getGuildChannels(guildId) as any[];
-            const mapped = chs.map((c: any) => ({
+            const dedupedChannels = Array.from(
+                new Map(
+                    chs.map((c: any) => {
+                        const normalizedName = (c.name || '').toLowerCase();
+                        const key = c.type === 'GUILD_CATEGORY' ? `${c.type}:${normalizedName}` : c.id;
+                        return [key, c];
+                    }),
+                ).values(),
+            );
+            const mapped = dedupedChannels.map((c: any) => ({
                 id: c.id,
                 name: c.name,
                 type: c.type,
@@ -554,9 +563,16 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
 
     const handleCreateCategory = async () => {
         if (!guildId || !newCategoryName.trim()) return;
+        const normalizedName = newCategoryName.trim().toLowerCase().replace(/\s+/g, '-');
+        if (channelsList.some(c => c.type === 'GUILD_CATEGORY' && c.name === normalizedName)) {
+            setNewCategoryName('');
+            setShowCreateCategory(false);
+            addToast({ title: 'Category already exists', variant: 'info' });
+            return;
+        }
         try {
             await api.channels.create(guildId, {
-                name: newCategoryName.trim().toLowerCase().replace(/\s+/g, '-'),
+                name: normalizedName,
                 type: 'GUILD_CATEGORY',
             });
             setNewCategoryName('');

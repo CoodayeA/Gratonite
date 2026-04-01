@@ -377,7 +377,8 @@ export function playSound(name: string) {
     setupUnlockListeners();
     if (!audioUnlocked) return;
     const perEventGainMultiplier: Record<string, number> = {
-        achievement: 0.22,
+        achievement: 0.12,
+        fame: 0.16,
     };
     const packName = getSoundPack();
     const pack = packs[packName] || packs.default;

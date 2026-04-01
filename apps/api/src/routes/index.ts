@@ -141,6 +141,7 @@ import { snippetsRouter } from './snippets';
 import { documentsRouter } from './documents';
 import { documentTemplatesRouter } from './document-templates';
 import { rssFeedsRouter } from './rss-feeds';
+import { sentryTunnelRouter } from './sentry-tunnel';
 
 export const router = Router();
 
@@ -201,6 +202,7 @@ router.use('/stats', statsRouter);
 
 // Client error reports (no auth — errors happen during login too)
 router.use('/client-errors', clientErrorsRouter);
+router.use('/sentry-tunnel', sentryTunnelRouter);
 
 // Global API rate limit (60 req/min per authenticated user).
 // Applied before feature routers so every authenticated endpoint is covered.

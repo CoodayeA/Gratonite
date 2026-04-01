@@ -180,6 +180,7 @@ const DirectMessage = () => {
     // API 429 rate-limit cooldown with countdown
     const [rateLimitRemaining, setRateLimitRemaining] = useState(0);
     const [isSendingMessage, setIsSendingMessage] = useState(false);
+    const isSendingMessageRef = useRef(false);
     useEffect(() => {
         const handler = (e: Event) => {
             const { retryAfter } = (e as CustomEvent).detail ?? {};
@@ -685,6 +686,17 @@ const DirectMessage = () => {
 
         return () => { cancelled = true; };
     }, [recipientId, isGroupDm]);
+
+    useEffect(() => {
+        const handleFameGiven = (event: Event) => {
+            const detail = (event as CustomEvent<{ userId?: string }>).detail;
+            if (!detail?.userId || detail.userId !== recipientId) return;
+            setFameStats(prev => prev ? { ...prev, fameReceived: prev.fameReceived + 1 } : { fameReceived: 1, fameGiven: 0 });
+        };
+
+        window.addEventListener('gratonite:fame-given', handleFameGiven);
+        return () => window.removeEventListener('gratonite:fame-given', handleFameGiven);
+    }, [recipientId]);
 
     // Fetch messages from API
     const userCacheRef = useRef<Map<string, { username: string; displayName: string }>>(new Map());
@@ -1609,6 +1621,14 @@ const DirectMessage = () => {
         return `${(size / 1048576).toFixed(1)} MB`;
     }, []);
 
+    const fingerprintDmFile = useCallback((file: File) => {
+        const normalizedName = (file.name || '').trim().toLowerCase();
+        if (normalizedName) {
+            return `${normalizedName}:${file.size}:${file.type}:${file.lastModified}`;
+        }
+        return `${file.size}:${file.type}:${file.lastModified}`;
+    }, []);
+
     const enqueueDmFiles = useCallback((files: File[]) => {
         if (!files.length) return;
         const now = Date.now();
@@ -1620,12 +1640,12 @@ const DirectMessage = () => {
 
         setDmAttachedFiles(prev => {
             const existingFingerprints = new Set(
-                prev.map(f => `${f.file.name}:${f.file.size}:${f.file.type}:${f.file.lastModified}`)
+                prev.map(f => fingerprintDmFile(f.file))
             );
             const next = [...prev];
 
             for (const file of files) {
-                const fingerprint = `${file.name}:${file.size}:${file.type}:${file.lastModified}`;
+                const fingerprint = fingerprintDmFile(file);
                 if (recent.has(fingerprint) || existingFingerprints.has(fingerprint)) continue;
                 recent.set(fingerprint, now);
                 existingFingerprints.add(fingerprint);
@@ -1638,7 +1658,7 @@ const DirectMessage = () => {
             }
             return next;
         });
-    }, [formatAttachmentSize]);
+    }, [fingerprintDmFile, formatAttachmentSize]);
 
     const handleDmInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = e.target.value;
@@ -1769,7 +1789,7 @@ const DirectMessage = () => {
     };
 
     const handleSendMessage = async () => {
-        if (isSendingMessage) return;
+        if (isSendingMessageRef.current || isSendingMessage) return;
         if (inputValue.trim() === '' && dmAttachedFiles.length === 0) return;
         if (!dmChannelId) {
             addToast({ title: 'Message unavailable', description: 'Conversation is not ready yet. Please retry.', variant: 'error' });
@@ -1784,6 +1804,7 @@ const DirectMessage = () => {
             addToast({ title: `Message too long (${dmWireContent.length}/2000)`, variant: 'error' });
             return;
         }
+        isSendingMessageRef.current = true;
         setIsSendingMessage(true);
         try {
             // Upload files — encrypt file content if E2E key is available
@@ -1893,6 +1914,7 @@ const DirectMessage = () => {
             setDmAttachedFiles([]);
             setReplyingTo(null);
         } finally {
+            isSendingMessageRef.current = false;
             setIsSendingMessage(false);
         }
     };

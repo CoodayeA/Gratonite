@@ -58,6 +58,7 @@ import {
   getOnlineStatus,
   searchUsers as searchUsersService,
 } from '../services/user.service';
+import { handleAppError } from '../lib/errors';
 
 const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -1256,8 +1257,7 @@ usersRouter.get('/@me/sessions', requireAuth, async (req: Request, res: Response
 
     res.json(sessions);
   } catch (err) {
-    logger.debug({ msg: 'failed to fetch sessions', err });
-    res.status(500).json({ error: 'Internal server error' });
+    handleAppError(res, err, 'user-sessions');
   }
 });
 
@@ -1266,13 +1266,17 @@ usersRouter.delete('/@me/sessions/:sessionId', requireAuth, async (req: Request,
   const userId = req.userId!;
   const sessionId = req.params.sessionId as string;
   try {
-    await db
+    const deleted = await db
       .delete(refreshTokens)
-      .where(and(eq(refreshTokens.id, sessionId), eq(refreshTokens.userId, userId)));
+      .where(and(eq(refreshTokens.id, sessionId), eq(refreshTokens.userId, userId)))
+      .returning({ id: refreshTokens.id });
+    if (deleted.length === 0) {
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Session not found' });
+      return;
+    }
     res.json({ success: true });
   } catch (err) {
-    logger.debug({ msg: 'failed to revoke session', err });
-    res.status(500).json({ error: 'Internal server error' });
+    handleAppError(res, err, 'user-sessions');
   }
 });
 
@@ -1304,8 +1308,7 @@ usersRouter.delete('/@me/sessions', requireAuth, async (req: Request, res: Respo
 
     res.json({ success: true, message: 'All other sessions revoked' });
   } catch (err) {
-    logger.debug({ msg: 'failed to revoke all sessions', err });
-    res.status(500).json({ error: 'Internal server error' });
+    handleAppError(res, err, 'user-sessions');
   }
 });
 

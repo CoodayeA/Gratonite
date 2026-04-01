@@ -18,11 +18,21 @@ function generateCode(): string {
   return crypto.randomBytes(6).toString('hex');
 }
 
+function normalizeChannelName(value: unknown): string {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 async function snapshotGuild(guildId: string) {
   const guildChannels = await db.select().from(channels).where(eq(channels.guildId, guildId));
   const guildRoles = await db.select().from(roles).where(eq(roles.guildId, guildId));
   return {
-    channels: guildChannels.map(c => ({ name: c.name, type: c.type, position: c.position, parentId: c.parentId, topic: c.topic })),
+    channels: guildChannels.map(c => ({ id: c.id, name: c.name, type: c.type, position: c.position, parentId: c.parentId, topic: c.topic })),
     roles: guildRoles.map(r => ({ name: r.name, color: r.color, position: r.position, permissions: r.permissions.toString(), hoist: r.hoist, mentionable: r.mentionable })),
   };
 }
@@ -117,16 +127,31 @@ templatesRouter.post('/templates/:code', requireAuth, validate(createFromTemplat
   }
 
   // Create channels from template (without parentId first, then fix parent references)
-  const channelIdMap = new Map<string, string>(); // old position-based key -> new id
-  for (const c of snapshot.channels || []) {
+  const channelIdMap = new Map<string, string>();
+  const createdChannelKeys = new Set<string>();
+  const sortedChannels = [...(snapshot.channels || [])].sort((a, b) => {
+    const aIsCategory = a?.type === 'GUILD_CATEGORY' ? 0 : 1;
+    const bIsCategory = b?.type === 'GUILD_CATEGORY' ? 0 : 1;
+    if (aIsCategory !== bIsCategory) return aIsCategory - bIsCategory;
+    return Number(a?.position || 0) - Number(b?.position || 0);
+  });
+
+  for (const c of sortedChannels) {
+    const normalizedName = normalizeChannelName(c?.name);
+    if (!normalizedName) continue;
+    const dedupeKey = `${c?.type}:${normalizedName}:${c?.type === 'GUILD_CATEGORY' ? 'root' : String(c?.parentId || 'root')}`;
+    if (createdChannelKeys.has(dedupeKey)) continue;
     const [created] = await db.insert(channels).values({
       guildId: newGuild.id,
-      name: c.name,
+      name: String(c?.name ?? '').trim() || normalizedName,
       type: c.type,
       position: c.position,
       topic: c.topic || null,
+      parentId: c.type === 'GUILD_CATEGORY' ? null : (c.parentId ? channelIdMap.get(String(c.parentId)) ?? null : null),
     }).returning();
-    channelIdMap.set(`${c.name}:${c.position}`, created.id);
+    createdChannelKeys.add(dedupeKey);
+    if (c?.id != null) channelIdMap.set(String(c.id), created.id);
+    channelIdMap.set(`${normalizedName}:${c.position}`, created.id);
   }
 
   // Increment usage count

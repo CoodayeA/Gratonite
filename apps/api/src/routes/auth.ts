@@ -44,6 +44,7 @@ import { referrals as referralsTable } from '../db/schema/referrals';
 import { userDevices } from '../db/schema/user-devices';
 import { ServiceError } from '../services/guild.service';
 import * as authService from '../services/auth.service';
+import { handleAppError } from '../lib/errors';
 
 export const authRouter = Router();
 
@@ -598,7 +599,7 @@ authRouter.post('/refresh', asyncHandler(async (req: Request, res: Response): Pr
       res.status(401).json({ code: 'UNAUTHORIZED', message: err.message });
       return;
     }
-    throw err;
+    handleAppError(res, err, 'auth-refresh');
   }
 }));
 
@@ -635,36 +636,39 @@ authRouter.post('/logout', asyncHandler(async (req: Request, res: Response): Pro
  * GET /sessions — List all active sessions for the authenticated user.
  */
 authRouter.get('/sessions', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const now = new Date();
-  const rows = await db
-    .select({
-      id: refreshTokens.id,
-      tokenHash: refreshTokens.tokenHash,
-      device: refreshTokens.device,
-      ip: refreshTokens.ip,
-      lastActive: refreshTokens.lastActiveAt,
-      createdAt: refreshTokens.createdAt,
-      expiresAt: refreshTokens.expiresAt,
-    })
-    .from(refreshTokens)
-    .where(eq(refreshTokens.userId, req.userId!));
+  try {
+    const now = new Date();
+    const rows = await db
+      .select({
+        id: refreshTokens.id,
+        tokenHash: refreshTokens.tokenHash,
+        device: refreshTokens.device,
+        ip: refreshTokens.ip,
+        lastActive: refreshTokens.lastActiveAt,
+        createdAt: refreshTokens.createdAt,
+        expiresAt: refreshTokens.expiresAt,
+      })
+      .from(refreshTokens)
+      .where(eq(refreshTokens.userId, req.userId!));
 
-  // Determine which session is the current one by matching the cookie or header.
-  const rawToken: string | undefined = req.cookies[REFRESH_COOKIE]
-    || (req.headers['x-refresh-token'] as string | undefined);
-  const currentHash = rawToken ? hashToken(rawToken) : null;
+    const rawToken: string | undefined = req.cookies[REFRESH_COOKIE]
+      || (req.headers['x-refresh-token'] as string | undefined);
+    const currentHash = rawToken ? hashToken(rawToken) : null;
 
-  const sessions = rows
-    .filter((r) => r.expiresAt > now)
-    .map((r) => ({
-      id: r.id,
-      device: r.device || 'Unknown Device',
-      ip: r.ip || '',
-      lastActive: (r.lastActive || r.createdAt).toISOString(),
-      current: r.tokenHash === currentHash,
-    }));
+    const sessions = rows
+      .filter((r) => r.expiresAt > now)
+      .map((r) => ({
+        id: r.id,
+        device: r.device || 'Unknown Device',
+        ip: r.ip || '',
+        lastActive: (r.lastActive || r.createdAt).toISOString(),
+        current: r.tokenHash === currentHash,
+      }));
 
-  res.json(sessions);
+    res.json(sessions);
+  } catch (err) {
+    handleAppError(res, err, 'auth-sessions');
+  }
 }));
 
 /**
@@ -672,47 +676,52 @@ authRouter.get('/sessions', requireAuth, asyncHandler(async (req: Request, res: 
  */
 authRouter.delete('/sessions/:id', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const sessionId = req.params.id as string;
+  try {
+    const [row] = await db
+      .select({ id: refreshTokens.id, tokenHash: refreshTokens.tokenHash })
+      .from(refreshTokens)
+      .where(and(eq(refreshTokens.id, sessionId), eq(refreshTokens.userId, req.userId!)))
+      .limit(1);
 
-  // Only allow deleting your own sessions.
-  const [row] = await db
-    .select({ id: refreshTokens.id, tokenHash: refreshTokens.tokenHash })
-    .from(refreshTokens)
-    .where(and(eq(refreshTokens.id, sessionId), eq(refreshTokens.userId, req.userId!)))
-    .limit(1);
+    if (!row) {
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Session not found' });
+      return;
+    }
 
-  if (!row) {
-    res.status(404).json({ code: 'NOT_FOUND', message: 'Session not found' });
-    return;
+    const rawToken: string | undefined = req.cookies[REFRESH_COOKIE]
+      || (req.headers['x-refresh-token'] as string | undefined);
+    if (rawToken && hashToken(rawToken) === row.tokenHash) {
+      res.status(400).json({ code: 'CANNOT_REVOKE_CURRENT', message: 'Use /logout to end the current session' });
+      return;
+    }
+
+    await db.delete(refreshTokens).where(eq(refreshTokens.id, sessionId));
+    res.json({ message: 'Session revoked' });
+  } catch (err) {
+    handleAppError(res, err, 'auth-sessions');
   }
-
-  // Don't allow revoking the current session via this endpoint (use /logout).
-  const rawToken: string | undefined = req.cookies[REFRESH_COOKIE]
-    || (req.headers['x-refresh-token'] as string | undefined);
-  if (rawToken && hashToken(rawToken) === row.tokenHash) {
-    res.status(400).json({ code: 'CANNOT_REVOKE_CURRENT', message: 'Use /logout to end the current session' });
-    return;
-  }
-
-  await db.delete(refreshTokens).where(eq(refreshTokens.id, sessionId));
-  res.json({ message: 'Session revoked' });
 }));
 
 /**
  * DELETE /sessions — Revoke all sessions except the current one.
  */
 authRouter.delete('/sessions', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const rawToken: string | undefined = req.cookies[REFRESH_COOKIE]
-    || (req.headers['x-refresh-token'] as string | undefined);
-  const currentHash = rawToken ? hashToken(rawToken) : null;
+  try {
+    const rawToken: string | undefined = req.cookies[REFRESH_COOKIE]
+      || (req.headers['x-refresh-token'] as string | undefined);
+    const currentHash = rawToken ? hashToken(rawToken) : null;
 
-  if (currentHash) {
-    await db.delete(refreshTokens)
-      .where(and(eq(refreshTokens.userId, req.userId!), ne(refreshTokens.tokenHash, currentHash)));
-  } else {
-    await db.delete(refreshTokens).where(eq(refreshTokens.userId, req.userId!));
+    if (currentHash) {
+      await db.delete(refreshTokens)
+        .where(and(eq(refreshTokens.userId, req.userId!), ne(refreshTokens.tokenHash, currentHash)));
+    } else {
+      await db.delete(refreshTokens).where(eq(refreshTokens.userId, req.userId!));
+    }
+
+    res.json({ message: 'All other sessions revoked' });
+  } catch (err) {
+    handleAppError(res, err, 'auth-sessions');
   }
-
-  res.json({ message: 'All other sessions revoked' });
 }));
 
 // ---------------------------------------------------------------------------

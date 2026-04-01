@@ -6,7 +6,7 @@ import { Permissions } from '../db/schema/roles';
 import { requireAuth } from '../middleware/auth';
 import { hasPermission } from './roles';
 import { logger } from '../lib/logger';
-import { normalizeError } from '../lib/errors';
+import { handleAppError, normalizeError } from '../lib/errors';
 
 export const wordFilterRouter = Router({ mergeParams: true });
 
@@ -38,7 +38,7 @@ wordFilterRouter.get('/', requireAuth, async (req: Request, res: Response): Prom
       res.json({ words: [], action: 'block', exemptRoles: [] });
       return;
     }
-    throw err;
+    handleAppError(res, err, 'word-filter');
   }
 });
 
@@ -82,28 +82,32 @@ wordFilterRouter.put('/', requireAuth, async (req: Request, res: Response): Prom
     }
   }
 
-  const [upserted] = await db
-    .insert(guildWordFilters)
-    .values({
-      guildId,
-      words: sanitizedWords,
-      action,
-      exemptRoles: sanitizedExemptRoles,
-      regexPatterns: sanitizedRegex,
-    })
-    .onConflictDoUpdate({
-      target: guildWordFilters.guildId,
-      set: {
+  try {
+    const [upserted] = await db
+      .insert(guildWordFilters)
+      .values({
+        guildId,
         words: sanitizedWords,
         action,
         exemptRoles: sanitizedExemptRoles,
         regexPatterns: sanitizedRegex,
-        updatedAt: new Date(),
-      },
-    })
-    .returning();
+      })
+      .onConflictDoUpdate({
+        target: guildWordFilters.guildId,
+        set: {
+          words: sanitizedWords,
+          action,
+          exemptRoles: sanitizedExemptRoles,
+          regexPatterns: sanitizedRegex,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
 
-  res.json(upserted);
+    res.json(upserted);
+  } catch (err) {
+    handleAppError(res, err, 'word-filter');
+  }
 });
 
 /** POST /api/v1/guilds/:guildId/word-filter/test — Test a regex pattern against sample text (item 92) */

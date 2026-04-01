@@ -2064,6 +2064,21 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     if (isChannelsLoading && guildChannels.length === 0) return null;
                     // Group channels by category (parentId)
                     const isCategoryType = (type: string) => type === 'category' || type === 'GUILD_CATEGORY';
+                    const dedupeKeyForChannel = (channel: typeof guildChannels[number]) => {
+                        const normalizedName = channel.name.toLowerCase();
+                        if (isCategoryType(channel.type)) return `${channel.type}:${normalizedName}`;
+                        return `${channel.parentId ?? 'root'}:${channel.type}:${normalizedName}`;
+                    };
+                    const dedupeChannelList = (channels: typeof guildChannels) => {
+                        const seen = new Set<string>();
+                        return channels.filter((channel) => {
+                            const key = dedupeKeyForChannel(channel);
+                            if (seen.has(key)) return false;
+                            seen.add(key);
+                            return true;
+                        });
+                    };
+
                     const seenCategoryKeys = new Set<string>();
                     const categories = guildChannels
                         .filter(c => isCategoryType(c.type))
@@ -2074,7 +2089,9 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                             seenCategoryKeys.add(key);
                             return true;
                         });
-                    const uncategorized = guildChannels.filter(c => !isCategoryType(c.type) && !c.parentId).sort((a, b) => a.position - b.position);
+                    const uncategorized = dedupeChannelList(
+                        guildChannels.filter(c => !isCategoryType(c.type) && !c.parentId).sort((a, b) => a.position - b.position)
+                    );
                     const channelsByParent = new Map<string, typeof guildChannels>();
                     for (const ch of guildChannels) {
                         if (isCategoryType(ch.type) || !ch.parentId) continue;
@@ -2083,7 +2100,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         channelsByParent.set(ch.parentId, list);
                     }
                     for (const [key, list] of channelsByParent) {
-                        channelsByParent.set(key, list.sort((a, b) => a.position - b.position));
+                        channelsByParent.set(key, dedupeChannelList(list.sort((a, b) => a.position - b.position)));
                     }
 
                     const renderChannel = (ch: typeof guildChannels[0]) => {

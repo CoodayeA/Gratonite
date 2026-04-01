@@ -245,6 +245,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                     .replace(/[^a-z0-9-]/g, '')
                     .replace(/-+/g, '-')
                     .replace(/^-|-$/g, '');
+            const normalizeName = (value: string) => toChannelSlug(value) || value.trim().toLowerCase();
 
             // 1. Create the guild via API
             const guild = await api.guilds.create({
@@ -266,7 +267,13 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                 new Set(channelNames.map(toChannelSlug).filter(Boolean))
             );
             const existingChannels = await api.channels.getGuildChannels(guild.id).catch(() => [] as any[]);
-            const findCategory = (name: string) => existingChannels.find((ch: any) => ch.type === 'GUILD_CATEGORY' && ch.name === name);
+            const existingKeys = new Set(
+                existingChannels.map((ch: any) => `${ch.type}:${normalizeName(ch.name || '')}`)
+            );
+            const findCategory = (name: string) => {
+                const normalized = normalizeName(name);
+                return existingChannels.find((ch: any) => ch.type === 'GUILD_CATEGORY' && normalizeName(ch.name || '') === normalized);
+            };
 
             // Create a "Text Channels" category if missing
             let textCategoryId: string | undefined;
@@ -278,6 +285,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                     const textCat = await api.channels.create(guild.id, { name: 'text-channels', type: 'GUILD_CATEGORY' });
                     textCategoryId = textCat.id;
                     existingChannels.push(textCat as any);
+                    existingKeys.add(`GUILD_CATEGORY:${normalizeName(textCat.name || 'text-channels')}`);
                 } catch { /* category creation might not be supported */ }
             }
 
@@ -286,12 +294,15 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                 try {
                     const channelName = uniqueChannelNames[i];
                     if (!channelName) continue;
-                    if (existingChannels.some((ch: any) => ch.name === channelName && ch.type === 'GUILD_TEXT')) continue;
-                    await api.channels.create(guild.id, {
+                    const textKey = `GUILD_TEXT:${normalizeName(channelName)}`;
+                    if (existingKeys.has(textKey)) continue;
+                    const createdChannel = await api.channels.create(guild.id, {
                         name: channelName,
                         type: 'GUILD_TEXT',
                         parentId: textCategoryId,
                     });
+                    existingChannels.push(createdChannel as any);
+                    existingKeys.add(textKey);
                 } catch { /* continue creating other channels */ }
             }
 
@@ -305,16 +316,20 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                     const voiceCat = await api.channels.create(guild.id, { name: 'voice-channels', type: 'GUILD_CATEGORY' });
                     voiceCategoryId = voiceCat.id;
                     existingChannels.push(voiceCat as any);
+                    existingKeys.add(`GUILD_CATEGORY:${normalizeName(voiceCat.name || 'voice-channels')}`);
                 } catch { /* category creation might not be supported */ }
             }
 
             try {
-                if (!existingChannels.some((ch: any) => ch.name === 'general' && ch.type === 'GUILD_VOICE')) {
-                    await api.channels.create(guild.id, {
+                const voiceKey = `GUILD_VOICE:${normalizeName('general')}`;
+                if (!existingKeys.has(voiceKey)) {
+                    const createdVoice = await api.channels.create(guild.id, {
                         name: 'general',
                         type: 'GUILD_VOICE',
                         parentId: voiceCategoryId,
                     });
+                    existingChannels.push(createdVoice as any);
+                    existingKeys.add(voiceKey);
                 }
             } catch { /* voice channel creation might fail */ }
 
