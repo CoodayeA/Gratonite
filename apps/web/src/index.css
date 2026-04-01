@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap');
+
 #root:empty::after {
   content: 'G';
   position: fixed;
@@ -11,8 +13,6 @@
   font-family: system-ui, sans-serif;
   z-index: 99999;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap');
 
 /* ------------------------
    GLOBAL TYPOGRAPHY SCALE
@@ -66,6 +66,8 @@
     --z-context-menu: 2100;
     --desktop-titlebar-inset: 0px;
     --desktop-titlebar-auth-offset: 0px;
+    --desktop-window-controls-width: 0px;
+    --desktop-topbar-extra-offset: 0px;
 }
 
 /* ------------------------
@@ -960,6 +962,7 @@ p {
     opacity: 0;
     transform: translateY(10px);
     animation: slideUp 0.4s ease forwards;
+    overflow: visible;
 }
 
 @keyframes slideUp {
@@ -1011,6 +1014,7 @@ p {
     border-radius: 0;
     padding: 0;
     min-width: 0;
+    overflow: visible;
 }
 
 .msg-header {
@@ -3066,6 +3070,8 @@ button:active:not(:disabled) {
 body.electron-mac {
   --desktop-titlebar-inset: 28px;
   --desktop-titlebar-auth-offset: 36px;
+  --desktop-window-controls-width: 84px;
+  --desktop-topbar-extra-offset: 8px;
 }
 body.electron-mac .guild-rail {
   padding-top: 40px;
@@ -3079,14 +3085,28 @@ body.electron-mac .sidebar-header {
 body.electron-win {
   --desktop-titlebar-inset: 36px;
   --desktop-titlebar-auth-offset: 44px;
+  --desktop-window-controls-width: 144px;
+  --desktop-topbar-extra-offset: 8px;
 }
 body.electron-win .guild-rail {
   padding-top: 36px;
   -webkit-app-region: drag;
 }
 body.electron-win .app-sidebar,
-body.electron-win .sidebar-header {
+body.electron-win .sidebar-header,
+body.electron-win .top-bar {
   padding-top: 24px;
+}
+
+body.electron-mac .top-bar {
+  padding-top: 16px;
+}
+
+body.electron-win .top-bar,
+body.electron-mac .top-bar {
+  min-height: calc(64px + var(--desktop-topbar-extra-offset));
+  padding-right: calc(24px + var(--desktop-window-controls-width));
+  box-sizing: border-box;
 }
 
 /* Make interactive children non-draggable */

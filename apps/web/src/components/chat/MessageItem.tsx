@@ -272,6 +272,16 @@ export const MemoizedMessageItem = memo(({
             await api.fame.give(msg.authorId, { messageId: msg.apiId, guildId });
             setFamGiven(true);
             setShowFameSparkle(true);
+            window.dispatchEvent(new CustomEvent('gratonite:fame-given', {
+                detail: { userId: msg.authorId },
+            }));
+            queryClient.setQueryData(userQueryKey(msg.authorId), (prev: any) => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    fameReceived: (prev.fameReceived ?? 0) + 1,
+                };
+            });
             if (fameSparkleTimerRef.current) clearTimeout(fameSparkleTimerRef.current);
             fameSparkleTimerRef.current = setTimeout(() => { fameSparkleTimerRef.current = null; setShowFameSparkle(false); }, 1400);
         } catch (err: any) {
@@ -363,6 +373,7 @@ export const MemoizedMessageItem = memo(({
                 data-message-id={msg.apiId}
                 style={{
                     position: 'relative',
+                    overflow: 'visible',
                     marginTop: isGrouped ? '2px' : (compactMode ? '1px' : '16px'),
                     paddingTop: isGrouped ? '2px' : (compactMode ? '2px' : '16px'),
                     paddingBottom: isGrouped ? '2px' : (compactMode ? '2px' : '16px'),
@@ -820,7 +831,7 @@ export const MemoizedMessageItem = memo(({
                 </div>
                 {/* Reaction Picker Popup */}
                 {showReactionPicker && (
-                    <div ref={reactionPickerRef} style={{ position: 'absolute', top: isGrouped ? '34px' : '38px', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '20px', padding: '4px 8px', display: 'flex', gap: '2px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 30 }}>
+                    <div ref={reactionPickerRef} style={{ position: 'absolute', top: isGrouped ? '38px' : '42px', right: '16px', maxWidth: 'min(280px, calc(100vw - 48px))', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '16px', padding: '6px 8px', display: 'flex', gap: '2px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 30, flexWrap: 'wrap' }}>
                         {quickReactions.map(qEmoji => (
                             qEmoji === '\u{1F44F}' ? (
                                 <SlowClapReaction key={qEmoji} onClap={() => { onReaction?.(msg.apiId, qEmoji, false); setShowReactionPicker(false); }} />
@@ -835,7 +846,7 @@ export const MemoizedMessageItem = memo(({
                 {/* Interactive Message Toolbar */}
                 {isHovered && (
                     <div style={{
-                        position: 'absolute', top: isGrouped ? '2px' : '6px', right: '16px',
+                        position: 'absolute', top: isGrouped ? '6px' : '10px', right: '16px',
                         background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
                         borderRadius: 'var(--radius-sm)', padding: '4px',
                         display: 'flex', gap: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',

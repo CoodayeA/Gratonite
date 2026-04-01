@@ -186,6 +186,17 @@ const UserProfilePopover = ({
         return () => { cancelled = true; };
     }, [user.id, user.guildId]);
 
+    useEffect(() => {
+        const handleFameGiven = (event: Event) => {
+            const detail = (event as CustomEvent<{ userId?: string }>).detail;
+            if (!detail?.userId || detail.userId !== user.id) return;
+            setFameStats(prev => prev ? { ...prev, fameReceived: prev.fameReceived + 1 } : { fameReceived: 1, fameGiven: 0 });
+        };
+
+        window.addEventListener('gratonite:fame-given', handleFameGiven);
+        return () => window.removeEventListener('gratonite:fame-given', handleFameGiven);
+    }, [user.id]);
+
     // Fetch note
     useEffect(() => {
         if (!user.id || user.id === currentUser?.id) { setNoteLoaded(true); return; }

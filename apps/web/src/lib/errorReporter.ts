@@ -49,6 +49,20 @@ function getSessionId(): string | undefined {
 }
 
 function enqueue(err: ClientError) {
+  const message = err.message || '';
+  const stack = err.stack || '';
+  const url = err.url || '';
+
+  if (
+    message.includes('Resource blocked by content blocker') ||
+    message.includes('View transition was skipped because document visibility state is hidden') ||
+    (message.includes('Service Worker system has shutdown') && message.includes('Failed to update a ServiceWorker')) ||
+    ((message.includes('Failed to fetch') || message.includes('access control checks')) &&
+      (url.includes('ingest.us.sentry.io') || stack.includes('ingest.us.sentry.io')))
+  ) {
+    return;
+  }
+
   const hash = errorHash(err.message, err.stack);
   if (seen.has(hash)) return;
   seen.add(hash);

@@ -24,6 +24,7 @@ import { fameTransactions } from '../db/schema/fameTransactions';
 import { requireAuth } from '../middleware/auth';
 import { toRows } from '../lib/to-rows.js';
 import { redis } from '../lib/redis';
+import { handleAppError, normalizeError } from '../lib/errors';
 
 export const leaderboardRouter = Router();
 
@@ -137,8 +138,12 @@ leaderboardRouter.get(
       await redis.set(cacheKey, JSON.stringify(result), 'EX', 300); // 5 min cache
       res.status(200).json(result);
     } catch (err) {
-      logger.error('[leaderboard] global/metric error:', err);
-      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+      const normalized = normalizeError(err);
+      if (normalized.code === 'FEATURE_UNAVAILABLE') {
+        res.status(200).json([]);
+        return;
+      }
+      handleAppError(res, err, 'leaderboard');
     }
   },
 );
@@ -203,8 +208,12 @@ leaderboardRouter.get(
       await redis.set(cacheKey, JSON.stringify(result), 'EX', 300); // 5 min cache
       res.status(200).json(result);
     } catch (err) {
-      logger.error('[leaderboard] global error:', err);
-      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+      const normalized = normalizeError(err);
+      if (normalized.code === 'FEATURE_UNAVAILABLE') {
+        res.status(200).json([]);
+        return;
+      }
+      handleAppError(res, err, 'leaderboard');
     }
   },
 );
@@ -323,8 +332,12 @@ leaderboardRouter.get(
 
       res.status(200).json(result);
     } catch (err) {
-      logger.error('[leaderboard] guild error:', err);
-      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+      const normalized = normalizeError(err);
+      if (normalized.code === 'FEATURE_UNAVAILABLE') {
+        res.status(200).json([]);
+        return;
+      }
+      handleAppError(res, err, 'leaderboard');
     }
   },
 );

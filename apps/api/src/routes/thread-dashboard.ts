@@ -1,12 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { logger } from '../lib/logger';
-import { eq, and, desc, sql, isNull, count } from 'drizzle-orm';
+import { eq, and, desc, sql, count, inArray } from 'drizzle-orm';
 import { db } from '../db/index';
 import { channels } from '../db/schema/channels';
 import { messages } from '../db/schema/messages';
 import { users } from '../db/schema/users';
 import { guildMembers } from '../db/schema/guilds';
 import { requireAuth } from '../middleware/auth';
+import { handleAppError, normalizeError } from '../lib/errors';
 
 export const threadDashboardRouter = Router({ mergeParams: true });
 
@@ -99,7 +100,7 @@ threadDashboardRouter.get('/dashboard', requireAuth, async (req: Request, res: R
       })
         .from(messages)
         .leftJoin(users, eq(messages.authorId, users.id))
-        .where(sql`${messages.channelId} IN (${sql.join(threadIds.map(id => sql`${id}`), sql`,`)})`)
+        .where(inArray(messages.channelId, threadIds))
         .groupBy(messages.channelId);
 
       for (const p of participants) {
@@ -118,7 +119,7 @@ threadDashboardRouter.get('/dashboard', requireAuth, async (req: Request, res: R
         content: messages.content,
       })
         .from(messages)
-        .where(sql`${messages.channelId} IN (${sql.join(threadIds.map(id => sql`${id}`), sql`,`)})`)
+        .where(inArray(messages.channelId, threadIds))
         .orderBy(desc(messages.createdAt))
         .limit(threadIds.length);
 
@@ -145,7 +146,11 @@ threadDashboardRouter.get('/dashboard', requireAuth, async (req: Request, res: R
 
     res.json(result);
   } catch (err) {
-    logger.error('[thread-dashboard] GET error:', err);
-    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+    const normalized = normalizeError(err);
+    if (normalized.code === 'FEATURE_UNAVAILABLE') {
+      res.json([]);
+      return;
+    }
+    handleAppError(res, err, 'thread-dashboard');
   }
 });

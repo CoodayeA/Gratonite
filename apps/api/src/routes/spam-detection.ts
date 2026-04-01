@@ -9,7 +9,15 @@ import { guildSpamConfig } from '../db/schema/guild-spam-config';
 import { Permissions } from '../db/schema/roles';
 import { requireAuth } from '../middleware/auth';
 import { hasPermission } from './roles';
-import { normalizeError } from '../lib/errors';
+import { handleAppError, normalizeError } from '../lib/errors';
+
+function defaultSpamConfig(guildId: string) {
+  return {
+    guildId, enabled: false, maxDuplicateMessages: 5, duplicateWindowSeconds: 10,
+    maxMentionsPerMessage: 10, maxLinksPerMessage: 5, rapidJoinThreshold: 10,
+    rapidJoinWindowSeconds: 30, action: 'flag', exemptRoles: [],
+  };
+}
 
 export const spamDetectionRouter = Router({ mergeParams: true });
 
@@ -22,22 +30,14 @@ spamDetectionRouter.get('/', requireAuth, async (req: Request, res: Response): P
 
   try {
     const [config] = await db.select().from(guildSpamConfig).where(eq(guildSpamConfig.guildId, guildId)).limit(1);
-    res.json(config || {
-      guildId, enabled: false, maxDuplicateMessages: 5, duplicateWindowSeconds: 10,
-      maxMentionsPerMessage: 10, maxLinksPerMessage: 5, rapidJoinThreshold: 10,
-      rapidJoinWindowSeconds: 30, action: 'flag', exemptRoles: [],
-    });
+    res.json(config || defaultSpamConfig(guildId));
   } catch (err) {
     const normalized = normalizeError(err);
     if (normalized.code === 'FEATURE_UNAVAILABLE') {
-      res.json({
-        guildId, enabled: false, maxDuplicateMessages: 5, duplicateWindowSeconds: 10,
-        maxMentionsPerMessage: 10, maxLinksPerMessage: 5, rapidJoinThreshold: 10,
-        rapidJoinWindowSeconds: 30, action: 'flag', exemptRoles: [],
-      });
+      res.json(defaultSpamConfig(guildId));
       return;
     }
-    throw err;
+    handleAppError(res, err, 'spam-config');
   }
 });
 
@@ -53,22 +53,10 @@ spamDetectionRouter.put('/', requireAuth, async (req: Request, res: Response): P
 
   const validAction = ['flag', 'mute', 'kick'].includes(action) ? action : 'flag';
 
-  const [upserted] = await db.insert(guildSpamConfig)
-    .values({
-      guildId, enabled: !!enabled,
-      maxDuplicateMessages: maxDuplicateMessages ?? 5,
-      duplicateWindowSeconds: duplicateWindowSeconds ?? 10,
-      maxMentionsPerMessage: maxMentionsPerMessage ?? 10,
-      maxLinksPerMessage: maxLinksPerMessage ?? 5,
-      rapidJoinThreshold: rapidJoinThreshold ?? 10,
-      rapidJoinWindowSeconds: rapidJoinWindowSeconds ?? 30,
-      action: validAction,
-      exemptRoles: Array.isArray(exemptRoles) ? exemptRoles : [],
-    })
-    .onConflictDoUpdate({
-      target: guildSpamConfig.guildId,
-      set: {
-        enabled: !!enabled,
+  try {
+    const [upserted] = await db.insert(guildSpamConfig)
+      .values({
+        guildId, enabled: !!enabled,
         maxDuplicateMessages: maxDuplicateMessages ?? 5,
         duplicateWindowSeconds: duplicateWindowSeconds ?? 10,
         maxMentionsPerMessage: maxMentionsPerMessage ?? 10,
@@ -77,10 +65,26 @@ spamDetectionRouter.put('/', requireAuth, async (req: Request, res: Response): P
         rapidJoinWindowSeconds: rapidJoinWindowSeconds ?? 30,
         action: validAction,
         exemptRoles: Array.isArray(exemptRoles) ? exemptRoles : [],
-        updatedAt: new Date(),
-      },
-    })
-    .returning();
+      })
+      .onConflictDoUpdate({
+        target: guildSpamConfig.guildId,
+        set: {
+          enabled: !!enabled,
+          maxDuplicateMessages: maxDuplicateMessages ?? 5,
+          duplicateWindowSeconds: duplicateWindowSeconds ?? 10,
+          maxMentionsPerMessage: maxMentionsPerMessage ?? 10,
+          maxLinksPerMessage: maxLinksPerMessage ?? 5,
+          rapidJoinThreshold: rapidJoinThreshold ?? 10,
+          rapidJoinWindowSeconds: rapidJoinWindowSeconds ?? 30,
+          action: validAction,
+          exemptRoles: Array.isArray(exemptRoles) ? exemptRoles : [],
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
 
-  res.json(upserted);
+    res.json(upserted);
+  } catch (err) {
+    handleAppError(res, err, 'spam-config');
+  }
 });

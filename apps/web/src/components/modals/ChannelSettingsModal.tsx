@@ -221,6 +221,7 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                     height: 'min(620px, calc(90vh - var(--desktop-titlebar-inset, 0px)))',
                     maxHeight: 'calc(90vh - var(--desktop-titlebar-inset, 0px))',
                     overflow: 'hidden',
+                    boxSizing: 'border-box',
                 }}
             >
                 {/* Sidebar */}
@@ -233,10 +234,10 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                 </div>
 
                 {/* Content */}
-                <div style={{ flex: 1, padding: '24px', overflowY: 'auto', position: 'relative' }}>
+                <div style={{ flex: 1, padding: '32px 24px 24px', overflowY: 'auto', position: 'relative', boxSizing: 'border-box' }}>
                     <button
                         onClick={onClose}
-                        style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}
+                        style={{ position: 'absolute', top: '18px', right: '18px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '6px', display: 'flex', borderRadius: '8px' }}
                     >
                         <X size={20} />
                     </button>

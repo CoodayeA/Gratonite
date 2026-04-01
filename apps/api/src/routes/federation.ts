@@ -33,7 +33,7 @@ import { isRelayEnabled, getRelayConfig, getRelayClient } from '../relay/index';
 import { assertNotPrivateHost } from '../lib/ssrf-guard';
 import { getIO } from '../lib/socket-io';
 import { logger } from '../lib/logger';
-import { normalizeError } from '../lib/errors';
+import { handleAppError, normalizeError } from '../lib/errors';
 
 export const federationRouter = Router();
 
@@ -1325,29 +1325,18 @@ federationRouter.post('/report', requireAuth, async (req: Request, res: Response
     return;
   }
 
-  let instance: { id: string; status: string } | undefined;
   try {
-    [instance] = await db
+    const [instance] = await db
       .select({ id: federatedInstances.id, status: federatedInstances.status })
       .from(federatedInstances)
       .where(eq(federatedInstances.id, instanceId))
       .limit(1);
-  } catch (err) {
-    const normalized = normalizeError(err);
-    if (normalized.code === 'FEATURE_UNAVAILABLE') {
-      res.status(503).json({ code: 'FEATURE_UNAVAILABLE', message: 'Federation reporting is temporarily unavailable' });
+
+    if (!instance) {
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Instance not found' });
       return;
     }
-    throw err;
-  }
 
-  if (!instance) {
-    res.status(404).json({ code: 'NOT_FOUND', message: 'Instance not found' });
-    return;
-  }
-
-  // Insert report (unique constraint prevents duplicate user+instance reports)
-  try {
     await db.insert(instanceReports).values({
       instanceId,
       reporterId: req.userId!,
@@ -1359,29 +1348,48 @@ federationRouter.post('/report', requireAuth, async (req: Request, res: Response
       res.status(409).json({ code: 'ALREADY_REPORTED', message: 'You have already reported this instance' });
       return;
     }
-    throw err;
+    const normalized = normalizeError(err);
+    if (normalized.code === 'FEATURE_UNAVAILABLE') {
+      res.status(503).json({ code: 'FEATURE_UNAVAILABLE', message: 'Federation reporting is temporarily unavailable' });
+      return;
+    }
+    handleAppError(res, err, 'federation-report');
+    return;
   }
 
-  // Check for auto-suspend: 3+ unique reporters → suspend pending review
-  const [reportCount] = await db
-    .select({ count: sql<number>`count(distinct ${instanceReports.reporterId})` })
-    .from(instanceReports)
-    .where(and(eq(instanceReports.instanceId, instanceId), eq(instanceReports.status, 'pending')));
+  try {
+    const [reportCount] = await db
+      .select({ count: sql<number>`count(distinct ${instanceReports.reporterId})` })
+      .from(instanceReports)
+      .where(and(eq(instanceReports.instanceId, instanceId), eq(instanceReports.status, 'pending')));
 
-  if (Number(reportCount.count) >= 3 && instance.status === 'active') {
-    await db.update(federatedInstances)
-      .set({ status: 'suspended', updatedAt: new Date() })
-      .where(eq(federatedInstances.id, instanceId));
+    const [instance] = await db
+      .select({ status: federatedInstances.status })
+      .from(federatedInstances)
+      .where(eq(federatedInstances.id, instanceId))
+      .limit(1);
 
-    // Also un-approve all guilds from this instance
-    await db.update(remoteGuilds)
-      .set({ isApproved: false, updatedAt: new Date() })
-      .where(eq(remoteGuilds.instanceId, instanceId));
+    if (Number(reportCount.count) >= 3 && instance?.status === 'active') {
+      await db.update(federatedInstances)
+        .set({ status: 'suspended', updatedAt: new Date() })
+        .where(eq(federatedInstances.id, instanceId));
 
-    logger.warn(`[federation] Auto-suspended instance ${instanceId} after 3+ abuse reports`);
+      await db.update(remoteGuilds)
+        .set({ isApproved: false, updatedAt: new Date() })
+        .where(eq(remoteGuilds.instanceId, instanceId));
+
+      logger.warn(`[federation] Auto-suspended instance ${instanceId} after 3+ abuse reports`);
+    }
+
+    res.status(201).json({ status: 'reported' });
+  } catch (err) {
+    const normalized = normalizeError(err);
+    if (normalized.code === 'FEATURE_UNAVAILABLE') {
+      res.status(201).json({ status: 'reported' });
+      return;
+    }
+    handleAppError(res, err, 'federation-report');
   }
-
-  res.status(201).json({ status: 'reported' });
 });
 
 // ---------------------------------------------------------------------------

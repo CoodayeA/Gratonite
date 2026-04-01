@@ -17,7 +17,7 @@ import { publicInviteRateLimit } from '../middleware/rateLimit';
 import { toRows } from '../lib/to-rows.js';
 import crypto from 'crypto';
 import { recordActivity } from './activity';
-import { normalizeError } from '../lib/errors';
+import { handleAppError, normalizeError } from '../lib/errors';
 
 export const invitesRouter = Router();
 
@@ -38,8 +38,63 @@ invitesRouter.post(
   validate(createInviteSchema),
   async (req: Request, res: Response): Promise<void> => {
     const { guildId } = req.params as Record<string, string>;
+    try {
+      const [membership] = await db
+        .select({ id: guildMembers.id })
+        .from(guildMembers)
+        .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, req.userId!)))
+        .limit(1);
+      if (!membership) { res.status(403).json({ code: 'FORBIDDEN', message: 'Not a guild member' }); return; }
 
-    // Verify membership
+      const { maxUses, expiresIn, temporary } = req.body;
+      const expiresAt = expiresIn && expiresIn > 0 ? new Date(Date.now() + expiresIn * 1000) : null;
+
+      let code = generateCode();
+      for (let i = 0; i < 5; i++) {
+        const [exists] = await db.select({ code: guildInvites.code }).from(guildInvites).where(eq(guildInvites.code, code)).limit(1);
+        if (!exists) break;
+        code = generateCode();
+      }
+
+      let invite: typeof guildInvites.$inferSelect | undefined;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          [invite] = await db.insert(guildInvites).values({
+            code,
+            guildId,
+            createdBy: req.userId!,
+            maxUses: maxUses ?? null,
+            expiresAt,
+            temporary: temporary ?? false,
+          }).returning();
+          break;
+        } catch (err) {
+          const normalized = normalizeError(err);
+          const rawCode = (err as { code?: string }).code;
+          if (rawCode === '23505' || normalized.code === 'CONFLICT') {
+            code = generateCode();
+            continue;
+          }
+          throw err;
+        }
+      }
+
+      if (!invite) {
+        res.status(503).json({ code: 'INVITE_CREATE_RETRY_EXHAUSTED', message: 'Could not generate a unique invite code. Please retry.' });
+        return;
+      }
+
+      res.status(201).json(invite);
+    } catch (err) {
+      handleAppError(res, err, 'invites');
+    }
+  },
+);
+
+/** GET /api/v1/guilds/:guildId/invites */
+invitesRouter.get('/guilds/:guildId/invites', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId } = req.params as Record<string, string>;
+  try {
     const [membership] = await db
       .select({ id: guildMembers.id })
       .from(guildMembers)
@@ -47,102 +102,59 @@ invitesRouter.post(
       .limit(1);
     if (!membership) { res.status(403).json({ code: 'FORBIDDEN', message: 'Not a guild member' }); return; }
 
-    const { maxUses, expiresIn, temporary } = req.body;
-    const expiresAt = expiresIn && expiresIn > 0 ? new Date(Date.now() + expiresIn * 1000) : null;
+    const inviteRows = await db
+      .select({
+        code: guildInvites.code,
+        guildId: guildInvites.guildId,
+        createdBy: guildInvites.createdBy,
+        maxUses: guildInvites.maxUses,
+        uses: guildInvites.uses,
+        expiresAt: guildInvites.expiresAt,
+        temporary: guildInvites.temporary,
+        createdAt: guildInvites.createdAt,
+        creatorUsername: users.username,
+      })
+      .from(guildInvites)
+      .leftJoin(users, eq(users.id, guildInvites.createdBy))
+      .where(eq(guildInvites.guildId, guildId));
 
-    let code = generateCode();
-    // Ensure uniqueness
-    for (let i = 0; i < 5; i++) {
-      const [exists] = await db.select({ code: guildInvites.code }).from(guildInvites).where(eq(guildInvites.code, code)).limit(1);
-      if (!exists) break;
-      code = generateCode();
-    }
-
-    let invite: typeof guildInvites.$inferSelect | undefined;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        [invite] = await db.insert(guildInvites).values({
-          code,
-          guildId,
-          createdBy: req.userId!,
-          maxUses: maxUses ?? null,
-          expiresAt,
-          temporary: temporary ?? false,
-        }).returning();
-        break;
-      } catch (err) {
-        const normalized = normalizeError(err);
-        const rawCode = (err as { code?: string }).code;
-        if (rawCode === '23505' || normalized.code === 'CONFLICT') {
-          code = generateCode();
-          continue;
-        }
-        throw err;
-      }
-    }
-
-    if (!invite) {
-      res.status(503).json({ code: 'INVITE_CREATE_RETRY_EXHAUSTED', message: 'Could not generate a unique invite code. Please retry.' });
+    res.json(inviteRows);
+  } catch (err) {
+    const normalized = normalizeError(err);
+    if (normalized.code === 'FEATURE_UNAVAILABLE') {
+      res.json([]);
       return;
     }
-
-    res.status(201).json(invite);
-  },
-);
-
-/** GET /api/v1/guilds/:guildId/invites */
-invitesRouter.get('/guilds/:guildId/invites', requireAuth, async (req: Request, res: Response): Promise<void> => {
-  const { guildId } = req.params as Record<string, string>;
-
-  const [membership] = await db
-    .select({ id: guildMembers.id })
-    .from(guildMembers)
-    .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, req.userId!)))
-    .limit(1);
-  if (!membership) { res.status(403).json({ code: 'FORBIDDEN', message: 'Not a guild member' }); return; }
-
-  const inviteRows = await db
-    .select({
-      code: guildInvites.code,
-      guildId: guildInvites.guildId,
-      createdBy: guildInvites.createdBy,
-      maxUses: guildInvites.maxUses,
-      uses: guildInvites.uses,
-      expiresAt: guildInvites.expiresAt,
-      temporary: guildInvites.temporary,
-      createdAt: guildInvites.createdAt,
-      creatorUsername: users.username,
-    })
-    .from(guildInvites)
-    .leftJoin(users, eq(users.id, guildInvites.createdBy))
-    .where(eq(guildInvites.guildId, guildId));
-
-  res.json(inviteRows);
+    handleAppError(res, err, 'invites');
+  }
 });
 
 /** GET /api/v1/invites/:code — public preview */
 invitesRouter.get('/invites/:code', publicInviteRateLimit, async (req: Request, res: Response): Promise<void> => {
   const { code } = req.params as Record<string, string>;
-  const [invite] = await db.select().from(guildInvites).where(eq(guildInvites.code, code)).limit(1);
-  if (!invite) { res.status(404).json({ code: 'NOT_FOUND', message: 'Invite not found or expired' }); return; }
+  try {
+    const [invite] = await db.select().from(guildInvites).where(eq(guildInvites.code, code)).limit(1);
+    if (!invite) { res.status(404).json({ code: 'NOT_FOUND', message: 'Invite not found or expired' }); return; }
 
-  // Check expiry
-  if (invite.expiresAt && invite.expiresAt < new Date()) {
-    res.status(410).json({ code: 'EXPIRED', message: 'Invite has expired' }); return;
+    if (invite.expiresAt && invite.expiresAt < new Date()) {
+      res.status(410).json({ code: 'EXPIRED', message: 'Invite has expired' }); return;
+    }
+    if (invite.maxUses && invite.uses >= invite.maxUses) {
+      res.status(410).json({ code: 'EXHAUSTED', message: 'Invite has reached max uses' }); return;
+    }
+
+    const [guild] = await db.select({
+      id: guilds.id,
+      name: guilds.name,
+      iconHash: guilds.iconHash,
+      memberCount: guilds.memberCount,
+      description: guilds.description,
+    }).from(guilds).where(eq(guilds.id, invite.guildId)).limit(1);
+
+    res.json({ invite: { code: invite.code, guildId: invite.guildId }, guild });
+  } catch (err) {
+    handleAppError(res, err, 'invites');
   }
-  if (invite.maxUses && invite.uses >= invite.maxUses) {
-    res.status(410).json({ code: 'EXHAUSTED', message: 'Invite has reached max uses' }); return;
-  }
-
-  const [guild] = await db.select({
-    id: guilds.id,
-    name: guilds.name,
-    iconHash: guilds.iconHash,
-    memberCount: guilds.memberCount,
-    description: guilds.description,
-  }).from(guilds).where(eq(guilds.id, invite.guildId)).limit(1);
-
-  res.json({ invite: { code: invite.code, guildId: invite.guildId }, guild });
 });
 
 /** POST /api/v1/invites/:code — join guild via invite or vanity code */
@@ -260,17 +272,20 @@ invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Resp
 /** DELETE /api/v1/invites/:code — revoke invite */
 invitesRouter.delete('/invites/:code', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { code } = req.params as Record<string, string>;
-  const [invite] = await db.select().from(guildInvites).where(eq(guildInvites.code, code)).limit(1);
-  if (!invite) { res.status(404).json({ code: 'NOT_FOUND', message: 'Invite not found' }); return; }
+  try {
+    const [invite] = await db.select().from(guildInvites).where(eq(guildInvites.code, code)).limit(1);
+    if (!invite) { res.status(404).json({ code: 'NOT_FOUND', message: 'Invite not found' }); return; }
 
-  // Only creator or guild owner can revoke
-  const [guild] = await db.select({ ownerId: guilds.ownerId }).from(guilds).where(eq(guilds.id, invite.guildId)).limit(1);
-  if (invite.createdBy !== req.userId && guild?.ownerId !== req.userId) {
-    res.status(403).json({ code: 'FORBIDDEN', message: 'Not authorized' }); return;
+    const [guild] = await db.select({ ownerId: guilds.ownerId }).from(guilds).where(eq(guilds.id, invite.guildId)).limit(1);
+    if (invite.createdBy !== req.userId && guild?.ownerId !== req.userId) {
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Not authorized' }); return;
+    }
+
+    await db.delete(guildInvites).where(eq(guildInvites.code, code));
+    res.json({ code: 'OK', message: 'Invite revoked' });
+  } catch (err) {
+    handleAppError(res, err, 'invites');
   }
-
-  await db.delete(guildInvites).where(eq(guildInvites.code, code));
-  res.json({ code: 'OK', message: 'Invite revoked' });
 });
 
 /** DELETE /api/v1/guilds/:guildId/invites/:code — revoke invite (MANAGE_GUILD perm) */
@@ -281,10 +296,14 @@ invitesRouter.delete('/guilds/:guildId/invites/:code', requireAuth, async (req: 
     res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_GUILD permission' }); return;
   }
 
-  const [invite] = await db.select().from(guildInvites)
-    .where(and(eq(guildInvites.code, code), eq(guildInvites.guildId, guildId))).limit(1);
-  if (!invite) { res.status(404).json({ code: 'NOT_FOUND', message: 'Invite not found' }); return; }
+  try {
+    const [invite] = await db.select().from(guildInvites)
+      .where(and(eq(guildInvites.code, code), eq(guildInvites.guildId, guildId))).limit(1);
+    if (!invite) { res.status(404).json({ code: 'NOT_FOUND', message: 'Invite not found' }); return; }
 
-  await db.delete(guildInvites).where(eq(guildInvites.code, code));
-  res.json({ code: 'OK', message: 'Invite revoked' });
+    await db.delete(guildInvites).where(eq(guildInvites.code, code));
+    res.json({ code: 'OK', message: 'Invite revoked' });
+  } catch (err) {
+    handleAppError(res, err, 'invites');
+  }
 });
