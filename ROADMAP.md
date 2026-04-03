@@ -11,22 +11,20 @@ Gratonite is production-ready with **140** database schemas, **134** API route m
 - **Shipped** items are backed by code in this repository (API routes, web/mobile UI, jobs). They are spot-checked during roadmap reviews; not every bullet has a dedicated automated test.
 - **Counts** (schemas, routes, pages) come from repository inventory scripts or manual tallies and may drift slightly between releases — treat as approximate.
 - **Near-term / mid-term / long-term** lists are planning intent, not commitments with dates.
-- For a finer-grained initiative matrix (search, notifications, federation, operators), see [`docs/roadmap/PRODUCT-PROGRAM.md`](docs/roadmap/PRODUCT-PROGRAM.md).
+- Finer-grained initiative tracking (search, notifications, federation, operators) is maintained **outside** this repository.
 
-### Product program — checked off (sync with docs)
-
-Track detailed status in [`docs/roadmap/PRODUCT-PROGRAM.md`](docs/roadmap/PRODUCT-PROGRAM.md) (tables + **Completion log**). Roadmap-level confirmations:
+### Recently shipped (high level)
 
 - [x] **Search:** server-wide filters (guild, author, date range, `has:*`, mentions-me) — see *Shipped → Core Platform*
 - [x] **Privacy:** GDPR account data export — see *Shipped → Moderation*
 - [x] **Email:** transactional-by-default policy + migration defaults — see *Shipped → Email and Notifications*
-- [x] **Presence:** scheduled DND window (settings + `dnd_schedules` + job) — covered in product program § Notifications
-- [x] **Operator backup entry point:** Admin → Self-host backups → documentation + copy helpers (product program §6)
-- [x] **Notification quiet hours** (user-level: mute alerts + digest email by time window; distinct from DND presence) — see product program § Notifications
-- [x] **Per-guild notification master rules** — default level for new members (see product program § Notifications)
-- [x] **Saved searches + search page entry** — persisted named queries on `GlobalSearch`; sidebar opens `/guild/:guildId/search` (see product program § Search)
-- [x] **Mobile quiet hours** — same JSON as web in notification settings (product program § Notifications)
-- [x] **Public API docs** — `docs/api/openapi.yaml` + `docs/api/WEBHOOK-EVENTS.md` (product program § Platform)
+- [x] **Presence:** scheduled DND window (settings + `dnd_schedules` + job)
+- [x] **Operator backup entry point:** Admin → Self-host backups → documentation + copy helpers
+- [x] **Notification quiet hours** (user-level: mute alerts + digest email by time window; distinct from DND presence)
+- [x] **Per-guild notification master rules** — default level for new members
+- [x] **Saved searches + search page entry** — persisted named queries on `GlobalSearch`; sidebar opens `/guild/:guildId/search`
+- [x] **Mobile quiet hours** — same JSON as web in notification settings
+- [x] **Public API docs** — `docs/api/openapi.yaml` + `docs/api/WEBHOOK-EVENTS.md`
 
 ---
 
