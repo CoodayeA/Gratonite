@@ -10,6 +10,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-04-03a',
+    date: 'April 3, 2026',
+    title: 'Smarter search, notification controls & privacy',
+    entries: [
+      { type: 'feature', text: 'Server-wide search filters — narrow results by server, person, date range, “mentions me,” or messages that have files, images, links, or embeds' },
+      { type: 'improvement', text: 'Do Not Disturb schedule — your DND hours now save reliably and apply automatically in the background (Settings → Notifications)' },
+      { type: 'feature', text: 'Notification quiet hours — pause notification alerts and unread digest emails during the hours you choose; your online status stays the same (Settings → Notifications)' },
+      { type: 'improvement', text: 'Email defaults — mention, DM, and digest emails are opt-in by default; verification and password reset messages still send when needed' },
+      { type: 'feature', text: 'Download your account data — request a GDPR-style export under Settings → Privacy & Safety' },
+      { type: 'improvement', text: 'Admins: instance health snapshot on the admin dashboard, plus a quick link to self-host backup documentation' },
+    ],
+  },
+  {
     id: '2026-03-23a',
     date: 'March 23, 2026',
     title: 'Federation Identity & Trust System',
