@@ -22,6 +22,7 @@ function App() {
   const [config, setConfig] = useState<Config | null>(null);
   const [pullProgress, setPullProgress] = useState({ index: 0, total: 6 });
   const [error, setError] = useState<string | null>(null);
+  const [copiedLogs, setCopiedLogs] = useState(false);
 
   useEffect(() => {
     checkState();
@@ -61,6 +62,7 @@ function App() {
   async function startSetup() {
     setPhase("setup");
     setError(null);
+    setCopiedLogs(false);
     try {
       const cfg = await invoke<Config>("start_instance");
       setConfig(cfg);
@@ -74,6 +76,7 @@ function App() {
     setPhase("setup");
     setStep("Starting containers...");
     setError(null);
+    setCopiedLogs(false);
     try {
       const cfg = await invoke<Config>("start_instance");
       setConfig(cfg);
@@ -87,6 +90,15 @@ function App() {
     await invoke("stop_instance");
     setPhase("stopped");
   }
+
+  async function handleCopyLogs() {
+    if (!formattedError) return;
+    await navigator.clipboard.writeText(formattedError);
+    setCopiedLogs(true);
+    window.setTimeout(() => setCopiedLogs(false), 2000);
+  }
+
+  const formattedError = error?.replace(/^Error:\s*/, "").trim() ?? "";
 
   if (phase === "no-docker") {
     return (
@@ -130,19 +142,28 @@ function App() {
           )}
           {error && (
             <div className="error-box">
-              <p className="error">{error}</p>
+              <p className="error">Setup failed.</p>
+              <pre className="error-log">{formattedError}</pre>
               <p className="hint">
-                This usually means the database setup ran into a problem.
-                Try stopping all containers in Docker Desktop and clicking "Start" again.
+                This often means PostgreSQL or Redis was not ready yet, or the setup container hit a migration or configuration error.
+                Wait for Docker Desktop to finish starting, then click "Try Again".
+              </p>
+              <p className="hint">
+                If the logs above mention authentication failure or an existing broken database state, stop the containers in Docker Desktop before retrying.
               </p>
               <p className="hint">
                 Still stuck?{" "}
                 <a href="https://github.com/CoodayeA/Gratonite/issues" target="_blank">
                   Report this issue
                 </a>{" "}
-                and we'll help you out.
+                and include the setup logs shown above.
               </p>
-              <button onClick={handleStart} className="btn secondary">Try Again</button>
+              <div className="actions">
+                <button onClick={handleStart} className="btn secondary">Try Again</button>
+                <button onClick={handleCopyLogs} className="btn secondary">
+                  {copiedLogs ? "Copied" : "Copy Setup Logs"}
+                </button>
+              </div>
             </div>
           )}
         </div>
