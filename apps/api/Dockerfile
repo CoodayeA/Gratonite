@@ -22,12 +22,14 @@ RUN pnpm install --no-frozen-lockfile --prod
 COPY --from=builder /build/dist ./dist
 COPY --from=builder /build/drizzle ./drizzle
 COPY --from=builder /build/drizzle.config.ts ./
+COPY apps/api/start.sh ./start.sh
 
 # Create uploads directory
 RUN mkdir -p /app/uploads /app/keys
 
 # Non-root user
 RUN addgroup -g 1001 gratonite && adduser -u 1001 -G gratonite -s /bin/sh -D gratonite
+RUN chmod +x /app/start.sh
 RUN chown -R gratonite:gratonite /app
 USER gratonite
 
@@ -36,4 +38,4 @@ EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:4000/health || exit 1
 
-CMD ["node", "dist/index.js"]
+CMD ["sh", "/app/start.sh"]
