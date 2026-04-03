@@ -8,6 +8,7 @@ import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { redis } from '../lib/redis';
 import { safeJsonParse } from '../lib/safe-json.js';
+import { DEFAULT_EMAIL_NOTIFICATIONS, mergeEmailNotificationsJson } from '../lib/emailNotificationPrefs';
 
 export const settingsRouter = Router();
 
@@ -45,6 +46,8 @@ const patchSettingsSchema = z.object({
     mentions: z.boolean().optional(),
     dms: z.boolean().optional(),
     frequency: z.enum(['instant', 'daily', 'never']).optional(),
+    /** Opt-in: new sign-in from unrecognized device (not verification / password reset) */
+    securityAlerts: z.boolean().optional(),
   }).optional(),
   // Item 86: DND scheduling
   dndSchedule: z.object({
@@ -97,12 +100,16 @@ settingsRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
         accentColor: null,
         customThemeId: null,
         themePreferences: null,
+        emailNotifications: { ...DEFAULT_EMAIL_NOTIFICATIONS },
       });
       return;
     }
 
     const { id, userId, createdAt, updatedAt, ...rest } = settings;
-    res.json(rest);
+    res.json({
+      ...rest,
+      emailNotifications: mergeEmailNotificationsJson(rest.emailNotifications),
+    });
   } catch (err) {
     logger.error('[settings] GET / error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
@@ -116,14 +123,22 @@ settingsRouter.patch(
   validate(patchSettingsSchema),
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const data = req.body as z.infer<typeof patchSettingsSchema>;
+      const data = { ...(req.body as z.infer<typeof patchSettingsSchema>) };
 
       // Upsert
       const [existing] = await db
-        .select({ id: userSettings.id })
+        .select({ id: userSettings.id, emailNotifications: userSettings.emailNotifications })
         .from(userSettings)
         .where(eq(userSettings.userId, req.userId!))
         .limit(1);
+
+      const incomingEmail = (req.body as z.infer<typeof patchSettingsSchema>).emailNotifications;
+      if (incomingEmail !== undefined) {
+        data.emailNotifications = {
+          ...mergeEmailNotificationsJson(existing?.emailNotifications),
+          ...incomingEmail,
+        };
+      }
 
       if (existing) {
         const [updated] = await db
@@ -132,14 +147,29 @@ settingsRouter.patch(
           .where(eq(userSettings.userId, req.userId!))
           .returning();
         const { id, userId, createdAt, updatedAt, ...rest } = updated;
-        res.json(rest);
+        res.json({
+          ...rest,
+          emailNotifications: mergeEmailNotificationsJson(rest.emailNotifications),
+        });
       } else {
+        const insertPayload = { ...data };
+        if (insertPayload.emailNotifications !== undefined) {
+          insertPayload.emailNotifications = {
+            ...DEFAULT_EMAIL_NOTIFICATIONS,
+            ...insertPayload.emailNotifications,
+          };
+        } else {
+          insertPayload.emailNotifications = { ...DEFAULT_EMAIL_NOTIFICATIONS };
+        }
         const [created] = await db
           .insert(userSettings)
-          .values({ userId: req.userId!, ...data })
+          .values({ userId: req.userId!, ...insertPayload })
           .returning();
         const { id, userId, createdAt, updatedAt, ...rest } = created;
-        res.json(rest);
+        res.json({
+          ...rest,
+          emailNotifications: mergeEmailNotificationsJson(rest.emailNotifications),
+        });
       }
     } catch (err) {
       logger.error('[settings] PATCH / error:', err);

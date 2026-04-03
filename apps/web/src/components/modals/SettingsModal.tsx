@@ -1838,7 +1838,12 @@ function SettingsNotificationsPanel() {
     const { addToast } = useToast();
     const [pushEnabled, setPushEnabled] = useState(false);
     const [pushSupported] = useState(() => 'serviceWorker' in navigator && 'PushManager' in window);
-    const [emailPrefs, setEmailPrefs] = useState<{ mentions: boolean; dms: boolean; frequency: 'instant' | 'daily' | 'never' }>({ mentions: true, dms: true, frequency: 'daily' });
+    const [emailPrefs, setEmailPrefs] = useState<{
+        mentions: boolean;
+        dms: boolean;
+        frequency: 'instant' | 'daily' | 'never';
+        securityAlerts: boolean;
+    }>({ mentions: false, dms: false, frequency: 'never', securityAlerts: false });
 
     useEffect(() => {
         // Check push subscription status
@@ -1849,7 +1854,13 @@ function SettingsNotificationsPanel() {
         }
         // Load email prefs from settings
         api.users.getSettings().then((s: any) => {
-            if (s?.emailNotifications) setEmailPrefs(prev => ({ ...prev, ...s.emailNotifications }));
+            if (s?.emailNotifications) {
+                setEmailPrefs(prev => ({
+                    ...prev,
+                    ...s.emailNotifications,
+                    securityAlerts: s.emailNotifications.securityAlerts === true,
+                }));
+            }
         }).catch(() => {});
     }, []);
 
@@ -1937,7 +1948,10 @@ function SettingsNotificationsPanel() {
             </div>
 
             <div style={{ marginBottom: '32px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Email Notifications</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Email Notifications</h3>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: 1.45 }}>
+                    Account verification and password reset emails are always sent when needed. Everything below is opt-in.
+                </p>
                 <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
                     <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <div style={{ flex: 1 }}>
@@ -1956,6 +1970,16 @@ function SettingsNotificationsPanel() {
                         </div>
                         <div onClick={() => updateEmailPref('dms', !emailPrefs.dms)} style={{ width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', background: emailPrefs.dms ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: `1px solid ${emailPrefs.dms ? 'transparent' : 'var(--stroke)'}`, position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
                             <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: emailPrefs.dms ? '22px' : '2px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+                        </div>
+                    </div>
+                    <div style={{ height: '1px', background: 'var(--stroke)' }} />
+                    <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px' }}>New sign-in alerts</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Email when your account is used from a new device or location.</div>
+                        </div>
+                        <div onClick={() => updateEmailPref('securityAlerts', !emailPrefs.securityAlerts)} style={{ width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', background: emailPrefs.securityAlerts ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: `1px solid ${emailPrefs.securityAlerts ? 'transparent' : 'var(--stroke)'}`, position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                            <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: emailPrefs.securityAlerts ? '22px' : '2px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
                         </div>
                     </div>
                     <div style={{ height: '1px', background: 'var(--stroke)' }} />

@@ -22,6 +22,8 @@ import { logger } from '../lib/logger';
 import { redis } from '../lib/redis';
 import { referrals as referralsTable } from '../db/schema/referrals';
 import { userDevices } from '../db/schema/user-devices';
+import { userSettings } from '../db/schema/settings';
+import { mergeEmailNotificationsJson } from '../lib/emailNotificationPrefs';
 import { ServiceError } from './guild.service';
 
 // ---------------------------------------------------------------------------
@@ -468,14 +470,22 @@ export async function login(data: LoginData): Promise<LoginResult> {
     const isNewDevice = inserted && (Date.now() - new Date(inserted.firstSeenAt).getTime()) < 5000;
 
     if (isNewDevice && user.email) {
-      const appUrl = process.env.APP_URL || 'https://gratonite.chat';
-      sendNewDeviceLoginAlert({
-        to: user.email,
-        ip: clientIp,
-        device,
-        timestamp: new Date(),
-        appUrl,
-      }).catch(() => { /* email delivery failure is non-critical */ });
+      const [prefsRow] = await db
+        .select({ emailNotifications: userSettings.emailNotifications })
+        .from(userSettings)
+        .where(eq(userSettings.userId, user.id))
+        .limit(1);
+      const emailPrefs = mergeEmailNotificationsJson(prefsRow?.emailNotifications);
+      if (emailPrefs.securityAlerts === true) {
+        const appUrl = process.env.APP_URL || 'https://gratonite.chat';
+        sendNewDeviceLoginAlert({
+          to: user.email,
+          ip: clientIp,
+          device,
+          timestamp: new Date(),
+          appUrl,
+        }).catch(() => { /* email delivery failure is non-critical */ });
+      }
     }
   } catch {
     // Device tracking is non-critical
