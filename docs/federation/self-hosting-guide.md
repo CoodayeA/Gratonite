@@ -142,6 +142,7 @@ It will output something like `k7Rp3mNx9Qz2wYh8bLfT4jKv5nCs6dA`. Copy that and p
 
 > **That's all you need to set.** Everything else has sensible defaults:
 > - JWT secrets are auto-generated on first run
+> - MFA and Bull Board admin secrets are auto-generated on first run
 > - HTTPS certificates are auto-obtained via Let's Encrypt
 > - APP_URL and CORS_ORIGIN are auto-derived from your INSTANCE_DOMAIN
 > - Database and Redis connections are pre-configured for the Docker network
@@ -178,6 +179,8 @@ You should see:
 === Gratonite Instance Setup ===
 Running database migrations... done.
 Generated JWT secrets.
+Generated MFA encryption key.
+Generated Bull Board admin token.
 Generating Ed25519 instance keypair... done.
 Creating admin account: admin (you@gmail.com)... done.
 === Setup complete! ===
@@ -369,6 +372,8 @@ These are the only values you **must** set. Everything else has sensible default
 |----------|---------|-------------|
 | `JWT_SECRET` | Auto-generated | Access token signing key (32+ chars) |
 | `JWT_REFRESH_SECRET` | Auto-generated | Refresh token signing key (32+ chars) |
+| `MFA_ENCRYPTION_KEY` | Auto-generated | MFA encryption key (32-byte hex) |
+| `BULLBOARD_ADMIN_TOKEN` | Auto-generated | Admin token for the Bull Board jobs dashboard |
 | `APP_URL` | Auto-derived from `INSTANCE_DOMAIN` | Full URL of your instance |
 | `CORS_ORIGIN` | Auto-derived from `INSTANCE_DOMAIN` | Allowed origin for cross-origin requests |
 
@@ -489,7 +494,8 @@ docker compose -f deploy/self-host/docker-compose.yml logs api --tail 50
 
 | Error | Fix |
 |-------|-----|
-| `JWT_SECRET must be at least 32 characters` | Delete your `.env` and re-copy from `.env.example`. Leave `JWT_SECRET` and `JWT_REFRESH_SECRET` blank — they'll be auto-generated. |
+| `JWT_SECRET environment variable is not set` | Older self-host images generated secrets during setup but did not pass them into the API runtime. Update to the latest images and retry from a clean `docker compose -f deploy/self-host/docker-compose.yml down -v` if this is a fresh install. |
+| `Startup config invalid. BULLBOARD_ADMIN_TOKEN` | Older self-host images required a Bull Board token but did not auto-generate one. Update to the latest images and retry from a clean `docker compose -f deploy/self-host/docker-compose.yml down -v` if this is a fresh install. |
 | `APP_URL and CORS_ORIGIN are required` | Make sure `INSTANCE_DOMAIN` is set in your `.env` file. APP_URL and CORS_ORIGIN are auto-derived from it. |
 | `Federation is not enabled` on federation endpoints | Set `FEDERATION_ENABLED=true` in `.env` and restart: `docker compose restart api` |
 

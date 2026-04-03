@@ -25,6 +25,7 @@ docker compose restart
 | `JWT_SECRET` | No | Auto-generated | Secret key for signing access tokens. Auto-generated on first run if left blank |
 | `JWT_REFRESH_SECRET` | No | Auto-generated | Secret key for signing refresh tokens. Auto-generated on first run if left blank |
 | `MFA_ENCRYPTION_KEY` | No | Auto-generated | Encryption key for MFA TOTP secrets. Auto-generated on first run if left blank |
+| `BULLBOARD_ADMIN_TOKEN` | No | Auto-generated | Admin token for the Bull Board jobs dashboard. Auto-generated on first run if left blank |
 | `FEDERATION_ENABLED` | No | `true` | Enable or disable federation entirely |
 | `FEDERATION_ALLOW_INBOUND` | No | `true` | Allow other instances to send messages to this instance |
 | `FEDERATION_ALLOW_OUTBOUND` | No | `true` | Allow this instance to send messages to other instances |
@@ -46,7 +47,7 @@ docker compose restart
 
 ## Notes
 
-- **Secrets** (`JWT_SECRET`, `JWT_REFRESH_SECRET`, `MFA_ENCRYPTION_KEY`) are auto-generated on first run if left blank. Once generated, do not change them or existing sessions and MFA setups will break.
+- **Secrets** (`JWT_SECRET`, `JWT_REFRESH_SECRET`, `MFA_ENCRYPTION_KEY`, `BULLBOARD_ADMIN_TOKEN`) are auto-generated on first run if left blank. Once generated, do not change them or existing sessions, MFA setups, and Bull Board access will break.
 - **Database credentials** (`DB_USER`, `DB_PASSWORD`, `DB_NAME`) are used by both the API and the PostgreSQL container. Changing them after first run requires manually updating the database as well.
 - **Admin credentials** are only used during initial setup. After the admin account is created, changing these values in `.env` has no effect. Use the app to change your password.
 - **SMTP** is optional. Without it, email features (password reset, email notifications) are disabled but everything else works normally.
