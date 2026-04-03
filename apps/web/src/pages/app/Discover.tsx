@@ -391,6 +391,54 @@ const Discover = () => {
     const [federatedLoading, setFederatedLoading] = useState(false);
     const [selectedFederated, setSelectedFederated] = useState<FederatedPortalInfo | null>(null);
     const [brokenIcons, setBrokenIcons] = useState<Set<string>>(new Set());
+    const [fedAddrInput, setFedAddrInput] = useState('');
+    const [fedResolving, setFedResolving] = useState(false);
+    const [fedResolved, setFedResolved] = useState<null | {
+        id: string;
+        displayName?: string;
+        username?: string;
+        federationAddress?: string;
+        avatarUrl?: string | null;
+        avatarHash?: string | null;
+        isLocal?: boolean;
+    }>(null);
+
+    const resolveFederationAddress = async () => {
+        const q = fedAddrInput.trim();
+        if (!q.includes('@')) {
+            addToast({ title: 'Invalid address', description: 'Use a federation address like user@example.com', variant: 'error' });
+            return;
+        }
+        setFedResolving(true);
+        setFedResolved(null);
+        try {
+            const u = (await api.federation.resolve(q)) as {
+                id: string;
+                displayName?: string;
+                username?: string;
+                federationAddress?: string;
+                avatarUrl?: string | null;
+                avatarHash?: string | null;
+                isLocal?: boolean;
+            };
+            setFedResolved(u);
+            addToast({ title: 'Profile found', description: u.displayName || u.username || 'Open a conversation below.', variant: 'success' });
+        } catch {
+            addToast({ title: 'Could not resolve', description: 'No cached profile for that address yet, or federation is unavailable.', variant: 'error' });
+        } finally {
+            setFedResolving(false);
+        }
+    };
+
+    const openResolvedDm = async () => {
+        if (!fedResolved?.id) return;
+        try {
+            const dm = (await api.relationships.openDm(fedResolved.id)) as { id: string };
+            navigate(`/dm/${dm.id}`);
+        } catch {
+            addToast({ title: 'Could not open DM', variant: 'error' });
+        }
+    };
 
     useEffect(() => {
         api.get<string[]>('/guilds/tags').then(tags => {
@@ -620,6 +668,91 @@ const Discover = () => {
                     </div>
                 </div>
             )}
+
+            {/* Federation address lookup (user@domain) */}
+            <div style={{ marginBottom: '28px', padding: '18px', borderRadius: '14px', border: '1px solid var(--stroke)', background: 'var(--bg-secondary)' }}>
+                <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+                    <Globe size={18} color="var(--accent-primary)" /> Find someone on another instance
+                </h2>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.45 }}>
+                    Enter a <strong>federation address</strong> (username@their-server). We&apos;ll look up their profile so you can start a direct message.{' '}
+                    <a href="https://gratonite.chat/federation" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)' }}>Learn how federation works</a>.
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                    <input
+                        type="text"
+                        value={fedAddrInput}
+                        onChange={e => setFedAddrInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') void resolveFederationAddress(); }}
+                        placeholder="friend@social.example.com"
+                        style={{
+                            flex: '1 1 220px',
+                            minWidth: 0,
+                            padding: '10px 14px',
+                            borderRadius: '10px',
+                            border: '1px solid var(--stroke)',
+                            background: 'var(--bg-primary)',
+                            color: 'var(--text-primary)',
+                            fontSize: '14px',
+                            outline: 'none',
+                        }}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => void resolveFederationAddress()}
+                        disabled={fedResolving}
+                        style={{
+                            padding: '10px 20px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            background: 'var(--accent-primary)',
+                            color: '#111',
+                            fontWeight: 700,
+                            fontSize: '13px',
+                            cursor: fedResolving ? 'wait' : 'pointer',
+                            opacity: fedResolving ? 0.75 : 1,
+                        }}
+                    >
+                        {fedResolving ? 'Looking up…' : 'Look up'}
+                    </button>
+                </div>
+                {fedResolved && (
+                    <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '14px', padding: '14px', borderRadius: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)' }}>
+                        <div style={{ width: '44px', height: '44px', borderRadius: '10px', overflow: 'hidden', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '16px' }}>
+                            {fedResolved.avatarUrl ? (
+                                <img src={fedResolved.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : fedResolved.avatarHash ? (
+                                <img src={`${API_BASE}/files/${fedResolved.avatarHash}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                                (fedResolved.displayName || fedResolved.username || '?').charAt(0).toUpperCase()
+                            )}
+                        </div>
+                        <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: '15px' }}>{fedResolved.displayName || fedResolved.username}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                {fedResolved.federationAddress || fedAddrInput.trim()}
+                                {fedResolved.isLocal ? ' · This instance' : ''}
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => void openResolvedDm()}
+                            style={{
+                                padding: '10px 18px',
+                                borderRadius: '10px',
+                                border: 'none',
+                                background: 'var(--accent-primary)',
+                                color: '#111',
+                                fontWeight: 700,
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            Message
+                        </button>
+                    </div>
+                )}
+            </div>
 
             {/* Self-Hosted Servers from federated instances */}
             {federatedPortals.length > 0 && (
