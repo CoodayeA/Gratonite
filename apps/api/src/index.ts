@@ -30,6 +30,7 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import * as Sentry from '@sentry/node';
 import { handleAppError, normalizeError } from './lib/errors';
+import { parseCorsOriginsFromEnv } from './lib/corsConfig';
 
 const PLACEHOLDER_PATTERNS = [
   'changeme',
@@ -108,11 +109,20 @@ function validateStartupConfig(): string[] {
     }
   }
 
-  if (appUrl && corsOrigin && corsOrigin !== '*') {
+  const corsRaw = process.env.CORS_ORIGIN?.trim() ?? '';
+  if (appUrl && corsRaw && corsRaw !== '*') {
     try {
       const appOrigin = new URL(appUrl).origin;
-      if (corsOrigin !== appOrigin) {
-        errors.push(`APP_URL origin (${appOrigin}) must match CORS_ORIGIN (${corsOrigin}).`);
+      const allowed = corsRaw
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (allowed.length === 0) {
+        errors.push('CORS_ORIGIN must list at least one origin when set.');
+      } else if (!allowed.includes(appOrigin)) {
+        errors.push(
+          `APP_URL origin (${appOrigin}) must be listed in CORS_ORIGIN (current: ${corsRaw}).`,
+        );
       }
     } catch {
       errors.push('APP_URL must be a valid absolute URL.');
@@ -158,9 +168,11 @@ if (!process.env.CORS_ORIGIN) {
   logger.warn('[cors] CORS_ORIGIN is not set, falling back to http://localhost:5173. Set CORS_ORIGIN in production.');
 }
 
+const corsOriginOption = parseCorsOriginsFromEnv();
+
 const io = new SocketIOServer(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || ['http://localhost:5173', 'http://localhost:5174', /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/],
+    origin: corsOriginOption,
     credentials: true,
   },
   // Cap per-message payload (defense-in-depth; keep in sync with client expectations)
@@ -206,7 +218,7 @@ app.use(helmet({
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || ['http://localhost:5173', 'http://localhost:5174', /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/],
+    origin: corsOriginOption,
     credentials: true,
   })
 );
