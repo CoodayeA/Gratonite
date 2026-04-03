@@ -1,5 +1,5 @@
 source_path,target_path,restore_command
-/Users/ferdinand/.gemini/antigravity/scratch/gratonite-web-desktop/webapp,/Volumes/Project BUS/GratoniteFinalForm/apps/web,mv "/Volumes/Project BUS/GratoniteFinalForm/apps/web" "/Users/ferdinand/.gemini/antigravity/scratch/gratonite-web-desktop/webapp"
+/Users/ferdinand/work/scratch/gratonite-web-desktop/webapp,/Volumes/Project BUS/GratoniteFinalForm/apps/web,mv "/Volumes/Project BUS/GratoniteFinalForm/apps/web" "/Users/ferdinand/work/scratch/gratonite-web-desktop/webapp"
 /Volumes/Project BUS/GratPhase1Test/gratonite-api,/Volumes/Project BUS/GratoniteFinalForm/apps/api,mv "/Volumes/Project BUS/GratoniteFinalForm/apps/api" "/Volumes/Project BUS/GratPhase1Test/gratonite-api"
 /Volumes/Project BUS/GratPhase1Test/gratonite-desktop,/Volumes/Project BUS/GratoniteFinalForm/apps/desktop,mv "/Volumes/Project BUS/GratoniteFinalForm/apps/desktop" "/Volumes/Project BUS/GratPhase1Test/gratonite-desktop"
 /Volumes/Project BUS/GratPhase1Test/gratonite-mobile,/Volumes/Project BUS/GratoniteFinalForm/apps/mobile,mv "/Volumes/Project BUS/GratoniteFinalForm/apps/mobile" "/Volumes/Project BUS/GratPhase1Test/gratonite-mobile"

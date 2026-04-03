@@ -2,7 +2,7 @@
 
 **Task ID:** CONS-012  
 **Status:** ✓ COMPLETE  
-**Owner:** Kiro  
+**Owner:** Engineering  
 **Completed:** 2026-03-04T02:15:00Z
 
 ---

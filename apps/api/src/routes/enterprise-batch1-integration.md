@@ -1,6 +1,6 @@
 # Enterprise Batch 1 Integration Notes
 
-These are the changes needed in shared files that this agent does not own.
+These are the changes needed in shared files maintained outside this integration note.
 
 ## 1. apps/api/src/routes/index.ts
 
@@ -65,7 +65,7 @@ reactions: {
 
 Note: The ChannelChat.tsx frontend currently uses raw fetch() calls for drafts, bookmarks, scheduled, and who-reacted, so the api.ts wrapper methods are optional but recommended for consistency.
 
-## 5. Note for reactions.ts (for agent-search / other agent)
+## 5. Note for reactions.ts (search / follow-up)
 
 Need endpoint:
 ```

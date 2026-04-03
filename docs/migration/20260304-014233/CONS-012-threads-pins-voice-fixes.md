@@ -2,7 +2,7 @@
 
 **Task ID:** CONS-012  
 **Status:** In Progress  
-**Owner:** Kiro  
+**Owner:** Engineering  
 **Timestamp:** 2026-03-04T01:50:00Z
 
 ## Issues Identified

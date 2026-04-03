@@ -49,7 +49,7 @@ export interface ApiError {
   details?: Record<string, string[]>;
 }
 
-export interface CursorPaginationParams {
+export interface KeysetPaginationParams {
   before?: string;
   after?: string;
   around?: string;
@@ -643,7 +643,7 @@ export async function apiFetch<T = any>(
 // Query string helper
 // ---------------------------------------------------------------------------
 
-export function buildQuery(params?: CursorPaginationParams): string {
+export function buildQuery(params?: KeysetPaginationParams): string {
   if (!params) return '';
   const parts: string[] = [];
   if (params.before) parts.push(`before=${params.before}`);

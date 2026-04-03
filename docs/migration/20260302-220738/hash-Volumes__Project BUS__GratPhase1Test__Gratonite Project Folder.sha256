@@ -1,6 +1,6 @@
 62346a5962555505757f9b4c816ff720e318635f40a401b19d06f671a11b705a  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/.DS_Store
-f42858fbbed80d53c2bb8539902e48fab746393e0832f5d99cfb03ad73afd711  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/.claude/launch.json
-32b84267adb9b8049dd8a60520b45bd7fcb07f90d08222a72baffb6401eb8725  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/.claude/settings.local.json
+f42858fbbed80d53c2bb8539902e48fab746393e0832f5d99cfb03ad73afd711  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/editor/launch.json
+32b84267adb9b8049dd8a60520b45bd7fcb07f90d08222a72baffb6401eb8725  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/editor/settings.local.json
 47b69db6863f9508c098a6c3f0b97348bb016f8cd50bac0404d1dbd5224b2c53  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/.dockerignore
 20156d045f9ad790c023df6eff690dc20311804c492c11581996357a5f31c4b3  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/.easignore
 aef41bb0ea4797f2a03bb688767429964a34c22dca83d0721afa1320676efdbe  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/.github/workflows/pr-ci.yml
@@ -20,7 +20,7 @@ f439b858578d0af8f88a741c2fecbcaab7aeaa84bcea9c2640cadf4c9793941c  /Volumes/Proje
 f439b858578d0af8f88a741c2fecbcaab7aeaa84bcea9c2640cadf4c9793941c  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/.playwright-cli/page-2026-02-23T16-16-09-282Z.yml
 8f111fd9d36e47bc1ab13a25eba09a02d56f546d3eae600d5f1524eca79a3669  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/.prettierrc
 9cbadb7509ff16f86d6bfc419bb98b50f22094a7aebc7a4210f6fb0132f094da  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/ARCHITECTURE.md
-7edf846cf0dfa5c9fe06d7f682ce65078c2949e5f3e59c8252c1777afdee180a  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/CLAUDE.md
+7edf846cf0dfa5c9fe06d7f682ce65078c2949e5f3e59c8252c1777afdee180a  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/EDITOR.md
 b7d8e55ec0d597562a7122fb812e81aae7997035e8ddea3cd8fcb4e7d09eec4d  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/MOBILE_UI_UX_HANDOFF.md
 3480a081c72d2845b390c8a12ee9ff9db2508ce2c0c742228438bfdc778a2bde  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/PROGRESS.md
 0bbe8c1b92993ce777e16947d860c721eddbddc8351e2526b7638e42ff03bd7b  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/apps/.DS_Store
@@ -11725,7 +11725,7 @@ bbcaf6e43cac2d24b33ea8f98618b99ee9311da61e17aa0f8231853ebc6132cf  /Volumes/Proje
 d6b5deebda0e06d7425cf1db5d2906f804362a0cdf6ba2303fa2c454802baede  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/pnpm-lock.yaml
 08d75840c97ab0e72d1d9b5b84a17e47a2e06cb159a5fbec5ee0a6a56682dad7  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/pnpm-workspace.yaml
 0717dc531a57a2d0a2e25f6b015790cb9410dc71ab7ae21bf67c7211f80b2088  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/ralph/.last-branch
-4dfe2e6d157db340680a4610a354b78840ea280f8384f96fba736316194fcbb5  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/ralph/CLAUDE.md
+4dfe2e6d157db340680a4610a354b78840ea280f8384f96fba736316194fcbb5  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/ralph/EDITOR.md
 bf468a9091195f020d41b4b3366b1f2050c66b8cd320fcfcb3b96df9d8e2ac5a  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/ralph/archive/2026-02-25-massive-ui-ux-upgrade/prd.json
 e9637757bfe5c319381ffcd58c29474770c12ecd9556de3513819b3628278b6e  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/ralph/archive/2026-02-25-massive-ui-ux-upgrade/progress.txt
 a89ee2cff550f0ffc67413793e1e3b1a0598c00365473e8641e314b3d478a19e  /Volumes/Project BUS/GratPhase1Test/Gratonite Project Folder/ralph/prd.json

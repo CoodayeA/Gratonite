@@ -2,7 +2,7 @@
 
 **Task ID:** CONS-011  
 **Status:** Done  
-**Owner:** Kiro  
+**Owner:** Engineering  
 **Timestamp:** 2026-03-04T01:42:33Z  
 **Evidence:** `docs/migration/20260304-014233/security-fixes-verification.log`
 

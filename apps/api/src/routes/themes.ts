@@ -9,7 +9,7 @@
  *   - Rate limiting (Item 76)
  *   - CSS value sanitization / XSS prevention (Items 77, 80)
  *   - Theme reporting / content moderation (Item 78)
- *   - Cursor-based pagination (Item 79)
+ *   - Keyset pagination (Item 79)
  *   - Theme versioning (Item 85)
  *   - Download tracking (Item 87)
  */
@@ -175,7 +175,7 @@ themesRouter.get('/themes', requireAuth, themeBrowseRateLimit, async (req: Reque
     );
   }
 
-  // Cursor-based pagination: `after` is a theme ID
+  // Keyset pagination: `after` is a theme ID
   if (after) {
     const [cursorRow] = await db.select({ downloads: themes.downloads, createdAt: themes.createdAt })
       .from(themes)

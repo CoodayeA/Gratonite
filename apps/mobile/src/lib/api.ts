@@ -426,13 +426,13 @@ export async function apiFetch<T>(
 // Query string helper
 // ---------------------------------------------------------------------------
 
-interface CursorPaginationParams {
+interface KeysetPaginationParams {
   before?: string;
   after?: string;
   limit?: number;
 }
 
-function buildQuery(params?: CursorPaginationParams): string {
+function buildQuery(params?: KeysetPaginationParams): string {
   if (!params) return '';
   const parts: string[] = [];
   if (params.before) parts.push(`before=${params.before}`);
@@ -709,7 +709,7 @@ export type MessageSendBody = {
 };
 
 export const messages = {
-  list(channelId: string, params?: CursorPaginationParams, signal?: AbortSignal) {
+  list(channelId: string, params?: KeysetPaginationParams, signal?: AbortSignal) {
     const qs = buildQuery(params);
     return apiFetch<Message[]>(`/channels/${channelId}/messages${qs}`, { signal });
   },
@@ -1022,7 +1022,7 @@ export const threads = {
     return apiFetch<Thread & { memberCount: number }>(`/threads/${threadId}`);
   },
 
-  getMessages(threadId: string, params?: CursorPaginationParams) {
+  getMessages(threadId: string, params?: KeysetPaginationParams) {
     const qs = buildQuery(params);
     return apiFetch<Message[]>(`/threads/${threadId}/messages${qs}`);
   },
@@ -1683,7 +1683,7 @@ export const forum = {
     return apiFetch<ForumPost>(`/forum-posts/${postId}`);
   },
 
-  getReplies(postId: string, params?: CursorPaginationParams) {
+  getReplies(postId: string, params?: KeysetPaginationParams) {
     const qs = buildQuery(params);
     return apiFetch<Message[]>(`/forum-posts/${postId}/replies${qs}`);
   },
