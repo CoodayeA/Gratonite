@@ -32,6 +32,8 @@ export default function LoginScreen({ navigation }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [mfaRequired, setMfaRequired] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const handleLogin = async () => {
     if (!loginInput.trim() || !password) {
@@ -55,6 +57,21 @@ export default function LoginScreen({ navigation }: Props) {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const validateLoginInput = () => {
+    if (loginInput.includes('@')) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(loginInput.trim())) {
+        setEmailError('Please enter a valid email address');
+      }
+    }
+  };
+
+  const validatePassword = () => {
+    if (!password) {
+      setPasswordError('Password is required');
     }
   };
 
@@ -153,6 +170,10 @@ export default function LoginScreen({ navigation }: Props) {
     },
     eyeButton: {
       padding: spacing.xs,
+      minWidth: 44,
+      minHeight: 44,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     button: {
       backgroundColor: colors.accentPrimary,
@@ -263,6 +284,14 @@ export default function LoginScreen({ navigation }: Props) {
       letterSpacing: 8,
       fontWeight: '700',
     },
+    fieldGroup: {
+      gap: spacing.xs,
+    },
+    fieldError: {
+      fontSize: fontSize.xs,
+      color: colors.error,
+      marginLeft: spacing.xs,
+    },
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   return (
@@ -311,43 +340,51 @@ export default function LoginScreen({ navigation }: Props) {
 
           {/* Form */}
           <Animated.View entering={FadeInDown.duration(600).delay(300)} style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Ionicons name="mail-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                value={loginInput}
-                onChangeText={setLoginInput}
-                placeholder="Email or username"
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="email-address"
-                accessibilityLabel="Email or username"
-              />
+            <View style={styles.fieldGroup}>
+              <View style={styles.inputContainer}>
+                <Ionicons name="mail-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={loginInput}
+                  onChangeText={(text) => { setLoginInput(text); if (emailError) setEmailError(''); }}
+                  onBlur={validateLoginInput}
+                  placeholder="Email or username"
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  accessibilityLabel="Email or username"
+                />
+              </View>
+              {!!emailError && <Text style={styles.fieldError}>{emailError}</Text>}
             </View>
 
-            <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Password"
-                placeholderTextColor={colors.textMuted}
-                secureTextEntry={!showPassword}
-                accessibilityLabel="Password"
-              />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowPassword(!showPassword)}
-                accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={20}
-                  color={colors.textMuted}
+            <View style={styles.fieldGroup}>
+              <View style={styles.inputContainer}>
+                <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={password}
+                  onChangeText={(text) => { setPassword(text); if (passwordError) setPasswordError(''); }}
+                  onBlur={validatePassword}
+                  placeholder="Password"
+                  placeholderTextColor={colors.textMuted}
+                  secureTextEntry={!showPassword}
+                  accessibilityLabel="Password"
                 />
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={colors.textMuted}
+                  />
+                </TouchableOpacity>
+              </View>
+              {!!passwordError && <Text style={styles.fieldError}>{passwordError}</Text>}
             </View>
 
             <TouchableOpacity

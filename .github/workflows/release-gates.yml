@@ -29,6 +29,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: i18n — locale parity (strict)
+        run: pnpm i18n:check:strict
+
+      - name: E2E primitives — doc paths
+        run: pnpm audit:e2e
+
       # API: typecheck + lint + placeholder guard (no live DB)
       - name: API — build, lint, guard
         run: |

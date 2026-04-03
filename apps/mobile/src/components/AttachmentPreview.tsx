@@ -9,16 +9,19 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface AttachmentPreviewProps {
   attachment: Attachment;
+  /** When E2E decrypted to a data: or file URI, use instead of attachment.url */
+  displayUri?: string;
   onImagePress?: (url: string, allImageUrls?: string[], imageIndex?: number) => void;
   allImageUrls?: string[];
   imageIndex?: number;
 }
 
-export default function AttachmentPreview({ attachment, onImagePress, allImageUrls, imageIndex }: AttachmentPreviewProps) {
+export default function AttachmentPreview({ attachment, displayUri, onImagePress, allImageUrls, imageIndex }: AttachmentPreviewProps) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const contentType = attachment.contentType ?? '';
   const fileName = attachment.filename || 'Attachment';
   const fileSize = typeof attachment.size === 'number' ? attachment.size : 0;
+  const resolvedUri = displayUri || attachment.url;
   const isImage = contentType.startsWith('image/');
   const isVideo = contentType.startsWith('video/');
   const isAudio = contentType.startsWith('audio/');
@@ -55,9 +58,9 @@ export default function AttachmentPreview({ attachment, onImagePress, allImageUr
     const h = w * ratio;
 
     return (
-      <TouchableOpacity onPress={() => onImagePress?.(attachment.url, allImageUrls, imageIndex)} activeOpacity={0.9}>
+      <TouchableOpacity onPress={() => onImagePress?.(resolvedUri, allImageUrls, imageIndex)} activeOpacity={0.9}>
         <Image
-          source={{ uri: attachment.url }}
+          source={{ uri: resolvedUri }}
           style={{ width: w, height: h, borderRadius: borderRadius.md }}
           contentFit="cover"
           cachePolicy="memory-disk"
@@ -70,7 +73,7 @@ export default function AttachmentPreview({ attachment, onImagePress, allImageUr
     return (
       <TouchableOpacity
         style={styles.fileCard}
-        onPress={() => Linking.openURL(attachment.url)}
+        onPress={() => Linking.openURL(resolvedUri)}
       >
         <Ionicons
           name={isVideo ? 'videocam-outline' : 'musical-notes-outline'}

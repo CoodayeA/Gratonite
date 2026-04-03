@@ -161,9 +161,9 @@ export default function GuildListScreen({ navigation }: Props) {
       gap: spacing.sm,
     },
     headerBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 19,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: colors.accentLight,
       justifyContent: 'center',
       alignItems: 'center',
@@ -452,7 +452,7 @@ export default function GuildListScreen({ navigation }: Props) {
             </Text>
           </View>
         </View>
-        <PressableScale onPress={() => navigation.navigate('Settings')} accessibilityLabel="Settings">
+        <PressableScale onPress={() => navigation.navigate('Settings')} accessibilityLabel="Settings" style={{ minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' }}>
           <Ionicons name="settings-outline" size={22} color={colors.textMuted} />
         </PressableScale>
       </PressableScale>

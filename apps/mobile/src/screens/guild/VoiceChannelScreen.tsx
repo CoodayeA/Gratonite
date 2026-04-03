@@ -259,11 +259,13 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
     featureBtn: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'center',
       gap: spacing.xs,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
       borderRadius: borderRadius.full,
       backgroundColor: colors.bgElevated,
+      minHeight: 44,
     },
     featureBtnText: {
       fontSize: fontSize.xs,

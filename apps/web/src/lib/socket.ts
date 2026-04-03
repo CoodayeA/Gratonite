@@ -1,5 +1,6 @@
 import { io, type Socket } from 'socket.io-client';
 import { getAccessToken } from './api';
+import { isExperimentEnabled } from './experiments';
 
 type GratoniteSocket = Socket;
 
@@ -998,7 +999,13 @@ export function connectSocket(): GratoniteSocket {
   });
 
   /* ── Track liveness on every incoming event ──── */
-  socket.onAny(() => { touchLiveness(); });
+  socket.onAny((eventName, ...args) => {
+    touchLiveness();
+    if (import.meta.env.DEV && isExperimentEnabled('verbose_socket_logs')) {
+      // eslint-disable-next-line no-console -- gated dev-only experiment
+      console.debug('[gratonite:socket]', eventName, args);
+    }
+  });
 
   // Engine-level pong also proves the connection is alive
   // (onAny only catches application events, not ping/pong)

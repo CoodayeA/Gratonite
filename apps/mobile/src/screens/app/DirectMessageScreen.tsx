@@ -49,6 +49,9 @@ import SwipeableMessage from '../../components/SwipeableMessage';
 import TypingDots from '../../components/TypingDots';
 import MessageSkeleton from '../../components/MessageSkeleton';
 import { useE2E } from '../../hooks/useE2E';
+import { encrypt, encryptFile, decryptFile } from '../../lib/crypto';
+import { Buffer } from 'buffer';
+import { publicKeyCache } from '../../lib/publicKeyCache';
 import { securityStore } from '../../lib/securityStore';
 import { channels as channelsApi } from '../../lib/api';
 import DisappearSettingsSheet from '../../components/DisappearSettingsSheet';
@@ -88,6 +91,10 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
     groupParticipantIds,
   });
   const [decryptedMessages, setDecryptedMessages] = useState<Map<string, string>>(new Map());
+  /** messageId -> attachmentId -> data URI or https URL for decrypted image bytes */
+  const [attachmentUriOverrides, setAttachmentUriOverrides] = useState<Map<string, Record<string, string>>>(new Map());
+  const decryptFileInflight = useRef<Set<string>>(new Set());
+  const textDecryptStartedRef = useRef<Set<string>>(new Set());
 
   // Disappearing messages
   const [disappearTimer, setDisappearTimer] = useState<number | null>(null);
@@ -184,7 +191,7 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
           id: data.id,
           channelId: data.channelId,
           authorId: data.authorId,
-          content: data.content,
+          content: data.content ?? '',
           type: data.type ?? 0,
           createdAt: data.createdAt,
           editedAt: null,
@@ -192,8 +199,8 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
           attachments: Array.isArray(data.attachments) ? data.attachments : undefined,
           replyToId: data.replyToId,
           replyTo: data.replyTo,
-          isEncrypted: data.isEncrypted,
-          encryptedContent: data.encryptedContent,
+          isEncrypted: !!data.isEncrypted,
+          encryptedContent: data.encryptedContent ?? null,
           isFederated: data.isFederated === true,
         };
         setMessageList((prev) => {
@@ -338,25 +345,75 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
     })();
   }, [isOnline]);
 
-  // Decrypt encrypted messages when e2eKey becomes available
+  useEffect(() => {
+    textDecryptStartedRef.current.clear();
+    decryptFileInflight.current.clear();
+  }, [channelId, e2eKey]);
+
+  // Decrypt encrypted messages when e2eKey is available (text + E2E file attachments v2)
   useEffect(() => {
     if (!e2eKey) return;
-    const decryptAll = async () => {
-      const newDecrypted = new Map(decryptedMessages);
-      for (const msg of messageList) {
-        if (msg.isEncrypted && msg.encryptedContent && !newDecrypted.has(msg.id)) {
+    const controller = new AbortController();
+
+    for (const msg of messageList) {
+      if (!msg.isEncrypted || !msg.encryptedContent) continue;
+      if (textDecryptStartedRef.current.has(msg.id)) continue;
+      textDecryptStartedRef.current.add(msg.id);
+
+      void (async () => {
+        try {
+          const plain = await decryptMessage(msg.encryptedContent!);
+          let displayText = plain;
           try {
-            const plaintext = await decryptMessage(msg.encryptedContent);
-            newDecrypted.set(msg.id, plaintext);
+            const parsed = JSON.parse(plain) as { _e2e?: number; text?: string | null; files?: Array<{ id: string; iv: string; ef: string; mt: string }> };
+            if (parsed && parsed._e2e === 2) {
+              displayText = parsed.text ?? '';
+              if (Array.isArray(parsed.files) && parsed.files.length > 0 && msg.attachments) {
+                for (const fileMeta of parsed.files) {
+                  const att = msg.attachments.find((a) => a.id === fileMeta.id);
+                  const inflightKey = `${msg.id}:${fileMeta.id}`;
+                  if (!att || decryptFileInflight.current.has(inflightKey)) continue;
+                  decryptFileInflight.current.add(inflightKey);
+                  fetch(att.url, { signal: controller.signal })
+                    .then((r) => r.arrayBuffer())
+                    .then(async (buf) => {
+                      const { buffer } = await decryptFile(e2eKey, buf, fileMeta.iv, fileMeta.ef);
+                      const mime = fileMeta.mt || 'application/octet-stream';
+                      const b64 = Buffer.from(buffer).toString('base64');
+                      const dataUri = `data:${mime};base64,${b64}`;
+                      setAttachmentUriOverrides((prev) => {
+                        const next = new Map(prev);
+                        const row = { ...(next.get(msg.id) ?? {}) };
+                        row[fileMeta.id] = dataUri;
+                        next.set(msg.id, row);
+                        return next;
+                      });
+                    })
+                    .catch(() => {})
+                    .finally(() => {
+                      decryptFileInflight.current.delete(inflightKey);
+                    });
+                }
+              }
+            }
           } catch {
-            newDecrypted.set(msg.id, '[Decryption failed]');
+            /* plain text */
           }
+          setDecryptedMessages((prev) => {
+            if (prev.has(msg.id)) return prev;
+            return new Map(prev).set(msg.id, displayText);
+          });
+        } catch {
+          setDecryptedMessages((prev) => {
+            if (prev.has(msg.id)) return prev;
+            return new Map(prev).set(msg.id, '[Decryption failed]');
+          });
         }
-      }
-      setDecryptedMessages(newDecrypted);
-    };
-    decryptAll();
-  }, [e2eKey, messageList]);
+      })();
+    }
+
+    return () => controller.abort();
+  }, [e2eKey, messageList, decryptMessage]);
 
   // Fetch group DM participants for E2E key distribution
   useEffect(() => {
@@ -583,19 +640,56 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
       quality: 0.8,
     });
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      setSending(true);
-      try {
-        // MOBILE-POLISH: the message send API does not yet accept uploaded
-        // attachment IDs/metadata, so mobile can only send the uploaded URL
-        // as plain text until backend attachment support is added.
+    if (result.canceled || !result.assets?.length) return;
+    const asset = result.assets[0];
+    if (!isOnline) {
+      toast.info('Attach files when you are online.');
+      return;
+    }
+
+    setSending(true);
+    try {
+      const filename = asset.fileName ?? asset.uri.split('/').pop() ?? 'upload.jpg';
+      const mimeType = asset.mimeType || 'image/jpeg';
+      const fileResp = await fetch(asset.uri);
+      const fileBuffer = await fileResp.arrayBuffer();
+
+      if (e2eKey) {
+        const { encryptedBuffer, encryptedFilename, iv } = await encryptFile(e2eKey, fileBuffer, filename);
         const formData = new FormData();
-        const filename = asset.uri.split('/').pop() || 'upload.jpg';
+        const blob = new Blob([encryptedBuffer], { type: 'application/octet-stream' });
+        formData.append('file', blob as unknown as Blob, 'encrypted.bin');
+
+        const uploadRes = await filesApi.upload(formData);
+        const encryptedFileMeta = [{ id: uploadRes.id, iv, ef: encryptedFilename, mt: mimeType }];
+        const plainPayload = JSON.stringify({ _e2e: 2, text: null, files: encryptedFileMeta });
+        const encryptedContent = await encrypt(e2eKey, plainPayload);
+        const gk = isGroupDm ? publicKeyCache.getGroupKey(channelId) : undefined;
+        const msg = await messagesApi.send(channelId, {
+          content: null,
+          encryptedContent,
+          isEncrypted: true,
+          attachmentIds: [uploadRes.id],
+          ...(gk != null ? { keyVersion: gk.version } : {}),
+        });
+        setMessageList((prev) => {
+          if (prev.some((m) => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
+        setDecryptedMessages((prev) => new Map(prev).set(msg.id, ''));
+        setAttachmentUriOverrides((prev) => {
+          const next = new Map(prev);
+          const row = { ...(next.get(msg.id) ?? {}) };
+          if (uploadRes.id) row[uploadRes.id] = asset.uri;
+          next.set(msg.id, row);
+          return next;
+        });
+      } else {
+        const formData = new FormData();
         formData.append('file', {
           uri: asset.uri,
           name: filename,
-          type: asset.mimeType || 'image/jpeg',
+          type: mimeType,
         } as any);
         const uploadRes = await filesApi.upload(formData);
         const msg = await messagesApi.send(channelId, uploadRes.url);
@@ -603,11 +697,13 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
           if (prev.some((m) => m.id === msg.id)) return prev;
           return [...prev, msg];
         });
-      } catch (err: any) {
-        toast.error(err?.message || 'There was an error uploading your file.');
-      } finally {
-        setSending(false);
       }
+      mediumImpact();
+      playSound('messageSend');
+    } catch (err: any) {
+      toast.error(err?.message || 'There was an error uploading your file.');
+    } finally {
+      setSending(false);
     }
   };
 
@@ -967,6 +1063,7 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
             onTextReactionToggle={(text) => handleTextReactionToggle(item.id, text)}
             isEncrypted={item.isEncrypted}
             decryptedContent={item.isEncrypted ? resolvedContent : undefined}
+            attachmentUriOverrides={attachmentUriOverrides.get(item.id)}
             channelDisappearTimer={disappearTimer}
             onReplyPress={item.replyToId ? () => scrollToMessage(item.replyToId!) : undefined}
           />

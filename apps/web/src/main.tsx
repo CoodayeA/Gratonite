@@ -14,6 +14,9 @@ import './themes/overrides/glass-optimization.css'
 import { ThemeProvider } from './components/ui/ThemeProvider'
 import { queryClient } from './lib/queryClient'
 import { init as initErrorReporter } from './lib/errorReporter'
+import { applyWebExperimentsToDocument } from './lib/experiments'
+
+applyWebExperimentsToDocument();
 
 // GSAP global setup
 gsap.registerPlugin(ScrollTrigger);

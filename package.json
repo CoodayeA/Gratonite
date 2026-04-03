@@ -6,7 +6,8 @@
     "verify:launch:super-gate": "node tools/verify-launch-super-gate.mjs",
     "install:workspace:no-desktop": "pnpm install --filter \"!gratonite-desktop\"",
     "i18n:check": "node tools/check-i18n-parity.mjs",
-    "i18n:check:strict": "node tools/check-i18n-parity.mjs --strict"
+    "i18n:check:strict": "node tools/check-i18n-parity.mjs --strict",
+    "audit:e2e": "node tools/audit-e2e-primitives.mjs"
   },
   "pnpm": {
     "overrides": {

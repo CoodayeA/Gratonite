@@ -8,11 +8,10 @@ Gratonite is production-ready with **140** database schemas, **134** API route m
 
 ### How this roadmap is verified
 
-- **Execution plan:** Multi-phase sequencing, dependencies, and definition-of-done for roadmap themes live in [`docs/EXECUTION-PLAN.md`](docs/EXECUTION-PLAN.md) (crypto forward plan, a11y checklist, i18n parity tooling, mobile E2E gaps).
 - **Shipped** items are backed by code in this repository (API routes, web/mobile UI, jobs). They are spot-checked during roadmap reviews; not every bullet has a dedicated automated test.
 - **Counts** (schemas, routes, pages) come from repository inventory scripts or manual tallies and may drift slightly between releases — treat as approximate.
 - **Near-term / mid-term / long-term** lists are planning intent, not commitments with dates.
-- Finer-grained initiative tracking (search, notifications, federation, operators) is maintained **outside** this repository.
+- Finer-grained initiative tracking (search, notifications, federation, operators) and **detailed execution planning** are maintained **outside** this repository (not stored in GitHub).
 
 ### Recently shipped (high level)
 
@@ -193,17 +192,17 @@ A formal **WCAG 2.1 AA pass** and **broader i18n** are tracked under **Near-Term
 
 ## Near-Term — Q2 2026
 
-Planning intent for the next engineering cycles. Cryptography work is a **multi-month** track; items here are direction, not a promise of simultaneous delivery. See [`docs/EXECUTION-PLAN.md`](docs/EXECUTION-PLAN.md) for phased ordering.
+Planning intent for the next engineering cycles. Cryptography work is a **multi-month** track; items here are direction, not a promise of simultaneous delivery.
 
-- **E2E encrypted file attachments** — *Web (DMs + encrypted channels):* client-side encryption before upload is implemented in [`apps/web/src/lib/e2e.ts`](apps/web/src/lib/e2e.ts). *Remaining:* mobile parity, edge flows, and hardening — [`docs/mobile/E2E-ATTACHMENTS-GAP.md`](docs/mobile/E2E-ATTACHMENTS-GAP.md).
-- **Forward secrecy (Double Ratchet)** — *Not started.* Planning: [`docs/crypto/FORWARD-PLAN.md`](docs/crypto/FORWARD-PLAN.md).
-- **Multi-device key sync** — *Not started.* Same forward plan; pairs with Double Ratchet program.
-- **Accessibility audit** — Checklist: [`docs/a11y/WCAG-AUDIT-CHECKLIST.md`](docs/a11y/WCAG-AUDIT-CHECKLIST.md); formal pass tracked as Phase A1 in the execution plan.
+- **E2E encrypted file attachments** — Implemented for web and mobile (DMs + encrypted guild channels): wire format and primitives are documented in [`docs/crypto/e2e-primitives.md`](docs/crypto/e2e-primitives.md); mobile notes in [`docs/mobile/E2E-ATTACHMENTS.md`](docs/mobile/E2E-ATTACHMENTS.md).
+- **Forward secrecy (Double Ratchet)** — *Not started.*
+- **Multi-device key sync** — *Not started.* Pairs with Double Ratchet program when scheduled.
+- **Accessibility audit** — Checklist: [`docs/a11y/WCAG-AUDIT-CHECKLIST.md`](docs/a11y/WCAG-AUDIT-CHECKLIST.md); formal pass tracked as near-term engineering work.
 - **i18n expansion** — Nine locales exist in web; run `pnpm i18n:check` from repo root. Contributor workflow: [`docs/i18n-CONTRIBUTING.md`](docs/i18n-CONTRIBUTING.md).
 
 ## Mid-Term — Q3-Q4 2026
 
-These are **large bets**; the execution plan recommends **one primary initiative per half** unless capacity expands. Sequencing: [`docs/EXECUTION-PLAN.md`](docs/EXECUTION-PLAN.md) (Phase B).
+These are **large bets**; prefer **one primary initiative per half** unless capacity expands.
 
 - **Plugin/extension SDK** — Third-party developers can build and distribute plugins
 - **Matrix / ActivityPub bridge** — Interop with Matrix rooms and Mastodon/Misskey

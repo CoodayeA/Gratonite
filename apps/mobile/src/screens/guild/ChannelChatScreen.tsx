@@ -25,6 +25,7 @@ import {
   scheduledMessages as scheduledMessagesApi,
   translation as translationApi,
   textReactions as textReactionsApi,
+  encryption as encryptionApi,
 } from '../../lib/api';
 import {
   onMessageCreate,
@@ -67,6 +68,8 @@ import { useIsOnline } from '../../components/OfflineBanner';
 import { mediumImpact, lightImpact } from '../../lib/haptics';
 import { playSound } from '../../lib/soundEngine';
 import { securityStore } from '../../lib/securityStore';
+import { encrypt, encryptFile, decryptFile, decrypt, getOrCreateKeyPair, decryptGroupKey } from '../../lib/crypto';
+import { Buffer } from 'buffer';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 import type { Message, ReactionGroup, TextReactionGroup, Sticker, Poll, GuildEmoji } from '../../types';
@@ -78,6 +81,77 @@ type Props = NativeStackScreenProps<AppStackParamList, 'ChannelChat'>;
 
 const QUICK_EMOJIS = ['\u{1F44D}', '\u{2764}\u{FE0F}', '\u{1F602}', '\u{1F60E}', '\u{1F525}', '\u{1F389}'];
 
+// -------- Date separator helpers --------
+
+type DateSeparatorItem = {
+  type: 'date-separator';
+  id: string;
+  date: Date;
+};
+
+type ListItem = Message | DateSeparatorItem;
+
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function formatDateLabel(date: Date): string {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  if (d.getTime() === today.getTime()) return 'Today';
+  if (d.getTime() === yesterday.getTime()) return 'Yesterday';
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+/** Injects date-separator items into an already-inverted (newest-first) message array. */
+function injectDateSeparators(messages: Message[]): ListItem[] {
+  if (messages.length === 0) return [];
+  const result: ListItem[] = [];
+  for (let i = 0; i < messages.length; i++) {
+    result.push(messages[i]);
+    const current = new Date(messages[i].createdAt);
+    const next = i + 1 < messages.length ? new Date(messages[i + 1].createdAt) : null;
+    if (!next || !isSameDay(current, next)) {
+      result.push({ type: 'date-separator', id: `sep-${messages[i].id}`, date: current });
+    }
+  }
+  return result;
+}
+
+function DateSeparator({ date }: { date: Date }) {
+  const { colors, spacing, fontSize } = useTheme();
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: spacing.md,
+        paddingHorizontal: spacing.sm,
+      }}
+    >
+      <View style={{ flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.border }} />
+      <Text
+        style={{
+          color: colors.textMuted,
+          fontSize: fontSize.xs,
+          fontWeight: '600',
+          marginHorizontal: spacing.sm,
+        }}
+      >
+        {formatDateLabel(date)}
+      </Text>
+      <View style={{ flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.border }} />
+    </View>
+  );
+}
+
 export default function ChannelChatScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { channelId, channelName, guildId } = route.params;
@@ -86,6 +160,13 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
   const glass = useGlass();
   const toast = useToast();
   const isOnline = useIsOnline();
+  const [channelIsEncrypted, setChannelIsEncrypted] = useState(false);
+  const [channelE2EKey, setChannelE2EKey] = useState<CryptoKey | null>(null);
+  const [channelKeyVersion, setChannelKeyVersion] = useState<number | null>(null);
+  const [decryptedMessages, setDecryptedMessages] = useState<Map<string, string>>(new Map());
+  const [attachmentUriOverrides, setAttachmentUriOverrides] = useState<Map<string, Record<string, string>>>(new Map());
+  const textDecryptStartedRef = useRef<Set<string>>(new Set());
+  const decryptFileInflight = useRef<Set<string>>(new Set());
   const [messageList, setMessageList] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -161,6 +242,24 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
 
   // Inverted data: newest first for inverted FlatList
   const invertedData = useMemo(() => [...messageList].reverse(), [messageList]);
+
+  // Pre-compute message grouping (keyed by message id) based on message-only array
+  const groupingMap = useMemo(() => {
+    const map = new Map<string, boolean>();
+    for (let i = 0; i < invertedData.length; i++) {
+      const item = invertedData[i];
+      const older = i + 1 < invertedData.length ? invertedData[i + 1] : null;
+      const grouped =
+        !!older &&
+        older.authorId === item.authorId &&
+        new Date(item.createdAt).getTime() - new Date(older.createdAt).getTime() < 5 * 60000;
+      map.set(item.id, grouped);
+    }
+    return map;
+  }, [invertedData]);
+
+  // Data with date separators injected between day boundaries
+  const invertedDataWithSeps = useMemo(() => injectDateSeparators(invertedData), [invertedData]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -419,14 +518,114 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     return unsubscribe;
   }, [navigation]);
 
-  // Fetch channel background
+  // Channel background + guild channel E2E key (when isEncrypted)
   useEffect(() => {
-    channelsApi.get(channelId).then((ch) => {
+    if (!user?.id) return;
+    channelsApi.get(channelId).then(async (ch) => {
       if (ch.backgroundUrl) {
         setBgMedia({ url: ch.backgroundUrl, type: ch.backgroundType || 'image' });
       }
+      const enc = !!(ch as { isEncrypted?: boolean }).isEncrypted;
+      setChannelIsEncrypted(enc);
+      if (enc && guildId) {
+        try {
+          const kp = await getOrCreateKeyPair(user.id, async (pub) => {
+            await encryptionApi.uploadPublicKey(pub);
+          });
+          if (!kp) {
+            setChannelE2EKey(null);
+            setChannelKeyVersion(null);
+            return;
+          }
+          const encKeyData = await channelsApi.getEncryptionKeys(guildId, channelId);
+          setChannelKeyVersion(encKeyData.version ?? null);
+          const myWrapped = encKeyData.keyData[user.id];
+          if (myWrapped) {
+            const gk = await decryptGroupKey(myWrapped, kp.privateKey);
+            setChannelE2EKey(gk);
+          } else {
+            setChannelE2EKey(null);
+          }
+        } catch {
+          setChannelE2EKey(null);
+          setChannelKeyVersion(null);
+        }
+      } else {
+        setChannelE2EKey(null);
+        setChannelKeyVersion(null);
+      }
     }).catch(() => {});
-  }, [channelId]);
+  }, [channelId, guildId, user?.id]);
+
+  useEffect(() => {
+    textDecryptStartedRef.current.clear();
+    decryptFileInflight.current.clear();
+  }, [channelId, channelE2EKey]);
+
+  // Decrypt encrypted guild messages (text + E2E attachment v2)
+  useEffect(() => {
+    if (!channelE2EKey) return;
+    const controller = new AbortController();
+
+    for (const msg of messageList) {
+      if (!msg.isEncrypted || !msg.encryptedContent) continue;
+      if (textDecryptStartedRef.current.has(msg.id)) continue;
+      textDecryptStartedRef.current.add(msg.id);
+
+      void (async () => {
+        try {
+          const plain = await decrypt(channelE2EKey, msg.encryptedContent!);
+          let displayText = plain;
+          try {
+            const parsed = JSON.parse(plain) as { _e2e?: number; text?: string | null; files?: Array<{ id: string; iv: string; ef: string; mt: string }> };
+            if (parsed && parsed._e2e === 2) {
+              displayText = parsed.text?.trim() === '' ? '' : (parsed.text ?? '');
+              if (Array.isArray(parsed.files) && parsed.files.length > 0 && msg.attachments) {
+                for (const fileMeta of parsed.files) {
+                  const att = msg.attachments.find((a) => a.id === fileMeta.id);
+                  const inflightKey = `${msg.id}:${fileMeta.id}`;
+                  if (!att || decryptFileInflight.current.has(inflightKey)) continue;
+                  decryptFileInflight.current.add(inflightKey);
+                  fetch(att.url, { signal: controller.signal })
+                    .then((r) => r.arrayBuffer())
+                    .then(async (buf) => {
+                      const { buffer } = await decryptFile(channelE2EKey, buf, fileMeta.iv, fileMeta.ef);
+                      const mime = fileMeta.mt || 'application/octet-stream';
+                      const b64 = Buffer.from(buffer).toString('base64');
+                      const dataUri = `data:${mime};base64,${b64}`;
+                      setAttachmentUriOverrides((prev) => {
+                        const next = new Map(prev);
+                        const row = { ...(next.get(msg.id) ?? {}) };
+                        row[fileMeta.id] = dataUri;
+                        next.set(msg.id, row);
+                        return next;
+                      });
+                    })
+                    .catch(() => {})
+                    .finally(() => {
+                      decryptFileInflight.current.delete(inflightKey);
+                    });
+                }
+              }
+            }
+          } catch {
+            /* plain text */
+          }
+          setDecryptedMessages((prev) => {
+            if (prev.has(msg.id)) return prev;
+            return new Map(prev).set(msg.id, displayText);
+          });
+        } catch {
+          setDecryptedMessages((prev) => {
+            if (prev.has(msg.id)) return prev;
+            return new Map(prev).set(msg.id, '[Decryption failed]');
+          });
+        }
+      })();
+    }
+
+    return () => controller.abort();
+  }, [channelE2EKey, messageList]);
 
   // Socket: new messages
   useEffect(() => {
@@ -446,6 +645,8 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
           replyToId: data.replyToId,
           replyTo: data.replyTo,
           nonce: data.nonce,
+          isEncrypted: !!data.isEncrypted,
+          encryptedContent: data.encryptedContent ?? null,
           isFederated: data.isFederated === true,
         };
         setMessageList((prev) => {
@@ -613,13 +814,13 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
   // --- Actions ---
 
   const scrollToMessage = useCallback((messageId: string) => {
-    const targetIndex = invertedData.findIndex((m) => m.id === messageId);
+    const targetIndex = invertedDataWithSeps.findIndex((m) => m.id === messageId);
     if (targetIndex >= 0) {
       flatListRef.current?.scrollToIndex({ index: targetIndex, animated: true, viewPosition: 0.5 });
     } else {
       toast.info('Original message is not loaded yet');
     }
-  }, [invertedData, toast]);
+  }, [invertedDataWithSeps, toast]);
 
   const handleSend = async () => {
     const text = inputText.trim();
@@ -738,33 +939,72 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       quality: 0.8,
     });
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      const optimisticId = `temp-upload-${Date.now()}`;
-      const optimisticMessage: Message = {
-        id: optimisticId,
-        channelId,
-        authorId: user?.id || 'me',
-        content: 'Uploading file...',
-        type: 0,
-        createdAt: new Date().toISOString(),
-        editedAt: null,
-        author: user ? {
-          id: user.id,
-          username: user.username,
-          displayName: user.displayName,
-          avatarHash: user.avatarHash,
-        } : undefined,
-      };
-      setMessageList((prev) => [...prev, optimisticMessage]);
-      setSending(true);
-      try {
+    if (result.canceled || !result.assets?.length) return;
+    if (!isOnline) {
+      toast.info('Attach files when you are online.');
+      return;
+    }
+
+    const asset = result.assets[0];
+    const optimisticId = `temp-upload-${Date.now()}`;
+    const optimisticMessage: Message = {
+      id: optimisticId,
+      channelId,
+      authorId: user?.id || 'me',
+      content: 'Uploading file...',
+      type: 0,
+      createdAt: new Date().toISOString(),
+      editedAt: null,
+      author: user ? {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarHash: user.avatarHash,
+      } : undefined,
+    };
+    setMessageList((prev) => [...prev, optimisticMessage]);
+    setSending(true);
+    try {
+      const filename = asset.fileName ?? asset.uri.split('/').pop() ?? 'upload.jpg';
+      const mimeType = asset.mimeType || 'image/jpeg';
+      const fileResp = await fetch(asset.uri);
+      const fileBuffer = await fileResp.arrayBuffer();
+
+      if (channelIsEncrypted && channelE2EKey) {
+        const { encryptedBuffer, encryptedFilename, iv } = await encryptFile(channelE2EKey, fileBuffer, filename);
         const formData = new FormData();
-        const filename = asset.uri.split('/').pop() || 'upload.jpg';
+        const blob = new Blob([encryptedBuffer], { type: 'application/octet-stream' });
+        formData.append('file', blob as unknown as Blob, 'encrypted.bin');
+        const uploadRes = await filesApi.upload(formData);
+        const encryptedFileMeta = [{ id: uploadRes.id, iv, ef: encryptedFilename, mt: mimeType }];
+        const plainPayload = JSON.stringify({ _e2e: 2, text: ' ', files: encryptedFileMeta });
+        const encryptedContent = await encrypt(channelE2EKey, plainPayload);
+        const msg = await messagesApi.send(channelId, {
+          content: null,
+          encryptedContent,
+          isEncrypted: true,
+          attachmentIds: [uploadRes.id],
+          ...(channelKeyVersion != null ? { keyVersion: channelKeyVersion } : {}),
+        });
+        setMessageList((prev) => {
+          const without = prev.filter((m) => m.id !== optimisticId);
+          if (without.some((m) => m.id === msg.id)) return without;
+          return [...without, msg];
+        });
+        setDecryptedMessages((prev) => new Map(prev).set(msg.id, ''));
+        setAttachmentUriOverrides((prev) => {
+          const next = new Map(prev);
+          const row = { ...(next.get(msg.id) ?? {}) };
+          if (uploadRes.id) row[uploadRes.id] = asset.uri;
+          next.set(msg.id, row);
+          return next;
+        });
+      } else {
+        const formData = new FormData();
         formData.append('file', {
           uri: asset.uri,
           name: filename,
-          type: asset.mimeType || 'image/jpeg',
+          type: mimeType,
         } as any);
         const uploadRes = await filesApi.upload(formData);
         const msg = await messagesApi.send(channelId, uploadRes.url);
@@ -773,12 +1013,14 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
           if (without.some((m) => m.id === msg.id)) return without;
           return [...without, msg];
         });
-      } catch {
-        setMessageList((prev) => prev.filter((m) => m.id !== optimisticId));
-        toast.error('There was an error uploading your file.');
-      } finally {
-        setSending(false);
       }
+      mediumImpact();
+      playSound('messageSend');
+    } catch {
+      setMessageList((prev) => prev.filter((m) => m.id !== optimisticId));
+      toast.error('There was an error uploading your file.');
+    } finally {
+      setSending(false);
     }
   };
 
@@ -1006,16 +1248,23 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
 
   // --- Render ---
 
-  const renderMessage = useCallback(({ item, index }: { item: Message; index: number }) => {
-    // With inverted list, data is newest-first. index+1 is the chronologically older message.
-    const olderMsg = index < invertedData.length - 1 ? invertedData[index + 1] : null;
-    const isGrouped = olderMsg?.authorId === item.authorId &&
-      new Date(item.createdAt).getTime() - new Date(olderMsg!.createdAt).getTime() < 5 * 60000;
+  const renderMessage = useCallback(({ item }: { item: ListItem }) => {
+    // Date separators are rendered inline without interactivity
+    if (item.type === 'date-separator') {
+      return <DateSeparator date={item.date} />;
+    }
+
+    // Use pre-computed grouping map (avoids index dependency with mixed separator array)
+    const isGrouped = groupingMap.get(item.id) ?? false;
     const isOwn = item.authorId === user?.id;
     const rxns = messageReactions.get(item.id) ?? [];
     const txtRxns = textReactionsMap.get(item.id) ?? [];
     const showPicker = reactionPickerMessageId === item.id;
     const isNew = initialLoadDone.current;
+
+    const resolvedContent = item.isEncrypted
+      ? (decryptedMessages.get(item.id) ?? (channelE2EKey ? 'Decrypting...' : '[Encrypted]'))
+      : item.content;
 
     // Build reply preview if message has replyTo
     const replyPreview = item.replyTo
@@ -1045,6 +1294,9 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
             onReactionLongPress={(emoji) => handleReactionLongPress(item.id, emoji)}
             textReactions={txtRxns}
             onTextReactionToggle={(text) => handleTextReactionToggle(item.id, text)}
+            isEncrypted={item.isEncrypted}
+            decryptedContent={item.isEncrypted ? resolvedContent : undefined}
+            attachmentUriOverrides={attachmentUriOverrides.get(item.id)}
             onReplyPress={item.replyToId ? () => scrollToMessage(item.replyToId!) : undefined}
           />
 
@@ -1065,7 +1317,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
         </View>
       </SwipeableMessage>
     );
-  }, [invertedData, user?.id, messageReactions, textReactionsMap, reactionPickerMessageId, customEmojis, styles, handleReply, handleReactionToggle, handleReact, handlePollVote, handlePollRemoveVote, handleReactionLongPress, handleTextReactionToggle]);
+  }, [groupingMap, user?.id, messageReactions, textReactionsMap, reactionPickerMessageId, customEmojis, styles, handleReply, handleReactionToggle, handleReact, handlePollVote, handlePollRemoveVote, handleReactionLongPress, handleTextReactionToggle, decryptedMessages, channelE2EKey, attachmentUriOverrides]);
 
   if (loading) {
     return (
@@ -1094,7 +1346,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
         <StickyMessage channelId={channelId} />
         <FlatList
           ref={flatListRef}
-          data={invertedData}
+          data={invertedDataWithSeps}
           keyExtractor={(item) => item.id}
           renderItem={renderMessage}
           contentContainerStyle={styles.messageList}
