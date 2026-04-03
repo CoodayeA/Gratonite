@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -213,7 +213,7 @@ interface ThemePickerScreenProps {
 export default function ThemePickerScreen({ onComplete }: ThemePickerScreenProps) {
   const { width: SCREEN_W } = useWindowDimensions();
   const CARD_W = (SCREEN_W - 56) / 2;
-  const [selectedFamily, setSelectedFamily] = useState<StyleFamily>('neobrutalism');
+  const [selectedFamily, setSelectedFamily] = useState<StyleFamily>('glassmorphism');
   const [neoDark, setNeoDark] = useState(false);
   const [glassDark, setGlassDark] = useState(true);
 
@@ -221,6 +221,12 @@ export default function ThemePickerScreen({ onComplete }: ThemePickerScreenProps
     const themeName: ThemeName = isDark ? `${family}-dark` : family;
     themeStore.setTheme(themeName);
   }, []);
+
+  useEffect(() => {
+    if (selectedFamily === 'glassmorphism') {
+      previewTheme('glassmorphism', glassDark);
+    }
+  }, [selectedFamily, glassDark, previewTheme]);
 
   const handleContinue = useCallback(async () => {
     const isDark = selectedFamily === 'neobrutalism' ? neoDark : glassDark;

@@ -30,6 +30,7 @@ import { desc } from 'drizzle-orm';
 import { safeJsonParse } from '../lib/safe-json.js';
 import { logger } from '../lib/logger';
 import { incrementChallengeProgress } from './daily-challenges';
+import { LIVEKIT_ACCESS_TOKEN_TTL } from '../lib/livekit-tokens';
 
 export const voiceRouter = Router();
 
@@ -278,6 +279,7 @@ voiceRouter.post(
     const at = new AccessToken(apiKey, apiSecret, {
       identity: userId,
       name: participantName,
+      ttl: LIVEKIT_ACCESS_TOKEN_TTL,
     });
 
     at.addGrant({
@@ -604,6 +606,7 @@ voiceRouter.post(
     const at = new AccessToken(process.env.LIVEKIT_API_KEY!, process.env.LIVEKIT_API_SECRET!, {
       identity: userId,
       name: participantName,
+      ttl: LIVEKIT_ACCESS_TOKEN_TTL,
     });
     at.addGrant({ room: channelId, roomJoin: true, canPublish: true, canSubscribe: true, canPublishData: true });
     const token = await at.toJwt();

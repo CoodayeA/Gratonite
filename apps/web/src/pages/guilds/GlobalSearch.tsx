@@ -361,6 +361,14 @@ export default function GlobalSearch() {
         />
       )}
 
+      {!loading && !searched && (
+        <EmptyState
+          type="search"
+          title="Search Messages"
+          description="Enter a keyword above and press Enter to search across your messages. Use filters to narrow down results."
+        />
+      )}
+
         {!loading && results.map(r => (
           <div
             key={r.id}

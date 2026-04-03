@@ -20,7 +20,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'VerifyEmail'>;
 
 export default function VerifyEmailScreen({ route, navigation }: Props) {
   const { email } = route.params;
-  const { colors, spacing, fontSize, borderRadius } = useTheme();
+  const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const [resending, setResending] = useState(false);
 
   const handleResend = async () => {
@@ -54,9 +54,9 @@ export default function VerifyEmailScreen({ route, navigation }: Props) {
       justifyContent: 'center',
     },
     heading: {
-      fontSize: 24,
-      fontWeight: '800',
-      color: colors.white,
+      fontSize: neo ? 24 : 22,
+      fontWeight: neo ? '800' : '700',
+      color: colors.textPrimary,
       textAlign: 'center',
       marginBottom: spacing.sm,
     },
@@ -101,7 +101,7 @@ export default function VerifyEmailScreen({ route, navigation }: Props) {
       color: colors.accentPrimary,
       fontWeight: '700',
     },
-  }), [colors, spacing, fontSize, borderRadius]);
+  }), [colors, spacing, fontSize, borderRadius, neo]);
 
   return (
     <PatternBackground>

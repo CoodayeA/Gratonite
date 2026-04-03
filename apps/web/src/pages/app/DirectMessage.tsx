@@ -18,6 +18,7 @@ import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { api, ApiRequestError, RateLimitError, API_BASE, getAccessToken } from '../../lib/api';
+import { classifyCallErrorToast } from '../../lib/callErrors';
 import { markRead as markReadStore } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
 import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onMessageRead, onCallAnswer, onCallReject, onPresenceUpdate, onThreadCreate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type MessageReadPayload, type PresenceUpdatePayload } from '../../lib/socket';
@@ -361,73 +362,13 @@ const DirectMessage = () => {
         }, [addToast]),
     });
 
-    const classifyCallError = useCallback((error: unknown) => {
-        if (error instanceof ApiRequestError) {
-            if (error.status === 403) {
-                return {
-                    title: 'Call permission denied',
-                    description: 'You cannot join this call from your current account. Check channel permissions and try again.',
-                };
-            }
-            if (error.status === 404) {
-                return {
-                    title: 'Call target unavailable',
-                    description: 'The call channel could not be found. Re-open the DM and retry.',
-                };
-            }
-            if (error.status === 400) {
-                return {
-                    title: 'Invalid call target',
-                    description: 'This target is not a voice-capable channel. Re-open the DM and try again.',
-                };
-            }
-            if (error.status === 503) {
-                return {
-                    title: 'Voice service unavailable',
-                    description: 'The voice service is currently unavailable. Retry in a few moments.',
-                };
-            }
-        }
-
-        const raw = (error instanceof Error ? error.message : String(error || '')).toLowerCase();
-        if (raw.includes('timed out') || raw.includes('timeout')) {
-            return {
-                title: 'Call timed out',
-                description: 'Could not connect before timeout. Check network connectivity and retry.',
-            };
-        }
-        if (raw.includes('permission') || raw.includes('forbidden')) {
-            return {
-                title: 'Call permission denied',
-                description: 'You do not have permission for this call. Verify access and retry.',
-            };
-        }
-        if (raw.includes('not found')) {
-            return {
-                title: 'Call target unavailable',
-                description: 'This call target was not found. Re-open the DM and retry.',
-            };
-        }
-        if (raw.includes('unavailable') || raw.includes('not configured')) {
-            return {
-                title: 'Voice service unavailable',
-                description: 'Voice service is unavailable right now. Retry in a few moments.',
-            };
-        }
-
-        return {
-            title: 'Call failed',
-            description: 'Could not connect to the call. Please retry.',
-        };
-    }, []);
-
     const lastCallErrorRef = useRef<string | null>(null);
     const showCallErrorToast = useCallback((error: unknown) => {
-        const details = classifyCallError(error);
+        const details = classifyCallErrorToast(error);
         if (lastCallErrorRef.current === details.description) return;
         lastCallErrorRef.current = details.description;
         addToast({ title: details.title, description: details.description, variant: 'error' });
-    }, [classifyCallError, addToast]);
+    }, [addToast]);
 
     const handleUploadBg = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];

@@ -27,6 +27,7 @@ import { BackgroundMedia } from '../../components/ui/BackgroundMedia';
 import UserProfilePopover from '../../components/ui/UserProfilePopover';
 import { playSound } from '../../utils/SoundManager';
 import { api, API_BASE, getAccessToken } from '../../lib/api';
+import type { SearchMessagesApiResponse } from '../../lib/api/messages';
 import { markRead, setChannelHasUnread } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
 import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onMessageDeleteBulk, onReactionAdd, onReactionRemove, onChannelPinsUpdate, onSocketReconnect, onChannelBackgroundUpdated, onGroupKeyRotationNeeded, onThreadCreate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type MessageDeleteBulkPayload, type ReactionPayload, type ChannelPinsUpdatePayload, type GroupKeyRotationNeededPayload } from '../../lib/socket';
@@ -346,7 +347,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     // Ctrl+F Search State
     const [showSearchBar, setShowSearchBar] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState<Array<{ id: string; authorId: string; content: string; createdAt: string; highlight: string }>>([]);
+    const [searchResults, setSearchResults] = useState<SearchMessagesApiResponse['results']>([]);
     const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
     const [isSearching, setIsSearching] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);

@@ -70,13 +70,6 @@ const ScreenShareModal = ({
         loadSources();
     }, [isOpen, isDesktop, isSharing]);
 
-    // Esc key handler
-    useEffect(() => {
-        const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') handleStop(); };
-        window.addEventListener('keydown', handleKey);
-        return () => window.removeEventListener('keydown', handleKey);
-    }, [onClose]);
-
     // Elapsed timer
     useEffect(() => {
         if (isSharing) {
@@ -96,7 +89,7 @@ const ScreenShareModal = ({
     };
 
     // Start screen share — native getDisplayMedia or Electron desktopCapturer
-    const startNativeScreenShare = useCallback(async () => {
+    const startNativeScreenShare = useCallback(async (): Promise<boolean> => {
         setIsStarting(true);
         setShareError(null);
         try {
@@ -161,7 +154,7 @@ const ScreenShareModal = ({
 
             setIsSharing(true);
             setDesktopSources([]); // Clear source picker
-            addToast({ title: 'Screen Share Started', description: 'You are now sharing your screen.', variant: 'success' });
+            return true;
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Failed to start screen share';
             if (msg.includes('Permission denied') || msg.includes('NotAllowedError')) {
@@ -170,6 +163,7 @@ const ScreenShareModal = ({
                 setShareError(msg);
                 addToast({ title: 'Screen Share Failed', description: msg, variant: 'error' });
             }
+            return false;
         } finally {
             setIsStarting(false);
         }
@@ -184,13 +178,19 @@ const ScreenShareModal = ({
                 setIsSharing(true);
                 addToast({ title: 'Screen Share Started', description: 'You are now sharing your screen via LiveKit.', variant: 'success' });
             } catch {
-                // Fall back to native share
-                await startNativeScreenShare();
+                // Fall back to native share — success toast only if native actually started
+                const nativeOk = await startNativeScreenShare();
+                if (nativeOk) {
+                    addToast({ title: 'Screen Share Started', description: 'You are now sharing your screen.', variant: 'success' });
+                }
             } finally {
                 setIsStarting(false);
             }
         } else {
-            await startNativeScreenShare();
+            const ok = await startNativeScreenShare();
+            if (ok) {
+                addToast({ title: 'Screen Share Started', description: 'You are now sharing your screen.', variant: 'success' });
+            }
         }
     }, [onStartScreenShare, startNativeScreenShare, addToast]);
 
@@ -216,6 +216,16 @@ const ScreenShareModal = ({
         onClose();
     }, [onStopScreenShare, onClose]);
 
+    // Esc closes modal (after handleStop exists)
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') void handleStop();
+        };
+        window.addEventListener('keydown', handleKey);
+        return () => window.removeEventListener('keydown', handleKey);
+    }, [isOpen, handleStop]);
+
     // Sync with LiveKit external state
     useEffect(() => {
         if (isLiveKitScreenSharing !== undefined) {
@@ -236,7 +246,7 @@ const ScreenShareModal = ({
 
     return (
         <div className="modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isFullScreen ? '0px' : '24px' }}>
-            <div role="dialog" aria-modal="true" style={{
+            <div role="dialog" aria-modal="true" aria-labelledby="screen-share-modal-title" style={{
                 width: '100%',
                 maxWidth: isFullScreen ? '100vw' : '900px',
                 height: isFullScreen ? '100vh' : '80vh',
@@ -256,7 +266,7 @@ const ScreenShareModal = ({
                         {isSharing && (
                             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 2s infinite' }} />
                         )}
-                        <h2 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, color: 'white' }}>
+                        <h2 id="screen-share-modal-title" style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, color: 'white' }}>
                             {isSharing ? 'Your Screen' : 'Screen Share'}
                         </h2>
                         {isSharing && (
@@ -277,7 +287,14 @@ const ScreenShareModal = ({
                                 {isFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
                             </div>
                         )}
-                        <X size={20} className="hover-color-error" style={{ cursor: 'pointer', transition: 'color 0.2s' }} onClick={handleStop} />
+                        <button
+                            type="button"
+                            aria-label="Close screen share"
+                            onClick={() => void handleStop()}
+                            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'inherit', display: 'flex', alignItems: 'center' }}
+                        >
+                            <X size={20} className="hover-color-error" style={{ transition: 'color 0.2s' }} />
+                        </button>
                     </div>
                 </div>
 

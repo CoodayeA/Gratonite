@@ -64,6 +64,7 @@ docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js"
 ```
 
 If you deploy with `deploy/deploy.sh`, the script now enforces guardrails:
+
 - protects remote `.env` files during rsync
 - aborts before restart if required env vars are missing/invalid
 - checks Bull Board token passthrough exists in compose
@@ -78,3 +79,4 @@ docker logs -f gratonite-caddy         # Reverse proxy logs
 docker restart gratonite-api           # Restart API
 docker exec gratonite-postgres pg_dump -U gratonite gratonite > backup.sql  # DB backup
 ```
+

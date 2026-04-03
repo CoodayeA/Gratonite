@@ -72,7 +72,10 @@ export default function VoiceBar() {
   };
 
   return (
-    <div style={{
+    <div
+      role="toolbar"
+      aria-label="Voice channel controls"
+      style={{
       position: 'fixed',
       bottom: 0,
       left: 0,
@@ -88,11 +91,16 @@ export default function VoiceBar() {
       padding: '0 16px',
       zIndex: 100,
       boxShadow: '0 -2px 12px rgba(0, 0, 0, 0.15)',
-    }}>
+    }}
+    >
       {/* Left: connection status + channel info */}
       <div
         onClick={handleNavigate}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNavigate(); } }}
         className="hover-bg-white-4"
+        role="button"
+        tabIndex={0}
+        aria-label={`Voice connected to ${channelName} in ${guildName}. Press Enter to open channel.`}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -170,10 +178,13 @@ export default function VoiceBar() {
         {/* Mute toggle */}
         <div style={{ position: 'relative' }}>
           <button
+            type="button"
             onClick={toggleMute}
             onMouseEnter={() => setHoveredBtn('mute')}
             onMouseLeave={() => setHoveredBtn(null)}
             title={muted ? 'Unmute' : 'Mute'}
+            aria-label={muted ? 'Unmute microphone' : 'Mute microphone'}
+            aria-pressed={!muted}
             style={{
               ...btnBase,
               background: pttActive
@@ -212,10 +223,13 @@ export default function VoiceBar() {
 
         {/* Deafen toggle */}
         <button
+          type="button"
           onClick={toggleDeafen}
           onMouseEnter={() => setHoveredBtn('deafen')}
           onMouseLeave={() => setHoveredBtn(null)}
           title={deafened ? 'Undeafen' : 'Deafen'}
+          aria-label={deafened ? 'Undeafen' : 'Deafen'}
+          aria-pressed={deafened}
           style={{
             ...btnBase,
             background: deafened
@@ -238,10 +252,12 @@ export default function VoiceBar() {
 
         {/* Disconnect */}
         <button
+          type="button"
           onClick={handleDisconnect}
           onMouseEnter={() => setHoveredBtn('disconnect')}
           onMouseLeave={() => setHoveredBtn(null)}
           title="Disconnect"
+          aria-label="Disconnect from voice"
           style={{
             height: '36px',
             padding: '0 14px',

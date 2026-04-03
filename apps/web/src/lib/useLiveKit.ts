@@ -21,6 +21,7 @@ import {
   isGratoniteDesktopApp,
   pickDefaultElectronScreenSourceId,
 } from './electronScreenCapture';
+import { captureCallErrorSentry, mapLiveKitConnectionError } from './callErrors';
 
 // Suppress expected "abort transport/connection attempt" warnings that occur
 // when users intentionally disconnect during in-flight WebRTC setup.
@@ -489,10 +490,8 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
       }
       
     } catch (err) {
-      let message = err instanceof Error ? err.message : 'Failed to connect to voice channel';
-      if (message.includes('signal connection') || message.includes('WebSocket')) {
-        message = 'Could not connect to voice server. Check your connection and try again.';
-      }
+      captureCallErrorSentry(err, { voice_connect_failure: 'connect' });
+      const message = mapLiveKitConnectionError(err);
       setConnectionError(message);
       setIsConnecting(false);
       setConnectionState(ConnectionState.Disconnected);
@@ -710,6 +709,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
           });
         }
       } catch (pubErr) {
+        captureCallErrorSentry(pubErr, { screen_share_error: 'electron_publish' });
         try {
           await room.localParticipant.setScreenShareEnabled(false);
         } catch {
@@ -724,11 +724,16 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
       return;
     }
 
-    await room.localParticipant.setScreenShareEnabled(
-      true,
-      { audio: true },
-      Object.keys(publishOpts).length > 0 ? publishOpts : undefined,
-    );
+    try {
+      await room.localParticipant.setScreenShareEnabled(
+        true,
+        { audio: true },
+        Object.keys(publishOpts).length > 0 ? publishOpts : undefined,
+      );
+    } catch (browserErr) {
+      captureCallErrorSentry(browserErr, { screen_share_error: 'browser_display_media' });
+      throw browserErr;
+    }
     setIsScreenSharing(true);
     updateParticipants();
   }, [updateParticipants, streamQuality]);
