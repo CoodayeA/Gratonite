@@ -402,6 +402,7 @@ collect_config() {
   JWT_SECRET="$(openssl rand -base64 48)"
   JWT_REFRESH_SECRET="$(openssl rand -base64 48)"
   MFA_ENCRYPTION_KEY="$(openssl rand -hex 32)"
+  BULLBOARD_ADMIN_TOKEN="$(openssl rand -hex 32)"
   LIVEKIT_API_KEY="gratonite_$(openssl rand -hex 6)"
   LIVEKIT_API_SECRET="$(openssl rand -base64 32)"
   ok "Secure secrets generated"
@@ -448,6 +449,7 @@ DB_NAME=gratonite
 JWT_SECRET=$JWT_SECRET
 JWT_REFRESH_SECRET=$JWT_REFRESH_SECRET
 MFA_ENCRYPTION_KEY=$MFA_ENCRYPTION_KEY
+BULLBOARD_ADMIN_TOKEN=$BULLBOARD_ADMIN_TOKEN
 
 # Federation — connects your instance to the Gratonite network.
 # Messages are end-to-end encrypted; the relay only routes envelopes.
