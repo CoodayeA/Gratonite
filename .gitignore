@@ -65,3 +65,7 @@ docs/superpowers/
 .windsurf/
 skills/
 skills-lock.json
+
+# Internal-only planning (never push to GitHub — keep local copies)
+docs/release-runbook.md
+docs/roadmap/PRODUCT-PROGRAM.md
