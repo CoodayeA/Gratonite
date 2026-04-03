@@ -3,8 +3,9 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Globe, Server, Activity, Shield, Ban, Wifi, Trash2, Check, X, Users, BadgeCheck, Flag, RefreshCw, ExternalLink } from 'lucide-react';
+import { Globe, Server, Activity, Shield, Ban, Wifi, Trash2, Check, X, Users, BadgeCheck, Flag, RefreshCw, ExternalLink, Plus } from 'lucide-react';
 import { api } from '../../lib/api';
+import ConnectInstanceWizard from '../../components/modals/ConnectInstanceWizard';
 
 type Tab = 'instances' | 'queue' | 'relays' | 'discover' | 'verification' | 'reports' | 'blocks' | 'health';
 
@@ -49,6 +50,7 @@ export default function FederationAdmin() {
   const [reports, setReports] = useState<any[]>([]);
   const [blocks, setBlocks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
 
   useEffect(() => { loadStats(); loadTab(tab); }, [tab]);
 
@@ -94,6 +96,7 @@ export default function FederationAdmin() {
   };
 
   return (
+    <>
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', color: 'var(--text-primary)', fontFamily: 'var(--font-body)' }}>
       {/* Header */}
       <div style={{ padding: '24px 28px 16px', borderBottom: '1px solid var(--stroke, #2a2a3e)' }}>
@@ -293,6 +296,14 @@ export default function FederationAdmin() {
         {/* ── Remote Guilds ── */}
         {tab === 'discover' && !loading && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowWizard(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '8px', background: 'var(--brand, #5865f2)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
+              >
+                <Plus size={14} /> Connect Instance
+              </button>
+            </div>
             {remoteGuilds.map((g: any) => {
               let hostname = g.instanceBaseUrl;
               try { hostname = new URL(g.instanceBaseUrl).hostname; } catch {}
@@ -421,6 +432,14 @@ export default function FederationAdmin() {
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
+
+    {showWizard && (
+      <ConnectInstanceWizard
+        onClose={() => setShowWizard(false)}
+        onConnected={() => { setShowWizard(false); setTab('instances'); loadTab('instances' as Tab); }}
+      />
+    )}
+    </>
   );
 }
 
