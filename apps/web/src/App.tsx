@@ -36,6 +36,7 @@ const DirectMessage = lazy(() => import('./pages/app/DirectMessage'));
 const ChannelChat = lazy(() => import('./pages/guilds/ChannelChat'));
 const VoiceChannel = lazy(() => import('./pages/guilds/VoiceChannel'));
 const GuildOverview = lazy(() => import('./pages/guilds/GuildOverview'));
+const GlobalSearch = lazy(() => import('./pages/guilds/GlobalSearch'));
 const AuditLog = lazy(() => import('./pages/guilds/AuditLog'));
 const GuildWorkflows = lazy(() => import('./pages/guilds/GuildWorkflows'));
 const EventScheduler = lazy(() => import('./pages/guilds/EventScheduler'));
@@ -2042,6 +2043,17 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 >
                     <Users size={18} style={{ opacity: 0.7 }} />
                     <span>Members</span>
+                </div>
+                <div
+                    className={`channel-item ${location.pathname.includes('/search') ? 'active' : ''}`}
+                    role="option"
+                    aria-selected={location.pathname.includes('/search')}
+                    tabIndex={0}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '6px 8px' }}
+                    onClick={() => navigate(`/guild/${activeGuildId}/search`)}
+                >
+                    <Search size={18} style={{ opacity: 0.7 }} />
+                    <span>Search</span>
                 </div>
                 {guildLoadErrorCode === 'FORBIDDEN' && (
                     <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '13px' }}>
@@ -4422,6 +4434,7 @@ const appRouter = createBrowserRouter(
                 <Route path="guild/:guildId/events" element={<Suspense fallback={<LazyFallback />}><EventScheduler /></Suspense>} />
                 <Route path="guild/:guildId/moderation" element={<Suspense fallback={<LazyFallback />}><ModerationDashboard /></Suspense>} />
                 <Route path="guild/:guildId/members" element={<Suspense fallback={<LazyFallback />}><MemberDirectory /></Suspense>} />
+                <Route path="guild/:guildId/search" element={<Suspense fallback={<LazyFallback />}><GlobalSearch /></Suspense>} />
                 <Route path="guild/:guildId/stats" element={<Suspense fallback={<LazyFallback />}><PublicGuildStats /></Suspense>} />
                 <Route path="guild/:guildId/clips" element={<Suspense fallback={<LazyFallback />}><ClipsGallery /></Suspense>} />
             </Route>

@@ -36,6 +36,9 @@ jobs:
           pnpm --filter gratonite-api run lint
           pnpm --filter gratonite-api run guard:placeholders
 
+      - name: OpenAPI spec — validate
+        run: pnpm --filter gratonite-api run validate:openapi
+
       # Web: same Vite-only build as production deploy (avoids known tsc issues in Setup.tsx)
       - name: Web — lint, guard, Vite build
         run: |

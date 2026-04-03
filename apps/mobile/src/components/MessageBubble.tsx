@@ -277,6 +277,14 @@ function MessageBubbleInner({
             size={32}
           />
           <Text style={styles.authorName}>{authorName}</Text>
+          {message.isFederated && (
+            <Ionicons
+              name="globe-outline"
+              size={12}
+              color={colors.textMuted}
+              accessibilityLabel="Federated message"
+            />
+          )}
           <Text style={styles.messageTime}>{formatTime(message.createdAt)}</Text>
           {isEncrypted && (
             <Ionicons

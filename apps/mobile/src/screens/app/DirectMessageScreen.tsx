@@ -194,6 +194,7 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
           replyTo: data.replyTo,
           isEncrypted: data.isEncrypted,
           encryptedContent: data.encryptedContent,
+          isFederated: data.isFederated === true,
         };
         setMessageList((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;

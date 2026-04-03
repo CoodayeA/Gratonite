@@ -13,6 +13,11 @@ export const ErrorBoundary = () => {
         errorMessage = error.data?.message || error.statusText;
     } else if (error instanceof Error) {
         errorMessage = error.message;
+        if (errorMessage.includes('Failed to fetch dynamically imported module')) {
+            errorCode = 'Load';
+            errorMessage =
+                'The app updated but your browser loaded an old script reference. Click Reload, or hard-refresh (Ctrl+Shift+R). If the problem persists, clear site data for this domain.';
+        }
     }
 
     return (

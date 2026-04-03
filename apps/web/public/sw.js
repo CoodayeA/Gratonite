@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gratonite-v4';
+const CACHE_NAME = 'gratonite-v5';
 const API_CACHE_NAME = 'gratonite-api-v2';
 const FONT_CACHE_NAME = 'gratonite-fonts-v1';
 const STATIC_ASSETS = ['/app/', '/app/index.html', '/app/manifest.json'];
@@ -61,14 +61,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for static assets (hashed filenames)
+  // Hashed JS/CSS: network-first so a new deploy always fetches matching chunks (avoids
+  // "Failed to fetch dynamically imported module" when index.html updated but SW/cache had stale logic).
+  // Offline: fall back to cache.
   if (url.pathname.startsWith('/app/assets/')) {
     event.respondWith(
-      caches.match(event.request).then(cached => cached || fetch(event.request).then(res => {
-        const clone = res.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        return res;
-      }))
+      fetch(event.request)
+        .then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match(event.request))
     );
     return;
   }

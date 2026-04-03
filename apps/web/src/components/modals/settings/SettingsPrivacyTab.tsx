@@ -69,7 +69,55 @@ const SettingsPrivacyTab = ({ userProfile, onNavigateTab }: Props) => {
       <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Privacy &amp; Safety</h2>
       <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Control who can contact you and how messages are filtered.</p>
 
+      {/* Privacy & Safety Quick Links */}
       <div style={{ marginBottom: '32px' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Quick Links</h3>
+        <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
+          <button
+            onClick={() => onNavigateTab('muted-users')}
+            style={{
+              width: '100%', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-primary)',
+              fontSize: '14px', fontWeight: 500, textAlign: 'left',
+            }}
+          >
+            <span>View Blocked &amp; Muted Users</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Manage who you&apos;ve muted or blocked</span>
+          </button>
+          <div style={{ height: '1px', background: 'var(--stroke)' }} />
+          <button
+            onClick={() => {
+              const el = document.getElementById('data-export-section');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }}
+            style={{
+              width: '100%', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-primary)',
+              fontSize: '14px', fontWeight: 500, textAlign: 'left',
+            }}
+          >
+            <span>Export Your Data</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Download a copy of your account data</span>
+          </button>
+          <div style={{ height: '1px', background: 'var(--stroke)' }} />
+          <button
+            onClick={() => {
+              const el = document.getElementById('dm-privacy-section');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }}
+            style={{
+              width: '100%', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-primary)',
+              fontSize: '14px', fontWeight: 500, textAlign: 'left',
+            }}
+          >
+            <span>Direct Message Privacy</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Control who can send you DMs</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="dm-privacy-section" style={{ marginBottom: '32px' }}>
         <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Direct Messages</h3>
         <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
           <PrivacyToggle label="Filter message requests" description="Automatically filter DMs from people you don't know into Message Requests. Suspected spam will be moved to a separate Spam folder." storageKey="privacy-filter-message-requests" defaultValue={true} />
@@ -131,7 +179,7 @@ const SettingsPrivacyTab = ({ userProfile, onNavigateTab }: Props) => {
         <PrivacyScoreWidget userSettings={{}} userProfile={userProfile} onNavigate={(tab: string) => onNavigateTab(tab)} />
       </div>
 
-      <div style={{ marginBottom: '32px' }}>
+      <div id="data-export-section" style={{ marginBottom: '32px' }}>
         <DataExportWidget />
       </div>
 

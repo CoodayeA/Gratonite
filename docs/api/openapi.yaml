@@ -67,6 +67,153 @@ paths:
             type: string
           required: true
 
+  /search/messages:
+    get:
+      summary: Full-text search across channels the caller can access
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Search text (alias of `query`; min 2 characters)
+        - in: query
+          name: query
+          schema: { type: string }
+          description: Search text (min 2 characters)
+        - in: query
+          name: guildId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: channelId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: authorId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: before
+          schema: { type: string, format: date-time }
+        - in: query
+          name: after
+          schema: { type: string, format: date-time }
+        - in: query
+          name: has
+          schema: { type: string, enum: [file, image, embed, link] }
+        - in: query
+          name: mentionsMe
+          schema: { type: string, enum: ['true'] }
+          description: When `true`, only messages that @mention the caller or @everyone/@here
+        - in: query
+          name: limit
+          schema: { type: integer, default: 25, maximum: 50 }
+      responses:
+        '200':
+          description: Ranked message hits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results: { type: array }
+                  total: { type: integer }
+                  limit: { type: integer }
+                  offset: { type: integer }
+        '400':
+          description: Validation error (e.g. query too short)
+
+  /channels/{channelId}/webhooks:
+    post:
+      summary: Create an inbound webhook for a channel (post messages via token URL)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 80 }
+                url: { type: string, format: uri, description: Optional HTTPS callback (validated for SSRF) }
+      responses:
+        '201': { description: Webhook record }
+        '403': { description: Missing permission or not a member }
+        '404': { description: Channel not found }
+
+  /guilds/{guildId}/webhooks:
+    get:
+      summary: List webhooks for a guild
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: guildId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Webhook array }
+        '403': { description: Missing MANAGE_WEBHOOKS }
+
+  /webhooks/{webhookId}:
+    delete:
+      summary: Delete a channel webhook
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: webhookId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Deleted }
+        '403': { description: Not authorized }
+        '404': { description: Not found }
+
+  /webhooks/{webhookId}/{token}:
+    post:
+      summary: Execute webhook (create a message as the webhook; unauthenticated)
+      parameters:
+        - in: path
+          name: webhookId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: token
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, maxLength: 4000 }
+                username: { type: string, maxLength: 80 }
+                avatarUrl: { type: string, format: uri }
+      responses:
+        '201': { description: Message row }
+        '400': { description: Missing content }
+        '401': { description: Invalid id/token pair }
+        '429': { description: Rate limit (5 requests / 10s per webhook) }
+
+  /webhooks/{webhookId}/deliveries:
+    get:
+      summary: Recent outbound delivery attempts (bot webhooks)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: webhookId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Delivery log rows }
+        '403': { description: Not a guild member }
+        '404': { description: Webhook not found }
+
 components:
   securitySchemes:
     bearerAuth:

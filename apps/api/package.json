@@ -20,7 +20,8 @@
     "db:studio": "drizzle-kit studio",
     "guard:placeholders": "node ../../tools/placeholder-guard.mjs",
     "verify:prod": "pnpm run build && pnpm run lint && pnpm run guard:placeholders",
-    "verify:release": "pnpm run build && pnpm run guard:placeholders && pnpm run gate:data && pnpm run test:guild-get-contract && pnpm run lint"
+    "verify:release": "pnpm run build && pnpm run guard:placeholders && pnpm run gate:data && pnpm run test:guild-get-contract && pnpm run lint",
+    "validate:openapi": "node ./scripts/validate-openapi.mjs"
   },
   "dependencies": {
     "@bull-board/api": "^6.20.5",
@@ -53,6 +54,7 @@
     ]
   },
   "devDependencies": {
+    "@apidevtools/swagger-parser": "^12.1.0",
     "@eslint/js": "^9.39.1",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",

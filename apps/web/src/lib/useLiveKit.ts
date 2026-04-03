@@ -69,6 +69,7 @@ export interface UseLiveKitReturn {
   isConnected: boolean;
   isConnecting: boolean;
   connectionError: string | null;
+  connectionState: ConnectionState;
 
   // Local user state
   isMuted: boolean;
@@ -129,6 +130,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.Disconnected);
 
   // Local user state
   const [isMuted, setIsMuted] = useState(true);
@@ -317,6 +319,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     
     setIsConnecting(true);
     setConnectionError(null);
+    setConnectionState(ConnectionState.Connecting);
     const attemptId = ++connectAttemptRef.current;
     
     try {
@@ -353,18 +356,28 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
       room.on(RoomEvent.Connected, () => {
         setIsConnected(true);
         setIsConnecting(false);
+        setConnectionState(ConnectionState.Connected);
         updateParticipants();
       });
-      
+
       room.on(RoomEvent.Disconnected, () => {
         setIsConnected(false);
         setIsConnecting(false);
+        setConnectionState(ConnectionState.Disconnected);
         setParticipants([]);
         setLocalParticipant(null);
         setIsMuted(true);
         setIsDeafened(false);
         setIsCameraOn(false);
         setIsScreenSharing(false);
+      });
+
+      room.on(RoomEvent.Reconnecting, () => {
+        setConnectionState(ConnectionState.Reconnecting);
+      });
+
+      room.on(RoomEvent.Reconnected, () => {
+        setConnectionState(ConnectionState.Connected);
       });
       
       room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
@@ -482,6 +495,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
       }
       setConnectionError(message);
       setIsConnecting(false);
+      setConnectionState(ConnectionState.Disconnected);
       throw err;
     }
   }, [channelId, isMuted, isDeafened, participantToInfo, updateParticipants, refreshDevices]);
@@ -513,6 +527,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     setIsConnected(false);
     setIsConnecting(false);
     setConnectionError(null);
+    setConnectionState(ConnectionState.Disconnected);
     setParticipants([]);
     setLocalParticipant(null);
     setIsMuted(true);
@@ -830,6 +845,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     isConnected,
     isConnecting,
     connectionError,
+    connectionState,
     isMuted,
     isDeafened,
     isCameraOn,

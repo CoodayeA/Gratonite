@@ -2,7 +2,7 @@
  * Messages domain: message CRUD, reactions, pins, typing, threads, search.
  */
 import { apiFetch, buildQuery } from './_core';
-import type { Message, Thread, CursorPaginationParams, SearchMessagesResponse, InviteInfo, Guild, ReactionGroup } from './_core';
+import type { Message, Thread, CursorPaginationParams, InviteInfo, Guild, ReactionGroup } from './_core';
 
 export const messagesApi = {
   list: (channelId: string, params?: CursorPaginationParams) =>
@@ -83,8 +83,41 @@ export const messagesApi = {
     apiFetch<{ targetMessageId: string; messages: Message[] }>(`/channels/${channelId}/messages/jump-to-message?messageId=${encodeURIComponent(messageId)}`),
 };
 
+/** Response shape from `GET /search/messages` (richer than legacy `SearchMessagesResponse` in _core). */
+export type SearchMessagesApiResponse = {
+  results: Array<{
+    id: string;
+    channelId: string;
+    channelName: string | null;
+    guildId: string | null;
+    guildName: string | null;
+    content: string | null;
+    createdAt: string;
+    author: {
+      id: string;
+      username: string;
+      displayName: string | null;
+      avatarHash: string | null;
+    } | null;
+  }>;
+  total: number;
+  limit: number;
+  offset: number;
+};
+
 export const searchApi = {
-  messages: (params: { query: string; guildId?: string; channelId?: string; authorId?: string; before?: string; after?: string; has?: string; limit?: number; offset?: number }) => {
+  messages: (params: {
+    query: string;
+    guildId?: string;
+    channelId?: string;
+    authorId?: string;
+    before?: string;
+    after?: string;
+    has?: string;
+    mentionsMe?: boolean;
+    limit?: number;
+    offset?: number;
+  }) => {
     const query = new URLSearchParams();
     query.set('query', params.query);
     if (params.guildId) query.set('guildId', params.guildId);
@@ -93,9 +126,10 @@ export const searchApi = {
     if (params.before) query.set('before', params.before);
     if (params.after) query.set('after', params.after);
     if (params.has) query.set('has', params.has);
+    if (params.mentionsMe) query.set('mentionsMe', 'true');
     if (params.limit) query.set('limit', String(params.limit));
     if (params.offset) query.set('offset', String(params.offset));
-    return apiFetch<SearchMessagesResponse>(`/search/messages?${query.toString()}`);
+    return apiFetch<SearchMessagesApiResponse>(`/search/messages?${query.toString()}`);
   },
 };
 

@@ -95,6 +95,8 @@ export interface Message {
   isEncrypted?: boolean;
   encryptedContent?: string | null;
   expiresAt?: string | null;
+  /** True when the message originated on another instance (federation). */
+  isFederated?: boolean;
 }
 
 export interface GuildMember {

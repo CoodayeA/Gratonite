@@ -14,7 +14,7 @@ import { SpatialAudioEngine } from '../../lib/spatialAudio';
 import { useSpatialPositions } from '../../hooks/useSpatialPositions';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import SpatialCanvas from '../../components/voice/SpatialCanvas';
-import { Track } from 'livekit-client';
+import { Track, ConnectionState as LiveKitConnectionState } from 'livekit-client';
 
 type OutletContextType = {
     hasCustomBg: boolean;
@@ -131,6 +131,9 @@ const VoiceChannel = () => {
     const [showMoreControls, setShowMoreControls] = useState(false);
     const moreControlsRef = useRef<HTMLDivElement>(null);
 
+    // Connection panel state
+    const [showConnectionPanel, setShowConnectionPanel] = useState(false);
+
     // Resizable chat sidebar state (I4)
     const [chatWidth, setChatWidth] = useState(420);
     const chatDraggingRef = useRef(false);
@@ -168,6 +171,7 @@ const VoiceChannel = () => {
         isConnected,
         isConnecting,
         connectionError,
+        connectionState,
         isMuted,
         isDeafened,
         isCameraOn,
@@ -783,6 +787,17 @@ const VoiceChannel = () => {
             case 'good': return 'Good';
             case 'poor': return 'Poor';
             case 'lost': return 'Lost';
+            default: return 'Unknown';
+        }
+    };
+
+    // Connection state formatter
+    const getConnectionStateLabel = (state: LiveKitConnectionState): string => {
+        switch (state) {
+            case LiveKitConnectionState.Connected: return 'Connected';
+            case LiveKitConnectionState.Connecting: return 'Connecting…';
+            case LiveKitConnectionState.Reconnecting: return 'Reconnecting…';
+            case LiveKitConnectionState.Disconnected: return 'Disconnected';
             default: return 'Unknown';
         }
     };
@@ -1751,7 +1766,59 @@ const VoiceChannel = () => {
                                     >
                                         <Settings size={16} /> Volume
                                     </button>
+
+                                    {/* Connection Panel Toggle */}
+                                    <button
+                                        onClick={() => setShowConnectionPanel(!showConnectionPanel)}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px',
+                                            background: showConnectionPanel ? 'rgba(var(--accent-primary-rgb, 88, 101, 242), 0.15)' : 'var(--bg-tertiary)',
+                                            border: showConnectionPanel ? '1px solid var(--accent-primary)' : '1px solid var(--stroke)',
+                                            borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: showConnectionPanel ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                            fontSize: '12px', fontWeight: 600, transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        <Wifi size={16} /> Connection
+                                    </button>
                                 </div>
+
+                                {/* Collapsible Connection Panel */}
+                                {showConnectionPanel && (
+                                    <div style={{
+                                        marginTop: '12px',
+                                        padding: '12px',
+                                        background: 'var(--bg-tertiary)',
+                                        borderRadius: 'var(--radius-md)',
+                                        border: '1px solid var(--stroke)',
+                                    }}>
+                                        <div style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '10px', letterSpacing: '0.05em' }}>Connection Status</div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            {/* Connection State */}
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>State</span>
+                                                <span style={{ fontSize: '12px', fontWeight: 600, color: connectionState === LiveKitConnectionState.Connected ? '#43b581' : connectionState === LiveKitConnectionState.Connecting || connectionState === LiveKitConnectionState.Reconnecting ? '#faa61a' : 'var(--error)' }}>
+                                                    {getConnectionStateLabel(connectionState)}
+                                                </span>
+                                            </div>
+                                            {/* Local Connection Quality */}
+                                            {localParticipant && (
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Quality</span>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <Wifi size={12} style={{ color: getQualityColor(localParticipant.connectionQuality) }} />
+                                                        <span style={{ fontSize: '12px', fontWeight: 600, color: getQualityColor(localParticipant.connectionQuality) }}>
+                                                            {getQualityLabel(localParticipant.connectionQuality)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {/* Network Hint */}
+                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.4', paddingTop: '6px', borderTop: '1px solid var(--stroke)' }}>
+                                                Experiencing issues? Check your network connection or try switching networks.
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
