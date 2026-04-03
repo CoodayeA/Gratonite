@@ -160,9 +160,11 @@ pub async fn start_instance(
     let _ = app.emit("setup-step", "Starting Redis...");
     start_redis(&d).await?;
 
-    // Wait for postgres health
     let _ = app.emit("setup-step", "Waiting for database...");
-    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+    wait_for_health(&d, "gratonite-postgres", 60).await?;
+
+    let _ = app.emit("setup-step", "Waiting for cache...");
+    wait_for_health(&d, "gratonite-redis", 30).await?;
 
     let _ = app.emit("setup-step", "Running setup (migrations + admin account)...");
     run_setup(&d, cfg).await?;
@@ -265,6 +267,56 @@ fn port_map(container_port: &str, host_port: &str) -> PortMap {
     map
 }
 
+async fn wait_for_health(
+    d: &Docker,
+    container_name: &str,
+    timeout_secs: u64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    for _ in 0..timeout_secs {
+        let info = d.inspect_container(container_name, None).await?;
+        if let Some(state) = info.state {
+            if let Some(health) = state.health {
+                match health.status.as_deref() {
+                    Some("healthy") => return Ok(()),
+                    Some("unhealthy") => {
+                        return Err(format!("{container_name} became unhealthy before setup could continue").into());
+                    }
+                    _ => {}
+                }
+            } else if state.running == Some(true) {
+                return Ok(());
+            }
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    }
+
+    Err(format!("{container_name} did not become ready within {timeout_secs} seconds").into())
+}
+
+async fn collect_container_logs(
+    d: &Docker,
+    container_name: &str,
+    lines: u64,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let mut logs = d.logs(
+        container_name,
+        Some(LogsOptions::<String> {
+            stdout: true,
+            stderr: true,
+            tail: lines.to_string(),
+            ..Default::default()
+        }),
+    );
+
+    let mut result = Vec::new();
+    while let Some(Ok(log)) = logs.next().await {
+        result.push(format!("{}", log));
+    }
+
+    Ok(result.join(""))
+}
+
 async fn create_and_start(
     d: &Docker,
     name: &str,
@@ -291,6 +343,16 @@ async fn start_postgres(d: &Docker, cfg: &InstanceConfig) -> Result<(), Box<dyn 
             format!("POSTGRES_DB={}", cfg.db_name),
         ]),
         labels: Some(labels()),
+        healthcheck: Some(bollard::models::HealthConfig {
+            test: Some(vec![
+                "CMD-SHELL".into(),
+                format!("pg_isready -U {}", cfg.db_user),
+            ]),
+            interval: Some(5_000_000_000),
+            timeout: Some(5_000_000_000),
+            retries: Some(10),
+            ..Default::default()
+        }),
         host_config: Some(HostConfig {
             mounts: Some(vec![Mount {
                 target: Some("/var/lib/postgresql/data".into()),
@@ -310,6 +372,13 @@ async fn start_redis(d: &Docker) -> Result<(), Box<dyn std::error::Error>> {
         image: Some("redis:7-alpine".into()),
         cmd: Some(vec!["redis-server".into(), "--maxmemory".into(), "256mb".into(), "--maxmemory-policy".into(), "noeviction".into()]),
         labels: Some(labels()),
+        healthcheck: Some(bollard::models::HealthConfig {
+            test: Some(vec!["CMD".into(), "redis-cli".into(), "ping".into()]),
+            interval: Some(5_000_000_000),
+            timeout: Some(5_000_000_000),
+            retries: Some(10),
+            ..Default::default()
+        }),
         host_config: Some(HostConfig {
             mounts: Some(vec![Mount {
                 target: Some("/data".into()),
@@ -365,22 +434,30 @@ async fn run_setup(d: &Docker, cfg: &InstanceConfig) -> Result<(), Box<dyn std::
 
     d.start_container("gratonite-setup", None::<StartContainerOptions<String>>).await?;
 
-    // Wait for setup to complete (max 60s)
-    for _ in 0..30 {
+    // Wait for setup to complete (max 120s)
+    for _ in 0..60 {
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
         let info = d.inspect_container("gratonite-setup", None).await?;
         if let Some(state) = info.state {
             if state.running == Some(false) {
                 let exit_code = state.exit_code.unwrap_or(-1);
                 if exit_code != 0 {
-                    return Err(format!("Setup failed with exit code {}", exit_code).into());
+                    let logs = collect_container_logs(d, "gratonite-setup", 120).await
+                        .unwrap_or_else(|_| "Unable to retrieve setup logs.".into());
+                    return Err(format!(
+                        "Setup failed with exit code {}.\n\nSetup logs:\n{}",
+                        exit_code,
+                        logs.trim()
+                    ).into());
                 }
                 return Ok(());
             }
         }
     }
 
-    Err("Setup timed out".into())
+    let logs = collect_container_logs(d, "gratonite-setup", 120).await
+        .unwrap_or_else(|_| "Unable to retrieve setup logs.".into());
+    Err(format!("Setup timed out.\n\nSetup logs:\n{}", logs.trim()).into())
 }
 
 async fn start_api(d: &Docker, cfg: &InstanceConfig) -> Result<(), Box<dyn std::error::Error>> {
