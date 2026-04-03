@@ -4894,3 +4894,12 @@ textarea:focus-visible,
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
+
+/* Build experiment: VITE_EXPERIMENT_REDUCED_MOTION_COMPOSER=1 — see src/lib/experiments.ts */
+body.gratonite-exp-reduced-motion *,
+body.gratonite-exp-reduced-motion *::before,
+body.gratonite-exp-reduced-motion *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+}

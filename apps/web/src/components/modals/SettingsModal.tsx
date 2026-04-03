@@ -23,6 +23,7 @@ import ThemeEditorModal from './ThemeEditorModal';
 import ThemeStoreModal from './ThemeStoreModal';
 import PluginStoreModal from './PluginStoreModal';
 import { CODE_THEMES as codeThemeList } from '../../utils/codeTheme';
+import { getWebExperimentSnapshot } from '../../lib/experiments';
 
 // ─── Image Crop Modal ────────────────────────────────────────────────────────
 
@@ -2420,6 +2421,22 @@ function SettingsDeveloperPanel({ addToast }: { addToast: (t: any) => void }) {
                     ))}
                 </div>
             )}
+
+            <hr style={{ border: 'none', borderTop: '1px solid var(--stroke)', margin: '32px 0' }} />
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Build experiments</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '13px', lineHeight: 1.5 }}>
+                Opt-in flags via Vite at build time. Set in <code style={{ fontSize: '12px', padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px' }}>.env</code>, then rebuild. Values shown below reflect this session only.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {getWebExperimentSnapshot().map((exp) => (
+                    <div key={exp.id} style={{ padding: '12px 14px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--stroke)', fontSize: '13px' }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>{exp.id}</div>
+                        <div style={{ color: 'var(--text-muted)', marginBottom: '8px' }}>{exp.description}</div>
+                        <code style={{ fontSize: '11px', color: 'var(--text-secondary)', wordBreak: 'break-all', display: 'block' }}>{exp.envKey}=1</code>
+                        <div style={{ marginTop: '8px', fontWeight: 600, color: exp.enabled ? '#22c55e' : 'var(--text-muted)' }}>{exp.enabled ? 'On' : 'Off'}</div>
+                    </div>
+                ))}
+            </div>
         </>
     );
 }

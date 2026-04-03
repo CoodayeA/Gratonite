@@ -29,6 +29,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [emailError, setEmailError] = useState('');
 
   const handleSendReset = async () => {
     if (!email.trim()) {
@@ -48,6 +49,13 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
       toast.error(err.message || 'Something went wrong');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const validateEmail = () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !emailRegex.test(email.trim())) {
+      setEmailError('Please enter a valid email address');
     }
   };
 
@@ -191,6 +199,14 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
       textAlign: 'center',
       lineHeight: 22,
     },
+    fieldGroup: {
+      gap: spacing.xs,
+    },
+    fieldError: {
+      fontSize: fontSize.xs,
+      color: colors.error,
+      marginLeft: spacing.xs,
+    },
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   return (
@@ -250,20 +266,24 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
 
               {/* Form */}
               <Animated.View entering={FadeInDown.duration(600).delay(200)} style={styles.form}>
-                <View style={styles.inputContainer}>
-                  <Ionicons name="mail-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
-                  <TextInput
-                    testID="email-input"
-                    style={styles.input}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="Email address"
-                    placeholderTextColor={colors.textMuted}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    keyboardType="email-address"
-                    accessibilityLabel="Email address"
-                  />
+                <View style={styles.fieldGroup}>
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="mail-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+                    <TextInput
+                      testID="email-input"
+                      style={styles.input}
+                      value={email}
+                      onChangeText={(text) => { setEmail(text); if (emailError) setEmailError(''); }}
+                      onBlur={validateEmail}
+                      placeholder="Email address"
+                      placeholderTextColor={colors.textMuted}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      keyboardType="email-address"
+                      accessibilityLabel="Email address"
+                    />
+                  </View>
+                  {!!emailError && <Text style={styles.fieldError}>{emailError}</Text>}
                 </View>
 
                 <TouchableOpacity

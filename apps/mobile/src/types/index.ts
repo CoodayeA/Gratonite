@@ -54,6 +54,8 @@ export interface Channel {
   backgroundType?: 'image' | 'video' | null;
   slowModeSeconds?: number;
   disappearTimer?: number | null;
+  /** Guild text channel E2E — when true, message payloads use channel encryption keys (web parity). */
+  isEncrypted?: boolean;
 }
 
 export interface GuildEmoji {

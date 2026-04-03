@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import {
   View,
   Text,
+  TextInput,
   FlatList,
   StyleSheet,
   RefreshControl,
@@ -24,6 +25,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppTabParamList, AppStackParamList } from '../../navigation/types';
 import PatternBackground from '../../components/PatternBackground';
 import LoadErrorCard from '../../components/LoadErrorCard';
+import ListSkeleton from '../../components/ListSkeleton';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<AppTabParamList, 'Friends'>,
@@ -45,6 +47,7 @@ export default function FriendsScreen({ navigation }: Props) {
   const [tab, setTab] = useState<Tab>('all');
   const [refreshing, setRefreshing] = useState(false);
   const [streaks, setStreaks] = useState<Map<string, number>>(new Map());
+  const [searchQuery, setSearchQuery] = useState('');
   const isFetchingRef = useRef(false);
   const refreshingRef = useRef(false);
   refreshingRef.current = refreshing;
@@ -103,12 +106,24 @@ export default function FriendsScreen({ navigation }: Props) {
     fetchRelationships();
   }, [fetchRelationships]);
 
+  // Reset search when switching tabs
+  useEffect(() => {
+    setSearchQuery('');
+  }, [tab]);
+
   const filtered = rels.filter((r) => {
     if (tab === 'all') return r.type === 'friend';
     if (tab === 'pending') return r.type === 'pending_incoming' || r.type === 'pending_outgoing';
     if (tab === 'blocked') return r.type === 'blocked';
     return false;
   });
+
+  const filteredFriends = tab === 'all' && searchQuery.length > 0
+    ? filtered.filter((f) =>
+        f.user?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        f.user?.displayName?.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : filtered;
 
   const handleAccept = async (userId: string) => {
     try {
@@ -343,6 +358,31 @@ export default function FriendsScreen({ navigation }: Props) {
       color: colors.textMuted,
       fontSize: fontSize.sm,
     },
+    searchContainer: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
+    searchRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      backgroundColor: glass
+        ? glass.glassBackground
+        : neo ? colors.bgElevated : colors.bgSecondary,
+      borderRadius: neo ? 0 : borderRadius.md,
+      paddingHorizontal: spacing.md,
+      gap: spacing.sm,
+      ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border } : {}),
+      ...(glass ? { borderWidth: 1, borderColor: glass.glassBorder } : {}),
+    },
+    searchInput: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      color: colors.textPrimary,
+      fontSize: fontSize.md,
+    },
+    searchClear: {
+      padding: spacing.sm,
+    },
   }), [colors, spacing, fontSize, borderRadius, neo, glass, insets.bottom]);
 
   const renderItem = ({ item, index }: { item: Relationship; index: number }) => {
@@ -401,6 +441,16 @@ export default function FriendsScreen({ navigation }: Props) {
 
   if (loadError && rels.length === 0) return <LoadErrorCard title="Failed to load friends" message={loadError} onRetry={() => { setLoading(true); fetchRelationships(); }} />;
 
+  if (loading && rels.length === 0) {
+    return (
+      <PatternBackground>
+        <View style={[styles.container, { paddingTop: insets.top }]}>
+          <ListSkeleton />
+        </View>
+      </PatternBackground>
+    );
+  }
+
   return (
     <PatternBackground>
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -436,8 +486,30 @@ export default function FriendsScreen({ navigation }: Props) {
         ))}
       </View>
 
+      {tab === 'all' && (
+        <View style={styles.searchContainer}>
+          <View style={styles.searchRow}>
+            <Ionicons name="search-outline" size={18} color={colors.textMuted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search friends..."
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              returnKeyType="search"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <PressableScale style={styles.searchClear} onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+              </PressableScale>
+            )}
+          </View>
+        </View>
+      )}
+
       <FlatList
-        data={filtered}
+        data={filteredFriends}
         keyExtractor={(item) => item.id || item.targetId}
         renderItem={renderItem}
         contentContainerStyle={styles.list}

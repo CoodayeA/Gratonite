@@ -85,6 +85,39 @@ export async function decrypt(key: CryptoKey, ciphertextBase64: string): Promise
   return new TextDecoder().decode(plaintext);
 }
 
+/**
+ * Encrypt file bytes + filename — wire-compatible with apps/web crypto.worker encryptFileOp.
+ */
+export async function encryptFile(
+  key: CryptoKey,
+  fileBuffer: ArrayBuffer,
+  filename: string,
+): Promise<{ encryptedBuffer: ArrayBuffer; encryptedFilename: string; iv: string }> {
+  const iv = getRandomValues(new Uint8Array(12));
+  const ciphertext = await subtle.encrypt({ name: 'AES-GCM', iv }, key, fileBuffer);
+  const encryptedFilename = await encrypt(key, filename);
+  return {
+    encryptedBuffer: ciphertext,
+    encryptedFilename,
+    iv: Buffer.from(iv).toString('base64'),
+  };
+}
+
+/**
+ * Decrypt file blob — compatible with web decryptFile.
+ */
+export async function decryptFile(
+  key: CryptoKey,
+  encryptedBuffer: ArrayBuffer,
+  ivB64: string,
+  encryptedFilename: string,
+): Promise<{ buffer: ArrayBuffer; filename: string }> {
+  const iv = new Uint8Array(Buffer.from(ivB64, 'base64'));
+  const plaintext = await subtle.decrypt({ name: 'AES-GCM', iv }, key, encryptedBuffer);
+  const filename = await decrypt(key, encryptedFilename);
+  return { buffer: plaintext, filename };
+}
+
 // ---------------------------------------------------------------------------
 // Group key management
 // ---------------------------------------------------------------------------

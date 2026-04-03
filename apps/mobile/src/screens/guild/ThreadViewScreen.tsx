@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   View,
+  Text,
   FlatList,
   TextInput,
   TouchableOpacity,
@@ -16,6 +17,7 @@ import {
   onMessageCreate,
   onMessageUpdate,
   onMessageDelete,
+  onTypingStart,
   getSocket,
 } from '../../lib/socket';
 import { useAuth } from '../../contexts/AuthContext';
@@ -26,6 +28,8 @@ import MessageBubble from '../../components/MessageBubble';
 import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
 import LoadErrorCard from '../../components/LoadErrorCard';
+import TypingDots from '../../components/TypingDots';
+import Reanimated, { SlideInDown } from 'react-native-reanimated';
 import type { Message } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -47,6 +51,10 @@ export default function ThreadViewScreen({ route }: Props) {
   const flatListRef = useRef<FlatList>(null);
   const isNearBottomRef = useRef(true);
   const hasDataRef = useRef(false);
+
+  // Typing indicator state
+  const [typingUsers, setTypingUsers] = useState<Map<string, { username: string; timeout: ReturnType<typeof setTimeout> }>>(new Map());
+  const typingThrottle = useRef<number>(0);
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -135,6 +143,38 @@ export default function ThreadViewScreen({ route }: Props) {
       }
     });
     return unsub;
+  }, [threadId]);
+
+  // Socket: typing indicators
+  useEffect(() => {
+    const unsub = onTypingStart((data) => {
+      if (data.channelId !== threadId || data.userId === user?.id) return;
+      setTypingUsers((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(data.userId);
+        if (existing) clearTimeout(existing.timeout);
+        const timeout = setTimeout(() => {
+          setTypingUsers((p) => {
+            const n = new Map(p);
+            n.delete(data.userId);
+            return n;
+          });
+        }, 5000);
+        next.set(data.userId, { username: data.username || data.userId, timeout });
+        return next;
+      });
+    });
+    return unsub;
+  }, [threadId, user?.id]);
+
+  // Clear typing timeouts on thread switch or unmount
+  useEffect(() => {
+    return () => {
+      setTypingUsers((prev) => {
+        prev.forEach((entry) => clearTimeout(entry.timeout));
+        return new Map();
+      });
+    };
   }, [threadId]);
 
   const handleSend = async () => {
@@ -229,6 +269,19 @@ export default function ThreadViewScreen({ route }: Props) {
     sendButtonDisabled: {
       backgroundColor: colors.bgElevated,
     },
+    typingBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.xs,
+      backgroundColor: colors.bgSecondary,
+      gap: spacing.sm,
+    },
+    typingText: {
+      color: colors.textMuted,
+      fontSize: fontSize.xs,
+      fontStyle: 'italic',
+    },
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) {
@@ -269,6 +322,17 @@ export default function ThreadViewScreen({ route }: Props) {
           />
         }
       />
+
+      {/* Typing indicator */}
+      {typingUsers.size > 0 && (
+        <Reanimated.View entering={SlideInDown.springify().damping(15)} style={styles.typingBar}>
+          <TypingDots />
+          <Text style={styles.typingText}>
+            {Array.from(typingUsers.values()).map((t) => t.username).join(', ')}{' '}
+            {typingUsers.size === 1 ? 'is' : 'are'} typing
+          </Text>
+        </Reanimated.View>
+      )}
 
       <View style={styles.inputBar}>
         <TextInput

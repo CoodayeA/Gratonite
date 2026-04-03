@@ -33,6 +33,8 @@ interface MessageBubbleProps {
   onTextReactionToggle?: (text: string) => void;
   isEncrypted?: boolean;
   decryptedContent?: string;
+  /** Per attachment id: decrypted display URI (e.g. data:image/...;base64,...) for E2E files */
+  attachmentUriOverrides?: Record<string, string>;
   channelDisappearTimer?: number | null;
   forwardingDisabled?: boolean;
 }
@@ -57,6 +59,7 @@ function MessageBubbleInner({
   onTextReactionToggle,
   isEncrypted,
   decryptedContent,
+  attachmentUriOverrides,
   channelDisappearTimer,
   forwardingDisabled,
 }: MessageBubbleProps) {
@@ -72,8 +75,11 @@ function MessageBubbleInner({
 
   // Collect image URLs from attachments for gallery
   const imageUrls = useMemo(
-    () => (message.attachments || []).filter(a => a.contentType?.startsWith('image/')).map(a => a.url),
-    [message.attachments],
+    () =>
+      (message.attachments || [])
+        .filter((a) => a.contentType?.startsWith('image/'))
+        .map((a) => attachmentUriOverrides?.[a.id] ?? a.url),
+    [message.attachments, attachmentUriOverrides],
   );
 
   const styles = useMemo(() => StyleSheet.create({
@@ -240,6 +246,13 @@ function MessageBubbleInner({
     lockIcon: {
       marginLeft: 4,
     },
+    groupedTimeHint: {
+      color: colors.textMuted,
+      fontSize: 10,
+      opacity: 0.5,
+      marginLeft: 40,
+      marginBottom: 2,
+    },
   }), [colors, neo, glass, windowWidth]);
 
   const entering = isNewMessage
@@ -298,6 +311,11 @@ function MessageBubbleInner({
         </View>
       )}
 
+      {/* Subtle time hint for grouped messages (replaces hidden header timestamp) */}
+      {isGrouped && (
+        <Text style={styles.groupedTimeHint}>{formatTime(message.createdAt)}</Text>
+      )}
+
       {(decryptedContent ?? message.content)?.trim() ? (
         <View style={[styles.bubbleWrapper, isGrouped && styles.groupedWrapper]}>
           <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
@@ -310,11 +328,12 @@ function MessageBubbleInner({
       {message.attachments && message.attachments.length > 0 && (
         <View style={{ marginLeft: 40, marginTop: spacing.xs, gap: spacing.xs }}>
           {message.attachments.map((att) => {
-            const imgIdx = imageUrls.indexOf(att.url);
+            const imgIdx = imageUrls.indexOf(attachmentUriOverrides?.[att.id] ?? att.url);
             return (
               <AttachmentPreview
                 key={att.id}
                 attachment={att}
+                displayUri={attachmentUriOverrides?.[att.id]}
                 allImageUrls={imageUrls}
                 imageIndex={imgIdx >= 0 ? imgIdx : undefined}
                 onImagePress={(_url, _allUrls, idx) => {

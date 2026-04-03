@@ -36,7 +36,6 @@ export default function SettingsAccountScreen({ navigation }: Props) {
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [changingPassword, setChangingPassword] = useState(false);
   const [mfaEnabled, setMfaEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -63,20 +62,6 @@ export default function SettingsAccountScreen({ navigation }: Props) {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleChangePassword = async () => {
-    if (!currentPassword || !newPassword) {
-      toast.error('Please fill in both password fields');
-      return;
-    }
-    if (newPassword.length < 8) {
-      toast.error('New password must be at least 8 characters');
-      return;
-    }
-    // MOBILE-POLISH: backend/mobile API does not yet expose an authenticated
-    // password-change endpoint, so this screen cannot complete the flow yet.
-    toast.error('Password changes are not available on mobile yet. Please use the forgot password flow to reset your password.');
   };
 
   const handleDeleteAccount = () => {
@@ -249,6 +234,12 @@ export default function SettingsAccountScreen({ navigation }: Props) {
       borderRadius: borderRadius.sm,
       backgroundColor: colors.accentPrimary,
     },
+    unavailableNote: {
+      fontSize: fontSize.xs,
+      color: colors.textMuted,
+      marginBottom: spacing.sm,
+      fontStyle: 'italic',
+    },
     mfaButtonText: {
       color: colors.white,
       fontSize: fontSize.sm,
@@ -317,7 +308,8 @@ export default function SettingsAccountScreen({ navigation }: Props) {
 
         {/* Change Password */}
         <SectionHeader title="Change Password" />
-        <View style={styles.section}>
+        <View style={[styles.section, { opacity: 0.4 }]} pointerEvents="none">
+          <Text style={styles.unavailableNote}>Available on web only</Text>
           <Text style={styles.label}>Current Password</Text>
           <TextInput
             style={styles.input}
@@ -327,6 +319,7 @@ export default function SettingsAccountScreen({ navigation }: Props) {
             placeholderTextColor={colors.textMuted}
             secureTextEntry
             maxLength={128}
+            editable={false}
           />
 
           <Text style={styles.label}>New Password</Text>
@@ -338,18 +331,14 @@ export default function SettingsAccountScreen({ navigation }: Props) {
             placeholderTextColor={colors.textMuted}
             secureTextEntry
             maxLength={128}
+            editable={false}
           />
 
           <TouchableOpacity
-            style={[styles.saveButton, changingPassword && styles.buttonDisabled]}
-            onPress={handleChangePassword}
-            disabled={changingPassword}
+            style={[styles.saveButton, styles.buttonDisabled]}
+            disabled={true}
           >
-            {changingPassword ? (
-              <ActivityIndicator color={colors.white} />
-            ) : (
-              <Text style={styles.saveButtonText}>Change Password</Text>
-            )}
+            <Text style={styles.saveButtonText}>Change Password</Text>
           </TouchableOpacity>
         </View>
 

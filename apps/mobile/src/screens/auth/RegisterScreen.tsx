@@ -35,6 +35,10 @@ export default function RegisterScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [usernameError, setUsernameError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
 
   const handleRegister = async () => {
     if (!username.trim() || !email.trim() || !password) {
@@ -68,6 +72,47 @@ export default function RegisterScreen({ navigation }: Props) {
       Alert.alert('Registration Failed', err.message || 'Something went wrong');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getPasswordStrength = (pwd: string): 'weak' | 'fair' | 'strong' | null => {
+    if (!pwd) return null;
+    const hasLetters = /[a-zA-Z]/.test(pwd);
+    const hasNumbers = /[0-9]/.test(pwd);
+    const hasSymbols = /[^a-zA-Z0-9]/.test(pwd);
+    if (pwd.length < 8 || !hasLetters) return 'weak';
+    if (hasLetters && hasNumbers && hasSymbols) return 'strong';
+    if (hasLetters && hasNumbers) return 'fair';
+    return 'weak';
+  };
+
+  const validateUsername = () => {
+    const usernameRegex = /^[a-zA-Z0-9_]{3,32}$/;
+    if (username && !usernameRegex.test(username.trim())) {
+      setUsernameError('3–32 chars: letters, numbers and underscores only');
+    }
+  };
+
+  const validateEmail = () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !emailRegex.test(email.trim())) {
+      setEmailError('Please enter a valid email address');
+    }
+  };
+
+  const validatePasswordBlur = () => {
+    if (password && password.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
+    }
+  };
+
+  const handleConfirmPasswordChange = (text: string) => {
+    setConfirmPassword(text);
+    if (passwordError === 'Passwords do not match') setPasswordError('');
+    if (text && password && text !== password) {
+      setConfirmPasswordError('Passwords do not match');
+    } else {
+      setConfirmPasswordError('');
     }
   };
 
@@ -165,6 +210,10 @@ export default function RegisterScreen({ navigation }: Props) {
     },
     eyeButton: {
       padding: spacing.xs,
+      minWidth: 44,
+      minHeight: 44,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     button: {
       backgroundColor: colors.accentPrimary,
@@ -215,6 +264,25 @@ export default function RegisterScreen({ navigation }: Props) {
       color: colors.accentPrimary,
       fontWeight: '700',
     },
+    fieldGroup: {
+      gap: spacing.xs,
+    },
+    fieldError: {
+      fontSize: fontSize.xs,
+      color: colors.error,
+      marginLeft: spacing.xs,
+    },
+    strengthRow: {
+      flexDirection: 'row',
+      gap: spacing.xs,
+      marginLeft: spacing.xs,
+    },
+    strengthSegment: {
+      flex: 1,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.border,
+    },
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   return (
@@ -263,80 +331,112 @@ export default function RegisterScreen({ navigation }: Props) {
 
           {/* Form */}
           <Animated.View entering={FadeInDown.duration(600).delay(300)} style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Ionicons name="person-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                value={username}
-                onChangeText={setUsername}
-                placeholder="Username"
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-                accessibilityLabel="Username"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Ionicons name="mail-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Email address"
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                accessibilityLabel="Email"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Password"
-                placeholderTextColor={colors.textMuted}
-                secureTextEntry={!showPassword}
-                accessibilityLabel="Password"
-              />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowPassword(!showPassword)}
-                accessibilityLabel="Toggle password visibility"
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={20}
-                  color={colors.textMuted}
+            <View style={styles.fieldGroup}>
+              <View style={styles.inputContainer}>
+                <Ionicons name="person-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={username}
+                  onChangeText={(text) => { setUsername(text); if (usernameError) setUsernameError(''); }}
+                  onBlur={validateUsername}
+                  placeholder="Username"
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  accessibilityLabel="Username"
                 />
-              </TouchableOpacity>
+              </View>
+              {!!usernameError && <Text style={styles.fieldError}>{usernameError}</Text>}
             </View>
 
-            <View style={styles.inputContainer}>
-              <Ionicons name="shield-checkmark-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder="Confirm password"
-                placeholderTextColor={colors.textMuted}
-                secureTextEntry={!showConfirmPassword}
-                accessibilityLabel="Confirm password"
-              />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                accessibilityLabel="Toggle confirm password visibility"
-              >
-                <Ionicons
-                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={20}
-                  color={colors.textMuted}
+            <View style={styles.fieldGroup}>
+              <View style={styles.inputContainer}>
+                <Ionicons name="mail-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={email}
+                  onChangeText={(text) => { setEmail(text); if (emailError) setEmailError(''); }}
+                  onBlur={validateEmail}
+                  placeholder="Email address"
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  accessibilityLabel="Email"
                 />
-              </TouchableOpacity>
+              </View>
+              {!!emailError && <Text style={styles.fieldError}>{emailError}</Text>}
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <View style={styles.inputContainer}>
+                <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={password}
+                  onChangeText={(text) => { setPassword(text); if (passwordError) setPasswordError(''); }}
+                  onBlur={validatePasswordBlur}
+                  placeholder="Password"
+                  placeholderTextColor={colors.textMuted}
+                  secureTextEntry={!showPassword}
+                  accessibilityLabel="Password"
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                  accessibilityLabel="Toggle password visibility"
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={colors.textMuted}
+                  />
+                </TouchableOpacity>
+              </View>
+              {!!passwordError && <Text style={styles.fieldError}>{passwordError}</Text>}
+              {(() => {
+                const strength = getPasswordStrength(password);
+                if (!strength) return null;
+                const segmentColors = {
+                  weak: [colors.error, colors.border, colors.border],
+                  fair: [colors.warning, colors.warning, colors.border],
+                  strong: [colors.success, colors.success, colors.success],
+                } as const;
+                const segs = segmentColors[strength];
+                return (
+                  <View style={styles.strengthRow} accessibilityLabel={`Password strength: ${strength}`}>
+                    {segs.map((color, i) => (
+                      <View key={i} style={[styles.strengthSegment, { backgroundColor: color }]} />
+                    ))}
+                  </View>
+                );
+              })()}
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <View style={styles.inputContainer}>
+                <Ionicons name="shield-checkmark-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={confirmPassword}
+                  onChangeText={handleConfirmPasswordChange}
+                  placeholder="Confirm password"
+                  placeholderTextColor={colors.textMuted}
+                  secureTextEntry={!showConfirmPassword}
+                  accessibilityLabel="Confirm password"
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  accessibilityLabel="Toggle confirm password visibility"
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={colors.textMuted}
+                  />
+                </TouchableOpacity>
+              </View>
+              {!!confirmPasswordError && <Text style={styles.fieldError}>{confirmPasswordError}</Text>}
             </View>
 
             <TouchableOpacity

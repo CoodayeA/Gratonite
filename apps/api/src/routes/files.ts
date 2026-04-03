@@ -51,6 +51,8 @@ const ALLOWED_MIME_TYPES = new Set([
   'text/plain',
   'application/zip',
   'application/json',
+  /** E2E clients upload ciphertext as opaque binary (see web encryptFile → encrypted.bin). */
+  'application/octet-stream',
 ]);
 
 /**
@@ -93,6 +95,7 @@ const EXT_MIME_MAP: Record<string, string[]> = {
   '.wav': ['audio/wav', 'audio/wave', 'audio/x-wav'],
   '.pdf': ['application/pdf'],
   '.txt': ['text/plain'],
+  '.bin': ['application/octet-stream'],
 };
 
 /**
@@ -106,6 +109,7 @@ const ALLOWED_EXTENSIONS = new Set([
   '.pdf', '.txt', '.md', '.json', '.csv', '.xml',
   '.zip', '.tar', '.gz',
   '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+  '.bin', // E2E encrypted blob uploads (paired with application/octet-stream)
 ]);
 
 /**

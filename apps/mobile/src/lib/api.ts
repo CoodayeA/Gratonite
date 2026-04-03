@@ -649,6 +649,12 @@ export const channels = {
     return apiFetch<Channel>(`/channels/${channelId}`);
   },
 
+  getEncryptionKeys(guildId: string, channelId: string) {
+    return apiFetch<{ id: string; channelId: string; version: number; keyData: Record<string, string> }>(
+      `/guilds/${guildId}/channels/${channelId}/encryption-keys`,
+    );
+  },
+
   create(guildId: string, data: { name: string; type: string; parentId?: string; nsfw?: boolean; slowModeSeconds?: number }) {
     return apiFetch<Channel>(`/guilds/${guildId}/channels`, {
       method: 'POST',
@@ -686,17 +692,48 @@ export const channels = {
 // Messages
 // ---------------------------------------------------------------------------
 
+/** POST /channels/:id/messages body — aligned with web `messagesApi.send`. */
+export type MessageSendBody = {
+  content?: string | null;
+  nonce?: string;
+  messageReference?: { messageId: string };
+  attachmentIds?: string[];
+  replyToId?: string;
+  threadId?: string;
+  expiresIn?: number;
+  isEncrypted?: boolean;
+  encryptedContent?: string;
+  keyVersion?: number;
+  embeds?: Record<string, unknown>[];
+  stickerId?: string;
+};
+
 export const messages = {
   list(channelId: string, params?: CursorPaginationParams, signal?: AbortSignal) {
     const qs = buildQuery(params);
     return apiFetch<Message[]>(`/channels/${channelId}/messages${qs}`, { signal });
   },
 
-  send(channelId: string, content: string, opts?: { replyToId?: string; stickerId?: string; isEncrypted?: boolean; encryptedContent?: string; signal?: AbortSignal }) {
-    const { signal, ...body } = opts ?? {};
+  send(
+    channelId: string,
+    contentOrBody: string | (MessageSendBody & { signal?: AbortSignal }),
+    maybeOpts?: MessageSendBody & { signal?: AbortSignal },
+  ): Promise<Message> {
+    let signal: AbortSignal | undefined;
+    let body: Record<string, unknown>;
+    if (typeof contentOrBody === 'string') {
+      const opts = maybeOpts ?? {};
+      signal = opts.signal;
+      const { signal: _s, ...rest } = opts;
+      body = { content: contentOrBody, ...rest };
+    } else {
+      const { signal: sig, ...rest } = contentOrBody;
+      signal = sig;
+      body = { ...rest };
+    }
     return apiFetch<Message>(`/channels/${channelId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ content, ...body }),
+      body: JSON.stringify(body),
       signal,
     });
   },
@@ -818,7 +855,7 @@ export const voice = {
 
 export const files = {
   upload(formData: FormData) {
-    return apiFetch<{ id: string; url: string }>('/files/upload', {
+    return apiFetch<{ id: string; url: string; filename?: string; size?: number; mimeType?: string }>('/files/upload', {
       method: 'POST',
       body: formData,
     });
