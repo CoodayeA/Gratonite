@@ -25,7 +25,7 @@ Gratonite works the same way. Each instance is fully independent — you own you
 3. **Discovery happens automatically** — after 48 hours with no abuse reports, your public servers appear in the Discover directory on gratonite.chat
 4. **Messages flow across instances** — when someone from gratonite.chat joins a server on your instance, messages are cryptographically signed and routed through the relay. To everyone, it looks like they're in the same room.
 
-For setup instructions, see the [Federation Guide](federation-guide.md). For self-hosting, see the [Self-Hosting Guide](self-hosting-guide.md).
+For setup instructions, see the [Federation Guide](federation-guide.md). For self-hosting, see [docs/self-hosting.md](../self-hosting.md).
 
 ---
 

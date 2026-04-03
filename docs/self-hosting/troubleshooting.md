@@ -21,6 +21,29 @@ Common issues and their fixes when self-hosting Gratonite.
 | Cannot log in after install | Admin credentials lost or mistyped | Check `~/gratonite/.env` for `ADMIN_USERNAME` and `ADMIN_PASSWORD`. These are only used on first run to create the account. |
 | Emails not sending | SMTP not configured | Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` in `.env`. Email features are optional. |
 
+## First Thing to Collect for Support
+
+Generate a support bundle before opening an issue so logs and container state are preserved.
+
+From `~/gratonite` (CLI installs):
+
+```bash
+bash ./collect-logs.sh
+```
+
+From PowerShell:
+
+```powershell
+pwsh ./collect-logs.ps1
+```
+
+The bundle includes:
+
+- `docker compose ps -a`
+- logs for `setup`, `api`, `web`, `caddy`, `postgres`, `redis`, `livekit`
+- Docker and Compose version/info
+- `.env` keys with values redacted
+
 ## Desktop App: "Setup failed with exit code 1"
 
 If the desktop self-host app shows:

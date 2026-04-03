@@ -10,6 +10,8 @@ curl -fsSL https://gratonite.chat/install | bash
 
 The installer asks one question — **local** or **server** — then handles everything else.
 
+If something fails, collect a support bundle from `~/gratonite` with `bash ./collect-logs.sh` (or `pwsh ./collect-logs.ps1`) before troubleshooting.
+
 ## Choose Your Path
 
 | | Local (your computer) | Server (VPS / homelab) |

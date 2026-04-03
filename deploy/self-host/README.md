@@ -10,7 +10,19 @@
 
 ## Configuration
 
-See [Self-Hosting Guide](../../docs/federation/self-hosting-guide.md) for full documentation.
+See [Self-Hosting Guide](../../docs/self-hosting.md) for full documentation.
+
+## Troubleshooting Bundle
+
+Run from this directory to generate logs you can share for support:
+
+```bash
+bash ./collect-logs.sh
+```
+
+```powershell
+pwsh ./collect-logs.ps1
+```
 
 ## Voice/Video (Optional)
 

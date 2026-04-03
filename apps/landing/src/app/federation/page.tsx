@@ -108,7 +108,7 @@ export default function FederationPage() {
                   </tr>
                   <tr className="border-b border-gray-800/50">
                     <td className="py-3 px-4 font-medium">Who owns the data</td>
-                    <td className="py-3 px-4">Stored on your device, not our servers</td>
+                    <td className="py-3 px-4">Managed on Gratonite infrastructure</td>
                     <td className="py-3 px-4">You own everything</td>
                   </tr>
                   <tr className="border-b border-gray-800/50">
@@ -374,6 +374,11 @@ export default function FederationPage() {
         {/* CTA */}
         <ScrollReveal delay={0.7}>
           <div className="text-center">
+            <p className="text-gray-500 text-sm mb-3">
+              Self-host troubleshooting bundle: <code>bash ./collect-logs.sh</code>
+              <span className="mx-1">or</span>
+              <code>pwsh ./collect-logs.ps1</code>
+            </p>
             <h2 className="text-2xl font-bold mb-4">Join the Network</h2>
             <p className="text-gray-400 mb-8 max-w-lg mx-auto">
               Run your own instance and be part of a decentralized community.

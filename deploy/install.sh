@@ -429,6 +429,14 @@ create_files() {
   info "Downloading config files..."
   curl -fsSL "$GITHUB_RAW/deploy/self-host/docker-compose.yml" -o docker-compose.yml
   curl -fsSL "$GITHUB_RAW/deploy/self-host/Caddyfile" -o Caddyfile
+  if curl -fsSL "$GITHUB_RAW/deploy/self-host/collect-logs.sh" -o collect-logs.sh; then
+    chmod +x collect-logs.sh || true
+  else
+    warn "Could not download collect-logs.sh (optional)."
+  fi
+  if ! curl -fsSL "$GITHUB_RAW/deploy/self-host/collect-logs.ps1" -o collect-logs.ps1; then
+    warn "Could not download collect-logs.ps1 (optional)."
+  fi
 
   info "Generating .env with secure secrets..."
   cat > .env << ENVEOF
@@ -532,6 +540,8 @@ start_services() {
         echo ""
         echo "      To see what happened:"
         echo "        cd $INSTALL_DIR && $COMPOSE logs setup"
+        echo "      To generate a full support bundle:"
+        echo "        cd $INSTALL_DIR && bash ./collect-logs.sh"
         echo ""
         echo "      Need help? Open an issue and we'll sort it out:"
         echo "        https://github.com/CoodayeA/Gratonite/issues"
@@ -560,6 +570,7 @@ start_services() {
         echo ""
         echo "      Something went wrong during database setup."
         echo "      To see the error: cd $INSTALL_DIR && $COMPOSE logs setup"
+        echo "      To generate a full support bundle: cd $INSTALL_DIR && bash ./collect-logs.sh"
         echo "      Report this bug:  https://github.com/CoodayeA/Gratonite/issues"
         echo ""
         exit 1
@@ -648,6 +659,8 @@ print_success() {
   echo "      $COMPOSE restart                          # Restart everything"
   echo "      $COMPOSE down                             # Shut it down"
   echo "      $COMPOSE pull && $COMPOSE up -d           # Update to latest version"
+  echo "      bash ./collect-logs.sh                    # Collect support bundle"
+  echo "      pwsh ./collect-logs.ps1                   # Support bundle on PowerShell"
   echo ""
   echo -e "    ${BOLD}Disable federation:${NC} Edit .env, set FEDERATION_ENABLED=false"
   echo ""

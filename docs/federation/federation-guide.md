@@ -2,23 +2,23 @@
 
 Federation allows independent Gratonite instances to communicate with each other. Users on one instance can discover and join servers on another instance, and public servers can be listed on the [Gratonite Discover](https://gratonite.chat/app/discover) directory.
 
-**Federation is optional.** Your instance works perfectly fine as a standalone platform without it.
+Self-host templates enable federation by default. You can still run a standalone instance by disabling federation in `.env`.
 
 ---
 
-## Enabling Federation
+## Federation Status
 
 1. Open your `.env` file:
    ```bash
    nano deploy/self-host/.env
    ```
 
-2. Set the federation flag:
+2. Confirm (or set) the federation flag:
    ```bash
    FEDERATION_ENABLED=true
    ```
 
-3. Restart the API:
+3. Restart the API if you changed `.env`:
    ```bash
    docker compose -f deploy/self-host/docker-compose.yml restart api
    ```
@@ -52,21 +52,17 @@ If you want to pre-trust a specific instance, go to the admin dashboard: **Setti
 
 To make your public servers appear on the [Discover directory](https://gratonite.chat/app/discover):
 
-1. Enable federation (see above) and also set:
-   ```bash
-   FEDERATION_DISCOVER_REGISTRATION=true
-   ```
-   Restart the API after changing the `.env` file.
+1. Enable federation (see above). Discovery eligibility is automatic after trust checks.
 
 2. In your Gratonite instance, go to a server you want to list publicly.
 
 3. Open **Server Settings > Overview** and enable **"Listed in Server Discovery"**.
 
-4. Your discoverable servers will automatically sync to gratonite.chat every 30 minutes and appear in the **"Self-Hosted Servers"** section of Discover.
+4. Eligible servers automatically sync and appear in the **"Self-Hosted Servers"** section of Discover.
 
 ### Verifying Your Servers Are Listed
 
-After enabling, wait up to 30 minutes, then visit [gratonite.chat/app/discover](https://gratonite.chat/app/discover) and look for the "Self-Hosted Servers" section.
+After enabling, allow time for trust checks (typically ~48h with no abuse reports), then visit [gratonite.chat/app/discover](https://gratonite.chat/app/discover) and look for the "Self-Hosted Servers" section.
 
 If your servers don't appear:
 - Check federation is enabled: `curl https://your-domain.com/.well-known/gratonite`
@@ -81,12 +77,10 @@ These flags give you fine-grained control over what federation features are acti
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `FEDERATION_ENABLED` | `false` | Master switch — must be `true` for any federation to work |
+| `FEDERATION_ENABLED` | `true` (self-host template) | Master switch for federation |
 | `FEDERATION_ALLOW_INBOUND` | `true` | Accept requests from other instances |
 | `FEDERATION_ALLOW_OUTBOUND` | `true` | Send requests to other instances |
 | `FEDERATION_ALLOW_JOINS` | `true` | Allow users from other instances to join your servers |
-| `FEDERATION_ALLOW_REPLICATION` | `false` | Enable server replication for redundancy |
-| `FEDERATION_DISCOVER_REGISTRATION` | `false` | Register your servers with the Gratonite Discover directory |
 | `FEDERATION_HUB_URL` | `https://gratonite.chat` | Hub URL for Discover registration (only change for private networks) |
 
 **Example: Outbound only** — Your users can join servers on other instances, but nobody from other instances can join yours:
@@ -136,7 +130,7 @@ POST /api/v1/federation/admin/blocks
 - **Rate limiting** — 100 requests per minute per remote instance.
 - **Auto-suspension** — Instances that fail 10 consecutive heartbeats are automatically suspended.
 - **Domain blocking** — You can block specific domains via the admin panel.
-- **Opt-in** — Federation is disabled by default. You choose exactly what to allow.
+- **Operator-controlled** — Self-host templates default to federation on, and you can disable it any time with `FEDERATION_ENABLED=false`.
 
 ---
 
