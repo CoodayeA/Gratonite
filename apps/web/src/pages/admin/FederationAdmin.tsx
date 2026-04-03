@@ -185,6 +185,7 @@ export default function FederationAdmin() {
                         <span>v{inst.softwareVersion || '?'}</span>
                         <span>Score: {inst.trustScore}/100</span>
                         <span>Last seen: {timeAgo(inst.lastSeenAt)}</span>
+                        {inst.federatedMemberCount > 0 && <span style={{ color: 'var(--text-secondary)' }}>{inst.federatedMemberCount} remote member{inst.federatedMemberCount !== 1 ? 's' : ''}</span>}
                       </div>
                     </div>
                   </div>
@@ -258,12 +259,12 @@ export default function FederationAdmin() {
               Cross-instance issues: coordinate with the remote instance admin when possible; use <strong>Blocks</strong> for repeat abuse from a domain.
             </p>
             {reports.map((r: any) => (
-              <Card key={r.id} style={{ borderLeft: `3px solid ${r.status === 'pending' ? '#ef4444' : '#6b7280'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Card key={r.id} style={{ borderLeft: `3px solid ${r.status === 'pending' ? '#ef4444' : r.status === 'escalated' ? '#8b5cf6' : '#6b7280'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <span style={{ fontWeight: 600, fontSize: '14px' }}>{r.instanceBaseUrl}</span>
                     <Badge color="#ef4444">{r.reason}</Badge>
-                    <Badge color={r.status === 'pending' ? '#f59e0b' : '#6b7280'}>{r.status}</Badge>
+                    <Badge color={r.status === 'pending' ? '#f59e0b' : r.status === 'escalated' ? '#8b5cf6' : '#6b7280'}>{r.status}</Badge>
                   </div>
                   {r.details && <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>{r.details}</p>}
                   <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -272,6 +273,9 @@ export default function FederationAdmin() {
                 </div>
                 {r.status === 'pending' && (
                   <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                    <SmallBtn onClick={async () => { await api.post(`/federation/admin/reports/${r.id}/escalate`, {}); loadTab('reports'); }} color="#8b5cf6" title="Escalate to remote instance admin">
+                      <ExternalLink size={14} /> Escalate
+                    </SmallBtn>
                     <SmallBtn onClick={async () => { await api.patch(`/federation/admin/reports/${r.id}`, { status: 'reviewed' }); loadTab('reports'); }} color="#10b981" title="Mark reviewed">
                       <Check size={14} />
                     </SmallBtn>

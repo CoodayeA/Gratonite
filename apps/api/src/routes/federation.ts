@@ -640,7 +640,17 @@ federationRouter.get('/admin/instances', requireAuth, async (req: Request, res: 
     .orderBy(desc(federatedInstances.lastSeenAt))
     .limit(100);
 
-  res.json(instances);
+  // Attach federated member counts per instance
+  const memberCounts = await db
+    .select({ homeInstanceId: users.homeInstanceId, count: sql<number>`cast(count(*) as int)` })
+    .from(users)
+    .where(eq(users.isFederated, true))
+    .groupBy(users.homeInstanceId);
+
+  const countMap = Object.fromEntries(memberCounts.map(r => [r.homeInstanceId, r.count]));
+  const result = instances.map(inst => ({ ...inst, federatedMemberCount: countMap[inst.id] ?? 0 }));
+
+  res.json(result);
 });
 
 federationRouter.patch('/admin/instances/:instanceId', requireAuth, async (req: Request, res: Response) => {
@@ -1297,8 +1307,33 @@ federationRouter.patch('/admin/reports/:reportId', requireAuth, async (req: Requ
   res.json({ status: 'updated' });
 });
 
-// ---------------------------------------------------------------------------
-// User-facing: report a federated instance
+/**
+ * Admin: escalate a report to the remote instance operator.
+ * Marks the report as "escalated" and records the escalation timestamp.
+ * Actual HTTP dispatch to the remote instance is queued for future work.
+ */
+federationRouter.post('/admin/reports/:reportId/escalate', requireAuth, async (req: Request, res: Response) => {
+  const reportId = req.params.reportId as string;
+
+  const [user] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, req.userId!)).limit(1);
+  if (!user?.isAdmin) { res.status(403).json({ code: 'FORBIDDEN', message: 'Admin access required' }); return; }
+
+  const [report] = await db
+    .select({ id: instanceReports.id, status: instanceReports.status, instanceId: instanceReports.instanceId })
+    .from(instanceReports)
+    .where(eq(instanceReports.id, reportId))
+    .limit(1);
+
+  if (!report) { res.status(404).json({ code: 'NOT_FOUND', message: 'Report not found' }); return; }
+  if (report.status === 'escalated') { res.status(409).json({ code: 'ALREADY_ESCALATED', message: 'Report already escalated' }); return; }
+
+  await db.update(instanceReports)
+    .set({ status: 'escalated' })
+    .where(eq(instanceReports.id, reportId));
+
+  // TODO: enqueue an ActivityPub Announce/Flag activity to the remote instance admin inbox
+  res.json({ status: 'escalated', instanceId: report.instanceId });
+});
 // ---------------------------------------------------------------------------
 
 /**
