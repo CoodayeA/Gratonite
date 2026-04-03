@@ -1,4 +1,4 @@
-openapi: 3.0.3
+﻿openapi: 3.0.3
 info:
   title: Gratonite API
   version: 1.0.0
@@ -213,6 +213,369 @@ paths:
         '200': { description: Delivery log rows }
         '403': { description: Not a guild member }
         '404': { description: Webhook not found }
+
+  /auth/register:
+    post:
+      summary: Register a new account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, email, password]
+              properties:
+                username: { type: string, minLength: 2, maxLength: 32 }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+      responses:
+        '201': { description: Account created, access token returned }
+        '400': { description: Validation error }
+        '409': { description: Username or email already taken }
+
+  /auth/login:
+    post:
+      summary: Authenticate and receive JWT tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200': { description: Access and refresh tokens }
+        '401': { description: Invalid credentials }
+
+  /auth/logout:
+    post:
+      summary: Revoke current session
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Session revoked }
+
+  /auth/refresh:
+    post:
+      summary: Exchange refresh token for new access token
+      responses:
+        '200': { description: New access token }
+        '401': { description: Refresh token invalid or expired }
+
+  /users/@me:
+    get:
+      summary: Get current user profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Current user object }
+    patch:
+      summary: Update current user profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Updated user object }
+        '400': { description: Validation error }
+
+  /users/{userId}:
+    get:
+      summary: Get public profile for a user
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Public user profile }
+        '404': { description: User not found }
+
+  /guilds:
+    get:
+      summary: List guilds the current user is a member of
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Array of guild summary objects }
+    post:
+      summary: Create a new guild
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 100 }
+      responses:
+        '201': { description: Created guild }
+        '400': { description: Validation error }
+
+  /guilds/{guildId}/members:
+    get:
+      summary: List members of a guild
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: guildId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 200, maximum: 1000 }
+      responses:
+        '200': { description: Array of guild member objects }
+        '403': { description: Not a member }
+
+  /guilds/{guildId}/channels:
+    get:
+      summary: List channels in a guild
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: guildId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Array of channel objects }
+        '403': { description: Not a member }
+    post:
+      summary: Create a channel in a guild
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: guildId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type]
+              properties:
+                name: { type: string }
+                type: { type: string, enum: [text, voice, announcement, forum] }
+      responses:
+        '201': { description: Created channel }
+        '403': { description: Missing permission }
+
+  /channels/{channelId}/messages:
+    get:
+      summary: Fetch messages in a channel
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50, maximum: 100 }
+        - in: query
+          name: before
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Array of message objects }
+        '403': { description: Not a member or missing VIEW_CHANNEL }
+    post:
+      summary: Send a message to a channel
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content: { type: string, maxLength: 4000 }
+      responses:
+        '201': { description: Created message }
+        '403': { description: Missing SEND_MESSAGES }
+        '429': { description: Rate limited }
+
+  /channels/{channelId}/messages/{messageId}:
+    patch:
+      summary: Edit a message (author only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: messageId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, maxLength: 4000 }
+      responses:
+        '200': { description: Updated message }
+        '403': { description: Not the author }
+    delete:
+      summary: Delete a message (author or MANAGE_MESSAGES)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: messageId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Deleted }
+        '403': { description: Not authorized }
+
+  /relationships:
+    get:
+      summary: List friends, pending requests, and blocks
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Array of relationship objects }
+
+  /relationships/{userId}:
+    put:
+      summary: Send friend request or accept pending request
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Relationship updated }
+    delete:
+      summary: Remove friend or cancel request
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Removed }
+
+  /relationships/blocks:
+    get:
+      summary: List users blocked by the current user
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Array of blocked user objects }
+
+  /notifications:
+    get:
+      summary: List recent notifications for the current user
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 25 }
+      responses:
+        '200': { description: Array of notification objects }
+
+  /voice/{channelId}/token:
+    post:
+      summary: Get a LiveKit access token for joining a voice channel
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: LiveKit token and URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  url: { type: string, format: uri }
+        '403': { description: Not a member }
+        '503': { description: LiveKit not configured }
+
+  /voice/{channelId}/participants:
+    get:
+      summary: List current participants in a voice channel
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Array of participant objects }
+        '403': { description: Not a member }
+
+  /federation/handshake:
+    post:
+      summary: Initiate federation handshake with a remote Gratonite instance
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [instanceUrl]
+              properties:
+                instanceUrl: { type: string, format: uri }
+      responses:
+        '200': { description: Handshake acknowledged }
+        '400': { description: Invalid instance URL }
+        '409': { description: Already federated }
+
+  /federation/inbox:
+    post:
+      summary: Receive a signed ActivityPub-style activity from a remote instance
+      responses:
+        '202': { description: Activity queued for processing }
+        '401': { description: Signature verification failed }
+
+  /federation/resolve/{address}:
+    get:
+      summary: Resolve a federation address (user@domain) to a local shadow user
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: address
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Resolved user object }
+        '404': { description: Address not resolvable }
+
+  /admin/system-health/history:
+    get:
+      summary: Last 12 system-health snapshots from Redis (platform admin only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: History array
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  history: { type: array }
+        '403': { description: Not a platform admin }
 
 components:
   securitySchemes:
