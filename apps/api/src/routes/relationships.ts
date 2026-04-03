@@ -864,6 +864,44 @@ relationshipsRouter.delete(
 // ---------------------------------------------------------------------------
 
 /**
+ * GET /api/v1/relationships/blocks
+ *
+ * List all users blocked by the current user.
+ *
+ * @auth    requireAuth
+ * @returns 200 Array<{ blockedUserId, username, displayName, avatarHash, createdAt }>
+ */
+relationshipsRouter.get(
+  '/blocks',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const blocked = await db
+        .select({
+          blockedUserId: relationships.addresseeId,
+          username: users.username,
+          displayName: users.displayName,
+          avatarHash: users.avatarHash,
+          createdAt: relationships.createdAt,
+        })
+        .from(relationships)
+        .innerJoin(users, eq(users.id, relationships.addresseeId))
+        .where(
+          and(
+            eq(relationships.requesterId, userId),
+            eq(relationships.type, 'BLOCKED'),
+          ),
+        )
+        .orderBy(desc(relationships.createdAt));
+      res.status(200).json(blocked);
+    } catch (err) {
+      handleAppError(res, err, 'relationships');
+    }
+  },
+);
+
+/**
  * PUT /api/v1/relationships/blocks/:userId
  *
  * Block a user. Removes any existing friend/pending relationship rows between
