@@ -38,12 +38,12 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 ## 1. Search & discovery
 
 
-| Initiative                                                 | Status | Where                                                      |
-| ---------------------------------------------------------- | ------ | ---------------------------------------------------------- |
-| Channel message search                                     | ✅      | `ChannelChat.tsx` + `api.search.messages`                  |
-| Global search (modal + filters)                            | ✅      | `GlobalSearchModal.tsx`, `CommandPalette`, `TopBarActions` |
-| Dedicated search page                                      | ✅      | `pages/guilds/GlobalSearch.tsx`                            |
-| Server-wide search filters (guild, author, date, has:file) | 🔶     | Extend `GET /search/messages` + modal filters as needed    |
+| Initiative                                                 | Status | Where                                                                                                                  |
+| ---------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Channel message search                                     | ✅      | `ChannelChat.tsx` + `api.search.messages`                                                                              |
+| Global search (modal + filters)                            | ✅      | `GlobalSearchModal.tsx`, `CommandPalette`, `TopBarActions`                                                             |
+| Dedicated search page                                      | ✅      | `pages/guilds/GlobalSearch.tsx`                                                                                        |
+| Server-wide search filters (guild, author, date, has:file) | ✅      | `GET /api/v1/search/messages` (`guildId`, `authorId`, `before`/`after`, `has`, `mentionsMe`); web `searchApi.messages` |
 
 
 **Next slices:** saved searches; expose Global Search route in sidebar if not linked; optional full-text tuning (DB indexes) for large instances.
@@ -53,12 +53,13 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 ## 2. Notifications
 
 
-| Initiative                            | Status | Where                                                                    |
-| ------------------------------------- | ------ | ------------------------------------------------------------------------ |
-| Per-channel notification prefs + mute | ✅      | `NotificationPrefsModal.tsx`, `channel-notification-prefs` API           |
-| Web push + email prefs                | ✅      | `SettingsModal` — email defaults opt-out; verification/reset always      |
-| Quiet hours / per-guild master rules  | 📋     | Settings + API fields                                                    |
-| Mobile granular prefs                 | 🔶     | Local-only until server fields exist (`SettingsNotificationsScreen.tsx`) |
+| Initiative                            | Status | Where                                                                                               |
+| ------------------------------------- | ------ | --------------------------------------------------------------------------------------------------- |
+| Per-channel notification prefs + mute | ✅      | `NotificationPrefsModal.tsx`, `channel-notification-prefs` API                                      |
+| Web push + email prefs                | ✅      | `SettingsModal` — email defaults opt-out; verification/reset always                                 |
+| Scheduled DND window (auto presence)  | ✅      | `GET/PUT /users/@me/dnd-schedule`, `jobs/dndSchedule.ts`, `DndSchedulePanel` in `SettingsModal.tsx` |
+| Quiet hours / per-guild master rules  | 📋     | Notification muting by time window (distinct from status DND schedule)                              |
+| Mobile granular prefs                 | 🔶     | Local-only until server fields exist (`SettingsNotificationsScreen.tsx`)                            |
 
 
 **Next slices:** persist quiet hours server-side; align mobile with web prefs.
@@ -68,14 +69,14 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 ## 3. Federation & trust
 
 
-| Initiative                           | Status | Where                                                         |
-| ------------------------------------ | ------ | ------------------------------------------------------------- |
-| Federation HTTP API & trust scoring  | ✅      | `apps/api/src/routes/federation.ts`, `federation/`            |
-| Admin federation dashboard           | ✅      | `pages/admin/FederationAdmin.tsx`                             |
-| User-facing help article             | ✅      | `helpArticles.ts` → `federation`                              |
+| Initiative                           | Status | Where                                                                           |
+| ------------------------------------ | ------ | ------------------------------------------------------------------------------- |
+| Federation HTTP API & trust scoring  | ✅      | `apps/api/src/routes/federation.ts`, `federation/`                              |
+| Admin federation dashboard           | ✅      | `pages/admin/FederationAdmin.tsx`                                               |
+| User-facing help article             | ✅      | `helpArticles.ts` → `federation`                                                |
 | Guided “connect instance” wizard     | 🔶     | `Discover.tsx` — federation address lookup + DM; expand to instance URL preview |
-| Cross-instance badges in UI          | 🔶     | Surface `federationAddress` / remote flags in message headers |
-| Cross-instance moderation escalation | 🔶     | Reports queue exists in admin; extend policies                |
+| Cross-instance badges in UI          | 🔶     | Surface `federationAddress` / remote flags in message headers                   |
+| Cross-instance moderation escalation | 🔶     | Reports queue exists in admin; extend policies                                  |
 
 
 **Next slices:** instance URL well-known preview; badges on messages/DMs; operator escalation docs in admin.
@@ -115,13 +116,13 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 ## 6. Self-host & operators
 
 
-| Initiative                           | Status | Where                                                  |
-| ------------------------------------ | ------ | ------------------------------------------------------ |
-| Docker production compose            | ✅      | `deploy/docker-compose.production.yml`                 |
-| Windows deploy wrapper (off-repo)    | ✅      | `Gratonite-deploy.ps1` (user Documents)                |
-| Admin **instance health** snapshot   | ✅      | `AdminDashboard.tsx` → fetches `GET /health`           |
-| In-product backup reminders          | 📋     | Link to `docs/self-hosting` + one-click copy commands  |
-| Health dashboard (disk, LiveKit, DB) | 📋     | Extend `/health` or `/admin/system` with gated metrics |
+| Initiative                           | Status | Where                                                                                                                          |
+| ------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| Docker production compose            | ✅      | `deploy/docker-compose.production.yml`                                                                                         |
+| Windows deploy wrapper (off-repo)    | ✅      | `Gratonite-deploy.ps1` (user Documents)                                                                                        |
+| Admin **instance health** snapshot   | ✅      | `AdminDashboard.tsx` → fetches `GET /health`                                                                                   |
+| In-product backup reminders          | 🔶     | Admin Dashboard → **Self-host backups** → `https://gratonite.chat/docs/self-hosting`; copy scripts in repo `deploy/self-host/` |
+| Health dashboard (disk, LiveKit, DB) | 📋     | Extend `/health` or `/admin/system` with gated metrics                                                                         |
 
 
 **Next slices:** expand health JSON for admins only; surface disk/LiveKit ping where safe.
@@ -131,12 +132,12 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 ## 7. Safety & privacy
 
 
-| Initiative               | Status | Where                                     |
-| ------------------------ | ------ | ----------------------------------------- |
-| User reports (admin)     | ✅      | `AdminReports`, federation reports tab    |
-| Audit log                | ✅      | `AuditLog`, `AdminAuditLog`               |
-| Account data export      | 📋     | GDPR export job + download link           |
-| Block / privacy settings | 🔶     | Varies by surface — consolidate checklist |
+| Initiative               | Status | Where                                                                                          |
+| ------------------------ | ------ | ---------------------------------------------------------------------------------------------- |
+| User reports (admin)     | ✅      | `AdminReports`, federation reports tab                                                         |
+| Audit log                | ✅      | `AuditLog`, `AdminAuditLog`                                                                    |
+| Account data export      | ✅      | `jobs/dataExport.ts`; `GET/POST /users/@me/data-exports` + download route in `routes/users.ts` |
+| Block / privacy settings | 🔶     | Varies by surface — consolidate checklist                                                      |
 
 
 ---
@@ -161,4 +162,4 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 - **Do not** land unrelated refactors with feature work.
 - After each merge, update this file’s **Status** column when an initiative moves ✅.
 
-Last reviewed: program charter + admin health panel (`docs/roadmap/PRODUCT-PROGRAM.md`).
+Last reviewed: 2026-04-03 — search `guildId` enforcement, DND schedule UI ↔ `dnd_schedules` API, admin backup doc link, roadmap verification note.

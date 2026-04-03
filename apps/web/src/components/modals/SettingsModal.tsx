@@ -2004,8 +2004,9 @@ function SettingsNotificationsPanel() {
     );
 }
 
-// Item 86: DND Schedule Panel
+// Item 86: DND Schedule Panel — persists to `dnd_schedules` (worker) via canonical API, and mirrors to settings JSON for compatibility.
 function DndSchedulePanel() {
+    const { addToast } = useToast();
     const [enabled, setEnabled] = useState(false);
     const [startHour, setStartHour] = useState(22);
     const [startMinute, setStartMinute] = useState(0);
@@ -2013,25 +2014,62 @@ function DndSchedulePanel() {
     const [endMinute, setEndMinute] = useState(0);
     const [saving, setSaving] = useState(false);
 
+    const padHour = (n: number) => String(Math.min(23, Math.max(0, n))).padStart(2, '0');
+    const padMinute = (n: number) => String(Math.min(59, Math.max(0, n))).padStart(2, '0');
+
+    const applyScheduleToState = (row: { startTime: string; endTime: string; enabled?: boolean; timezone?: string }) => {
+        const [sh, sm] = (row.startTime || '22:00').split(':').map(Number);
+        const [eh, em] = (row.endTime || '07:00').split(':').map(Number);
+        setStartHour(Number.isFinite(sh) ? sh : 22);
+        setStartMinute(Number.isFinite(sm) ? sm : 0);
+        setEndHour(Number.isFinite(eh) ? eh : 7);
+        setEndMinute(Number.isFinite(em) ? em : 0);
+        setEnabled(row.enabled !== false);
+    };
+
     useEffect(() => {
-        api.get<any>('/users/@me/settings').then((s: any) => {
-            if (s?.dndSchedule) {
-                setEnabled(s.dndSchedule.enabled ?? false);
-                setStartHour(s.dndSchedule.startHour ?? 22);
-                setStartMinute(s.dndSchedule.startMinute ?? 0);
-                setEndHour(s.dndSchedule.endHour ?? 7);
-                setEndMinute(s.dndSchedule.endMinute ?? 0);
-            }
-        }).catch(() => {});
+        (async () => {
+            try {
+                const row = await api.get<any>('/users/@me/dnd-schedule');
+                if (row?.startTime && row?.endTime) {
+                    applyScheduleToState(row);
+                    return;
+                }
+            } catch { /* fall through */ }
+            try {
+                const s = await api.get<any>('/users/@me/settings');
+                if (s?.dndSchedule) {
+                    const d = s.dndSchedule;
+                    setEnabled(d.enabled ?? false);
+                    setStartHour(d.startHour ?? 22);
+                    setStartMinute(d.startMinute ?? 0);
+                    setEndHour(d.endHour ?? 7);
+                    setEndMinute(d.endMinute ?? 0);
+                }
+            } catch { /* ignore */ }
+        })();
     }, []);
 
     const save = async () => {
         setSaving(true);
         try {
-            await api.patch('/users/@me/settings', {
-                dndSchedule: { enabled, startHour, startMinute, endHour, endMinute, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+            const startTime = `${padHour(startHour)}:${padMinute(startMinute)}`;
+            const endTime = `${padHour(endHour)}:${padMinute(endMinute)}`;
+            await api.put('/users/@me/dnd-schedule', {
+                startTime,
+                endTime,
+                enabled,
+                timezone: tz,
+                days: [0, 1, 2, 3, 4, 5, 6],
             });
-        } catch {} finally { setSaving(false); }
+            await api.patch('/users/@me/settings', {
+                dndSchedule: { enabled, startHour, startMinute, endHour, endMinute, timezone: tz },
+            });
+            addToast({ title: 'DND schedule saved', variant: 'success' });
+        } catch {
+            addToast({ title: 'Could not save DND schedule', variant: 'error' });
+        } finally { setSaving(false); }
     };
 
     const timeInput = { padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', width: '60px', textAlign: 'center' as const };

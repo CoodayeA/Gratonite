@@ -6,14 +6,23 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Shield, Users, FileText, MessageSquare, Globe, Bot, Server,
-  Search, UserPlus, Check, X, AlertTriangle, Palette, Activity,
+  Search, UserPlus, Check, X, AlertTriangle, Palette, Activity, Database,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../components/ui/ToastManager';
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/api\/v1$/, '');
 
-const ADMIN_SECTIONS = [
+type AdminNavItem = {
+  label: string;
+  description: string;
+  icon: typeof Shield;
+  color: string;
+  path?: string;
+  href?: string;
+};
+
+const ADMIN_SECTIONS: { title: string; items: AdminNavItem[] }[] = [
   {
     title: 'Trust & Safety',
     items: [
@@ -35,6 +44,13 @@ const ADMIN_SECTIONS = [
     items: [
       { label: 'Team', description: 'Manage admin team members and roles', icon: Users, path: '/admin/team', color: '#8b5cf6' },
       { label: 'Audit Log', description: 'View all admin actions and changes', icon: FileText, path: '/admin/audit', color: '#6b7280' },
+      {
+        label: 'Self-host backups',
+        description: 'Backup and restore runbook (opens documentation)',
+        icon: Database,
+        color: '#0ea5e9',
+        href: 'https://gratonite.chat/docs/self-hosting',
+      },
     ],
   },
 ];
@@ -230,8 +246,8 @@ export default function AdminDashboard() {
           <div key={section.title} style={{ marginBottom: '28px' }}>
             <h2 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>{section.title}</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
-              {section.items.map(item => (
-                <Link key={item.path} to={item.path} style={{ textDecoration: 'none', color: 'inherit' }}>
+              {section.items.map(item => {
+                const inner = (
                   <div style={{
                     background: 'var(--bg-secondary, #1a1a2e)', borderRadius: '12px',
                     border: '1px solid var(--stroke, #2a2a3e)', padding: '18px',
@@ -246,8 +262,21 @@ export default function AdminDashboard() {
                       <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>{item.description}</p>
                     </div>
                   </div>
-                </Link>
-              ))}
+                );
+                const key = item.path ?? item.href ?? item.label;
+                if (item.href) {
+                  return (
+                    <a key={key} href={item.href} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+                      {inner}
+                    </a>
+                  );
+                }
+                return (
+                  <Link key={key} to={item.path!} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    {inner}
+                  </Link>
+                );
+              })}
             </div>
           </div>
         ))}
