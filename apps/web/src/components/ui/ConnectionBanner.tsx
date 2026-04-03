@@ -49,7 +49,15 @@ const ConnectionBanner = () => {
         setQueueCount(getQueuedMessages().length);
     }, []);
 
-    useEffect(() => {
+    // Desktop IPC: report network status to Electron main process
+  const notifyDesktopNetworkStatus = useCallback((online: boolean) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).gratoniteDesktop?.setNetworkStatus?.(online);
+  }, []);
+
+    const [reconnectQueueCount, setReconnectQueueCount] = useState(0);
+
+  useEffect(() => {
         const unsubDisconnect = onSocketDisconnect(() => {
             hasDisconnectedRef.current = true;
             if (hideTimerRef.current) {
@@ -58,13 +66,16 @@ const ConnectionBanner = () => {
             }
             setState('disconnected');
             updateQueueCount();
+            notifyDesktopNetworkStatus(false);
         });
 
         const unsubReconnect = onSocketReconnect(() => {
             if (!hasDisconnectedRef.current) return;
             hasDisconnectedRef.current = false;
             setRetrying(false);
+            setReconnectQueueCount(getQueuedMessages().length);
             setState('connected');
+            notifyDesktopNetworkStatus(true);
             hideTimerRef.current = setTimeout(() => {
                 setState('hidden');
                 hideTimerRef.current = null;
@@ -80,6 +91,7 @@ const ConnectionBanner = () => {
         const onOffline = () => {
             hasDisconnectedRef.current = true;
             setState('disconnected');
+            notifyDesktopNetworkStatus(false);
         };
         window.addEventListener('online', onOnline);
         window.addEventListener('offline', onOffline);
@@ -91,7 +103,7 @@ const ConnectionBanner = () => {
             window.removeEventListener('offline', onOffline);
             if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
         };
-    }, [updateQueueCount]);
+    }, [updateQueueCount, notifyDesktopNetworkStatus]);
 
     const handleRetry = useCallback(() => {
         setRetrying(true);
@@ -173,7 +185,7 @@ const ConnectionBanner = () => {
             ) : (
                 <>
                     <Wifi size={14} />
-                    <span>Back online — syncing in real time</span>
+                    <span>{reconnectQueueCount > 0 ? `Back online — sending ${reconnectQueueCount} queued message${reconnectQueueCount === 1 ? '' : 's'}` : 'Back online — syncing in real time'}</span>
                 </>
             )}
             <style>{`
