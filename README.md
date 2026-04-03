@@ -16,9 +16,9 @@ Real-time chat, voice, video, federation, and 140+ features — fully self-hosta
 
 ---
 
-## Continuing development
+## Contributing
 
-**Contributors and any AI coding agent:** Start with **[`docs/HANDOFF.md`](docs/HANDOFF.md)** (onboarding, verification, and an editable “current focus” section), then **[`AGENTS.md`](AGENTS.md)** (CI, deploy, conventions). Documentation index: **[`docs/README.md`](docs/README.md)**.
+**Documentation index:** [`docs/README.md`](docs/README.md). **CI, deployment, and engineering conventions:** [`DEVELOPMENT.md`](DEVELOPMENT.md).
 
 ---
 

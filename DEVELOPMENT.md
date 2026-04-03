@@ -1,16 +1,14 @@
-# Gratonite — agent and automation notes
-
-> **New session (any tool: Cursor, Copilot, Claude, etc.)?** Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first — continuity and “where we left off”; chat history does not carry over.
+# Gratonite — development and operations
 
 ## Layers that protect production quality
 
 1. **CI (GitHub Actions)** — `.github/workflows/release-gates.yml` runs on every PR and push to `main`: API `build` + `lint` + placeholder guard; web `lint` + guard + **`build:vite`** (same as production; skips the broken `tsc` path in `npm run build`). Fix red CI before merging risky work.
-2. **Agent rule** — `.cursor/rules/production-deploy-review.mdc` — review/double-check before production deploy; treat green CI as a prerequisite for shipping; full verification after deploy.
+2. **Production deploy review** — Before shipping to production, follow [`docs/deploy-review-checklist.md`](docs/deploy-review-checklist.md): treat green CI as a prerequisite, review the change set, then verify on server and public URLs.
 3. **Human process** — PR template checklist; optional branch protection requiring passing checks on `main`.
 
 **Full release gate** (stricter, run locally or in release automation): root `package.json` → `verify:release:all` (includes API `verify:release` with `gate:data`, web `verify:prod`, e2e smoke). That needs a real DB and env for `gate:data` — not the same as lightweight CI.
 
-**Documentation map** — [`docs/HANDOFF.md`](docs/HANDOFF.md) (start here); [`docs/README.md`](docs/README.md) (index); [`docs/roadmap/PRODUCT-PROGRAM.md`](docs/roadmap/PRODUCT-PROGRAM.md) (initiatives); [`ROADMAP.md`](ROADMAP.md) (roadmap).
+**Documentation map** — [`docs/README.md`](docs/README.md) (index); [`docs/roadmap/PRODUCT-PROGRAM.md`](docs/roadmap/PRODUCT-PROGRAM.md) (initiatives); [`ROADMAP.md`](ROADMAP.md) (roadmap); this file (`DEVELOPMENT.md`) for CI, deploy, and conventions.
 
 ## Production deployment
 
