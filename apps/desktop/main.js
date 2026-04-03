@@ -780,8 +780,24 @@ if (process.defaultApp) {
   app.setAsDefaultProtocolClient('gratonite');
 }
 
+function isDeepLinkSafe(url) {
+  if (typeof url !== 'string') return false;
+  if (url.length > 8192) return false;
+  if (!url.startsWith('gratonite://')) return false;
+  try {
+    const u = new URL(url);
+    if (u.username || u.password) return false;
+    const host = (u.hostname || '').toLowerCase();
+    const allowed = new Set(['guild', 'dm', 'invite', 'settings']);
+    if (host && !allowed.has(host)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function handleDeepLink(url) {
-  if (!url || !url.startsWith('gratonite://')) return;
+  if (!isDeepLinkSafe(url)) return;
   // Wait for window to be ready
   const sendToRenderer = () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -812,7 +828,7 @@ if (!gotTheLock) {
       mainWindow.focus();
     }
     // The deep link URL is typically the last argument
-    const deepLinkUrl = commandLine.find(arg => arg.startsWith('gratonite://'));
+    const deepLinkUrl = commandLine && commandLine.find(arg => arg.startsWith('gratonite://'));
     if (deepLinkUrl) {
       handleDeepLink(deepLinkUrl);
     }

@@ -28,8 +28,8 @@ interface ThemeState {
 }
 
 let state: ThemeState = {
-  name: 'neobrutalism',
-  theme: themes.neobrutalism,
+  name: 'glassmorphism-dark',
+  theme: themes['glassmorphism-dark'],
   userFontSize: BASE_FONT_SIZE,
   autoMode: false,
 };

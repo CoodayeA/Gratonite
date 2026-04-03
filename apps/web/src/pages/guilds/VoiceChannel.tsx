@@ -166,6 +166,10 @@ const VoiceChannel = () => {
     const [spatialMode, setSpatialMode] = useState(() => localStorage.getItem('gratonite_spatial_mode') === 'true');
     const spatialEngineRef = useRef<SpatialAudioEngine | null>(null);
 
+    // Throttling refs for participant join/leave toasts (prevent spam during rapid reconnects)
+    const lastJoinToastRef = useRef<number>(0);
+    const lastLeftToastRef = useRef<number>(0);
+
     // LiveKit hook for real-time voice/video
     const {
         isConnected,
@@ -200,10 +204,20 @@ const VoiceChannel = () => {
     } = useLiveKit({
         channelId: channelId || '',
         onParticipantJoined: useCallback((participant: LiveKitParticipant) => {
-            addToast({ title: 'User Joined', description: `${participant.name} joined the voice channel.`, variant: 'info' });
+            // Throttle "User Joined" toasts: max 1 per 8 seconds to prevent spam during rapid reconnects
+            const now = Date.now();
+            if (now - lastJoinToastRef.current >= 8000) {
+                lastJoinToastRef.current = now;
+                addToast({ title: 'User Joined', description: `${participant.name} joined the voice channel.`, variant: 'info' });
+            }
         }, [addToast]),
         onParticipantLeft: useCallback((_participantId: string) => {
-            addToast({ title: 'User Left', description: 'A user left the voice channel.', variant: 'info' });
+            // Throttle "User Left" toasts: max 1 per 8 seconds
+            const now = Date.now();
+            if (now - lastLeftToastRef.current >= 8000) {
+                lastLeftToastRef.current = now;
+                addToast({ title: 'User Left', description: 'A user left the voice channel.', variant: 'info' });
+            }
         }, [addToast]),
         onAudioTrackSubscribed: useCallback((participantId: string, track: MediaStreamTrack, detach: () => void) => {
             if (spatialEngineRef.current) {
@@ -598,15 +612,20 @@ const VoiceChannel = () => {
         voiceCtx.syncMuted(isMuted);
     }, [isMuted]);
 
-    // Handle connection errors
+    // Handle connection errors (dedupe identical strings to avoid reconnect toast spam)
+    const lastVoiceConnectionErrRef = useRef<string | null>(null);
     useEffect(() => {
-        if (connectionError) {
-            addToast({
-                title: 'Voice Error',
-                description: connectionError,
-                variant: 'error',
-            });
+        if (!connectionError) {
+            lastVoiceConnectionErrRef.current = null;
+            return;
         }
+        if (lastVoiceConnectionErrRef.current === connectionError) return;
+        lastVoiceConnectionErrRef.current = connectionError;
+        addToast({
+            title: 'Voice Error',
+            description: connectionError,
+            variant: 'error',
+        });
     }, [connectionError, addToast]);
 
     useEffect(() => {

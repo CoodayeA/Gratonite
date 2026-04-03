@@ -8,6 +8,7 @@ import { onVoiceStateUpdate, type VoiceStateUpdatePayload } from '../../lib/sock
 import type { GuildSessionChannel, GuildSessionInfo, GuildSessionErrorCode } from '../../hooks/useGuildSession';
 import GuildWelcomeModal from '../../components/modals/GuildWelcomeModal';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import Skeleton from '../../components/ui/Skeleton';
 
 interface GuildData {
     id: string;
@@ -210,7 +211,29 @@ const GuildOverview = () => {
                 />
             )}
             {loading && !guild && (
-                <div style={{ padding: '20px 48px', color: 'var(--text-muted)', fontSize: '13px' }}>Loading portal…</div>
+                <div style={{ padding: '48px', maxWidth: '1400px', margin: '0 auto' }}>
+                    {/* Skeleton header */}
+                    <div style={{ marginBottom: '40px' }}>
+                        <Skeleton variant="text" width="60%" height={40} style={{ marginBottom: '12px' }} />
+                        <Skeleton variant="text" width="40%" height={20} />
+                    </div>
+                    {/* Skeleton channel sections */}
+                    <div style={{ marginBottom: '24px' }}>
+                        <Skeleton variant="text" width={120} height={16} style={{ marginBottom: '16px' }} />
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
+                            <Skeleton variant="card" width="100%" height={80} />
+                            <Skeleton variant="card" width="100%" height={80} />
+                            <Skeleton variant="card" width="100%" height={80} />
+                        </div>
+                    </div>
+                    <div style={{ marginBottom: '24px' }}>
+                        <Skeleton variant="text" width={120} height={16} style={{ marginBottom: '16px' }} />
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+                            <Skeleton variant="card" width="100%" height={64} />
+                            <Skeleton variant="card" width="100%" height={64} />
+                        </div>
+                    </div>
+                </div>
             )}
             {/* Guild Banner */}
             {bannerUrl && (

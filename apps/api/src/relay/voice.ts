@@ -21,6 +21,7 @@ import { redis } from '../lib/redis';
 import { getIO } from '../lib/socket-io';
 import { queueOutboundActivity, type ActivityType } from '../federation/activities';
 import { logger } from '../lib/logger';
+import { LIVEKIT_ACCESS_TOKEN_TTL } from '../lib/livekit-tokens';
 
 const LIVEKIT_ENABLED = !!(process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET);
 
@@ -65,7 +66,7 @@ export async function handleFederatedVoiceJoin(
   const at = new AccessToken(process.env.LIVEKIT_API_KEY!, process.env.LIVEKIT_API_SECRET!, {
     identity,
     name: participantName,
-    ttl: 3600, // 1 hour
+    ttl: LIVEKIT_ACCESS_TOKEN_TTL,
   });
 
   at.addGrant({

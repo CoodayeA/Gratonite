@@ -127,13 +127,13 @@ export default function ResetPasswordScreen({ route, navigation }: Props) {
       top: -10,
     },
     heading: {
-      fontSize: 28,
-      fontWeight: '900',
+      fontSize: neo ? 32 : 28,
+      fontWeight: neo ? '900' : '700',
       color: colors.textPrimary,
       textAlign: 'center',
-      textTransform: 'uppercase',
-      letterSpacing: 1,
-      lineHeight: 34,
+      textTransform: neo ? 'uppercase' : 'none',
+      letterSpacing: neo ? 1 : 0,
+      lineHeight: neo ? 38 : 34,
     },
     headingAccent: {
       color: colors.accentPrimary,

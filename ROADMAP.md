@@ -15,16 +15,16 @@ Gratonite is production-ready with **140** database schemas, **134** API route m
 
 ### Recently shipped (high level)
 
-- [x] **Search:** server-wide filters (guild, author, date range, `has:*`, mentions-me) — see *Shipped → Core Platform*
-- [x] **Privacy:** GDPR account data export — see *Shipped → Moderation*
-- [x] **Email:** transactional-by-default policy + migration defaults — see *Shipped → Email and Notifications*
-- [x] **Presence:** scheduled DND window (settings + `dnd_schedules` + job)
-- [x] **Operator backup entry point:** Admin → Self-host backups → documentation + copy helpers
-- [x] **Notification quiet hours** (user-level: mute alerts + digest email by time window; distinct from DND presence)
-- [x] **Per-guild notification master rules** — default level for new members
-- [x] **Saved searches + search page entry** — persisted named queries on `GlobalSearch`; sidebar opens `/guild/:guildId/search`
-- [x] **Mobile quiet hours** — same JSON as web in notification settings
-- [x] **Public API docs** — `docs/api/openapi.yaml` + `docs/api/WEBHOOK-EVENTS.md`
+- **Search:** server-wide filters (guild, author, date range, `has:`*, mentions-me) — see *Shipped → Core Platform*
+- **Privacy:** GDPR account data export — see *Shipped → Moderation*
+- **Email:** transactional-by-default policy + migration defaults — see *Shipped → Email and Notifications*
+- **Presence:** scheduled DND window (settings + `dnd_schedules` + job)
+- **Operator backup entry point:** Admin → Self-host backups → documentation + copy helpers
+- **Notification quiet hours** (user-level: mute alerts + digest email by time window; distinct from DND presence)
+- **Per-guild notification master rules** — default level for new members
+- **Saved searches + search page entry** — persisted named queries on `GlobalSearch`; sidebar opens `/guild/:guildId/search`
+- **Mobile quiet hours** — same JSON as web in notification settings
+- **Public API docs** — `docs/api/openapi.yaml` + `docs/api/WEBHOOK-EVENTS.md`
 
 ---
 
@@ -172,20 +172,31 @@ Everything below is live in production.
 
 ---
 
+## Current iteration — quality & stability (ongoing)
+
+Work that tightens the **existing** product before or alongside larger roadmap bets. Scope is **web** and **desktop (Electron)** unless a fix clearly applies to mobile too.
+
+- **Security hardening** — Dependency and supply-chain review, auth/session edge cases, upload and federation paths, rate limits and admin surfaces; triage and fix findings from tooling or external review.
+- **UI/UX polish** — Visual consistency (spacing, typography, states), clearer empty and error states, fewer dead ends, performance fixes for scroll and heavy views.
+- **Calls, video, and screen sharing** — Reliable join/leave/reconnect, mute/deafen, screen-share start/stop, permission prompts and failure copy, layout and controls (LiveKit-backed flows).
+- **Bug squashing** — Reproduce, fix, and add coverage where it matters: core chat, DMs, guild navigation, voice/video, notifications, and desktop shell behavior.
+
+This section is **process intent**, not a dated release gate. Finer tracking may live outside the repository.
+
+---
+
 ## Near-Term — Q2 2026
 
-Planning intent for the next engineering cycles. Cryptography and app-store work are **multi-month** tracks; they are listed here as direction, not a promise of simultaneous delivery.
+Planning intent for the next engineering cycles. Cryptography work is a **multi-month** track; items here are direction, not a promise of simultaneous delivery.
 
 - **E2E encrypted file attachments** — Encrypt images, videos, and files before upload so the server never sees plaintext media
 - **Forward secrecy (Double Ratchet)** — Signal-style ratchet so compromising a single key doesn't expose past messages
 - **Multi-device key sync** — Securely synchronize encryption keys across browsers and devices
-- **Mobile app store release** — Publish to App Store and Google Play
 - **Accessibility audit** — WCAG 2.1 AA compliance pass across all surfaces
 - **i18n expansion** — Community-contributed locale packs beyond en/es/fr
 
 ## Mid-Term — Q3-Q4 2026
 
-- **Voice/video E2E encryption** — Insertable Streams for E2E encrypted WebRTC media
 - **Plugin/extension SDK** — Third-party developers can build and distribute plugins
 - **Matrix / ActivityPub bridge** — Interop with Matrix rooms and Mastodon/Misskey
 - **Tauri migration** — Replace Electron with Tauri for a smaller, faster desktop app
@@ -196,10 +207,44 @@ Planning intent for the next engineering cycles. Cryptography and app-store work
 
 - **Peer-to-peer fallback** — Direct device-to-device messaging when the server is unreachable
 - **Decentralized identity (DID)** — W3C Decentralized Identifiers for portable, self-sovereign identity
-- **Enterprise SSO** — SAML 2.0 and OpenID Connect
 - **Offline mode** — Full offline read/compose with automatic sync
 - **Federated file storage** — Distributed file hosting across instances
 - **WebAssembly encryption** — Move crypto operations to WASM for performance
+
+---
+
+## Ideas backlog — possible enhancements
+
+Uncommitted ideas that could make Gratonite stronger over time. Not prioritized; some may overlap shipped work or later roadmap items.
+
+1. **Richer desktop notifications** — Grouping, inline actions (mute server, mark read), and clearer attribution on Windows/macOS/Linux.
+2. **Inline message translation** — Optional, per-user or per-channel; provider pluggable and privacy-conscious for self-hosters.
+3. **Keyboard shortcut editor** — User-remappable shortcuts for navigation, composer, and voice push-to-talk.
+4. **Density and layout presets** — Beyond compact mode: list vs cozy vs spacious; optional sidebar width memory per guild.
+5. **Channel follow without full membership** — For public guilds: follow announcements or a single channel with a lighter subscription model.
+6. **Cross-post / mirror posts** — Opt-in broadcast from one channel to another (with mod controls and deduplication).
+7. **Scheduled voice events + ICS** — Calendar invites, reminders, and “event channel” templates for community calls.
+8. **Consent-based voice recording** — Server-governed, auditable recording for stages or moderation (legal/compliance hooks).
+9. **Guild-scoped backup and restore** — Export/import a single guild for migration between instances or cold storage.
+10. **In-app search syntax help** — Discoverable `has:`, `from:`, date, and mention operators with examples from the current guild.
+11. **Per-channel link unfurl controls** — Toggle previews by channel or domain blocklist to reduce spam and surprises.
+12. **Dev community link previews** — Optional GitHub/GitLab/issue and PR cards with instance-controlled allowlists.
+13. **Granular bot OAuth scopes** — Narrow permissions per guild (e.g. read messages vs send vs manage roles) with clearer install UX.
+14. **Webhook hardening UX** — Documented signing, idempotency keys, and delivery replay expectations in the developer panel.
+15. **User-created sticker packs** — Curated pack sharing within a guild or the marketplace, with moderation queues.
+16. **Soundboard in voice** — Permissioned short clips for stages and community events (rate-limited, auditable).
+17. **Per-channel default voice mode** — Voice-activation vs push-to-talk defaults set by moderators for noisy or quiet rooms.
+18. **Noise and input controls surfacing** — Expose clearer mic processing options where the client stack allows (aligns with call polish).
+19. **Low-bandwidth mode** — Reduce autoplay, image quality, and realtime fan-out for poor networks (esp. mobile).
+20. **Private moderator notes** — Per-user notes visible only to mods and admins, tied to audit expectations.
+21. **Read-only compliance archives** — Legal hold style: immutable channel views for designated roles.
+22. **Channel and thread export** — Export to Markdown, HTML, or PDF for documentation and off-platform backups.
+23. **Collaborative notes or docs attached to channels** — Lightweight wiki-adjacent doc with presence (distinct from full wiki channels).
+24. **Public server discovery filters** — Language, region, moderation stance, or “verified” tags at the directory level.
+25. **Federation transparency panel** — For users: which remote instances appear in this guild, blocked instances, and trust hints.
+26. **Instance abuse reporting** — Clear path to report spam or CSAM to instance operators with evidence attachments.
+27. **Self-hosted auth plugins** — LDAP or OIDC hooks for **self-hosted** deployments (distinct from a hosted “enterprise SSO” product).
+28. **Better offline behavior on desktop** — Graceful degradation when the network drops during voice or compose (pairs with long-term offline mode).
 
 ---
 

@@ -163,6 +163,8 @@ const io = new SocketIOServer(server, {
     origin: process.env.CORS_ORIGIN || ['http://localhost:5173', 'http://localhost:5174', /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/],
     credentials: true,
   },
+  // Cap per-message payload (defense-in-depth; keep in sync with client expectations)
+  maxHttpBufferSize: 512 * 1024,
 });
 
 /**

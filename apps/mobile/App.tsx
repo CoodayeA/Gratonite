@@ -31,7 +31,7 @@ import * as Sentry from '@sentry/react-native';
 import { useSystemThemeListener } from './src/lib/useSystemTheme';
 import type { ThemeName } from './src/lib/themes';
 
-export const OTA_BUILD_STAMP = '2026-03-19-v3';
+export const OTA_BUILD_STAMP = '2026-04-03-v1';
 
 Sentry.init({
   dsn: 'https://ad17bb4f67fef179cb02bbf241babb25@o4511074273329152.ingest.us.sentry.io/4511074285649920',

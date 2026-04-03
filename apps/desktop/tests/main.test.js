@@ -28,7 +28,7 @@ async function loadMain({ platform = 'darwin', isDev = false, envUrl = null } = 
   }
 
   currentMocks = createElectronMock();
-  mockAutoUpdater = { checkForUpdatesAndNotify: vi.fn(), autoDownload: false, autoInstallOnAppQuit: false };
+  mockAutoUpdater = { checkForUpdates: vi.fn(), autoDownload: false, autoInstallOnAppQuit: false, on: vi.fn() };
 
   injectCache(ELECTRON_PATH, currentMocks);
   if (UPDATER_PATH) injectCache(UPDATER_PATH, { autoUpdater: mockAutoUpdater });
@@ -58,9 +58,9 @@ describe('URL selection', () => {
     expect(mocks.mockWindow.loadURL).toHaveBeenCalledWith('http://localhost:5174/app');
   });
 
-  test('production → loads https://app.gratonite.chat', async () => {
+  test('production → loads https://gratonite.chat/app', async () => {
     const mocks = await loadMain({ isDev: false });
-    expect(mocks.mockWindow.loadURL).toHaveBeenCalledWith('https://app.gratonite.chat');
+    expect(mocks.mockWindow.loadURL).toHaveBeenCalledWith('https://gratonite.chat/app');
   });
 
   test('GRATONITE_DESKTOP_URL env var overrides production URL', async () => {
@@ -146,16 +146,20 @@ describe('mute state', () => {
 
   test('tray menu toggle → state updates + sends mute-toggled to renderer', async () => {
     const mocks = await loadMain();
-    const template = mocks.Menu.buildFromTemplate.mock.calls[0][0];
-    const muteItem = template.find((item) => item.label === 'Mute Notifications');
+    const trayCall = mocks.Menu.buildFromTemplate.mock.calls.find(
+      (c) => c[0].some((item) => item.label === 'Mute')
+    );
+    const muteItem = trayCall[0].find((item) => item.label === 'Mute');
     muteItem.click({ checked: true });
     expect(mocks.mockWebContents.send).toHaveBeenCalledWith('mute-toggled', true);
   });
 
   test('tray menu toggle → get-mute-state reflects new value', async () => {
     const mocks = await loadMain();
-    const template = mocks.Menu.buildFromTemplate.mock.calls[0][0];
-    const muteItem = template.find((item) => item.label === 'Mute Notifications');
+    const trayCall = mocks.Menu.buildFromTemplate.mock.calls.find(
+      (c) => c[0].some((item) => item.label === 'Mute')
+    );
+    const muteItem = trayCall[0].find((item) => item.label === 'Mute');
     muteItem.click({ checked: true });
     expect(await mocks.ipcHandlers['get-mute-state']()).toBe(true);
   });
@@ -272,19 +276,19 @@ describe('badge system', () => {
 // Group E: Auto-Updater
 // ---------------------------------------------------------------------------
 describe('auto-updater', () => {
-  test('dev mode → checkForUpdatesAndNotify never called', async () => {
+  test('dev mode → checkForUpdates never called', async () => {
     const mocks = await loadMain({ isDev: true });
-    expect(mocks.autoUpdater.checkForUpdatesAndNotify).not.toHaveBeenCalled();
+    expect(mocks.autoUpdater.checkForUpdates).not.toHaveBeenCalled();
   });
 
-  test('production → checkForUpdatesAndNotify called once on startup', async () => {
+  test('production → checkForUpdates called once on startup', async () => {
     const mocks = await loadMain({ isDev: false });
-    expect(mocks.autoUpdater.checkForUpdatesAndNotify).toHaveBeenCalledTimes(1);
+    expect(mocks.autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
   });
 
-  test('production → autoUpdater.autoDownload set to true', async () => {
+  test('production → autoUpdater.autoDownload set to false', async () => {
     const mocks = await loadMain({ isDev: false });
-    expect(mocks.autoUpdater.autoDownload).toBe(true);
+    expect(mocks.autoUpdater.autoDownload).toBe(false);
   });
 
   test('production → autoUpdater.autoInstallOnAppQuit set to true', async () => {
@@ -300,12 +304,12 @@ describe('auto-updater', () => {
     spy.mockRestore();
   });
 
-  test('interval callback calls checkForUpdatesAndNotify again', async () => {
+  test('interval callback calls checkForUpdates again', async () => {
     const spy = vi.spyOn(global, 'setInterval');
     const mocks = await loadMain({ isDev: false });
     const call = spy.mock.calls.find((c) => c[1] === 14400000);
     call[0]();
-    expect(mocks.autoUpdater.checkForUpdatesAndNotify).toHaveBeenCalledTimes(2);
+    expect(mocks.autoUpdater.checkForUpdates).toHaveBeenCalledTimes(2);
     spy.mockRestore();
   });
 
@@ -330,7 +334,7 @@ describe('app lifecycle', () => {
   test('second-instance: restores minimized window + focuses', async () => {
     const mocks = await loadMain();
     mocks.mockWindow.isMinimized.mockReturnValue(true);
-    mocks.appListeners['second-instance'][0]();
+    mocks.appListeners['second-instance'][0](null, []);
     expect(mocks.mockWindow.restore).toHaveBeenCalled();
     expect(mocks.mockWindow.focus).toHaveBeenCalled();
   });
@@ -338,13 +342,14 @@ describe('app lifecycle', () => {
   test('second-instance: focuses non-minimized window without restore', async () => {
     const mocks = await loadMain();
     mocks.mockWindow.isMinimized.mockReturnValue(false);
-    mocks.appListeners['second-instance'][0]();
+    mocks.appListeners['second-instance'][0](null, []);
     expect(mocks.mockWindow.restore).not.toHaveBeenCalled();
     expect(mocks.mockWindow.focus).toHaveBeenCalled();
   });
 
   test('window-all-closed on Linux → app.quit() called', async () => {
     const mocks = await loadMain({ platform: 'linux' });
+    mocks.ipcListeners['set-minimize-to-tray'](null, false);
     mocks.appListeners['window-all-closed'][0]();
     expect(mocks.app.quit).toHaveBeenCalled();
   });

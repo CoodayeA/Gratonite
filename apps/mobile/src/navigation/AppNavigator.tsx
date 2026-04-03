@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Platform, StyleSheet } from 'react-native';
+import { BlurView } from 'expo-blur';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -161,6 +162,19 @@ function MainTabs() {
   const { notificationCount } = useAppState();
   const { colors, fontSize, neo, glass } = useTheme();
 
+  const iosGlassTabBar = Boolean(glass && Platform.OS === 'ios');
+
+  const tabBarBackground = React.useCallback(() => {
+    if (!iosGlassTabBar || !glass) return undefined;
+    return (
+      <BlurView
+        intensity={Math.min(glass.blurIntensity + 12, 90)}
+        tint={glass.blurTint}
+        style={StyleSheet.absoluteFill}
+      />
+    );
+  }, [glass, iosGlassTabBar]);
+
   return (
     <View style={{ flex: 1 }}>
     <Tab.Navigator
@@ -169,17 +183,22 @@ function MainTabs() {
       }}
       screenOptions={{
         headerShown: false,
+        tabBarBackground,
         tabBarStyle: {
-          backgroundColor: glass ? glass.glassBackground : colors.bgSecondary,
+          backgroundColor: iosGlassTabBar
+            ? 'transparent'
+            : glass
+              ? glass.glassBackground
+              : colors.bgSecondary,
           borderTopColor: neo ? colors.border : glass ? glass.glassBorder : colors.accentPrimary,
           borderTopWidth: neo ? 3 : glass ? 0.5 : 1,
           height: 60 + insets.bottom,
           paddingBottom: insets.bottom,
           paddingTop: 6,
           shadowColor: '#000',
-          shadowOpacity: 0.1,
+          shadowOpacity: iosGlassTabBar ? 0.06 : 0.1,
           shadowOffset: { width: 0, height: -2 },
-          shadowRadius: 4,
+          shadowRadius: iosGlassTabBar ? 8 : 4,
           elevation: 8,
         },
         tabBarActiveTintColor: colors.accentPrimary,

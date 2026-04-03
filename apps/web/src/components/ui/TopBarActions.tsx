@@ -92,7 +92,7 @@ export const TopBarActions = () => {
                     results.push({
                         id: `msg-${m.id}`,
                         type: 'message',
-                        title: m.highlight || m.content.slice(0, 80),
+                        title: (m.content ?? '').trim().slice(0, 80) || '(empty message)',
                         subtitle: m.guildId ? `#channel` : 'DM',
                         route: m.guildId
                             ? buildGuildChannelRoute(m.guildId, m.channelId) + msgParam

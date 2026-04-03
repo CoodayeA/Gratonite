@@ -54,8 +54,17 @@ export async function resolveRemoteUser(federationAddress: string): Promise<stri
 
   if (!instance || instance.status !== 'active') return null;
 
-  // Fetch user profile from remote instance
+  // Fetch user profile from remote instance (only the registered instance base URL — SSRF mitigation)
   const profileUrl = `${baseUrl}/api/v1/federation/users/${encodeURIComponent(parsed.username)}`;
+  let profileHostname: string;
+  try {
+    profileHostname = new URL(profileUrl).hostname;
+  } catch {
+    return null;
+  }
+  if (profileHostname !== parsed.domain) {
+    return null;
+  }
   const kp = getActiveKeyPair();
   const headers = signRequest('GET', profileUrl, '', kp.keyId, kp.privateKeyPem);
 

@@ -29,5 +29,5 @@ export interface UserThemeLike {
 }
 
 export interface SettingsTabProps {
-  addToast: (t: { title: string; description?: string; variant: 'success' | 'error' }) => void;
+  addToast: (t: { title: string; description?: string; variant: 'success' | 'error' | 'info' }) => void;
 }
