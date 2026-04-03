@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Search, FileText, Calendar, User, Hash, X, Bookmark, BookmarkPlus, Trash2, Edit2, Check, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, FileText, Calendar, User, Hash, X, Bookmark, BookmarkPlus, Trash2, Edit2, Check, ChevronDown, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
 import { api } from '../../lib/api';
 import { EmptyState } from '../../components/ui/EmptyState';
 
@@ -41,6 +41,8 @@ interface SavedSearch {
 
 const SAVED_SEARCHES_KEY = 'gratonite_saved_searches_v1';
 
+const SEARCH_LIMIT = 25;
+
 export default function GlobalSearch() {
   const navigate = useNavigate();
   const { guildId: routeGuildId } = useParams<{ guildId: string }>();
@@ -48,6 +50,10 @@ export default function GlobalSearch() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [error, setError] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({});
 
   // Saved searches state
@@ -118,16 +124,52 @@ export default function GlobalSearch() {
     persistSavedSearches(updated);
   }, [savedSearches, persistSavedSearches]);
 
+  const doSearchWithParams = useCallback(async (searchQuery: string, searchFilters: SearchFilters, searchOffset = 0, append = false) => {
+    if (searchQuery.trim().length < 2) return;
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setSearched(true);
+      setError(false);
+    }
+    try {
+      const data = await api.search.messages({
+        query: searchQuery.trim(),
+        guildId: searchFilters.guildId,
+        channelId: searchFilters.channelId,
+        authorId: searchFilters.authorId,
+        before: searchFilters.before,
+        after: searchFilters.after,
+        has: searchFilters.has,
+        mentionsMe: searchFilters.mentionsMe,
+        limit: SEARCH_LIMIT,
+        offset: searchOffset,
+      });
+      const newResults = data.results as SearchResult[];
+      setResults(prev => append ? [...prev, ...newResults] : newResults);
+      setHasMore(newResults.length >= SEARCH_LIMIT);
+    } catch {
+      setError(true);
+      if (!append) setResults([]);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, []);
+
   const applySavedSearch = useCallback((saved: SavedSearch) => {
     setQuery(saved.query);
     setFilters(saved.filters);
+    setOffset(0);
+    setHasMore(false);
     // Trigger search immediately
     setTimeout(() => {
       if (saved.query.trim().length >= 2) {
-        doSearchWithParams(saved.query, saved.filters);
+        doSearchWithParams(saved.query, saved.filters, 0, false);
       }
     }, 0);
-  }, []);
+  }, [doSearchWithParams]);
 
   const startEditing = useCallback((saved: SavedSearch) => {
     setEditingId(saved.id);
@@ -150,32 +192,17 @@ export default function GlobalSearch() {
     setEditName('');
   }, []);
 
-  const doSearchWithParams = useCallback(async (searchQuery: string, searchFilters: SearchFilters) => {
-    if (searchQuery.trim().length < 2) return;
-    setLoading(true);
-    setSearched(true);
-    try {
-      const data = await api.search.messages({
-        query: searchQuery.trim(),
-        guildId: searchFilters.guildId,
-        channelId: searchFilters.channelId,
-        authorId: searchFilters.authorId,
-        before: searchFilters.before,
-        after: searchFilters.after,
-        has: searchFilters.has,
-        mentionsMe: searchFilters.mentionsMe,
-        limit: 50,
-      });
-      setResults(data.results as SearchResult[]);
-    } catch {
-      setResults([]);
-    }
-    setLoading(false);
-  }, []);
-
   const doSearch = useCallback(() => {
-    doSearchWithParams(query, filters);
+    setOffset(0);
+    setHasMore(false);
+    doSearchWithParams(query, filters, 0, false);
   }, [query, filters, doSearchWithParams]);
+
+  const loadMore = useCallback(() => {
+    const nextOffset = offset + SEARCH_LIMIT;
+    setOffset(nextOffset);
+    doSearchWithParams(query, filters, nextOffset, true);
+  }, [query, filters, offset, doSearchWithParams]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') doSearch();
@@ -348,12 +375,36 @@ export default function GlobalSearch() {
         />
       </div>
 
-      {/* Results */}
+      {/* Skeleton loading rows */}
       {loading && (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Searching...</div>
+        <div>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} style={{ padding: 12, borderRadius: 8, marginBottom: 8, background: 'var(--bg-secondary)', border: '1px solid var(--stroke)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <div className="skeleton-pulse" style={{ height: 12, width: 90, borderRadius: 4 }} />
+                <div className="skeleton-pulse" style={{ height: 12, width: 60, borderRadius: 4 }} />
+              </div>
+              <div className="skeleton-pulse" style={{ height: 14, width: `${75 + (i % 3) * 10}%`, borderRadius: 4 }} />
+            </div>
+          ))}
+        </div>
       )}
 
-      {!loading && searched && results.length === 0 && (
+      {/* Error state */}
+      {!loading && error && (
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
+          <AlertCircle size={32} style={{ opacity: 0.5, marginBottom: 12 }} />
+          <p style={{ marginBottom: 12, fontSize: 14 }}>Search failed. Please try again.</p>
+          <button
+            onClick={doSearch}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 6, border: 'none', background: 'var(--accent-primary)', color: '#000', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+          >
+            <RefreshCw size={14} /> Retry
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && searched && results.length === 0 && (
         <EmptyState
           type="search"
           title="No results found"
@@ -361,7 +412,7 @@ export default function GlobalSearch() {
         />
       )}
 
-      {!loading && !searched && (
+      {!loading && !error && !searched && (
         <EmptyState
           type="search"
           title="Search Messages"
@@ -411,6 +462,23 @@ export default function GlobalSearch() {
             </div>
           </div>
         ))}
+
+        {/* Load more / loading more */}
+        {loadingMore && (
+          <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-muted)', fontSize: 13 }}>
+            Loading more results...
+          </div>
+        )}
+        {!loading && !loadingMore && !error && hasMore && results.length > 0 && (
+          <div style={{ textAlign: 'center', padding: '8px 0 16px' }}>
+            <button
+              onClick={loadMore}
+              style={{ padding: '8px 20px', borderRadius: 6, border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer' }}
+            >
+              Load more results
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Saved searches sidebar */}

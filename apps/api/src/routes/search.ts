@@ -27,6 +27,7 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
   const after = typeof req.query.after === 'string' ? req.query.after : undefined;
   const has = typeof req.query.has === 'string' ? req.query.has : undefined;
   const limit = Math.min(Number(req.query.limit) || 25, 50);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
 
   const escaped = q.replace(/[%_\\]/g, '\\$&');
   const pattern = `%${escaped}%`;
@@ -126,7 +127,8 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
     .leftJoin(users, eq(users.id, messages.authorId))
     .where(and(...conditions))
     .orderBy(desc(messages.createdAt))
-    .limit(limit);
+    .limit(limit)
+    .offset(offset);
 
   // Fetch guild names in a single batch query
   const guildIds = [...new Set(results.filter(r => r.guildId).map(r => r.guildId!))];
@@ -154,7 +156,7 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
       avatarHash: r.authorAvatarHash,
     } : null,
   }));
-  res.json({ results: mapped, total: mapped.length, limit, offset: 0 });
+  res.json({ results: mapped, total: mapped.length, limit, offset });
   } catch (err) {
     logger.error('[search] GET /messages error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
