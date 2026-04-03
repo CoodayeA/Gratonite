@@ -1,5 +1,7 @@
 # Gratonite product program
 
+**New session?** Read [`../HANDOFF.md`](../HANDOFF.md) first (any AI tool or human).
+
 Execution-focused tracker for initiatives that span **search, notifications, federation, desktop, operators, and platform**. Priorities and “what shipped” are also summarized in [`ROADMAP.md`](../../ROADMAP.md) at the repo root — **keep both in sync** when status changes.
 
 **Legend:** ✅ shipped on `main` | 🔶 partial / next slice | 📋 not started
