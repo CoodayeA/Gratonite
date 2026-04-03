@@ -21,6 +21,7 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
   }
 
   const channelId = typeof req.query.channelId === 'string' ? req.query.channelId : undefined;
+  const guildId = typeof req.query.guildId === 'string' ? req.query.guildId : undefined;
   const authorId = typeof req.query.authorId === 'string' ? req.query.authorId : undefined;
   const before = typeof req.query.before === 'string' ? req.query.before : undefined;
   const after = typeof req.query.after === 'string' ? req.query.after : undefined;
@@ -44,6 +45,7 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
     conditions.push(sql`(${messages.content} ILIKE ${'%<@' + req.userId + '>%'} OR ${messages.content} ILIKE '%@everyone%' OR ${messages.content} ILIKE '%@here%')`);
   }
   if (channelId) conditions.push(eq(messages.channelId, channelId));
+  if (guildId) conditions.push(eq(channels.guildId, guildId));
   if (authorId) conditions.push(eq(messages.authorId, authorId));
   if (before) {
     const beforeDate = new Date(before);
@@ -75,6 +77,11 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
     .where(eq(guildMembers.userId, req.userId!))
     .limit(500);
   const userGuildIds = userGuildRows.map(r => r.guildId);
+
+  if (guildId && !userGuildIds.includes(guildId)) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'Not a member of this guild' });
+    return;
+  }
 
   // Fetch DM channel IDs where the user participates.
   const userDmRows = await db
