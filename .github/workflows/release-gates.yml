@@ -51,3 +51,6 @@ jobs:
           pnpm --filter gratonite-web run lint
           pnpm --filter gratonite-web run guard:placeholders
           pnpm --filter gratonite-web run build:vite
+
+      - name: Web — SW precache integrity check
+        run: pnpm --filter gratonite-web run validate:sw-precache

@@ -1,7 +1,7 @@
 const CACHE_NAME = 'gratonite-v5';
 const API_CACHE_NAME = 'gratonite-api-v2';
 const FONT_CACHE_NAME = 'gratonite-fonts-v1';
-const STATIC_ASSETS = ['/app/', '/app/index.html', '/app/manifest.json'];
+const STATIC_ASSETS = ['/app/', '/app/index.html', '/app/manifest.json', '/app/offline.html'];
 
 // API paths that should be cached for offline access
 const CACHEABLE_API_PATHS = [
@@ -109,7 +109,9 @@ self.addEventListener('fetch', (event) => {
   // Network-first for HTML (SPA navigation)
   if (url.pathname.startsWith('/app') && !url.pathname.includes('.')) {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('/app/index.html'))
+      fetch(event.request).catch(() =>
+        caches.match('/app/index.html').then(cached => cached || caches.match('/app/offline.html'))
+      )
     );
   }
 });
