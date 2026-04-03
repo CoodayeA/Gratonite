@@ -8,6 +8,8 @@
 
 **Full release gate** (stricter, run locally or in release automation): root `package.json` → `verify:release:all` (includes API `verify:release` with `gate:data`, web `verify:prod`, e2e smoke). That needs a real DB and env for `gate:data` — not the same as lightweight CI.
 
+**Documentation map** — [`docs/README.md`](docs/README.md) (index); product initiative tracker — [`docs/roadmap/PRODUCT-PROGRAM.md`](docs/roadmap/PRODUCT-PROGRAM.md); high-level roadmap — [`ROADMAP.md`](ROADMAP.md).
+
 ## Production deployment
 
 Full runbook: `C:\Users\cooda\Documents\Gratonite-runbook.md` (read first for any deploy or incident work; also `C:\Users\cooda\Documents\Gratonite-ops-notes.md` for a quick reference).

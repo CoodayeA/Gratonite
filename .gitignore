@@ -68,4 +68,4 @@ skills-lock.json
 
 # Internal-only planning (never push to GitHub — keep local copies)
 docs/release-runbook.md
-docs/roadmap/PRODUCT-PROGRAM.md
+# Product program tracker is tracked: docs/roadmap/PRODUCT-PROGRAM.md (keep in sync with ROADMAP.md)

@@ -11,7 +11,7 @@ Gratonite is production-ready with **140** database schemas, **134** API route m
 - **Shipped** items are backed by code in this repository (API routes, web/mobile UI, jobs). They are spot-checked during roadmap reviews; not every bullet has a dedicated automated test.
 - **Counts** (schemas, routes, pages) come from repository inventory scripts or manual tallies and may drift slightly between releases — treat as approximate.
 - **Near-term / mid-term / long-term** lists are planning intent, not commitments with dates.
-- Finer-grained initiative tracking (search, notifications, federation, operators) and **detailed execution planning** are maintained **outside** this repository (not stored in GitHub).
+- Finer-grained initiative tracking (search, notifications, federation, operators) and **execution status** (✅ / 🔶 / 📋) live in **[`docs/roadmap/PRODUCT-PROGRAM.md`](docs/roadmap/PRODUCT-PROGRAM.md)**. When something moves from planned to shipped, update **both** this file and that program doc so they stay aligned.
 
 ### Recently shipped (high level)
 
