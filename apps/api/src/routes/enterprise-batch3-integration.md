@@ -1,6 +1,6 @@
 # Enterprise Batch 3 Integration Notes
 
-These are changes needed in shared files that this agent cannot edit directly.
+These are changes needed in shared files that must be edited in their owning modules.
 
 ## 1. routes/index.ts - Add new router imports and mounts
 

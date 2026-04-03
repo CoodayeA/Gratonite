@@ -1679,7 +1679,7 @@ guildsRouter.post(
  * @param   guildId {string}        — Guild UUID
  * @query   action? {string}        — Filter by action type
  * @query   userId? {string}        — Filter by acting user
- * @query   before? {string}        — Cursor: return entries before this ID
+ * @query   before? {string}        — Pagination: return entries before this ID
  * @query   limit?  {number}        — Max results (default 50, max 100)
  * @returns 200 { items: AuditLogEntry[] }
  */

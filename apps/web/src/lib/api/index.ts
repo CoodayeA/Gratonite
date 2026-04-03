@@ -154,7 +154,7 @@ export type {
   RegisterRequest,
   LoginRequest,
   ApiError,
-  CursorPaginationParams,
+  KeysetPaginationParams,
   Guild,
   Channel,
   Message,

@@ -1,6 +1,6 @@
 # Download Page Redesign Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Implementation:** Track progress with the checkbox (`- [ ]`) steps below.
 
 **Goal:** Redesign gratonite.chat/download into a three-section page (Desktop, Mobile, Server) with auto-detect OS hero, educational Docker explainer, and "portal" terminology for communities.
 
@@ -1254,4 +1254,4 @@ cd "/Volumes/project bus/GratoniteFinalForm/apps/landing" && npx next dev
 
 - [ ] **Step 3: Push**
 
-Follow the project's git workflow: code review agent, then push to main.
+Follow the project's git workflow: code review, then push to main.

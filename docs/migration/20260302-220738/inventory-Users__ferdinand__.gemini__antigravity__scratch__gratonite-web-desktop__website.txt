@@ -1,5 +1,0 @@
-source=/Users/ferdinand/.gemini/antigravity/scratch/gratonite-web-desktop/website
-timestamp=2026-03-03T03:10:29Z
-bytes=796426240
-files=25956
-dirs=3205

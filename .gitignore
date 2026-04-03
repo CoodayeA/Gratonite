@@ -53,14 +53,10 @@ archive/
 *.tsbuildinfo
 .worktrees/
 .superpowers/
-.claude/
 docs/superpowers/
 
 # Local editor / tooling artifacts (keep out of version control)
-.agent/
-.agents/
 .factory/
-.kiro/
 .qoder/
 .windsurf/
 skills/

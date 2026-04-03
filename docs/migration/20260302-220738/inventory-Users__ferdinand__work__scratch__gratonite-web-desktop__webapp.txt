@@ -1,0 +1,5 @@
+source=/Users/ferdinand/work/scratch/gratonite-web-desktop/webapp
+timestamp=2026-03-03T03:07:38Z
+bytes=247590912
+files=14885
+dirs=1065

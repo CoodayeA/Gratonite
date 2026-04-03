@@ -1,6 +1,6 @@
 # Enterprise Batch 2 — Integration Notes
 
-These are the exact lines that need to be added to **shared files** (which this agent does not own).
+These are the exact lines that need to be added to **shared files** maintained outside this integration note.
 
 ## 1. apps/api/src/routes/index.ts
 
