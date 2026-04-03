@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, Hash, MessageSquare, User, Loader, X, SlidersHorizontal } from 'lucide-react';
+import { Search, Hash, MessageSquare, User, Loader, X, SlidersHorizontal, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import Avatar from '../ui/Avatar';
@@ -62,6 +62,7 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
     const [filtersExpanded, setFiltersExpanded] = useState(false);
     const [searchError, setSearchError] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
+    const [showSyntaxHelp, setShowSyntaxHelp] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const navigate = useNavigate();
     const isMobile = useIsMobile();
@@ -195,6 +196,14 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                         onChange={e => setQuery(e.target.value)}
                         style={{ flex: 1, background: 'transparent', border: 'none', color: 'white', fontSize: '16px', outline: 'none' }}
                     />
+                    <button
+                        onClick={() => setShowSyntaxHelp(h => !h)}
+                        title="Search syntax help"
+                        aria-label="Search syntax help"
+                        style={{ background: 'none', border: 'none', color: showSyntaxHelp ? 'var(--accent-primary)' : 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                    >
+                        <HelpCircle size={18} />
+                    </button>
                     {isMobile ? (
                         <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}>
                             <X size={20} />
@@ -203,6 +212,31 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                         <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-muted)', fontSize: '12px', padding: '4px 8px', fontWeight: 600 }}>ESC</div>
                     )}
                 </div>
+
+                {/* Syntax help panel */}
+                {showSyntaxHelp && (
+                    <div style={{ padding: '12px 16px', background: 'rgba(88,101,242,0.06)', borderBottom: '1px solid var(--stroke)', fontSize: 12 }}>
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>Search operators</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {[
+                                ['from:alice', 'Messages from a specific user'],
+                                ['has:image', 'Messages with images attached'],
+                                ['has:file', 'Messages with any file attached'],
+                                ['has:embed', 'Messages with link embeds'],
+                                ['has:link', 'Messages containing a URL'],
+                                ['in:channel-name', 'Messages in a specific channel'],
+                                ['before:2024-01-01', 'Messages before a date'],
+                                ['after:2024-01-01', 'Messages after a date'],
+                            ].map(([op, desc]) => (
+                                <div key={op} style={{ display: 'flex', gap: 12, color: 'var(--text-secondary)', alignItems: 'baseline' }}>
+                                    <span style={{ fontFamily: 'monospace', color: 'var(--accent-primary)', whiteSpace: 'nowrap', minWidth: 140 }}>{op}</span>
+                                    <span>{desc}</span>
+                                </div>
+                            ))}
+                        </div>
+                        <div style={{ marginTop: 8, color: 'var(--text-muted)' }}>Combine operators: <span style={{ fontFamily: 'monospace', color: 'var(--accent-primary)' }}>from:alice has:file before:2024-06-01</span></div>
+                    </div>
+                )}
 
                 {/* Advanced search filters — collapsible on mobile */}
                 {isMobile && (
