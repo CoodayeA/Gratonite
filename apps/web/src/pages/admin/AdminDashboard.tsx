@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Shield, Users, FileText, MessageSquare, Globe, Bot, Server,
-  Search, UserPlus, Check, X, AlertTriangle, Palette,
+  Search, UserPlus, Check, X, AlertTriangle, Palette, Activity,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../components/ui/ToastManager';
@@ -39,12 +39,46 @@ const ADMIN_SECTIONS = [
   },
 ];
 
+type HealthPayload = {
+  status?: string;
+  version?: string;
+  uptime?: number;
+  db?: { connected?: boolean };
+  redis?: { connected?: boolean };
+  memory?: { rss?: number; heapUsed?: number };
+};
+
 export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
   const [promoting, setPromoting] = useState<string | null>(null);
+  const [health, setHealth] = useState<HealthPayload | null>(null);
+  const [healthLoading, setHealthLoading] = useState(true);
+  const [healthError, setHealthError] = useState<string | null>(null);
   const { addToast } = useToast();
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setHealthLoading(true);
+      setHealthError(null);
+      try {
+        const res = await fetch(`${API_BASE}/health`, { credentials: 'include' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as HealthPayload;
+        if (!cancelled) setHealth(data);
+      } catch (e) {
+        if (!cancelled) {
+          setHealth(null);
+          setHealthError(e instanceof Error ? e.message : 'Failed to load health');
+        }
+      } finally {
+        if (!cancelled) setHealthLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const searchUsers = async (query: string) => {
     if (query.trim().length < 2) { setSearchResults([]); return; }
@@ -88,6 +122,51 @@ export default function AdminDashboard() {
             <h1 style={{ fontSize: '24px', fontWeight: 700, margin: 0, fontFamily: 'var(--font-display)' }}>Admin Dashboard</h1>
             <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>Manage your Gratonite instance</p>
           </div>
+        </div>
+
+        {/* Instance API health (public /health — operators need a quick signal) */}
+        <div style={{ background: 'var(--bg-secondary, #1a1a2e)', borderRadius: '14px', border: '1px solid var(--stroke, #2a2a3e)', padding: '20px', marginBottom: '28px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <Activity size={18} color="#10b981" />
+            <h2 style={{ fontSize: '15px', fontWeight: 600, margin: 0 }}>Instance API status</h2>
+          </div>
+          {healthLoading && (
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>Loading health…</p>
+          )}
+          {!healthLoading && healthError && (
+            <p style={{ fontSize: '13px', color: '#f87171', margin: 0 }}>{healthError}</p>
+          )}
+          {!healthLoading && !healthError && health && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', fontSize: '13px' }}>
+              <div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Overall</div>
+                <div style={{ fontWeight: 600, color: health.status === 'ok' ? '#34d399' : '#fbbf24' }}>{health.status ?? '—'}</div>
+              </div>
+              <div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Database</div>
+                <div style={{ fontWeight: 600, color: health.db?.connected ? '#34d399' : '#f87171' }}>{health.db?.connected ? 'Connected' : 'Down'}</div>
+              </div>
+              <div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Redis</div>
+                <div style={{ fontWeight: 600, color: health.redis?.connected ? '#34d399' : '#f87171' }}>{health.redis?.connected ? 'Connected' : 'Down'}</div>
+              </div>
+              <div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>API version</div>
+                <div style={{ fontWeight: 600 }}>{health.version ?? '—'}</div>
+              </div>
+              <div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Uptime</div>
+                <div style={{ fontWeight: 600 }}>{health.uptime != null ? `${Math.floor(health.uptime / 3600)}h` : '—'}</div>
+              </div>
+              <div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Memory (RSS)</div>
+                <div style={{ fontWeight: 600 }}>{health.memory?.rss != null ? `${health.memory.rss} MB` : '—'}</div>
+              </div>
+            </div>
+          )}
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '12px 0 0', lineHeight: 1.4 }}>
+            Source: <code style={{ fontSize: '10px' }}>{API_BASE}/health</code>. For full infrastructure (disk, LiveKit, containers), use server SSH and compose per the self-host docs.
+          </p>
         </div>
 
         {/* Quick Action: Promote User to Admin */}
