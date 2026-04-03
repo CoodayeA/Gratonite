@@ -2,6 +2,7 @@
 
 | Document | Purpose |
 |----------|---------|
+| [`HANDOFF.md`](HANDOFF.md) | **Start here for any AI agent or new session** — read order, verification, editable current focus |
 | [`../ROADMAP.md`](../ROADMAP.md) | High-level direction, shipped features, Q2+ planning, ideas backlog |
 | [`roadmap/PRODUCT-PROGRAM.md`](roadmap/PRODUCT-PROGRAM.md) | Initiative tracker (✅/🔶/📋) aligned with the roadmap — **update both** when status changes |
 | [`self-hosting.md`](self-hosting.md) | Self-host overview |
