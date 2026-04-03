@@ -37,6 +37,22 @@ adminRouter.get('/system-health', requireAuth, async (req: Request, res: Respons
   }
 });
 
+/** GET /api/v1/admin/system-health/history — last 12 snapshots from Redis sliding window */
+adminRouter.get('/system-health/history', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!req.userId || !(await isPlatformAdmin(req.userId))) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'Platform admin required' });
+    return;
+  }
+  try {
+    const { redis } = await import('../lib/redis');
+    const raw = await redis.lrange('admin:health:history', 0, 11);
+    const history = raw.map(s => { try { return JSON.parse(s); } catch { return null; } }).filter(Boolean);
+    res.json({ history });
+  } catch {
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to load health history' });
+  }
+});
+
 const inviteTeamSchema = z.object({
   email: z.string().email(),
   role: z.enum(['admin', 'moderator', 'support']),
