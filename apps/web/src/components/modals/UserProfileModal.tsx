@@ -5,6 +5,7 @@ import { Tooltip } from '../ui/Tooltip';
 import { useToast } from '../ui/ToastManager';
 import { useUser } from '../../contexts/UserContext';
 import Avatar from '../ui/Avatar';
+import { RemoteBadge } from '../ui/RemoteBadge';
 import { api, API_BASE, getAccessToken } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
 import { copyToClipboard } from '../../utils/clipboard';
@@ -295,6 +296,8 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
     const bio = profile?.bio ?? userProfile?.bio ?? null;
     const pronouns = profile?.pronouns ?? null;
     const customStatus = profile?.customStatus ?? userProfile?.customStatus ?? null;
+    const isFederated = (profile as any)?.isFederated ?? (userProfile as any)?.isFederated ?? false;
+    const federationAddress = (profile as any)?.federationAddress ?? (userProfile as any)?.federationAddress ?? null;
 
     // Escape to close
     useEffect(() => {
@@ -446,7 +449,7 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                             })}
                         </div>
                     </div>
-                    <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{username}</p>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>@{username}{isFederated && <RemoteBadge address={federationAddress} />}</p>
                     {profile?.level != null && profile.level > 1 && (
                         <div style={{
                             display: 'inline-flex', alignItems: 'center', gap: '4px',

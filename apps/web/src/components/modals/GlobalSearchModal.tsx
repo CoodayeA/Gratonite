@@ -3,6 +3,7 @@ import { Search, Hash, MessageSquare, User, Loader, X, SlidersHorizontal, HelpCi
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import Avatar from '../ui/Avatar';
+import { RemoteBadge } from '../ui/RemoteBadge';
 import { buildDmRoute, buildGuildChannelRoute, normalizeLegacyRoute } from '../../lib/routes';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -15,6 +16,8 @@ type SearchResult = {
     route: string;
     targetUserId?: string;
     avatarHash?: string | null;
+    isFederated?: boolean;
+    federationAddress?: string | null;
 };
 
 /** Parse inline search operators from the query string */
@@ -127,6 +130,8 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                         route: '',
                         targetUserId: u.id,
                         avatarHash: u.avatarHash || null,
+                        isFederated: (u as any).isFederated ?? false,
+                        federationAddress: (u as any).federationAddress ?? null,
                     });
                 }
                 for (const m of ((messages as Record<string, unknown>).results ?? []) as Array<Record<string, string>>) {
@@ -334,7 +339,7 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 <Avatar userId={u.id} displayName={u.title} avatarHash={u.avatarHash} size={24} />
                                                 <div>
-                                                    <div style={{ fontSize: '14px', fontWeight: 500, color: 'white' }}>{u.title}</div>
+                                                    <div style={{ fontSize: '14px', fontWeight: 500, color: 'white', display: 'flex', alignItems: 'center' }}>{u.title}{u.isFederated && <RemoteBadge address={u.federationAddress} />}</div>
                                                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{u.subtitle}</div>
                                                 </div>
                                             </div>
