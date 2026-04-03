@@ -20,17 +20,19 @@ echo ""
 echo "📦 Step 1: Building application locally..."
 cd "$(dirname "$0")/.."
 
+# Install from repo root with filters to avoid EPERM on the Electron binary in
+# apps/desktop when running pnpm install inside a workspace subdirectory.
+pnpm install --filter gratonite-api... --filter gratonite-web...
+
 # Build backend
 echo "  Building backend..."
 cd apps/api
-pnpm install
 pnpm run build
 cd ../..
 
 # Build frontend
 echo "  Building frontend..."
 cd apps/web
-pnpm install
 pnpm run build:vite
 cd ../..
 
