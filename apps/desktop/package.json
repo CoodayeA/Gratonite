@@ -13,6 +13,8 @@
     "dev": "electron . --dev",
     "build:mac": "electron-builder --mac",
     "build:win": "electron-builder --win",
+    "build:win:clean": "node ./scripts/clean-dist.mjs && electron-builder --win",
+    "build:win:signed": "electron-builder --win -c.win.signAndEditExecutable=true",
     "build:linux": "electron-builder --linux",
     "build:linux-tar": "electron-builder --linux tar.gz",
     "build": "electron-builder --mac --win --linux",
@@ -57,7 +59,8 @@
       "target": ["nsis"],
       "icon": "assets/icon.ico",
       "executableName": "Gratonite",
-      "artifactName": "${productName} Setup ${version}.${ext}"
+      "artifactName": "${productName} Setup ${version}.${ext}",
+      "signAndEditExecutable": false
     },
     "linux": {
       "target": ["AppImage", "deb"],
