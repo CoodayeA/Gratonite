@@ -140,6 +140,7 @@ import LiveAnnouncer, { announce } from './components/ui/LiveAnnouncer';
 import { VoiceProvider, useVoice } from './contexts/VoiceContext';
 import { useVoiceSounds } from './hooks/useVoiceSounds';
 import Avatar from './components/ui/Avatar';
+import { RemoteBadge } from './components/ui/RemoteBadge';
 import UserProfilePopover from './components/ui/UserProfilePopover';
 import { useGuildSession, type GuildSessionErrorCode, type GuildSessionInfo, type GuildSessionChannel } from './hooks/useGuildSession';
 import { isAuthRuntimeExpired } from './lib/authRuntime';
@@ -1956,7 +1957,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                                             );
                                                         })()}
                                                     </div>
-                                                    <span style={{ fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: dmUnreadFlag ? 600 : undefined, color: dmUnreadFlag ? 'var(--text-primary)' : undefined }}>{displayName}</span>
+                                                    <span style={{ fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: dmUnreadFlag ? 600 : undefined, color: dmUnreadFlag ? 'var(--text-primary)' : undefined, display: 'flex', alignItems: 'center' }}>{displayName}{(recipient as any)?.isFederated && <RemoteBadge address={(recipient as any)?.federationAddress} size={11} />}</span>
                                                 </div>
                                                 {dmMentionCount > 0 && !dmActive && (
                                                     <span style={{ background: 'var(--error, #ed4245)', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>{dmMentionCount}</span>

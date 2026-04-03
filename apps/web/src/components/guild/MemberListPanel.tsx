@@ -3,6 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { api } from '../../lib/api';
 import { onPresenceUpdate, onSocketReconnect } from '../../lib/socket';
 import Avatar from '../ui/Avatar';
+import { RemoteBadge } from '../ui/RemoteBadge';
 
 interface Member {
   id: string;
@@ -15,6 +16,8 @@ interface Member {
   activity?: { name: string; type: string } | null;
   roles: string[];
   isBot?: boolean;
+  isFederated?: boolean;
+  federationAddress?: string | null;
 }
 
 interface Props {
@@ -55,7 +58,7 @@ const MemberRow = memo(function MemberRow({ member, onMemberClick }: { member: M
         />
       </div>
       <div className="member-info">
-        <div className="member-name">{name}{member.isBot && <span style={{ display: 'inline-block', marginLeft: '4px', background: 'var(--accent-primary)', color: '#000', fontSize: '8px', fontWeight: 700, padding: '1px 4px', borderRadius: '3px', verticalAlign: 'middle', letterSpacing: '0.5px' }}>BOT</span>}</div>
+        <div className="member-name">{name}{member.isBot && <span style={{ display: 'inline-block', marginLeft: '4px', background: 'var(--accent-primary)', color: '#000', fontSize: '8px', fontWeight: 700, padding: '1px 4px', borderRadius: '3px', verticalAlign: 'middle', letterSpacing: '0.5px' }}>BOT</span>}{member.isFederated && <RemoteBadge address={member.federationAddress} size={11} />}</div>
         {member.activity && (
           <div className="member-activity">
             {activityLabel(member.activity.type)} {member.activity.name}
