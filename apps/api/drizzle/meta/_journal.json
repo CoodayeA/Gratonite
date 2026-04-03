@@ -29,6 +29,13 @@
       "when": 1776000000000,
       "tag": "0003_notification_quiet_hours",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776100000000,
+      "tag": "0004_default_member_notification_level",
+      "breakpoints": true
     }
   ]
 }
