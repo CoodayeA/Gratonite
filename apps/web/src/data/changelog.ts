@@ -10,8 +10,8 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    id: '2026-04-10a',
-    date: 'April 10, 2026',
+    id: '2026-04-03b',
+    date: 'April 3, 2026',
     title: 'Search, quiet hours, privacy & admin tools',
     entries: [
       { type: 'feature', text: 'Server-wide search filters — narrow results by server, person, date range, “mentions me,” or messages that have files, images, links, or embeds' },
