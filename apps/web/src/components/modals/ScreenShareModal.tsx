@@ -121,19 +121,20 @@ const ScreenShareModal = ({
                     } as any,
                 });
 
-                // Try to get system audio separately
+                // System / loopback audio: same chromeMediaSourceId as video (Windows loopback)
                 try {
                     const audioStream = await navigator.mediaDevices.getUserMedia({
                         audio: {
                             mandatory: {
                                 chromeMediaSource: 'desktop',
+                                chromeMediaSourceId: selectedSourceId,
                             },
-                        } as any,
+                        },
                         video: false,
-                    });
+                    } as MediaStreamConstraints);
                     audioStream.getAudioTracks().forEach(track => stream.addTrack(track));
                 } catch {
-                    // Audio capture not available on all platforms
+                    // Audio capture not available on all platforms (e.g. some macOS builds)
                 }
             } else {
                 // Standard browser path

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage, globalShortcut, Notification, crashReporter, powerMonitor, screen, dialog, desktopCapturer, systemPreferences } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage, globalShortcut, Notification, crashReporter, powerMonitor, screen, dialog, desktopCapturer, systemPreferences, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -970,6 +970,15 @@ function createAppMenu() {
 }
 
 app.whenReady().then(() => {
+  // Allow getDisplayMedia / desktop getUserMedia in the renderer (required on some platforms)
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    if (permission === 'media' || permission === 'display-capture' || permission === 'screen') {
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
+
   createAppMenu();
   createWindow();
   createTray();
