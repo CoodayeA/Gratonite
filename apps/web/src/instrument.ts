@@ -1,7 +1,10 @@
 import * as Sentry from "@sentry/react";
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.gratonite.chat/api/v1';
-const SENTRY_TUNNEL_URL = `${API_URL.replace(/\/$/, '')}/sentry-tunnel`;
+const rawApiBase = import.meta.env.VITE_API_URL ?? '/api/v1';
+const API_BASE = rawApiBase.endsWith('/api/v1')
+  ? rawApiBase
+  : `${rawApiBase.replace(/\/$/, '')}/api/v1`;
+const SENTRY_TUNNEL_URL = `${API_BASE.replace(/\/$/, '')}/sentry-tunnel`;
 
 // Expose for console testing
 (window as any).Sentry = Sentry;
