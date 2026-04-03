@@ -10,6 +10,23 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-04-03c',
+    date: 'April 3, 2026',
+    title: 'Search polish, voice diagnostics, mobile parity & update reliability',
+    entries: [
+      { type: 'feature', text: 'Saved searches — bookmark named searches on the full Search page (Save / rename / delete) and open that page from the sidebar Search row' },
+      { type: 'improvement', text: 'Mobile: configure notification quiet hours in Settings → Notifications — same schedule as desktop (time window + days)' },
+      { type: 'feature', text: 'Federated messages show a globe next to the author on mobile when a message came from another instance' },
+      { type: 'improvement', text: 'Voice channels: use Connection in the call menu to see connection state and local quality hints when something feels off' },
+      { type: 'feature', text: 'Privacy & Safety: Quick Links to blocked/muted users, data export, and DM privacy — one place to jump to the important controls' },
+      { type: 'feature', text: 'Server admins can set a default notification level for new members (guild / portal settings)' },
+      { type: 'improvement', text: 'Discover: preview another instance’s federation info before you connect' },
+      { type: 'fix', text: 'Updates and deploys: the app fetches fresh scripts more reliably after a release — if you ever see a load error, use Reload or a hard refresh (Ctrl+Shift+R)' },
+      { type: 'improvement', text: 'Search uses a full-text index on the server for faster results on large communities' },
+      { type: 'improvement', text: 'Integrations: expanded API docs (search, webhooks) and a webhook events reference for bot builders' },
+    ],
+  },
+  {
     id: '2026-04-03b',
     date: 'April 3, 2026',
     title: 'Search, quiet hours, privacy & admin tools',
