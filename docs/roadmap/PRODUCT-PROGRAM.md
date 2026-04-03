@@ -4,6 +4,8 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 
 **Legend:** ✅ shipped in tree | 🔶 partial / iterate | 📋 planned next slice
 
+**When something ships:** update the **Status** column in the tables below to ✅ (or 🔶), then **append one line** to [Completion log](#completion-log) with the date and initiative name so we have an audit trail.
+
 ---
 
 ## Dependency order (do not skip)
@@ -160,6 +162,18 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 
 - Pick **one epic** per PR when possible; link PR title to a row here.
 - **Do not** land unrelated refactors with feature work.
-- After each merge, update this file’s **Status** column when an initiative moves ✅.
+- After each merge, update this file’s **Status** column when an initiative moves ✅, and add a **Completion log** entry.
 
-Last reviewed: 2026-04-03 — search `guildId` enforcement, DND schedule UI ↔ `dnd_schedules` API, admin backup doc link, roadmap verification note.
+---
+
+## Completion log
+
+| Date       | Initiative | Status |
+| ---------- | ---------- | ------ |
+| 2026-04-03 | Server-wide search filters (`guildId`, author, date, `has`, `mentionsMe`) | ✅ |
+| 2026-04-03 | Scheduled DND window (auto presence); UI ↔ `/users/@me/dnd-schedule` | ✅ |
+| 2026-04-03 | Account data export (GDPR job + routes) | ✅ |
+| 2026-04-03 | Email volume defaults + migration `0002` (documented in § Email) | ✅ (policy) |
+| 2026-04-03 | In-product backup entry point (Admin → Self-host backups → docs) | 🔶 |
+
+Last reviewed: 2026-04-03 — tables above synced with shipped code; completion log started.

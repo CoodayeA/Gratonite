@@ -13,6 +13,17 @@ Gratonite is production-ready with **140** database schemas, **134** API route m
 - **Near-term / mid-term / long-term** lists are planning intent, not commitments with dates.
 - For a finer-grained initiative matrix (search, notifications, federation, operators), see [`docs/roadmap/PRODUCT-PROGRAM.md`](docs/roadmap/PRODUCT-PROGRAM.md).
 
+### Product program — checked off (sync with docs)
+
+Track detailed status in [`docs/roadmap/PRODUCT-PROGRAM.md`](docs/roadmap/PRODUCT-PROGRAM.md) (tables + **Completion log**). Roadmap-level confirmations:
+
+- [x] **Search:** server-wide filters (guild, author, date range, `has:*`, mentions-me) — see *Shipped → Core Platform*
+- [x] **Privacy:** GDPR account data export — see *Shipped → Moderation*
+- [x] **Email:** transactional-by-default policy + migration defaults — see *Shipped → Email and Notifications*
+- [x] **Presence:** scheduled DND window (settings + `dnd_schedules` + job) — covered in product program § Notifications
+- [x] **Operator backup entry point:** Admin → Self-host backups → documentation (full one-click / copy UX still 🔶 in product program §6)
+- [ ] **Quiet hours** (notification muting by time, distinct from DND presence) — still 📋 in product program
+
 ---
 
 ## Shipped
