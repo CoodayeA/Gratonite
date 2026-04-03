@@ -56,7 +56,7 @@ archive/
 .claude/
 docs/superpowers/
 
-# AI coding agent skill files
+# Local editor / tooling artifacts (keep out of version control)
 .agent/
 .agents/
 .factory/
@@ -65,6 +65,7 @@ docs/superpowers/
 .windsurf/
 skills/
 skills-lock.json
+.swarm/
 
 # Internal-only planning (never push to GitHub — keep local copies)
 docs/release-runbook.md
