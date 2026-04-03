@@ -4,7 +4,7 @@ import gsap from 'gsap';
 import {
     Reply, Smile, Image as ImageIcon, Share2, FileText,
     Pause, MessageSquare, MoreHorizontal, Plus, Mic, Play,
-    ThumbsUp, Star, Edit2, Eye, Zap, Code
+    ThumbsUp, Star, Edit2, Eye, Zap, Code, Globe
 } from 'lucide-react';
 import { API_BASE } from '../../lib/api';
 import { api } from '../../lib/api';
@@ -462,7 +462,13 @@ export const MemoizedMessageItem = memo(({
                                     onMouseLeave={cancelUserPrefetch}
                                     style={{ cursor: msg.system ? 'default' : 'pointer', color: msg.authorRoleColor || undefined, fontSize: '13px' }}
                                 >
-                                    {msg.author}{msg.isBot && <span style={{ display: 'inline-block', marginLeft: '4px', background: 'var(--accent-primary)', color: '#000', fontSize: '9px', fontWeight: 700, padding: '1px 4px', borderRadius: '3px', verticalAlign: 'middle', letterSpacing: '0.5px', lineHeight: '14px' }}>BOT</span>}:
+                                    {msg.author}{msg.isBot && <span style={{ display: 'inline-block', marginLeft: '4px', background: 'var(--accent-primary)', color: '#000', fontSize: '9px', fontWeight: 700, padding: '1px 4px', borderRadius: '3px', verticalAlign: 'middle', letterSpacing: '0.5px', lineHeight: '14px' }}>BOT</span>}{msg.isFederated && (
+                                        <Tooltip content="Remote instance" position="top" delay={200}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '6px', verticalAlign: 'middle', color: 'var(--text-muted)' }} aria-label="Federated message">
+                                                <Globe size={12} strokeWidth={2.5} />
+                                            </span>
+                                        </Tooltip>
+                                    )}:
                                 </span>
                             </div>
                         )
@@ -477,7 +483,13 @@ export const MemoizedMessageItem = memo(({
                                     onMouseLeave={cancelUserPrefetch}
                                     style={{ cursor: msg.system ? 'default' : 'pointer', color: msg.authorRoleColor || undefined }}
                                 >
-                                    {msg.author}
+                                    {msg.author}{msg.isFederated && (
+                                        <Tooltip content="Remote instance" position="top" delay={200}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '6px', verticalAlign: 'middle', color: 'var(--text-muted)' }} aria-label="Federated message">
+                                                <Globe size={12} strokeWidth={2.5} />
+                                            </span>
+                                        </Tooltip>
+                                    )}
                                 </span>
                                 <Tooltip content={msg.createdAt ? new Date(msg.createdAt).toLocaleString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : msg.time} position="top" delay={200}>
                                     <span className="msg-timestamp">{msg.time}</span>

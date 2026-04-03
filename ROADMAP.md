@@ -21,9 +21,9 @@ Track detailed status in [`docs/roadmap/PRODUCT-PROGRAM.md`](docs/roadmap/PRODUC
 - [x] **Privacy:** GDPR account data export — see *Shipped → Moderation*
 - [x] **Email:** transactional-by-default policy + migration defaults — see *Shipped → Email and Notifications*
 - [x] **Presence:** scheduled DND window (settings + `dnd_schedules` + job) — covered in product program § Notifications
-- [x] **Operator backup entry point:** Admin → Self-host backups → documentation (full one-click / copy UX still 🔶 in product program §6)
+- [x] **Operator backup entry point:** Admin → Self-host backups → documentation + copy helpers (product program §6)
 - [x] **Notification quiet hours** (user-level: mute alerts + digest email by time window; distinct from DND presence) — see product program § Notifications
-- [ ] **Per-guild notification master rules** — 📋 in product program
+- [x] **Per-guild notification master rules** — default level for new members (see product program § Notifications)
 
 ---
 

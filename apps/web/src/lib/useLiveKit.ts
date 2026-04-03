@@ -325,6 +325,13 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
         selfMute: isMuted,
         selfDeaf: isDeafened,
       });
+
+      let musicMode = false;
+      try {
+        musicMode = localStorage.getItem('voiceMusicMode') === 'true';
+      } catch {
+        musicMode = false;
+      }
       
       // Create new room
       const room = new Room({
@@ -334,9 +341,9 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
           resolution: { width: 1280, height: 720, frameRate: 30 },
         },
         audioCaptureDefaults: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
+          echoCancellation: !musicMode,
+          noiseSuppression: !musicMode,
+          autoGainControl: !musicMode,
         },
       });
       

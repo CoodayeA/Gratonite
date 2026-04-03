@@ -62,6 +62,8 @@ export type Message = {
     embeds?: Array<{ url: string; title?: string; description?: string; image?: string; siteName?: string; type?: string; color?: string; fields?: any[]; thumbnail?: string; footer?: string }>;
     components?: any[];
     isBot?: boolean;
+    /** True when message originated on another instance (federation). */
+    isFederated?: boolean;
     isEncrypted?: boolean;
     encryptedContent?: string | null;
     expiresAt?: string | null;

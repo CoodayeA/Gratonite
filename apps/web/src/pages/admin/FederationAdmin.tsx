@@ -254,6 +254,9 @@ export default function FederationAdmin() {
         {/* ── Abuse Reports ── */}
         {tab === 'reports' && !loading && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 4px', lineHeight: 1.45 }}>
+              Cross-instance issues: coordinate with the remote instance admin when possible; use <strong>Blocks</strong> for repeat abuse from a domain.
+            </p>
             {reports.map((r: any) => (
               <Card key={r.id} style={{ borderLeft: `3px solid ${r.status === 'pending' ? '#ef4444' : '#6b7280'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>

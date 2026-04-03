@@ -9,6 +9,7 @@ import {
   Search, UserPlus, Check, X, AlertTriangle, Palette, Activity, Database,
 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { ApiRequestError } from '../../lib/api/_core';
 import { useToast } from '../../components/ui/ToastManager';
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/api\/v1$/, '');
@@ -64,6 +65,13 @@ type HealthPayload = {
   memory?: { rss?: number; heapUsed?: number };
 };
 
+type SystemHealthPayload = {
+  disk: { freeMb: number; totalMb: number; path: string } | null;
+  livekit: { configured: boolean; reachable: boolean | null; url: string | null };
+  db: { ok: boolean };
+  redis: { ok: boolean };
+};
+
 export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -72,6 +80,8 @@ export default function AdminDashboard() {
   const [health, setHealth] = useState<HealthPayload | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
   const [healthError, setHealthError] = useState<string | null>(null);
+  const [systemHealth, setSystemHealth] = useState<SystemHealthPayload | null>(null);
+  const [systemHealthError, setSystemHealthError] = useState<string | null>(null);
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -95,6 +105,38 @@ export default function AdminDashboard() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setSystemHealthError(null);
+      try {
+        const data = await api.get<SystemHealthPayload>('/admin/system-health');
+        if (!cancelled) setSystemHealth(data);
+      } catch (e: unknown) {
+        if (!cancelled) {
+          if (e instanceof ApiRequestError && e.status === 403) {
+            setSystemHealth(null);
+            setSystemHealthError('');
+            return;
+          }
+          const msg = e instanceof Error ? e.message : 'Unavailable';
+          setSystemHealth(null);
+          setSystemHealthError(msg);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const copyText = async (label: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      addToast({ title: `${label} copied`, variant: 'success' });
+    } catch {
+      addToast({ title: 'Copy failed', variant: 'error' });
+    }
+  };
 
   const searchUsers = async (query: string) => {
     if (query.trim().length < 2) { setSearchResults([]); return; }
@@ -181,8 +223,74 @@ export default function AdminDashboard() {
             </div>
           )}
           <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '12px 0 0', lineHeight: 1.4 }}>
-            Source: <code style={{ fontSize: '10px' }}>{API_BASE}/health</code>. For full infrastructure (disk, LiveKit, containers), use server SSH and compose per the self-host docs.
+            Source: <code style={{ fontSize: '10px' }}>{API_BASE}/health</code>. Platform admins also see extended metrics below.
           </p>
+        </div>
+
+        {systemHealth && (
+          <div style={{ background: 'var(--bg-secondary, #1a1a2e)', borderRadius: '14px', border: '1px solid var(--stroke, #2a2a3e)', padding: '20px', marginBottom: '28px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <Database size={18} color="#0ea5e9" />
+              <h2 style={{ fontSize: '15px', fontWeight: 600, margin: 0 }}>Operator metrics</h2>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px', fontSize: '13px' }}>
+              <div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Disk free</div>
+                <div style={{ fontWeight: 600 }}>
+                  {systemHealth.disk ? `${systemHealth.disk.freeMb} MB / ${systemHealth.disk.totalMb} MB` : '—'}
+                </div>
+              </div>
+              <div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>LiveKit</div>
+                <div style={{ fontWeight: 600 }}>
+                  {!systemHealth.livekit.configured ? 'Not configured' : systemHealth.livekit.reachable === null ? 'Configured' : systemHealth.livekit.reachable ? 'Reachable' : 'Unreachable'}
+                </div>
+              </div>
+              <div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>DB ping</div>
+                <div style={{ fontWeight: 600, color: systemHealth.db.ok ? '#34d399' : '#f87171' }}>{systemHealth.db.ok ? 'OK' : 'Fail'}</div>
+              </div>
+              <div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Redis ping</div>
+                <div style={{ fontWeight: 600, color: systemHealth.redis.ok ? '#34d399' : '#f87171' }}>{systemHealth.redis.ok ? 'OK' : 'Fail'}</div>
+              </div>
+            </div>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '12px 0 0', lineHeight: 1.4 }}>
+              <code style={{ fontSize: '10px' }}>GET /api/v1/admin/system-health</code> (platform admin only). Disk path: {systemHealth.disk?.path ?? '—'}.
+            </p>
+          </div>
+        )}
+        {systemHealthError && (
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '-20px 0 28px' }}>{systemHealthError}</p>
+        )}
+
+        <div style={{ background: 'var(--bg-secondary, #1a1a2e)', borderRadius: '14px', border: '1px solid var(--stroke, #2a2a3e)', padding: '20px', marginBottom: '28px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <Database size={18} color="#10b981" />
+            <h2 style={{ fontSize: '15px', fontWeight: 600, margin: 0 }}>Self-host backup hints</h2>
+          </div>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 12px', lineHeight: 1.45 }}>
+            Copy a generic Postgres dump command for your compose stack. Adjust service and database names to match your deployment.
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => void copyText('Docs link', 'https://gratonite.chat/docs/self-hosting')}
+              style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+            >
+              Copy docs URL
+            </button>
+            <button
+              type="button"
+              onClick={() => void copyText(
+                'pg_dump example',
+                'docker compose -f deploy/docker-compose.production.yml exec -T postgres pg_dump -U gratonite -Fc > gratonite-backup.dump',
+              )}
+              style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+            >
+              Copy pg_dump example
+            </button>
+          </div>
         </div>
 
         {/* Quick Action: Promote User to Admin */}

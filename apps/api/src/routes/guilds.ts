@@ -251,6 +251,7 @@ const updateGuildSchema = z.object({
   publicStatsEnabled: z.boolean().optional(),
   spotlightChannelId: z.string().uuid().nullable().optional(),
   spotlightMessage: z.string().max(2000).nullable().optional(),
+  defaultMemberNotificationLevel: z.enum(['all', 'mentions', 'nothing']).nullable().optional(),
 });
 
 /**

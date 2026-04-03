@@ -184,6 +184,12 @@ export const guilds = pgTable('guilds', {
 
   /** Whether public stats page is enabled for this guild. */
   publicStatsEnabled: boolean('public_stats_enabled').notNull().default(false),
+
+  /**
+   * Default per-guild notification level for members who have not set their own
+   * `notif:guild:<id>` preference yet (stored in Redis). Null = no server default.
+   */
+  defaultMemberNotificationLevel: varchar('default_member_notification_level', { length: 20 }),
 });
 
 /**

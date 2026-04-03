@@ -18,6 +18,7 @@ import { toRows } from '../lib/to-rows.js';
 import crypto from 'crypto';
 import { recordActivity } from './activity';
 import { handleAppError, normalizeError } from '../lib/errors';
+import { seedDefaultGuildNotificationIfUnset } from '../lib/seedDefaultGuildNotification';
 
 export const invitesRouter = Router();
 
@@ -164,7 +165,11 @@ invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Resp
 
   // Fallback: check if this is a vanity code
   if (!invite) {
-    const [vanityGuild] = await db.select({ id: guilds.id }).from(guilds).where(eq(guilds.vanityCode, code)).limit(1);
+    const [vanityGuild] = await db
+      .select({ id: guilds.id, defaultMemberNotificationLevel: guilds.defaultMemberNotificationLevel })
+      .from(guilds)
+      .where(eq(guilds.vanityCode, code))
+      .limit(1);
     if (!vanityGuild) { res.status(404).json({ code: 'NOT_FOUND', message: 'Invite not found' }); return; }
 
     // Check ban BEFORE raid detection so banned users can't trigger lockdown
@@ -199,6 +204,12 @@ invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Resp
     // Join guild via vanity code
     await db.insert(guildMembers).values({ guildId: vanityGuild.id, userId: req.userId! });
     await db.update(guilds).set({ memberCount: sql`${guilds.memberCount} + 1` }).where(eq(guilds.id, vanityGuild.id));
+
+    await seedDefaultGuildNotificationIfUnset(
+      req.userId!,
+      vanityGuild.id,
+      vanityGuild.defaultMemberNotificationLevel,
+    );
 
     const [user] = await db.select({ id: users.id, username: users.username, displayName: users.displayName, avatarHash: users.avatarHash })
       .from(users).where(eq(users.id, req.userId!)).limit(1);
@@ -250,6 +261,17 @@ invitesRouter.post('/invites/:code', requireAuth, async (req: Request, res: Resp
   // Join guild
   await db.insert(guildMembers).values({ guildId: invite.guildId, userId: req.userId! });
   await db.update(guilds).set({ memberCount: sql`${guilds.memberCount} + 1` }).where(eq(guilds.id, invite.guildId));
+
+  const [joinedGuildDefaults] = await db
+    .select({ defaultMemberNotificationLevel: guilds.defaultMemberNotificationLevel })
+    .from(guilds)
+    .where(eq(guilds.id, invite.guildId))
+    .limit(1);
+  await seedDefaultGuildNotificationIfUnset(
+    req.userId!,
+    invite.guildId,
+    joinedGuildDefaults?.defaultMemberNotificationLevel,
+  );
 
   // Increment uses
   await db.update(guildInvites).set({ uses: invite.uses + 1 }).where(eq(guildInvites.code, code));

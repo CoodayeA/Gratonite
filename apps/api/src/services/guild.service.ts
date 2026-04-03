@@ -221,6 +221,7 @@ export class GuildService {
       publicStatsEnabled?: boolean;
       spotlightChannelId?: string | null;
       spotlightMessage?: string | null;
+      defaultMemberNotificationLevel?: 'all' | 'mentions' | 'nothing' | null;
     },
   ) {
     // Verify membership
@@ -258,6 +259,9 @@ export class GuildService {
     if (data.spotlightChannelId !== undefined) updateData.spotlightChannelId = data.spotlightChannelId;
     if (data.spotlightMessage !== undefined) updateData.spotlightMessage = data.spotlightMessage;
     if (data.publicStatsEnabled !== undefined) updateData.publicStatsEnabled = data.publicStatsEnabled;
+    if (data.defaultMemberNotificationLevel !== undefined) {
+      updateData.defaultMemberNotificationLevel = data.defaultMemberNotificationLevel;
+    }
 
     const [updated] = await db
       .update(guilds)
@@ -290,6 +294,9 @@ export class GuildService {
     if (data.accentColor !== undefined) changes.accentColor = data.accentColor;
     if (data.category !== undefined) changes.category = data.category;
     if (data.tags !== undefined) changes.tags = data.tags;
+    if (data.defaultMemberNotificationLevel !== undefined) {
+      changes.defaultMemberNotificationLevel = data.defaultMemberNotificationLevel;
+    }
     logAuditEvent(guildId, userId, AuditActionTypes.GUILD_UPDATE, guildId, 'GUILD', changes);
 
     // Emit real-time guild update to all members
