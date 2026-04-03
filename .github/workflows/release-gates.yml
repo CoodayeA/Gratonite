@@ -45,6 +45,9 @@ jobs:
       - name: OpenAPI spec — validate
         run: pnpm --filter gratonite-api run validate:openapi
 
+      - name: OpenAPI — coverage threshold (≥25 paths)
+        run: pnpm --filter gratonite-api run validate:openapi-coverage
+
       # Web: same Vite-only build as production deploy (avoids known tsc issues in Setup.tsx)
       - name: Web — lint, guard, Vite build
         run: |

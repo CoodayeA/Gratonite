@@ -21,7 +21,8 @@
     "guard:placeholders": "node ../../tools/placeholder-guard.mjs",
     "verify:prod": "pnpm run build && pnpm run lint && pnpm run guard:placeholders",
     "verify:release": "pnpm run build && pnpm run guard:placeholders && pnpm run gate:data && pnpm run test:guild-get-contract && pnpm run lint",
-    "validate:openapi": "node ./scripts/validate-openapi.mjs"
+    "validate:openapi": "node ./scripts/validate-openapi.mjs",
+    "validate:openapi-coverage": "node ../../tools/check-openapi-coverage.mjs"
   },
   "dependencies": {
     "@bull-board/api": "^6.20.5",
