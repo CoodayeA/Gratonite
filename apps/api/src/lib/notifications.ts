@@ -12,11 +12,14 @@
  *   });
  */
 
+import { eq } from 'drizzle-orm';
 import { db } from '../db/index';
 import { logger } from './logger';
 import { notifications } from '../db/schema/notifications';
+import { userSettings } from '../db/schema/settings';
 import { getIO } from './socket-io';
 import { redis } from './redis';
+import { isWithinNotificationQuietHours } from './notificationQuietHours';
 
 export interface CreateNotificationParams {
   userId: string;
@@ -30,9 +33,8 @@ export interface CreateNotificationParams {
  * Insert a notification row and emit a NOTIFICATION_CREATE socket event
  * to the target user's private room.
  *
- * If the target user is in DND mode, the notification is still persisted
- * (so they see it when they leave DND) but the real-time socket event
- * is suppressed.
+ * If the target user is in DND mode or notification quiet hours, the row is still persisted
+ * (so they see it later) but the real-time socket event is suppressed.
  */
 export async function createNotification(params: CreateNotificationParams): Promise<void> {
   try {
@@ -54,6 +56,19 @@ export async function createNotification(params: CreateNotificationParams): Prom
       if (status === 'dnd') suppress = true;
     } catch {
       // Redis down — don't suppress
+    }
+
+    if (!suppress) {
+      try {
+        const [row] = await db
+          .select({ qh: userSettings.notificationQuietHours })
+          .from(userSettings)
+          .where(eq(userSettings.userId, params.userId))
+          .limit(1);
+        if (isWithinNotificationQuietHours(row?.qh)) suppress = true;
+      } catch {
+        /* ignore */
+      }
     }
 
     // Emit to the user's private room so they get a real-time notification

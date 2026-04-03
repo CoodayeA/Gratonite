@@ -9,6 +9,7 @@ import { validate } from '../middleware/validate';
 import { redis } from '../lib/redis';
 import { safeJsonParse } from '../lib/safe-json.js';
 import { DEFAULT_EMAIL_NOTIFICATIONS, mergeEmailNotificationsJson } from '../lib/emailNotificationPrefs';
+import { mergeNotificationQuietHoursJson } from '../lib/notificationQuietHours';
 
 export const settingsRouter = Router();
 
@@ -49,6 +50,16 @@ const patchSettingsSchema = z.object({
     /** Opt-in: new sign-in from unrecognized device (not verification / password reset) */
     securityAlerts: z.boolean().optional(),
   }).optional(),
+  notificationQuietHours: z
+    .object({
+      enabled: z.boolean(),
+      startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+      endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+      timezone: z.string().max(64).optional(),
+      days: z.array(z.number().int().min(0).max(6)).min(1).max(7),
+    })
+    .nullable()
+    .optional(),
   // Item 86: DND scheduling
   dndSchedule: z.object({
     enabled: z.boolean(),
@@ -101,6 +112,7 @@ settingsRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
         customThemeId: null,
         themePreferences: null,
         emailNotifications: { ...DEFAULT_EMAIL_NOTIFICATIONS },
+        notificationQuietHours: null,
       });
       return;
     }
@@ -127,7 +139,11 @@ settingsRouter.patch(
 
       // Upsert
       const [existing] = await db
-        .select({ id: userSettings.id, emailNotifications: userSettings.emailNotifications })
+        .select({
+          id: userSettings.id,
+          emailNotifications: userSettings.emailNotifications,
+          notificationQuietHours: userSettings.notificationQuietHours,
+        })
         .from(userSettings)
         .where(eq(userSettings.userId, req.userId!))
         .limit(1);
@@ -138,6 +154,14 @@ settingsRouter.patch(
           ...mergeEmailNotificationsJson(existing?.emailNotifications),
           ...incomingEmail,
         };
+      }
+
+      const incomingQh = (req.body as z.infer<typeof patchSettingsSchema>).notificationQuietHours;
+      if (incomingQh !== undefined) {
+        data.notificationQuietHours = mergeNotificationQuietHoursJson(
+          existing?.notificationQuietHours,
+          incomingQh,
+        );
       }
 
       if (existing) {

@@ -35,6 +35,8 @@ export const userSettings = pgTable('user_settings', {
     frequency: 'never',
     securityAlerts: false,
   }),
+  /** Suppress notification fan-out + digest email during this window (distinct from presence DND). */
+  notificationQuietHours: jsonb('notification_quiet_hours'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

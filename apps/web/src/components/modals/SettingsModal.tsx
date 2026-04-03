@@ -1994,6 +1994,15 @@ function SettingsNotificationsPanel() {
                 </div>
             </div>
 
+            {/* Notification quiet hours — suppress in-app/socket alerts + unread digest email; distinct from DND presence */}
+            <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Notification quiet hours</h3>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.45 }}>
+                    Pause notification alerts and unread digest emails during these hours. This does not change your online status — use Do Not Disturb schedule below for that.
+                </p>
+                <NotificationQuietHoursPanel />
+            </div>
+
             {/* Item 86: DND Schedule */}
             <div style={{ marginBottom: '32px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Do Not Disturb Schedule</h3>
@@ -2001,6 +2010,92 @@ function SettingsNotificationsPanel() {
                 <DndSchedulePanel />
             </div>
         </>
+    );
+}
+
+function NotificationQuietHoursPanel() {
+    const { addToast } = useToast();
+    const [enabled, setEnabled] = useState(false);
+    const [startHour, setStartHour] = useState(22);
+    const [startMinute, setStartMinute] = useState(0);
+    const [endHour, setEndHour] = useState(7);
+    const [endMinute, setEndMinute] = useState(0);
+    const [saving, setSaving] = useState(false);
+
+    const padHour = (n: number) => String(Math.min(23, Math.max(0, n))).padStart(2, '0');
+    const padMinute = (n: number) => String(Math.min(59, Math.max(0, n))).padStart(2, '0');
+
+    useEffect(() => {
+        api.users.getSettings().then((s: Record<string, unknown>) => {
+            const qh = s?.notificationQuietHours as {
+                enabled?: boolean;
+                startTime?: string;
+                endTime?: string;
+            } | null | undefined;
+            if (!qh) return;
+            setEnabled(qh.enabled === true);
+            if (qh.startTime) {
+                const [sh, sm] = qh.startTime.split(':').map(Number);
+                if (Number.isFinite(sh)) setStartHour(sh);
+                if (Number.isFinite(sm)) setStartMinute(sm);
+            }
+            if (qh.endTime) {
+                const [eh, em] = qh.endTime.split(':').map(Number);
+                if (Number.isFinite(eh)) setEndHour(eh);
+                if (Number.isFinite(em)) setEndMinute(em);
+            }
+        }).catch(() => {});
+    }, []);
+
+    const save = async () => {
+        setSaving(true);
+        try {
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+            await api.users.updateSettings({
+                notificationQuietHours: {
+                    enabled,
+                    startTime: `${padHour(startHour)}:${padMinute(startMinute)}`,
+                    endTime: `${padHour(endHour)}:${padMinute(endMinute)}`,
+                    timezone: tz,
+                    days: [0, 1, 2, 3, 4, 5, 6],
+                },
+            });
+            addToast({ title: 'Notification quiet hours saved', variant: 'success' });
+        } catch {
+            addToast({ title: 'Could not save quiet hours', variant: 'error' });
+        } finally { setSaving(false); }
+    };
+
+    const timeInput = { padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', width: '60px', textAlign: 'center' as const };
+
+    return (
+        <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', padding: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
+                <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 500 }}>Enable quiet hours</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>While on, new notification toasts are held until after this window (inbox still updates).</div>
+                </div>
+                <div
+                    onClick={() => { setEnabled(!enabled); }}
+                    style={{ width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', background: enabled ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: `1px solid ${enabled ? 'transparent' : 'var(--stroke)'}`, position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
+                >
+                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: enabled ? '22px' : '2px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+                </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>From</span>
+                <input type="number" min={0} max={23} value={startHour} onChange={e => setStartHour(+e.target.value)} style={timeInput} />
+                <span>:</span>
+                <input type="number" min={0} max={59} value={startMinute} onChange={e => setStartMinute(+e.target.value)} style={timeInput} />
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', marginLeft: '8px' }}>To</span>
+                <input type="number" min={0} max={23} value={endHour} onChange={e => setEndHour(+e.target.value)} style={timeInput} />
+                <span>:</span>
+                <input type="number" min={0} max={59} value={endMinute} onChange={e => setEndMinute(+e.target.value)} style={timeInput} />
+                <button type="button" onClick={save} disabled={saving} style={{ marginLeft: 'auto', padding: '6px 16px', borderRadius: '6px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 600, cursor: 'pointer', fontSize: '12px' }}>
+                    {saving ? '...' : 'Save'}
+                </button>
+            </div>
+        </div>
     );
 }
 

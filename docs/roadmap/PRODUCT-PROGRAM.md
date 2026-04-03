@@ -60,11 +60,12 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 | Per-channel notification prefs + mute | ✅      | `NotificationPrefsModal.tsx`, `channel-notification-prefs` API                                      |
 | Web push + email prefs                | ✅      | `SettingsModal` — email defaults opt-out; verification/reset always                                 |
 | Scheduled DND window (auto presence)  | ✅      | `GET/PUT /users/@me/dnd-schedule`, `jobs/dndSchedule.ts`, `DndSchedulePanel` in `SettingsModal.tsx` |
-| Quiet hours / per-guild master rules  | 📋     | Notification muting by time window (distinct from status DND schedule)                              |
+| Notification quiet hours (user-level) | ✅      | `user_settings.notification_quiet_hours`, `lib/notificationQuietHours.ts`, `createNotification`, `jobs/emailNotifications.ts`, `NotificationQuietHoursPanel` in `SettingsModal.tsx`; migration `0003_notification_quiet_hours.sql` |
+| Per-guild notification master rules   | 📋     | Server fields + UI for default mute level by guild                                                  |
 | Mobile granular prefs                 | 🔶     | Local-only until server fields exist (`SettingsNotificationsScreen.tsx`)                            |
 
 
-**Next slices:** persist quiet hours server-side; align mobile with web prefs.
+**Next slices:** per-guild master rules; align mobile with web prefs (including quiet hours JSON).
 
 ---
 
@@ -168,12 +169,15 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 
 ## Completion log
 
-| Date       | Initiative | Status |
-| ---------- | ---------- | ------ |
-| 2026-04-03 | Server-wide search filters (`guildId`, author, date, `has`, `mentionsMe`) | ✅ |
-| 2026-04-03 | Scheduled DND window (auto presence); UI ↔ `/users/@me/dnd-schedule` | ✅ |
-| 2026-04-03 | Account data export (GDPR job + routes) | ✅ |
-| 2026-04-03 | Email volume defaults + migration `0002` (documented in § Email) | ✅ (policy) |
-| 2026-04-03 | In-product backup entry point (Admin → Self-host backups → docs) | 🔶 |
 
-Last reviewed: 2026-04-03 — tables above synced with shipped code; completion log started.
+| Date       | Initiative                                                                | Status     |
+| ---------- | ------------------------------------------------------------------------- | ---------- |
+| 2026-04-03 | Server-wide search filters (`guildId`, author, date, `has`, `mentionsMe`) | ✅          |
+| 2026-04-03 | Scheduled DND window (auto presence); UI ↔ `/users/@me/dnd-schedule`      | ✅          |
+| 2026-04-03 | Account data export (GDPR job + routes)                                   | ✅          |
+| 2026-04-03 | Email volume defaults + migration `0002` (documented in § Email)          | ✅ (policy) |
+| 2026-04-03 | In-product backup entry point (Admin → Self-host backups → docs)          | 🔶         |
+| 2026-04-04 | Notification quiet hours (user-level): `notification_quiet_hours` + API + jobs + Settings UI | ✅         |
+
+
+Last reviewed: 2026-04-04 — notification quiet hours shipped; per-guild master rules still 📋.
