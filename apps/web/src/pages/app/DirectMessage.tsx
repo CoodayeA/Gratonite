@@ -17,7 +17,7 @@ import { LazyEmbed, type OgEmbed } from '../../components/chat/EmbedCard';
 import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
-import { api, ApiRequestError, API_BASE, getAccessToken } from '../../lib/api';
+import { api, ApiRequestError, RateLimitError, API_BASE, getAccessToken } from '../../lib/api';
 import { markRead as markReadStore } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
 import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onMessageRead, onCallAnswer, onCallReject, onPresenceUpdate, onThreadCreate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type MessageReadPayload, type PresenceUpdatePayload } from '../../lib/socket';
@@ -228,6 +228,10 @@ const DirectMessage = () => {
 
     const [dmChannelId, setDmChannelId] = useState<string>('');
     const [isResolvingDmChannel, setIsResolvingDmChannel] = useState(false);
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [isLoadingMessages, setIsLoadingMessages] = useState(true);
+    const [messagesError, setMessagesError] = useState(false);
+    const [messagesErrorDetail, setMessagesErrorDetail] = useState<string | null>(null);
 
     const resolveDmChannelId = useCallback(async (routeId: string) => {
         let channel: any = null;
@@ -260,6 +264,7 @@ const DirectMessage = () => {
             if (!id) {
                 setDmChannelId('');
                 setIsResolvingDmChannel(false);
+                setIsLoadingMessages(false);
                 return;
             }
 
@@ -278,6 +283,7 @@ const DirectMessage = () => {
                 const description = err instanceof Error ? err.message : 'Could not resolve this conversation.';
                 addToast({ title: 'Conversation unavailable', description, variant: 'error' });
                 setDmChannelId('');
+                setIsLoadingMessages(false);
             } finally {
                 if (!cancelled) setIsResolvingDmChannel(false);
             }
@@ -700,9 +706,6 @@ const DirectMessage = () => {
 
     // Fetch messages from API
     const userCacheRef = useRef<Map<string, { username: string; displayName: string }>>(new Map());
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [isLoadingMessages, setIsLoadingMessages] = useState(true);
-    const [messagesError, setMessagesError] = useState(false);
     const [hasMoreMessages, setHasMoreMessages] = useState(true);
     const [isLoadingOlder, setIsLoadingOlder] = useState(false);
     const oldestMessageIdRef = useRef<string | null>(null);
@@ -749,6 +752,7 @@ const DirectMessage = () => {
         if (!dmChannelId) return;
         setIsLoadingMessages(true);
         setMessagesError(false);
+        setMessagesErrorDetail(null);
         setHasMoreMessages(true);
         oldestMessageIdRef.current = null;
         try {
@@ -770,8 +774,17 @@ const DirectMessage = () => {
             if (apiMessages.length < 50) {
                 setHasMoreMessages(false);
             }
-        } catch {
+        } catch (err) {
             setMessagesError(true);
+            if (err instanceof ApiRequestError) {
+                setMessagesErrorDetail(err.message);
+            } else if (err instanceof RateLimitError) {
+                setMessagesErrorDetail(err.message);
+            } else if (err instanceof Error && err.message) {
+                setMessagesErrorDetail(err.message);
+            } else {
+                setMessagesErrorDetail(null);
+            }
         } finally {
             setIsLoadingMessages(false);
         }
@@ -2485,7 +2498,11 @@ const DirectMessage = () => {
                             ) : messagesError ? (
                                 <ErrorState
                                     message="Failed to load messages"
-                                    description="Could not load this conversation's messages."
+                                    description={
+                                        messagesErrorDetail
+                                            ? `Could not load this conversation's messages. ${messagesErrorDetail}`
+                                            : "Could not load this conversation's messages."
+                                    }
                                     onRetry={fetchDmMessages}
                                 />
                             ) : null}

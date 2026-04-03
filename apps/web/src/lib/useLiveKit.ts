@@ -16,6 +16,11 @@ import {
 } from 'livekit-client';
 import { api } from './api';
 import { isNoiseSuppressionSupported, createNoiseSuppressionStream } from './noise-suppression';
+import {
+  captureElectronScreenTracks,
+  isGratoniteDesktopApp,
+  pickDefaultElectronScreenSourceId,
+} from './electronScreenCapture';
 
 // Suppress expected "abort transport/connection attempt" warnings that occur
 // when users intentionally disconnect during in-flight WebRTC setup.
@@ -647,21 +652,63 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     const room = roomRef.current;
     if (!room?.localParticipant) return;
 
-    try {
-      const preset = QUALITY_PRESETS[streamQuality];
-      const opts: Record<string, unknown> = {};
-      if (preset) {
-        opts.screenShareEncoding = {
-          maxBitrate: preset.maxBitrate,
-          maxFramerate: preset.maxFramerate,
-        };
+    const preset = QUALITY_PRESETS[streamQuality];
+    const publishOpts: {
+      screenShareEncoding?: { maxBitrate: number; maxFramerate: number };
+    } = {};
+    if (preset) {
+      publishOpts.screenShareEncoding = {
+        maxBitrate: preset.maxBitrate,
+        maxFramerate: preset.maxFramerate,
+      };
+    }
+
+    // Electron: getDisplayMedia (used by LiveKit by default) is often broken or empty.
+    // Use desktopCapturer-backed getUserMedia + publish screen + optional system audio.
+    if (isGratoniteDesktopApp() && window.gratoniteDesktop?.getScreenSources) {
+      const sourceId = await pickDefaultElectronScreenSourceId();
+      if (!sourceId) {
+        throw new Error('No screen capture sources available. Restart the app and try again.');
       }
-      await room.localParticipant.setScreenShareEnabled(true, opts);
+      const hiRes = streamQuality === 'high' || streamQuality === 'source';
+      const dims = {
+        maxWidth: hiRes ? 1920 : 1280,
+        maxHeight: hiRes ? 1080 : 720,
+        maxFrameRate: preset?.maxFramerate ?? 30,
+      };
+      const { video, audio } = await captureElectronScreenTracks(sourceId, dims);
+      try {
+        await room.localParticipant.publishTrack(video, {
+          source: Track.Source.ScreenShare,
+          ...publishOpts,
+        });
+        if (audio) {
+          await room.localParticipant.publishTrack(audio, {
+            source: Track.Source.ScreenShareAudio,
+          });
+        }
+      } catch (pubErr) {
+        try {
+          await room.localParticipant.setScreenShareEnabled(false);
+        } catch {
+          /* best-effort cleanup */
+        }
+        video.stop();
+        audio?.stop();
+        throw pubErr;
+      }
       setIsScreenSharing(true);
       updateParticipants();
-    } catch (err) {
-      console.error('[LiveKit] Failed to start screen share:', err);
+      return;
     }
+
+    await room.localParticipant.setScreenShareEnabled(
+      true,
+      { audio: true },
+      Object.keys(publishOpts).length > 0 ? publishOpts : undefined,
+    );
+    setIsScreenSharing(true);
+    updateParticipants();
   }, [updateParticipants, streamQuality]);
 
   // Stop screen share
