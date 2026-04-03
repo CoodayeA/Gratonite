@@ -185,6 +185,9 @@ export const relationshipsApi = {
   unblock: (userId: string) =>
     apiFetch<void>(`/relationships/blocks/${userId}`, { method: 'DELETE' }),
 
+  listBlocked: () =>
+    apiFetch<Array<{ blockedUserId: string; username: string; displayName: string; avatarHash: string | null; createdAt: string }>>('/relationships/blocks'),
+
   listFriends: () =>
     apiFetch<any[]>('/relationships').then((rels: any[]) => (rels || []).filter((r: any) => r.type === 'FRIEND' || r.type === 'friend')),
 

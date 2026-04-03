@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { X, Check, ZoomIn, ZoomOut, RotateCw, Volume2, VolumeX, Copy, Info, Link2, Globe, Search, Download, Upload, Star, Sun, Moon, Dices, Eye, Sparkles, Palette, ShoppingBag, Edit3, Trash2, Share2 } from 'lucide-react';
+import { X, Check, ZoomIn, ZoomOut, RotateCw, Volume2, VolumeX, UserX, Copy, Info, Link2, Globe, Search, Download, Upload, Star, Sun, Moon, Dices, Eye, Sparkles, Palette, ShoppingBag, Edit3, Trash2, Share2 } from 'lucide-react';
 import { useTheme, ButtonShape, AppTheme, ColorMode, FontFamily, FontSize, GlassMode, FocusIndicatorSize, ColorBlindMode } from '../ui/ThemeProvider';
 import { haptic } from '../../utils/haptics';
 import { useToast } from '../ui/ToastManager';
@@ -249,7 +249,7 @@ const SettingsModal = ({
         { tab: 'theme', label: 'Theme', keywords: ['theme', 'dark mode', 'light mode', 'color', 'accent', 'font', 'glass', 'compact', 'button shape', 'neobrutalism', 'import', 'export'] },
         { tab: 'sound', label: 'Sound', keywords: ['sound', 'volume', 'notification', 'mute', 'audio', 'ambient'] },
         { tab: 'notifications', label: 'Notifications', keywords: ['notifications', 'push', 'email', 'digest', 'alerts'] },
-        { tab: 'muted-users', label: 'Muted Users', keywords: ['muted', 'mute', 'blocked users', 'silence'] },
+        { tab: 'muted-users', label: 'Blocked & Muted', keywords: ['muted', 'mute', 'blocked users', 'block', 'silence'] },
         { tab: 'referrals', label: 'Referrals', keywords: ['referral', 'invite', 'referral link', 'share'] },
         { tab: 'developer', label: 'Developer', keywords: ['developer', 'oauth', 'application', 'api', 'bot', 'token'] },
         { tab: 'accessibility', label: 'Accessibility', keywords: ['accessibility', 'screen reader', 'reduced motion', 'color blind', 'focus', 'underline', 'high contrast', 'link underlines'] },
@@ -787,7 +787,7 @@ const SettingsModal = ({
                         <div>
                             <div className="sidebar-section-label">NOTIFICATIONS & SOCIAL</div>
                             {(!matchingTabs || matchingTabs.has('notifications')) && <div className={`sidebar-nav-item ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => { setActiveTab('notifications'); setSettingsSearch(''); }}>Notifications</div>}
-                            {(!matchingTabs || matchingTabs.has('muted-users')) && <div className={`sidebar-nav-item ${activeTab === 'muted-users' ? 'active' : ''}`} onClick={() => { setActiveTab('muted-users'); setSettingsSearch(''); }}>Muted Users</div>}
+                            {(!matchingTabs || matchingTabs.has('muted-users')) && <div className={`sidebar-nav-item ${activeTab === 'muted-users' ? 'active' : ''}`} onClick={() => { setActiveTab('muted-users'); setSettingsSearch(''); }}>Blocked &amp; Muted</div>}
                             {(!matchingTabs || matchingTabs.has('referrals')) && <div className={`sidebar-nav-item ${activeTab === 'referrals' ? 'active' : ''}`} onClick={() => { setActiveTab('referrals'); setSettingsSearch(''); }}>Referrals</div>}
                             {(!matchingTabs || matchingTabs.has('dnd-schedule')) && <div className={`sidebar-nav-item ${activeTab === 'dnd-schedule' ? 'active' : ''}`} onClick={() => { setActiveTab('dnd-schedule'); setSettingsSearch(''); }}>DND Schedule</div>}
                             {(!matchingTabs || matchingTabs.has('snippets')) && <div className={`sidebar-nav-item ${activeTab === 'snippets' ? 'active' : ''}`} onClick={() => { setActiveTab('snippets'); setSettingsSearch(''); }}>Snippets</div>}
@@ -815,7 +815,7 @@ const SettingsModal = ({
                         </button>
                         {(['account', 'profile', 'sessions', 'privacy', 'connections', 'achievements', 'stats', 'wardrobe', 'theme', 'sound', 'accessibility', 'notifications', 'muted-users', 'referrals', 'developer', 'feedback'] as const).map(tab => (
                             <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>
-                                {tab === 'privacy' ? 'Privacy' : tab === 'connections' ? 'Connections' : tab === 'achievements' ? 'Achievements' : tab === 'wardrobe' ? 'Wardrobe' : tab === 'accessibility' ? 'A11y' : tab === 'feedback' ? 'Feedback' : tab === 'muted-users' ? 'Muted' : tab === 'notifications' ? 'Notifs' : tab === 'developer' ? 'Developer' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                {tab === 'privacy' ? 'Privacy' : tab === 'connections' ? 'Connections' : tab === 'achievements' ? 'Achievements' : tab === 'wardrobe' ? 'Wardrobe' : tab === 'accessibility' ? 'A11y' : tab === 'feedback' ? 'Feedback' : tab === 'muted-users' ? 'Blocked & Muted' : tab === 'notifications' ? 'Notifs' : tab === 'developer' ? 'Developer' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                             </button>
                         ))}
                     </div>
@@ -2205,10 +2205,17 @@ function DndSchedulePanel() {
 // ---------------------------------------------------------------------------
 function SettingsMutedUsersPanel({ addToast }: { addToast: (t: any) => void }) {
     const [mutedUsers, setMutedUsers] = useState<Array<{ mutedUserId: string; username: string; displayName: string; avatarHash: string | null; createdAt: string }>>([]);
+    const [blockedUsers, setBlockedUsers] = useState<Array<{ blockedUserId: string; username: string; displayName: string; avatarHash: string | null; createdAt: string }>>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        api.mutes.list().then(data => setMutedUsers(Array.isArray(data) ? data : [])).catch(() => {}).finally(() => setLoading(false));
+        Promise.all([
+            api.mutes.list().catch(() => []),
+            api.relationships.listBlocked().catch(() => []),
+        ]).then(([muted, blocked]) => {
+            setMutedUsers(Array.isArray(muted) ? muted : []);
+            setBlockedUsers(Array.isArray(blocked) ? blocked : []);
+        }).finally(() => setLoading(false));
     }, []);
 
     const handleUnmute = async (userId: string) => {
@@ -2221,34 +2228,72 @@ function SettingsMutedUsersPanel({ addToast }: { addToast: (t: any) => void }) {
         }
     };
 
+    const handleUnblock = async (userId: string) => {
+        try {
+            await api.relationships.unblock(userId);
+            setBlockedUsers(prev => prev.filter(u => u.blockedUserId !== userId));
+            addToast({ title: 'User unblocked', variant: 'success' });
+        } catch {
+            addToast({ title: 'Failed to unblock user', variant: 'error' });
+        }
+    };
+
+    const userRow = (
+        id: string,
+        avatarHash: string | null,
+        displayName: string,
+        username: string,
+        badge: string,
+        createdAt: string,
+        actionLabel: string,
+        onAction: () => void,
+    ) => (
+        <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'var(--bg-tertiary)', borderRadius: '10px', border: '1px solid var(--stroke)' }}>
+            <Avatar userId={id} avatarHash={avatarHash} displayName={displayName} size={36} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{displayName}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>@{username} — {badge} {new Date(createdAt).toLocaleDateString()}</div>
+            </div>
+            <button onClick={onAction} style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>
+                {actionLabel}
+            </button>
+        </div>
+    );
+
     return (
         <>
-            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Muted Users</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Muted users will not be able to send you notifications. Their messages will still appear, but grayed out.</p>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Blocked &amp; Muted Users</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Manage users you&apos;ve blocked or muted.</p>
 
             {loading ? (
                 <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
-            ) : mutedUsers.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
-                    <VolumeX size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-                    <p style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>No muted users</p>
-                    <p style={{ fontSize: '13px', marginTop: '4px' }}>Right-click a user and select "Mute" to add them here.</p>
-                </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {mutedUsers.map(u => (
-                        <div key={u.mutedUserId} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'var(--bg-tertiary)', borderRadius: '10px', border: '1px solid var(--stroke)' }}>
-                            <Avatar userId={u.mutedUserId} avatarHash={u.avatarHash} displayName={u.displayName} size={36} />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{u.displayName}</div>
-                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>@{u.username} — muted {new Date(u.createdAt).toLocaleDateString()}</div>
-                            </div>
-                            <button onClick={() => handleUnmute(u.mutedUserId)} style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>
-                                Unmute
-                            </button>
+                <>
+                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>Blocked</h3>
+                    {blockedUsers.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', marginBottom: '24px', background: 'var(--bg-tertiary)', borderRadius: '10px', border: '1px solid var(--stroke)' }}>
+                            <UserX size={32} style={{ opacity: 0.3, marginBottom: '8px' }} />
+                            <p style={{ fontSize: '14px', fontWeight: 600, margin: 0 }}>No blocked users</p>
                         </div>
-                    ))}
-                </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '32px' }}>
+                            {blockedUsers.map(u => userRow(u.blockedUserId, u.avatarHash, u.displayName, u.username, 'blocked', u.createdAt, 'Unblock', () => handleUnblock(u.blockedUserId)))}
+                        </div>
+                    )}
+
+                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>Muted</h3>
+                    {mutedUsers.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', background: 'var(--bg-tertiary)', borderRadius: '10px', border: '1px solid var(--stroke)' }}>
+                            <VolumeX size={32} style={{ opacity: 0.3, marginBottom: '8px' }} />
+                            <p style={{ fontSize: '14px', fontWeight: 600, margin: 0 }}>No muted users</p>
+                            <p style={{ fontSize: '13px', marginTop: '4px' }}>Right-click a user and select &quot;Mute&quot; to add them here.</p>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {mutedUsers.map(u => userRow(u.mutedUserId, u.avatarHash, u.displayName, u.username, 'muted', u.createdAt, 'Unmute', () => handleUnmute(u.mutedUserId)))}
+                        </div>
+                    )}
+                </>
             )}
         </>
     );
