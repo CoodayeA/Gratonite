@@ -15,6 +15,7 @@ import { useSpatialPositions } from '../../hooks/useSpatialPositions';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import SpatialCanvas from '../../components/voice/SpatialCanvas';
 import { Track, ConnectionState as LiveKitConnectionState } from 'livekit-client';
+import { getConnectionErrorHint } from '../../lib/callErrors';
 
 type OutletContextType = {
     hasCustomBg: boolean;
@@ -1088,6 +1089,14 @@ const VoiceChannel = () => {
                         </div>
                         <p style={{ color: 'var(--text-primary)', fontSize: '18px', fontWeight: 600 }}>Connection Failed</p>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '400px' }}>{connectionError}</p>
+                        {getConnectionErrorHint(connectionError) && (
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', maxWidth: '400px', padding: '10px 14px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--stroke)', textAlign: 'left' }}>
+                                <Wifi size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: '2px' }} />
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.5', margin: 0 }}>
+                                    {getConnectionErrorHint(connectionError)}
+                                </p>
+                            </div>
+                        )}
                         <button
                             onClick={() => connect()}
                             style={{
