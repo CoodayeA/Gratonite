@@ -95,6 +95,45 @@ export function classifyCallErrorToast(error: unknown): CallErrorToast {
   };
 }
 
+/**
+ * Return a secondary troubleshooting hint for a connection error message,
+ * or null when no specific guidance is available.
+ */
+export function getConnectionErrorHint(errorMsg: string): string | null {
+  const lower = errorMsg.toLowerCase();
+
+  if (lower.includes('permission') || lower.includes('denied') || lower.includes('notallowed') || lower.includes('microphone') || lower.includes('camera')) {
+    const isElectron = typeof window !== 'undefined' && 'electron' in window;
+    const isMac = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform);
+    const isWindows = typeof navigator !== 'undefined' && /win/i.test(navigator.platform);
+    if (isElectron && isMac) {
+      return 'Open System Settings → Privacy & Security → Microphone and enable Gratonite.';
+    }
+    if (isElectron && isWindows) {
+      return 'Open Windows Settings → Privacy → Microphone and allow Gratonite.';
+    }
+    return 'Click the camera/lock icon in your browser address bar and allow microphone access, then retry.';
+  }
+
+  if (lower.includes('signal connection') || lower.includes('websocket')) {
+    return 'A firewall or proxy may be blocking WebSocket traffic on port 443. Try on a different network.';
+  }
+
+  if (lower.includes('timed out') || lower.includes('timeout')) {
+    return 'The voice server did not respond in time. Check your connection or try again shortly.';
+  }
+
+  if (lower.includes('token') && (lower.includes('expired') || lower.includes('invalid'))) {
+    return 'Leave the channel, wait a moment, then rejoin to get a fresh session token.';
+  }
+
+  if (lower.includes('network') || lower.includes('failed to fetch')) {
+    return 'Verify your internet connection is stable and no VPN is blocking UDP/RTC traffic.';
+  }
+
+  return null;
+}
+
 export function captureCallErrorSentry(
   err: unknown,
   tags: Record<string, string>,
