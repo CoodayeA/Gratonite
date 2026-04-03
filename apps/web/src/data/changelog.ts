@@ -10,6 +10,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-04-03d',
+    date: 'April 3, 2026',
+    title: 'Quality & stability: calls, voice, and UI polish',
+    entries: [
+      { type: 'improvement', text: 'Voice channels — join/leave toasts are throttled so brief reconnects do not flood your notifications' },
+      { type: 'improvement', text: 'Calls & screen share — clearer connection errors, smarter LiveKit + browser fallback, and no false “sharing started” toast when share is cancelled' },
+      { type: 'improvement', text: 'Guild overview & global search — skeleton loading on the portal home and a helpful empty state before your first search' },
+      { type: 'security', text: 'Server updates — tighter limits and checks around voice tokens, realtime payloads, and federation requests (nothing you need to configure)' },
+      { type: 'fix', text: 'Desktop app — safer handling of launch arguments and a more reliable test suite so future updates stay stable' },
+    ],
+  },
+  {
     id: '2026-04-03c',
     date: 'April 3, 2026',
     title: 'Search polish, voice diagnostics, mobile parity & update reliability',
