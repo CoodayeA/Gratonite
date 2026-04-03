@@ -135,8 +135,8 @@ const ConnectionBanner = () => {
                 <>
                     <WifiOff size={14} />
                     <span>
-                        {retrying ? 'Reconnecting...' : 'Connection lost'}
-                        {queueCount > 0 && ` (${queueCount} unsent)`}
+                        {retrying ? 'Reconnecting...' : 'You’re offline or the server is unreachable — messages may not send until we reconnect.'}
+                        {queueCount > 0 && ` (${queueCount} queued)`}
                     </span>
                     {retrying ? (
                         <div style={{
@@ -173,7 +173,7 @@ const ConnectionBanner = () => {
             ) : (
                 <>
                     <Wifi size={14} />
-                    <span>Connected</span>
+                    <span>Back online — syncing in real time</span>
                 </>
             )}
             <style>{`

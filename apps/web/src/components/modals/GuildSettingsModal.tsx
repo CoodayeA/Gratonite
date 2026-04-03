@@ -814,6 +814,10 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                 setRaidProtectionEnabled(!!g.raidProtectionEnabled);
                 setPublicStatsEnabled(!!g.publicStatsEnabled);
                 setGuildLocked(!!g.lockedAt);
+                const d = g.defaultMemberNotificationLevel;
+                setDefaultMemberNotificationLevel(
+                    d === 'all' || d === 'mentions' || d === 'nothing' ? d : null,
+                );
             }).catch(() => {});
         }
         if (activeTab === 'bans') {
@@ -1045,6 +1049,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [raidSaving, setRaidSaving] = useState(false);
     const [publicStatsEnabled, setPublicStatsEnabled] = useState(false);
     const [publicStatsSaving, setPublicStatsSaving] = useState(false);
+    const [defaultMemberNotificationLevel, setDefaultMemberNotificationLevel] = useState<'all' | 'mentions' | 'nothing' | null>(null);
+    const [defaultNotifSaving, setDefaultNotifSaving] = useState(false);
     const [memberScreeningEnabled, setMemberScreeningEnabled] = useState(false);
     const [boostCount, setBoostCount] = useState(0);
     const [boostTier, setBoostTier] = useState(0);
@@ -2783,6 +2789,53 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     >Unlock Server</button>
                                 </div>
                             )}
+
+                            <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
+                                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>Default notifications for new members</h3>
+                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                                    When someone joins, their per-server notification level is set to this if they have not chosen one yet. Members can always override in the channel list.
+                                </p>
+                                <select
+                                    value={defaultMemberNotificationLevel ?? ''}
+                                    disabled={defaultNotifSaving}
+                                    onChange={async (e) => {
+                                        if (!guildId) return;
+                                        const raw = e.target.value;
+                                        const next = raw === '' ? null : (raw as 'all' | 'mentions' | 'nothing');
+                                        setDefaultNotifSaving(true);
+                                        setDefaultMemberNotificationLevel(next);
+                                        try {
+                                            await api.guilds.update(guildId, { defaultMemberNotificationLevel: next } as any);
+                                            addToast({ title: next ? `Default set to ${next === 'all' ? 'all messages' : next === 'mentions' ? 'mentions only' : 'nothing'}` : 'Server default cleared', variant: 'success' });
+                                        } catch {
+                                            addToast({ title: 'Failed to update default notifications', variant: 'error' });
+                                            api.guilds.get(guildId).then((g: any) => {
+                                                const d = g.defaultMemberNotificationLevel;
+                                                setDefaultMemberNotificationLevel(
+                                                    d === 'all' || d === 'mentions' || d === 'nothing' ? d : null,
+                                                );
+                                            }).catch(() => {});
+                                        } finally {
+                                            setDefaultNotifSaving(false);
+                                        }
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        maxWidth: '320px',
+                                        padding: '10px 12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid var(--stroke)',
+                                        background: 'var(--bg-tertiary)',
+                                        color: 'var(--text-primary)',
+                                        fontSize: '14px',
+                                    }}
+                                >
+                                    <option value="">No server default (use client default)</option>
+                                    <option value="all">All messages</option>
+                                    <option value="mentions">Only @mentions</option>
+                                    <option value="nothing">Nothing</option>
+                                </select>
+                            </div>
 
                             <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

@@ -444,6 +444,19 @@ export interface UserSettings {
   pushEnabled?: boolean;
   dmPrivacy?: string;
   friendRequestPrivacy?: string;
+  emailNotifications?: {
+    mentions?: boolean;
+    dms?: boolean;
+    frequency?: 'instant' | 'daily' | 'never';
+    securityAlerts?: boolean;
+  };
+  notificationQuietHours?: {
+    enabled: boolean;
+    startTime: string;
+    endTime: string;
+    timezone?: string;
+    days: number[];
+  } | null;
 }
 
 // ---------------------------------------------------------------------------

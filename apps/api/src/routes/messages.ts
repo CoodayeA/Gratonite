@@ -155,6 +155,7 @@ function formatMessage(
     isEncrypted: msg.isEncrypted ?? false,
     encryptedContent: msg.encryptedContent ?? null,
     keyVersion: msg.keyVersion ?? null,
+    isFederated: msg.originInstanceId != null,
     author: author
       ? {
           id: author.id,
@@ -327,7 +328,7 @@ messagesRouter.get('/jump-to-date', requireAuth, async (req: Request, res: Respo
           attachments: messages.attachments, edited: messages.edited, editedAt: messages.editedAt,
           createdAt: messages.createdAt, expiresAt: messages.expiresAt, replyToId: messages.replyToId,
           embeds: messages.embeds, isEncrypted: messages.isEncrypted, encryptedContent: messages.encryptedContent,
-          keyVersion: messages.keyVersion, authorId: messages.authorId,
+          keyVersion: messages.keyVersion, originInstanceId: messages.originInstanceId, authorId: messages.authorId,
           authorUsername: users.username, authorDisplayName: users.displayName,
           authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle, authorIsBot: users.isBot,
         })
@@ -349,7 +350,7 @@ messagesRouter.get('/jump-to-date', requireAuth, async (req: Request, res: Respo
           attachments: messages.attachments, edited: messages.edited, editedAt: messages.editedAt,
           createdAt: messages.createdAt, expiresAt: messages.expiresAt, replyToId: messages.replyToId,
           embeds: messages.embeds, isEncrypted: messages.isEncrypted, encryptedContent: messages.encryptedContent,
-          keyVersion: messages.keyVersion, authorId: messages.authorId,
+          keyVersion: messages.keyVersion, originInstanceId: messages.originInstanceId, authorId: messages.authorId,
           authorUsername: users.username, authorDisplayName: users.displayName,
           authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle, authorIsBot: users.isBot,
         })
@@ -374,7 +375,7 @@ messagesRouter.get('/jump-to-date', requireAuth, async (req: Request, res: Respo
         attachments: messages.attachments, edited: messages.edited, editedAt: messages.editedAt,
         createdAt: messages.createdAt, expiresAt: messages.expiresAt, replyToId: messages.replyToId,
         embeds: messages.embeds, isEncrypted: messages.isEncrypted, encryptedContent: messages.encryptedContent,
-        keyVersion: messages.keyVersion, authorId: messages.authorId,
+        keyVersion: messages.keyVersion, originInstanceId: messages.originInstanceId, authorId: messages.authorId,
         authorUsername: users.username, authorDisplayName: users.displayName,
         authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle, authorIsBot: users.isBot,
       })
@@ -430,6 +431,7 @@ messagesRouter.get('/jump-to-date', requireAuth, async (req: Request, res: Respo
         isEncrypted: row.isEncrypted ?? false,
         encryptedContent: row.encryptedContent ?? null,
         keyVersion: row.keyVersion ?? null,
+        isFederated: row.originInstanceId != null,
         reactions,
         author: row.authorId
           ? {
@@ -508,7 +510,7 @@ messagesRouter.get('/jump-to-message', requireAuth, async (req: Request, res: Re
           attachments: messages.attachments, edited: messages.edited, editedAt: messages.editedAt,
           createdAt: messages.createdAt, expiresAt: messages.expiresAt, replyToId: messages.replyToId,
           embeds: messages.embeds, isEncrypted: messages.isEncrypted, encryptedContent: messages.encryptedContent,
-          keyVersion: messages.keyVersion, authorId: messages.authorId,
+          keyVersion: messages.keyVersion, originInstanceId: messages.originInstanceId, authorId: messages.authorId,
           authorUsername: users.username, authorDisplayName: users.displayName,
           authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle, authorIsBot: users.isBot,
         })
@@ -530,7 +532,7 @@ messagesRouter.get('/jump-to-message', requireAuth, async (req: Request, res: Re
           attachments: messages.attachments, edited: messages.edited, editedAt: messages.editedAt,
           createdAt: messages.createdAt, expiresAt: messages.expiresAt, replyToId: messages.replyToId,
           embeds: messages.embeds, isEncrypted: messages.isEncrypted, encryptedContent: messages.encryptedContent,
-          keyVersion: messages.keyVersion, authorId: messages.authorId,
+          keyVersion: messages.keyVersion, originInstanceId: messages.originInstanceId, authorId: messages.authorId,
           authorUsername: users.username, authorDisplayName: users.displayName,
           authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle, authorIsBot: users.isBot,
         })
@@ -555,7 +557,7 @@ messagesRouter.get('/jump-to-message', requireAuth, async (req: Request, res: Re
         attachments: messages.attachments, edited: messages.edited, editedAt: messages.editedAt,
         createdAt: messages.createdAt, expiresAt: messages.expiresAt, replyToId: messages.replyToId,
         embeds: messages.embeds, isEncrypted: messages.isEncrypted, encryptedContent: messages.encryptedContent,
-        keyVersion: messages.keyVersion, authorId: messages.authorId,
+        keyVersion: messages.keyVersion, originInstanceId: messages.originInstanceId, authorId: messages.authorId,
         authorUsername: users.username, authorDisplayName: users.displayName,
         authorAvatarHash: users.avatarHash, authorNameplateStyle: users.nameplateStyle, authorIsBot: users.isBot,
       })
@@ -611,6 +613,7 @@ messagesRouter.get('/jump-to-message', requireAuth, async (req: Request, res: Re
         isEncrypted: row.isEncrypted ?? false,
         encryptedContent: row.encryptedContent ?? null,
         keyVersion: row.keyVersion ?? null,
+        isFederated: row.originInstanceId != null,
         reactions,
         author: row.authorId
           ? {

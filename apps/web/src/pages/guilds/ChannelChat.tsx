@@ -975,6 +975,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             authorAvatarHash: m.author?.avatarHash ?? null,
             authorNameplateStyle: (m.author as any)?.nameplateStyle ?? null,
             isBot: (m.author as any)?.isBot ?? false,
+            isFederated: !!(m as any).isFederated,
             components: Array.isArray((m as any).components) && (m as any).components.length > 0 ? (m as any).components : undefined,
             expiresAt: m.expiresAt ?? null,
             _isAnnouncementChannel: isAnnouncementChannel,

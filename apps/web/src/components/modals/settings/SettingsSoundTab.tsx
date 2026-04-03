@@ -13,6 +13,9 @@ const SettingsSoundTab = ({ addToast }: Props) => {
   const [noiseSuppressionEnabled, setNoiseSuppressionEnabledState] = useState(
     () => localStorage.getItem('noiseSuppression') === 'true',
   );
+  const [musicModeEnabled, setMusicModeEnabled] = useState(
+    () => localStorage.getItem('voiceMusicMode') === 'true',
+  );
   const [ambientMode, setAmbientMode] = useState<string>(
     () => localStorage.getItem('gratonite_ambient_mode') ?? 'off'
   );
@@ -229,6 +232,34 @@ const SettingsSoundTab = ({ addToast }: Props) => {
             style={{ width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', flexShrink: 0, background: noiseSuppressionEnabled ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: `1px solid ${noiseSuppressionEnabled ? 'transparent' : 'var(--stroke)'}`, position: 'relative', transition: 'background 0.2s ease' }}
           >
             <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: noiseSuppressionEnabled ? '22px' : '2px', transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+          </div>
+        </div>
+        <div style={{ height: '1px', background: 'var(--stroke)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px' }}>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>Music / studio mode</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.4' }}>Disables browser echo cancellation and noise suppression for clearer music or instruments. Reconnect to voice to apply.</div>
+          </div>
+          <div
+            onClick={() => {
+              const next = !musicModeEnabled;
+              setMusicModeEnabled(next);
+              try {
+                localStorage.setItem('voiceMusicMode', String(next));
+                if (next) {
+                  setNoiseSuppressionEnabledState(false);
+                  localStorage.setItem('noiseSuppression', 'false');
+                }
+              } catch { /* ignore */ }
+              addToast({
+                title: next ? 'Music mode enabled' : 'Music mode disabled',
+                description: 'Join or rejoin a voice channel for capture changes to take effect.',
+                variant: 'info',
+              });
+            }}
+            style={{ width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', flexShrink: 0, background: musicModeEnabled ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: `1px solid ${musicModeEnabled ? 'transparent' : 'var(--stroke)'}`, position: 'relative', transition: 'background 0.2s ease' }}
+          >
+            <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: musicModeEnabled ? '22px' : '2px', transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
           </div>
         </div>
       </div>

@@ -1396,6 +1396,37 @@ federationRouter.post('/report', requireAuth, async (req: Request, res: Response
 // User-facing federation endpoints (require regular auth)
 // ---------------------------------------------------------------------------
 
+/** GET /federation/well-known-preview?host= — server-side fetch of remote /.well-known/gratonite (SSRF-guarded) */
+federationRouter.get('/well-known-preview', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const raw = typeof req.query.host === 'string' ? req.query.host.trim() : '';
+  const hostname = raw.replace(/^https?:\/\//i, '').split('/')[0].replace(/:\d+$/, '');
+  if (!hostname || hostname.includes('..') || hostname.includes('@')) {
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'Valid host query required' });
+    return;
+  }
+  try {
+    await assertNotPrivateHost(hostname);
+  } catch {
+    res.status(400).json({ code: 'BLOCKED', message: 'Host not allowed' });
+    return;
+  }
+  const url = `https://${hostname}/.well-known/gratonite`;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(url, { signal: ctrl.signal, headers: { Accept: 'application/json' } });
+    clearTimeout(t);
+    if (!r.ok) {
+      res.status(502).json({ code: 'UPSTREAM', message: `Remote returned ${r.status}` });
+      return;
+    }
+    const wellKnown = await r.json();
+    res.json({ host: hostname, wellKnown });
+  } catch {
+    res.status(502).json({ code: 'FETCH_FAILED', message: 'Could not fetch well-known document' });
+  }
+});
+
 // Resolve a federation address
 federationRouter.get('/resolve/:address', requireAuth, async (req: Request, res: Response) => {
   const address = req.params.address as string;

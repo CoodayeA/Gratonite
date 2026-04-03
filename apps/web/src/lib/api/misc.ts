@@ -1540,6 +1540,12 @@ export const federationApi = {
   /** Resolve a federation address. */
   resolve: (address: string) => apiFetch(`/federation/resolve/${encodeURIComponent(address)}`),
 
+  /** Preview another instance's /.well-known/gratonite (server-side fetch). */
+  wellKnownPreview: (host: string) =>
+    apiFetch<{ host: string; wellKnown: Record<string, unknown> }>(
+      `/federation/well-known-preview?${new URLSearchParams({ host }).toString()}`,
+    ),
+
   /** Export account data. */
   exportAccount: () => apiFetch('/federation/export'),
 

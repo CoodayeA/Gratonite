@@ -1,0 +1,75 @@
+openapi: 3.0.3
+info:
+  title: Gratonite API
+  version: 1.0.0
+  description: |
+    Public contract sketch for the Gratonite HTTP API (`/api/v1`). This file is maintained by hand;
+    extend it when adding stable routes. Full surface area is larger than documented here.
+
+servers:
+  - url: https://gratonite.chat/api/v1
+    description: Production
+  - url: http://localhost:3001/api/v1
+    description: Local API
+
+paths:
+  /health:
+    get:
+      summary: Instance health (unauthenticated)
+      responses:
+        '200':
+          description: OK or degraded
+        '503':
+          description: Degraded (database or Redis down)
+
+  /users/@me/settings:
+    get:
+      summary: Current user settings
+      security: [{ bearerAuth: [] }]
+    patch:
+      summary: Patch user settings (partial JSON)
+      security: [{ bearerAuth: [] }]
+
+  /users/@me/settings/notif:
+    get:
+      summary: Redis-backed notification key (query `key=notif:guild:<uuid>` etc.)
+      security: [{ bearerAuth: [] }]
+    patch:
+      summary: Set notification key
+      security: [{ bearerAuth: [] }]
+
+  /guilds/{guildId}:
+    get:
+      summary: Guild details (member)
+      security: [{ bearerAuth: [] }]
+    patch:
+      summary: Update guild (manage permission)
+      security: [{ bearerAuth: [] }]
+
+  /admin/system-health:
+    get:
+      summary: Disk, LiveKit probe, DB/Redis (platform admin only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Operator snapshot
+        '403':
+          description: Not a platform admin
+
+  /federation/well-known-preview:
+    get:
+      summary: Server-side fetch of `https://{host}/.well-known/gratonite`
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: host
+          schema:
+            type: string
+          required: true
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

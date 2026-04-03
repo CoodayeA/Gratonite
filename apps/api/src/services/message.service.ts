@@ -137,6 +137,7 @@ function formatMessage(
     isEncrypted: msg.isEncrypted ?? false,
     encryptedContent: msg.encryptedContent ?? null,
     keyVersion: msg.keyVersion ?? null,
+    isFederated: msg.originInstanceId != null,
     author: author
       ? {
           id: author.id,
@@ -196,6 +197,7 @@ export class MessageService {
         isEncrypted: messages.isEncrypted,
         encryptedContent: messages.encryptedContent,
         keyVersion: messages.keyVersion,
+        originInstanceId: messages.originInstanceId,
         authorId: messages.authorId,
         authorUsername: users.username,
         authorDisplayName: users.displayName,
@@ -292,6 +294,7 @@ export class MessageService {
         isEncrypted: row.isEncrypted ?? false,
         encryptedContent: row.encryptedContent ?? null,
         keyVersion: row.keyVersion ?? null,
+        isFederated: row.originInstanceId != null,
         pinned: pinnedSet.has(row.id),
         threadReplyCount: threadReplyCountMap.get(row.id) ?? 0,
         reactions,

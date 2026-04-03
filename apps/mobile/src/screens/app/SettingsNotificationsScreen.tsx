@@ -20,21 +20,18 @@ import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SettingsNotifications'>;
 
-const MESSAGE_PREF_KEY = 'gratonite_notify_messages';
-const MENTION_PREF_KEY = 'gratonite_notify_mentions';
 const FRIEND_REQUEST_PREF_KEY = 'gratonite_notify_friend_requests';
 
-export default function SettingsNotificationsScreen({ navigation }: Props) {
+export default function SettingsNotificationsScreen(_props: Props) {
   const { colors, spacing, fontSize, borderRadius } = useTheme();
   const toast = useToast();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Local toggles backed by settings
   const [pushEnabled, setPushEnabled] = useState(false);
-  const [messagesEnabled, setMessagesEnabled] = useState(true);
-  const [mentionsEnabled, setMentionsEnabled] = useState(true);
+  const [emailMentions, setEmailMentions] = useState(false);
+  const [emailDms, setEmailDms] = useState(false);
   const [friendRequestsEnabled, setFriendRequestsEnabled] = useState(true);
 
   const fetchSettings = useCallback(async () => {
@@ -42,13 +39,9 @@ export default function SettingsNotificationsScreen({ navigation }: Props) {
       const data = await settingsApi.get();
       setSettings(data);
       setPushEnabled(data.pushEnabled ?? false);
-      const [messagesPref, mentionsPref, friendRequestsPref] = await Promise.all([
-        SecureStore.getItemAsync(MESSAGE_PREF_KEY),
-        SecureStore.getItemAsync(MENTION_PREF_KEY),
-        SecureStore.getItemAsync(FRIEND_REQUEST_PREF_KEY),
-      ]);
-      setMessagesEnabled(messagesPref !== 'false');
-      setMentionsEnabled(mentionsPref !== 'false');
+      setEmailMentions(!!data.emailNotifications?.mentions);
+      setEmailDms(!!data.emailNotifications?.dms);
+      const friendRequestsPref = await SecureStore.getItemAsync(FRIEND_REQUEST_PREF_KEY);
       setFriendRequestsEnabled(friendRequestsPref !== 'false');
     } catch (err: any) {
       toast.error(err.message || 'Failed to load settings');
@@ -75,21 +68,28 @@ export default function SettingsNotificationsScreen({ navigation }: Props) {
     }
   };
 
-  const updateLocalPreference = async (
-    key: string,
-    value: boolean,
-    setter: (value: boolean) => void,
-    label: string,
-  ) => {
-    setter(value);
+  const updateEmailPrefs = async (partial: NonNullable<UserSettings['emailNotifications']>) => {
+    setSaving(true);
     try {
-      // MOBILE-POLISH: backend/mobile API currently exposes only the master
-      // pushEnabled preference, so granular notification categories are
-      // persisted locally on-device until server-side fields are available.
-      await SecureStore.setItemAsync(key, String(value));
+      const merged = { ...settings?.emailNotifications, ...partial };
+      const updated = await settingsApi.update({ emailNotifications: merged });
+      setSettings(updated);
+      if (partial.mentions !== undefined) setEmailMentions(!!updated.emailNotifications?.mentions);
+      if (partial.dms !== undefined) setEmailDms(!!updated.emailNotifications?.dms);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save email preferences');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateLocalFriendRequests = async (value: boolean) => {
+    setFriendRequestsEnabled(value);
+    try {
+      await SecureStore.setItemAsync(FRIEND_REQUEST_PREF_KEY, String(value));
     } catch {
-      setter(!value);
-      toast.error(`Failed to save ${label.toLowerCase()} preference`);
+      setFriendRequestsEnabled(!value);
+      toast.error('Failed to save friend request preference');
     }
   };
 
@@ -150,6 +150,13 @@ export default function SettingsNotificationsScreen({ navigation }: Props) {
     bottomPad: {
       height: 40,
     },
+    note: {
+      color: colors.textMuted,
+      fontSize: fontSize.sm,
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.sm,
+      lineHeight: 20,
+    },
   }), [colors, spacing, fontSize, borderRadius]);
 
   if (loading) {
@@ -159,7 +166,6 @@ export default function SettingsNotificationsScreen({ navigation }: Props) {
   return (
     <PatternBackground>
     <ScrollView style={{ flex: 1 }}>
-      {/* Push notifications master toggle */}
       <SectionHeader title="Push Notifications" />
       <View style={styles.section}>
         <View style={styles.switchRow}>
@@ -179,22 +185,25 @@ export default function SettingsNotificationsScreen({ navigation }: Props) {
         </View>
       </View>
 
-      {/* Per-type toggles */}
-      <SectionHeader title="Notification Types" />
+      <Text style={styles.note}>
+        Email mention and DM preferences sync with your account (same as the web app). Configure quiet hours on web under Settings → Notifications.
+      </Text>
+
+      <SectionHeader title="Email (account)" />
       <View style={styles.section}>
         <View style={styles.switchRow}>
           <View style={styles.switchInfo}>
-            <Text style={styles.switchLabel}>Messages</Text>
+            <Text style={styles.switchLabel}>Email: @mentions</Text>
             <Text style={styles.switchDescription}>
-              New messages in channels and DMs
+              Message digest for mentions (respects server defaults)
             </Text>
           </View>
           <Switch
-            value={messagesEnabled}
-            onValueChange={(value) => updateLocalPreference(MESSAGE_PREF_KEY, value, setMessagesEnabled, 'Messages')}
+            value={emailMentions}
+            onValueChange={(v) => void updateEmailPrefs({ mentions: v })}
             trackColor={{ false: colors.bgElevated, true: colors.accentPrimary }}
             thumbColor={colors.white}
-            disabled={!pushEnabled}
+            disabled={saving}
           />
         </View>
 
@@ -202,32 +211,33 @@ export default function SettingsNotificationsScreen({ navigation }: Props) {
 
         <View style={styles.switchRow}>
           <View style={styles.switchInfo}>
-            <Text style={styles.switchLabel}>Mentions</Text>
+            <Text style={styles.switchLabel}>Email: direct messages</Text>
             <Text style={styles.switchDescription}>
-              When someone @mentions you
+              Notifications for DMs when email is enabled
             </Text>
           </View>
           <Switch
-            value={mentionsEnabled}
-            onValueChange={(value) => updateLocalPreference(MENTION_PREF_KEY, value, setMentionsEnabled, 'Mentions')}
+            value={emailDms}
+            onValueChange={(v) => void updateEmailPrefs({ dms: v })}
             trackColor={{ false: colors.bgElevated, true: colors.accentPrimary }}
             thumbColor={colors.white}
-            disabled={!pushEnabled}
+            disabled={saving}
           />
         </View>
+      </View>
 
-        <View style={styles.divider} />
-
+      <SectionHeader title="On this device" />
+      <View style={styles.section}>
         <View style={styles.switchRow}>
           <View style={styles.switchInfo}>
-            <Text style={styles.switchLabel}>Friend Requests</Text>
+            <Text style={styles.switchLabel}>Friend requests (local)</Text>
             <Text style={styles.switchDescription}>
-              Incoming friend requests
+              Push routing for friend requests until a server field exists
             </Text>
           </View>
           <Switch
             value={friendRequestsEnabled}
-            onValueChange={(value) => updateLocalPreference(FRIEND_REQUEST_PREF_KEY, value, setFriendRequestsEnabled, 'Friend Requests')}
+            onValueChange={(value) => void updateLocalFriendRequests(value)}
             trackColor={{ false: colors.bgElevated, true: colors.accentPrimary }}
             thumbColor={colors.white}
             disabled={!pushEnabled}
@@ -237,7 +247,7 @@ export default function SettingsNotificationsScreen({ navigation }: Props) {
 
       {!pushEnabled && (
         <Text style={styles.disabledHint}>
-          Enable push notifications to configure per-type settings
+          Enable push notifications to configure on-device friend-request routing
         </Text>
       )}
 

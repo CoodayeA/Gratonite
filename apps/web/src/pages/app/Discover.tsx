@@ -402,6 +402,28 @@ const Discover = () => {
         avatarHash?: string | null;
         isLocal?: boolean;
     }>(null);
+    const [fedInstanceHost, setFedInstanceHost] = useState('');
+    const [fedWellKnownPreview, setFedWellKnownPreview] = useState<{ host: string; wellKnown: Record<string, unknown> } | null>(null);
+    const [fedPreviewLoading, setFedPreviewLoading] = useState(false);
+
+    const previewInstanceWellKnown = async () => {
+        const h = fedInstanceHost.trim();
+        if (!h) {
+            addToast({ title: 'Enter a host', description: 'e.g. chat.example.com', variant: 'error' });
+            return;
+        }
+        setFedPreviewLoading(true);
+        setFedWellKnownPreview(null);
+        try {
+            const data = await api.federation.wellKnownPreview(h);
+            setFedWellKnownPreview(data);
+            addToast({ title: 'Instance document loaded', variant: 'success' });
+        } catch {
+            addToast({ title: 'Could not load well-known', description: 'Host may be offline or not running Gratonite.', variant: 'error' });
+        } finally {
+            setFedPreviewLoading(false);
+        }
+    };
 
     const resolveFederationAddress = async () => {
         const q = fedAddrInput.trim();
@@ -716,6 +738,64 @@ const Discover = () => {
                         {fedResolving ? 'Looking up…' : 'Look up'}
                     </button>
                 </div>
+                <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid var(--stroke)' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>Preview another instance</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                        <input
+                            type="text"
+                            value={fedInstanceHost}
+                            onChange={e => setFedInstanceHost(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') void previewInstanceWellKnown(); }}
+                            placeholder="chat.their-domain.com"
+                            style={{
+                                flex: '1 1 200px',
+                                minWidth: 0,
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                border: '1px solid var(--stroke)',
+                                background: 'var(--bg-primary)',
+                                color: 'var(--text-primary)',
+                                fontSize: '13px',
+                                outline: 'none',
+                            }}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => void previewInstanceWellKnown()}
+                            disabled={fedPreviewLoading}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: 'var(--bg-elevated)',
+                                color: 'var(--text-primary)',
+                                fontWeight: 600,
+                                fontSize: '12px',
+                                cursor: fedPreviewLoading ? 'wait' : 'pointer',
+                                opacity: fedPreviewLoading ? 0.7 : 1,
+                            }}
+                        >
+                            {fedPreviewLoading ? 'Fetching…' : 'Fetch /.well-known'}
+                        </button>
+                    </div>
+                    {fedWellKnownPreview && (
+                        <pre style={{
+                            marginTop: '10px',
+                            padding: '12px',
+                            borderRadius: '10px',
+                            background: 'var(--bg-primary)',
+                            border: '1px solid var(--stroke)',
+                            fontSize: '11px',
+                            overflow: 'auto',
+                            maxHeight: '180px',
+                            color: 'var(--text-secondary)',
+                            lineHeight: 1.4,
+                        }}>
+                            {JSON.stringify(fedWellKnownPreview.wellKnown, null, 2)}
+                        </pre>
+                    )}
+                </div>
+
                 {fedResolved && (
                     <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '14px', padding: '14px', borderRadius: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)' }}>
                         <div style={{ width: '44px', height: '44px', borderRadius: '10px', overflow: 'hidden', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '16px' }}>

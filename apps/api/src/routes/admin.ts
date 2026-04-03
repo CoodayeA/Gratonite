@@ -16,10 +16,26 @@ import {
   FULL_ADMIN_SCOPES,
   grantAdminScopes,
   hasAdminScope,
+  isPlatformAdmin,
   replaceAdminScopes,
 } from '../lib/admin-scopes';
+import { getSystemHealthSnapshot } from '../lib/systemHealth';
 
 export const adminRouter = Router();
+
+/** GET /api/v1/admin/system-health — disk, LiveKit probe, DB/Redis (platform admins only) */
+adminRouter.get('/system-health', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!req.userId || !(await isPlatformAdmin(req.userId))) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'Platform admin required' });
+    return;
+  }
+  try {
+    const snapshot = await getSystemHealthSnapshot();
+    res.json(snapshot);
+  } catch {
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to collect system health' });
+  }
+});
 
 const inviteTeamSchema = z.object({
   email: z.string().email(),
