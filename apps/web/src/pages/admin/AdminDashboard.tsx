@@ -70,6 +70,10 @@ type SystemHealthPayload = {
   livekit: { configured: boolean; reachable: boolean | null; url: string | null };
   db: { ok: boolean };
   redis: { ok: boolean };
+  memory?: { rssMb: number; heapUsedMb: number; heapTotalMb: number };
+  cpu?: { loadAvg1m: number; loadAvg5m: number; loadAvg15m: number };
+  queues?: { name: string; waiting: number; active: number; failed: number }[];
+  snapshotAt?: string;
 };
 
 export default function AdminDashboard() {
@@ -82,6 +86,7 @@ export default function AdminDashboard() {
   const [healthError, setHealthError] = useState<string | null>(null);
   const [systemHealth, setSystemHealth] = useState<SystemHealthPayload | null>(null);
   const [systemHealthError, setSystemHealthError] = useState<string | null>(null);
+  const [healthHistory, setHealthHistory] = useState<SystemHealthPayload[]>([]);
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -112,7 +117,14 @@ export default function AdminDashboard() {
       setSystemHealthError(null);
       try {
         const data = await api.get<SystemHealthPayload>('/admin/system-health');
-        if (!cancelled) setSystemHealth(data);
+        if (!cancelled) {
+          setSystemHealth(data);
+          // Fetch history for sparklines (best-effort)
+          try {
+            const hist = await api.get<{ history: SystemHealthPayload[] }>('/admin/system-health/history');
+            if (!cancelled) setHealthHistory(hist.history ?? []);
+          } catch { /* non-fatal */ }
+        }
       } catch (e: unknown) {
         if (!cancelled) {
           if (e instanceof ApiRequestError && e.status === 403) {
@@ -232,6 +244,11 @@ export default function AdminDashboard() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
               <Database size={18} color="#0ea5e9" />
               <h2 style={{ fontSize: '15px', fontWeight: 600, margin: 0 }}>Operator metrics</h2>
+              {systemHealth.snapshotAt && (
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
+                  Snapshot: {new Date(systemHealth.snapshotAt).toLocaleTimeString()}
+                </span>
+              )}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px', fontSize: '13px' }}>
               <div>
@@ -239,10 +256,15 @@ export default function AdminDashboard() {
                 <div style={{ fontWeight: 600 }}>
                   {systemHealth.disk ? `${systemHealth.disk.freeMb} MB / ${systemHealth.disk.totalMb} MB` : '—'}
                 </div>
+                {systemHealth.disk && (
+                  <div style={{ marginTop: '4px', height: '4px', borderRadius: '2px', background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: '2px', background: (systemHealth.disk.freeMb / systemHealth.disk.totalMb) < 0.1 ? '#ef4444' : (systemHealth.disk.freeMb / systemHealth.disk.totalMb) < 0.25 ? '#f59e0b' : '#10b981', width: `${(systemHealth.disk.freeMb / systemHealth.disk.totalMb) * 100}%` }} />
+                  </div>
+                )}
               </div>
               <div>
                 <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>LiveKit</div>
-                <div style={{ fontWeight: 600 }}>
+                <div style={{ fontWeight: 600, color: !systemHealth.livekit.configured ? 'var(--text-muted)' : systemHealth.livekit.reachable === null ? 'var(--text-primary)' : systemHealth.livekit.reachable ? '#34d399' : '#f87171' }}>
                   {!systemHealth.livekit.configured ? 'Not configured' : systemHealth.livekit.reachable === null ? 'Configured' : systemHealth.livekit.reachable ? 'Reachable' : 'Unreachable'}
                 </div>
               </div>
@@ -254,7 +276,52 @@ export default function AdminDashboard() {
                 <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Redis ping</div>
                 <div style={{ fontWeight: 600, color: systemHealth.redis.ok ? '#34d399' : '#f87171' }}>{systemHealth.redis.ok ? 'OK' : 'Fail'}</div>
               </div>
+              {systemHealth.memory && (
+                <div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Memory (RSS)</div>
+                  <div style={{ fontWeight: 600 }}>{systemHealth.memory.rssMb} MB</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Heap {systemHealth.memory.heapUsedMb}/{systemHealth.memory.heapTotalMb} MB</div>
+                </div>
+              )}
+              {systemHealth.cpu && (
+                <div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>CPU load avg</div>
+                  <div style={{ fontWeight: 600, color: systemHealth.cpu.loadAvg1m > 4 ? '#f87171' : systemHealth.cpu.loadAvg1m > 2 ? '#fbbf24' : '#34d399' }}>
+                    {systemHealth.cpu.loadAvg1m}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{systemHealth.cpu.loadAvg5m} / {systemHealth.cpu.loadAvg15m} (5m/15m)</div>
+                </div>
+              )}
             </div>
+            {systemHealth.queues && systemHealth.queues.length > 0 && (
+              <div style={{ marginTop: '16px' }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>BullMQ Queues</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {systemHealth.queues.map(q => (
+                    <div key={q.name} style={{ padding: '6px 10px', borderRadius: '8px', background: 'var(--bg-tertiary)', fontSize: '12px' }}>
+                      <span style={{ fontWeight: 600 }}>{q.name}</span>
+                      <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>
+                        {q.waiting >= 0 ? `${q.waiting}w ${q.active}a` : '?'}
+                        {q.failed > 0 && <span style={{ color: '#f87171', marginLeft: '4px' }}>{q.failed}f</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {healthHistory.length > 1 && systemHealth.memory && (
+              <div style={{ marginTop: '16px' }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Memory trend (RSS, last {healthHistory.length} snapshots)</div>
+                <svg width="100%" height="32" viewBox={`0 0 ${healthHistory.length * 12} 32`} preserveAspectRatio="none" style={{ display: 'block' }}>
+                  {(() => {
+                    const vals = [...healthHistory].reverse().map(h => h.memory?.rssMb ?? 0);
+                    const max = Math.max(...vals, 1);
+                    const pts = vals.map((v, i) => `${i * 12},${32 - (v / max) * 28}`).join(' ');
+                    return <polyline points={pts} fill="none" stroke="#0ea5e9" strokeWidth="1.5" />;
+                  })()}
+                </svg>
+              </div>
+            )}
             <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '12px 0 0', lineHeight: 1.4 }}>
               <code style={{ fontSize: '10px' }}>GET /api/v1/admin/system-health</code> (platform admin only). Disk path: {systemHealth.disk?.path ?? '—'}.
             </p>
