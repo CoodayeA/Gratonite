@@ -46,9 +46,11 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 | Global search (modal + filters)                            | ✅      | `GlobalSearchModal.tsx`, `CommandPalette`, `TopBarActions`                                                             |
 | Dedicated search page                                      | ✅      | `pages/guilds/GlobalSearch.tsx`                                                                                        |
 | Server-wide search filters (guild, author, date, has:file) | ✅      | `GET /api/v1/search/messages` (`guildId`, `authorId`, `before`/`after`, `has`, `mentionsMe`); web `searchApi.messages` |
+| Saved searches + sidebar entry to dedicated search page     | ✅      | `gratonite_saved_searches_v1` in `GlobalSearch.tsx`; sidebar item → `/guild/:guildId/search` (`App.tsx`)              |
+| FTS index (`search_vector` + GIN)                           | ✅      | Migration `0005_messages_search_vector.sql`; `search.ts` uses `"messages"."search_vector"`                            |
 
 
-**Next slices:** saved searches; expose Global Search route in sidebar if not linked; optional full-text tuning (DB indexes) for large instances.
+**Next slices:** optional ranking / `ts_rank` tuning for relevance on huge instances.
 
 ---
 
@@ -62,10 +64,10 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 | Scheduled DND window (auto presence)  | ✅      | `GET/PUT /users/@me/dnd-schedule`, `jobs/dndSchedule.ts`, `DndSchedulePanel` in `SettingsModal.tsx`                                                                                                                                |
 | Notification quiet hours (user-level) | ✅      | `user_settings.notification_quiet_hours`, `lib/notificationQuietHours.ts`, `createNotification`, `jobs/emailNotifications.ts`, `NotificationQuietHoursPanel` in `SettingsModal.tsx`; migration `0003_notification_quiet_hours.sql` |
 | Per-guild notification master rules   | ✅      | `guilds.default_member_notification_level`, seed on join (`seedDefaultGuildNotification.ts`), Portal Settings → Security (`GuildSettingsModal.tsx`)                                                                                                                                 |
-| Mobile granular prefs                 | ✅      | Email mention/DM prefs sync with `/users/@me/settings`; friend-request push remains device-local (`SettingsNotificationsScreen.tsx`)                                                                                                                                                |
+| Mobile granular prefs                 | ✅      | Email mention/DM prefs + **quiet hours** (`notificationQuietHours`) sync with `/users/@me/settings` (`SettingsNotificationsScreen.tsx`); friend-request push remains device-local                                                                                                                                                |
 
 
-**Next slices:** per-guild master rules; align mobile with web prefs (including quiet hours JSON).
+**Next slices:** (none critical) — further mobile parity only if new web-only notification controls ship.
 
 ---
 
@@ -82,7 +84,7 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 | Cross-instance moderation escalation | ✅      | Escalation copy on federation reports tab (`FederationAdmin.tsx`)               |
 
 
-**Next slices:** instance URL well-known preview; badges on messages/DMs; operator escalation docs in admin.
+**Next slices:** optional short operator blurb in admin help (badges on DMs + channels: `MessageBubble` / `MessageItem` when `isFederated`).
 
 ---
 
@@ -94,7 +96,7 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 | LiveKit integration                 | ✅      | Web + API token routes                                             |
 | Electron screen capture             | ✅      | `useLiveKit.ts`, `electronScreenCapture.ts`, `main.js` permissions |
 | Noise suppression / music mode      | ✅      | Web Audio noise path + **Music / studio mode** (`voiceMusicMode`, `SettingsSoundTab`, `useLiveKit` capture defaults) |
-| Call quality diagnostics (optional) | 🔶     | Wi‑Fi quality indicators on participants in `VoiceChannel.tsx`; detailed RTC stats still optional                 |
+| Call quality diagnostics (optional) | ✅      | Participant connection quality + **Connection** panel (LiveKit `ConnectionState` + local quality) in `VoiceChannel.tsx` / `useLiveKit.ts`; deep WebRTC stats still optional |
 
 
 ---
@@ -140,7 +142,7 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 | User reports (admin)     | ✅      | `AdminReports`, federation reports tab                                                         |
 | Audit log                | ✅      | `AuditLog`, `AdminAuditLog`                                                                    |
 | Account data export      | ✅      | `jobs/dataExport.ts`; `GET/POST /users/@me/data-exports` + download route in `routes/users.ts` |
-| Block / privacy settings | 🔶     | Surfaces aligned where touched this release; full checklist still optional                      |
+| Block / privacy settings | ✅      | Quick links on **Privacy & Safety** (`SettingsPrivacyTab.tsx`): blocked/muted, export, DM privacy |
 
 
 ---
@@ -152,10 +154,10 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 | ------------------------------------- | ------ | ------------------------------------------------ |
 | Channel webhooks (create/list/delete) | ✅      | `routes/webhooks.ts`                             |
 | Webhook bots & Bot Builder docs       | ✅      | `helpArticles` → `building-webhook-bot`          |
-| Public OpenAPI / generated docs       | 🔶     | Hand-maintained `docs/api/openapi.yaml` (expand over time) |
+| Public OpenAPI / generated docs       | ✅      | `docs/api/openapi.yaml` (search + webhooks + existing routes); `docs/api/WEBHOOK-EVENTS.md` for outbound bot payloads |
 
 
-**Next slices:** OpenAPI export; more outbound event types for webhooks.
+**Next slices:** optional OpenAPI codegen / CI validation; additional webhook event types as product needs them.
 
 ---
 
@@ -179,6 +181,8 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 | 2026-04-03 | In-product backup entry point (Admin → Self-host backups → docs)                             | 🔶         |
 | 2026-04-03 | Notification quiet hours (user-level): `notification_quiet_hours` + API + jobs + Settings UI | ✅          |
 | 2026-04-03 | Per-guild default notification level for new members; federation badges + well-known preview; admin system-health | ✅          |
+| 2026-04-03 | Saved searches + `/guild/:guildId/search` sidebar; mobile quiet hours UI; voice connection panel; privacy quick links; OpenAPI + WEBHOOK-EVENTS | ✅          |
+| 2026-04-03 | `messages.search_vector` + GIN index (`0005`); mobile federated globe on DMs/channels; CI `validate:openapi` (bundle) | ✅          |
 
 
-Last reviewed: 2026-04-03 — per-guild notification defaults, federation UX, operator health, and mobile email prefs shipped.
+Last reviewed: 2026-04-03 — FTS migration, mobile federation badge, OpenAPI gate.

@@ -446,6 +446,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
           replyToId: data.replyToId,
           replyTo: data.replyTo,
           nonce: data.nonce,
+          isFederated: data.isFederated === true,
         };
         setMessageList((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;

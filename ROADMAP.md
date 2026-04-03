@@ -24,6 +24,9 @@ Track detailed status in [`docs/roadmap/PRODUCT-PROGRAM.md`](docs/roadmap/PRODUC
 - [x] **Operator backup entry point:** Admin → Self-host backups → documentation + copy helpers (product program §6)
 - [x] **Notification quiet hours** (user-level: mute alerts + digest email by time window; distinct from DND presence) — see product program § Notifications
 - [x] **Per-guild notification master rules** — default level for new members (see product program § Notifications)
+- [x] **Saved searches + search page entry** — persisted named queries on `GlobalSearch`; sidebar opens `/guild/:guildId/search` (see product program § Search)
+- [x] **Mobile quiet hours** — same JSON as web in notification settings (product program § Notifications)
+- [x] **Public API docs** — `docs/api/openapi.yaml` + `docs/api/WEBHOOK-EVENTS.md` (product program § Platform)
 
 ---
 
@@ -45,7 +48,7 @@ Everything below is live in production.
 - Message bookmarks with folder organization
 - Voice messages and inline media player
 - Polls, message reminders, clips
-- Global search (PostgreSQL full-text) with filters: channel, server (`guildId`), author, date range, `has:file` / `has:image` / `has:embed` / `has:link`, mentions-me
+- Global search (PostgreSQL full-text) with filters: channel, server (`guildId`), author, date range, `has:file` / `has:image` / `has:embed` / `has:link`, mentions-me; **saved searches** on the dedicated search page (local persistence)
 
 ### Guilds and Community
 
@@ -173,12 +176,13 @@ Everything below is live in production.
 
 ## Near-Term — Q2 2026
 
+Planning intent for the next engineering cycles. Cryptography and app-store work are **multi-month** tracks; they are listed here as direction, not a promise of simultaneous delivery.
+
 - **E2E encrypted file attachments** — Encrypt images, videos, and files before upload so the server never sees plaintext media
 - **Forward secrecy (Double Ratchet)** — Signal-style ratchet so compromising a single key doesn't expose past messages
 - **Multi-device key sync** — Securely synchronize encryption keys across browsers and devices
 - **Mobile app store release** — Publish to App Store and Google Play
 - **Accessibility audit** — WCAG 2.1 AA compliance pass across all surfaces
-- **Saved searches & search UX polish** — Persisted queries, sidebar entry points, performance on large instances
 - **i18n expansion** — Community-contributed locale packs beyond en/es/fr
 
 ## Mid-Term — Q3-Q4 2026

@@ -36,7 +36,9 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
 
   // Build conditions — prefer ts_rank for relevance if FTS is viable
   const conditions = useFts
-    ? [sql`${messages.content} IS NOT NULL AND (search_vector @@ plainto_tsquery('english', ${q}) OR ${messages.content} ILIKE ${pattern})`]
+    ? [
+        sql`${messages.content} IS NOT NULL AND ("messages"."search_vector" @@ plainto_tsquery('english', ${q}) OR ${messages.content} ILIKE ${pattern})`,
+      ]
     : [sql`${messages.content} ILIKE ${pattern}`];
 
   // mentionsMe filter: messages that contain @userId or @everyone/@here
@@ -92,7 +94,8 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
   const userDmChannelIds = userDmRows.map(r => r.channelId);
 
   if (userGuildIds.length === 0 && userDmChannelIds.length === 0) {
-    res.json([]); return;
+    res.json({ results: [], total: 0, limit, offset: 0 });
+    return;
   }
 
   // Build access condition: channel belongs to a guild the user is in, OR is a DM the user participates in.
