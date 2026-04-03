@@ -3406,7 +3406,8 @@ export const AppLayout = () => {
 
     // Register service worker for web push + quick reply support
     useEffect(() => {
-        if ('serviceWorker' in navigator && 'PushManager' in window) {
+        const isLocalhostHost = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+        if ('serviceWorker' in navigator && 'PushManager' in window && !isLocalhostHost) {
             navigator.serviceWorker.register('/app/sw.js').then(reg => {
                 // Send auth token to service worker for notification quick reply
                 const token = getAccessToken() ?? '';

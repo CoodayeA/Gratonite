@@ -22,8 +22,11 @@ gsap.defaults({ ease: 'power3.out', duration: 0.6 });
 // Initialize global error reporting (window.onerror + unhandledrejection)
 initErrorReporter();
 
+const isLocalhostHost = typeof window !== 'undefined'
+  && ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+
 // Register service worker for PWA support (Phase 9, Item 145)
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+if ('serviceWorker' in navigator && import.meta.env.PROD && !isLocalhostHost) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/app/sw.js', { scope: '/app/' }).then(reg => {
       // Check for updates every 30 minutes
