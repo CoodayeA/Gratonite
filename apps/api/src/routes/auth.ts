@@ -36,7 +36,7 @@ import { db } from '../db/index';
 import { users } from '../db/schema/users';
 import { refreshTokens, emailVerificationTokens, passwordResetTokens } from '../db/schema/auth';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../lib/jwt';
-import { sendVerificationEmail, sendPasswordResetEmail, sendNewDeviceLoginAlert } from '../lib/mailer';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../lib/mailer';
 import { requireAuth } from '../middleware/auth';
 import { redis } from '../lib/redis';
 import { authRateLimit, usernameCheckRateLimit, emailVerifyRateLimit, mfaSetupRateLimit } from '../middleware/rateLimit';

@@ -4,6 +4,7 @@ import { notifications } from '../db/schema/notifications';
 import { users } from '../db/schema/users';
 import { userSettings } from '../db/schema/settings';
 import { sendMail } from '../lib/mailer';
+import { mergeEmailNotificationsJson } from '../lib/emailNotificationPrefs';
 import { redis } from '../lib/redis';
 import { eq, and, sql } from 'drizzle-orm';
 
@@ -43,7 +44,7 @@ async function runEmailNotifications(): Promise<void> {
     if (!user?.email) continue;
 
     const [settings] = await db.select({ emailNotifications: userSettings.emailNotifications }).from(userSettings).where(eq(userSettings.userId, row.userId)).limit(1);
-    const prefs = (settings?.emailNotifications as any) || { mentions: false, dms: false, frequency: 'never' };
+    const prefs = mergeEmailNotificationsJson(settings?.emailNotifications);
 
     // Respect frequency setting — skip entirely if 'never'
     if (prefs.frequency === 'never') continue;

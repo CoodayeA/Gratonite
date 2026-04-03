@@ -16,6 +16,23 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 
 ---
 
+## Email volume & transactional policy (SMTP quota)
+
+**Goal:** On small SMTP plans, only **transactional** mail should send by default. Everything else is **opt-in** in **Settings → Notifications → Email**.
+
+| Email type | Default | Notes |
+|------------|---------|--------|
+| Sign-up / email verification | Always sent | Required for account proof |
+| Password reset | Always sent | Account recovery |
+| Unread / digest / mention & DM emails | **Off** (`frequency: never`, mentions/dms false) | `user_settings.email_notifications`, job in `jobs/emailNotifications.ts` |
+| New sign-in / “new device” security alert | **Off** (`securityAlerts: false`) | `auth.service.ts` + opt-in toggle in Settings |
+
+**Implementation:** Defaults live in `apps/api/src/lib/emailNotificationPrefs.ts`. API **GET/PATCH** `/users/@me/settings` merges partial JSON so missing keys resolve to opt-out. **Web UI** (`SettingsModal`) defaults match the server (no more `mentions: true` / `daily` on first paint). Migration `drizzle/0002_email_notification_defaults.sql` backfills `securityAlerts` on existing rows.
+
+**Operator note:** If an old database still has many users with aggressive email prefs from earlier UI defaults, run a **one-off SQL** in maintenance window only after review, e.g. set `frequency` to `never` for users who never opted in — not applied automatically in migrations.
+
+---
+
 ## 1. Search & discovery
 
 | Initiative | Status | Where |
@@ -34,7 +51,7 @@ This file tracks the **full** initiative set we committed to (federation UX, sea
 | Initiative | Status | Where |
 |------------|--------|--------|
 | Per-channel notification prefs + mute | ✅ | `NotificationPrefsModal.tsx`, `channel-notification-prefs` API |
-| Web push + email prefs | 🔶 | `SettingsModal` notifications panel |
+| Web push + email prefs | ✅ | `SettingsModal` — email defaults opt-out; verification/reset always |
 | Quiet hours / per-guild master rules | 📋 | Settings + API fields |
 | Mobile granular prefs | 🔶 | Local-only until server fields exist (`SettingsNotificationsScreen.tsx`) |
 

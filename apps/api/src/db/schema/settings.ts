@@ -29,7 +29,12 @@ export const userSettings = pgTable('user_settings', {
   customThemeId: uuid('custom_theme_id'),
   themePreferences: jsonb('theme_preferences'),
   birthday: jsonb('birthday'),
-  emailNotifications: jsonb('email_notifications').notNull().default({ mentions: false, dms: false, frequency: 'never' }),
+  emailNotifications: jsonb('email_notifications').notNull().default({
+    mentions: false,
+    dms: false,
+    frequency: 'never',
+    securityAlerts: false,
+  }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
