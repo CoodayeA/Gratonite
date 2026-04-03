@@ -4,7 +4,9 @@
   "scripts": {
     "verify:release:all": "npm --prefix apps/web run verify:prod && pnpm --dir apps/api run verify:release && npm --prefix apps/web run smoke:e2e",
     "verify:launch:super-gate": "node tools/verify-launch-super-gate.mjs",
-    "install:workspace:no-desktop": "pnpm install --filter \"!gratonite-desktop\""
+    "install:workspace:no-desktop": "pnpm install --filter \"!gratonite-desktop\"",
+    "i18n:check": "node tools/check-i18n-parity.mjs",
+    "i18n:check:strict": "node tools/check-i18n-parity.mjs --strict"
   },
   "pnpm": {
     "overrides": {
@@ -28,7 +30,7 @@
       "fast-xml-parser@>=4.0.0-beta.3 <=5.5.6": ">=5.5.7",
       "smol-toml@<1.6.1": ">=1.6.1",
       "nodemailer@<8.0.4": ">=8.0.4",
-      "brace-expansion@<1.1.13": ">=1.1.13",
+      "brace-expansion@<1.1.13": ">=1.1.13 <2.0.0",
       "brace-expansion@>=2.0.0 <2.0.3": ">=2.0.3",
       "brace-expansion@>=4.0.0 <5.0.5": ">=5.0.5",
       "brace-expansion@5.0.4": "5.0.5",

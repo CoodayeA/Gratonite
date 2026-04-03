@@ -8,6 +8,7 @@ Gratonite is production-ready with **140** database schemas, **134** API route m
 
 ### How this roadmap is verified
 
+- **Execution plan:** Multi-phase sequencing, dependencies, and definition-of-done for roadmap themes live in [`docs/EXECUTION-PLAN.md`](docs/EXECUTION-PLAN.md) (crypto forward plan, a11y checklist, i18n parity tooling, mobile E2E gaps).
 - **Shipped** items are backed by code in this repository (API routes, web/mobile UI, jobs). They are spot-checked during roadmap reviews; not every bullet has a dedicated automated test.
 - **Counts** (schemas, routes, pages) come from repository inventory scripts or manual tallies and may drift slightly between releases — treat as approximate.
 - **Near-term / mid-term / long-term** lists are planning intent, not commitments with dates.
@@ -25,6 +26,7 @@ Gratonite is production-ready with **140** database schemas, **134** API route m
 - **Saved searches + search page entry** — persisted named queries on `GlobalSearch`; sidebar opens `/guild/:guildId/search`
 - **Mobile quiet hours** — same JSON as web in notification settings
 - **Public API docs** — `docs/api/openapi.yaml` + `docs/api/WEBHOOK-EVENTS.md`
+- **Quality & stability (April 2026)** — Call and screen-share error mapping, LiveKit + native fallback behavior (no false success on cancel), throttled voice join/leave toasts, guild overview loading skeleton and global search “before you search” empty state, API/socket/federation hardening (payload limits, LiveKit token TTL helper, hostname checks), desktop main-process test coverage and safer `second-instance` handling; `docs/SECURITY-AUDIT.md`, `docs/QUALITY-CHECKLIST.md`, What’s New `2026-04-03d`
 
 ---
 
@@ -148,6 +150,7 @@ Everything below is live in production.
 - Zod validation on all endpoints
 - File upload validation (MIME + magic bytes)
 - Federation HTTP signatures, SSRF protection
+- Documented review cadence and dependency policy — see `docs/SECURITY-AUDIT.md` (includes admin/file-serving and rate-limit verification)
 
 ### Email and Notifications
 
@@ -172,30 +175,35 @@ Everything below is live in production.
 
 ---
 
-## Current iteration — quality & stability (ongoing)
+## Maintenance — quality & stability (ongoing)
 
-Work that tightens the **existing** product before or alongside larger roadmap bets. Scope is **web** and **desktop (Electron)** unless a fix clearly applies to mobile too.
+The **April 2026** wave above shipped the first full pass (calls, screen share, key UI states, security documentation, desktop test harness). What remains is **continuous**: new regressions, browser/OS edge cases, dependency advisories, and small UX wins—without a fixed “done” date.
 
-- **Security hardening** — Dependency and supply-chain review, auth/session edge cases, upload and federation paths, rate limits and admin surfaces; triage and fix findings from tooling or external review.
-- **UI/UX polish** — Visual consistency (spacing, typography, states), clearer empty and error states, fewer dead ends, performance fixes for scroll and heavy views.
-- **Calls, video, and screen sharing** — Reliable join/leave/reconnect, mute/deafen, screen-share start/stop, permission prompts and failure copy, layout and controls (LiveKit-backed flows).
-- **Bug squashing** — Reproduce, fix, and add coverage where it matters: core chat, DMs, guild navigation, voice/video, notifications, and desktop shell behavior.
+| Area | Still in play |
+|------|----------------|
+| **Security** | Re-run audits before releases; respond to new CVEs; review new routes and admin surfaces as they ship |
+| **UI/UX** | More empty/loading/error coverage on secondary views; scroll and list performance on very large guilds |
+| **Calls / RTC** | New client versions, OS permission changes, TURN edge cases; noise/input surfacing (see ideas backlog #18) |
+| **Bugs** | Triage reports across web, desktop, mobile as filed |
+| **Testing** | Expand automated coverage where ROI is high (E2E still listed under Near-Term priorities indirectly via a11y and product QA) |
 
-This section is **process intent**, not a dated release gate. Finer tracking may live outside the repository.
+A formal **WCAG 2.1 AA pass** and **broader i18n** are tracked under **Near-Term**, not this maintenance bucket.
 
 ---
 
 ## Near-Term — Q2 2026
 
-Planning intent for the next engineering cycles. Cryptography work is a **multi-month** track; items here are direction, not a promise of simultaneous delivery.
+Planning intent for the next engineering cycles. Cryptography work is a **multi-month** track; items here are direction, not a promise of simultaneous delivery. See [`docs/EXECUTION-PLAN.md`](docs/EXECUTION-PLAN.md) for phased ordering.
 
-- **E2E encrypted file attachments** — Encrypt images, videos, and files before upload so the server never sees plaintext media
-- **Forward secrecy (Double Ratchet)** — Signal-style ratchet so compromising a single key doesn't expose past messages
-- **Multi-device key sync** — Securely synchronize encryption keys across browsers and devices
-- **Accessibility audit** — WCAG 2.1 AA compliance pass across all surfaces
-- **i18n expansion** — Community-contributed locale packs beyond en/es/fr
+- **E2E encrypted file attachments** — *Web (DMs + encrypted channels):* client-side encryption before upload is implemented in [`apps/web/src/lib/e2e.ts`](apps/web/src/lib/e2e.ts). *Remaining:* mobile parity, edge flows, and hardening — [`docs/mobile/E2E-ATTACHMENTS-GAP.md`](docs/mobile/E2E-ATTACHMENTS-GAP.md).
+- **Forward secrecy (Double Ratchet)** — *Not started.* Planning: [`docs/crypto/FORWARD-PLAN.md`](docs/crypto/FORWARD-PLAN.md).
+- **Multi-device key sync** — *Not started.* Same forward plan; pairs with Double Ratchet program.
+- **Accessibility audit** — Checklist: [`docs/a11y/WCAG-AUDIT-CHECKLIST.md`](docs/a11y/WCAG-AUDIT-CHECKLIST.md); formal pass tracked as Phase A1 in the execution plan.
+- **i18n expansion** — Nine locales exist in web; run `pnpm i18n:check` from repo root. Contributor workflow: [`docs/i18n-CONTRIBUTING.md`](docs/i18n-CONTRIBUTING.md).
 
 ## Mid-Term — Q3-Q4 2026
+
+These are **large bets**; the execution plan recommends **one primary initiative per half** unless capacity expands. Sequencing: [`docs/EXECUTION-PLAN.md`](docs/EXECUTION-PLAN.md) (Phase B).
 
 - **Plugin/extension SDK** — Third-party developers can build and distribute plugins
 - **Matrix / ActivityPub bridge** — Interop with Matrix rooms and Mastodon/Misskey
