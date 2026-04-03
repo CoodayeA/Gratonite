@@ -5,6 +5,7 @@ import { users } from '../db/schema/users';
 import { userSettings } from '../db/schema/settings';
 import { sendMail } from '../lib/mailer';
 import { mergeEmailNotificationsJson } from '../lib/emailNotificationPrefs';
+import { isWithinNotificationQuietHours } from '../lib/notificationQuietHours';
 import { redis } from '../lib/redis';
 import { eq, and, sql } from 'drizzle-orm';
 
@@ -43,7 +44,14 @@ async function runEmailNotifications(): Promise<void> {
     const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, row.userId)).limit(1);
     if (!user?.email) continue;
 
-    const [settings] = await db.select({ emailNotifications: userSettings.emailNotifications }).from(userSettings).where(eq(userSettings.userId, row.userId)).limit(1);
+    const [settings] = await db
+      .select({
+        emailNotifications: userSettings.emailNotifications,
+        notificationQuietHours: userSettings.notificationQuietHours,
+      })
+      .from(userSettings)
+      .where(eq(userSettings.userId, row.userId))
+      .limit(1);
     const prefs = mergeEmailNotificationsJson(settings?.emailNotifications);
 
     // Respect frequency setting — skip entirely if 'never'
@@ -51,6 +59,8 @@ async function runEmailNotifications(): Promise<void> {
 
     // Check if user wants mention or DM notifications
     if (!prefs.mentions && !prefs.dms) continue;
+
+    if (isWithinNotificationQuietHours(settings?.notificationQuietHours)) continue;
 
     await sendMail({
       to: user.email,

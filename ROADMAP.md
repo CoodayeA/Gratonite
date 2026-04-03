@@ -22,7 +22,8 @@ Track detailed status in [`docs/roadmap/PRODUCT-PROGRAM.md`](docs/roadmap/PRODUC
 - [x] **Email:** transactional-by-default policy + migration defaults — see *Shipped → Email and Notifications*
 - [x] **Presence:** scheduled DND window (settings + `dnd_schedules` + job) — covered in product program § Notifications
 - [x] **Operator backup entry point:** Admin → Self-host backups → documentation (full one-click / copy UX still 🔶 in product program §6)
-- [ ] **Quiet hours** (notification muting by time, distinct from DND presence) — still 📋 in product program
+- [x] **Notification quiet hours** (user-level: mute alerts + digest email by time window; distinct from DND presence) — see product program § Notifications
+- [ ] **Per-guild notification master rules** — 📋 in product program
 
 ---
 
@@ -154,6 +155,7 @@ Everything below is live in production.
 - Email notification digest (batched)
 - Per-channel notification preferences
 - Transactional-by-default email policy (marketing-style mail opt-in in settings; migration `0002` for defaults)
+- Notification quiet hours (user-level): suppress real-time notification toasts and unread digest email during a schedule; migration `0003` (`notification_quiet_hours` on `user_settings`)
 
 ### Internationalization
 
