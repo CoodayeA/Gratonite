@@ -66,4 +66,29 @@ Use this for a **structured** accessibility pass. Target is **WCAG 2.1 Level AA*
 
 ## Status
 
-**Template** — Fill in dates and owners when the formal audit starts.
+**Pass 1 started: 2026-07-15**
+
+### Completed in this pass
+
+- ✅ **eslint-plugin-jsx-a11y** expanded to full recommended rule set (`eslint.config.js`)
+  — 4 rules → 21 rules (all at `warn` level to allow incremental fixing)
+- ✅ **Lint budget lowered**: `--max-warnings=250` → `--max-warnings=100` (`apps/web/package.json`)
+- ✅ **`alt` text audit**: all `<img>` elements in `apps/web/src` reviewed;
+  decorative images use `alt=""`, content images have descriptive alt text.
+- ✅ **New modals created with correct ARIA**: `ConnectInstanceWizard` has
+  `role="dialog"`, `aria-modal="true"`, `aria-label`, and `autoFocus` on primary input.
+- 🔶 **Icon-only buttons** (message actions, toolbar): many buttons contain only Lucide icons
+  with no `aria-label`. P0 item — tracked for Pass 2.
+- 🔶 **`click-events-have-key-events`**: `onClick` on non-interactive elements
+  (many `<div onClick>` patterns in ChannelChat, MessageItem). P1 — tracked for Pass 2.
+- 🔶 **Focus trap** in modals: Tab focus not trapped in most modals.
+  P0 — will use `@radix-ui/react-focus-scope` or `focus-trap-react`. Tracked for Pass 2.
+- 🔶 **Skip link**: no skip-to-content link in the main layout. P1 — tracked for Pass 2.
+
+### Next pass targets (Pass 2)
+
+1. Add `aria-label` to all icon-only `<button>` elements (ChannelChat, MessageItem, VoiceBar)
+2. Add focus trap to all modal dialogs (SettingsModal, UserProfileModal, GuildSettingsModal)
+3. Add skip link to main layout (`App.tsx`)
+4. Replace `<div onClick>` patterns with `<button>` where semantically correct
+5. Lower lint budget: 100 → 50
