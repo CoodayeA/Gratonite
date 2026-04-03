@@ -106,8 +106,8 @@ export default function DeployPage() {
               <span className="text-gray-300">-fsSL https://gratonite.chat/install | bash</span>
             </div>
             <p className="text-sm text-gray-500 mt-3">
-              The installer asks one question (local or server), then handles everything:
-              Docker setup, secret generation, TLS certificates, federation.
+              The installer asks whether you want local or server mode, then handles Docker setup,
+              secret generation, TLS certificates, and federation automatically.
             </p>
           </Card>
         </ScrollReveal>
@@ -138,7 +138,7 @@ export default function DeployPage() {
               <div>
                 <h3 className="font-medium mb-2">CLI Installer</h3>
                 <p className="text-sm text-gray-400 mb-3">
-                  One command, zero prompts. Instance running at localhost:8443.
+                  One command, minimal prompts. Instance running at localhost:8443.
                 </p>
                 <code className="text-xs text-purple-300 bg-gray-950 px-3 py-1.5 rounded block">
                   curl -fsSL gratonite.chat/install | bash
@@ -203,7 +203,7 @@ apt-get update -y && apt-get upgrade -y
 # Install Docker
 curl -fsSL https://get.docker.com | sh
 
-# Run installer in server mode (non-interactive)
+# Bootstrap self-host config (non-interactive)
 GRATONITE_DOMAIN="chat.yourdomain.com"
 GRATONITE_EMAIL="you@yourdomain.com"
 GRATONITE_PASSWORD="$(openssl rand -hex 12)"
@@ -224,6 +224,7 @@ DB_NAME=gratonite
 JWT_SECRET=$(openssl rand -base64 48)
 JWT_REFRESH_SECRET=$(openssl rand -base64 48)
 MFA_ENCRYPTION_KEY=$(openssl rand -hex 32)
+BULLBOARD_ADMIN_TOKEN=$(openssl rand -hex 32)
 FEDERATION_ENABLED=true
 FEDERATION_ALLOW_INBOUND=true
 FEDERATION_ALLOW_OUTBOUND=true
@@ -277,6 +278,13 @@ echo "Admin password: $GRATONITE_PASSWORD"`}
         {/* Docs link */}
         <ScrollReveal delay={0.9}>
           <div className="text-center">
+            <p className="text-gray-500 text-sm mb-2">
+              Hit an error? Generate a support bundle from your install folder:
+              <code className="ml-1">bash ./collect-logs.sh</code>
+            </p>
+            <p className="text-gray-500 text-sm mb-4">
+              On PowerShell: <code>pwsh ./collect-logs.ps1</code>
+            </p>
             <p className="text-gray-400 mb-4">
               Need help? Check the self-hosting documentation.
             </p>

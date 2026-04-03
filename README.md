@@ -280,6 +280,25 @@ docker compose up -d
 docker compose --profile voice up -d
 ```
 
+**Manage and edit your self-hosted instance**:
+```bash
+cd ~/gratonite
+nano .env
+docker compose restart
+```
+
+**Collect a support bundle if setup or startup fails**:
+```bash
+cd ~/gratonite
+bash ./collect-logs.sh
+```
+
+PowerShell:
+```powershell
+Set-Location "$HOME\gratonite"
+pwsh ./collect-logs.ps1
+```
+
 Full guide: [docs/self-hosting.md](docs/self-hosting.md) | Deploy page: [gratonite.chat/deploy](https://gratonite.chat/deploy)
 
 ### Running a Relay Node

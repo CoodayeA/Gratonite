@@ -56,7 +56,7 @@ The installer will ask for three things:
 | Admin email | `you@example.com` |
 | Admin password | (you choose) |
 
-Everything else — database credentials, JWT secrets, MFA keys — is auto-generated and written to `~/gratonite/.env`.
+Everything else — database credentials, JWT secrets, MFA keys, Bull Board admin token — is auto-generated and written to `~/gratonite/.env`.
 
 ## 5. Automatic TLS
 
@@ -122,3 +122,13 @@ cd ~/gratonite
 | Stop | `docker compose down` |
 | Start | `docker compose up -d` |
 | Update | `docker compose pull && docker compose up -d` |
+
+## 10. Collect Logs for Support
+
+If setup or startup fails, run this and attach the generated archive when reporting the issue:
+
+```bash
+cd ~/gratonite
+bash ./collect-logs.sh
+```
+

@@ -285,7 +285,7 @@ Add this line (replace `/path/to/` with your actual paths):
 
 Federation lets your Gratonite instance communicate with other Gratonite instances. Users on your instance can discover and visit servers hosted on other instances, and your public servers can appear on the [Gratonite Discover](https://gratonite.chat/app/discover) directory.
 
-**Federation is completely optional and disabled by default.** Your instance works perfectly fine as a standalone platform.
+**Federation is enabled by default in the self-host templates.** You can disable it by setting `FEDERATION_ENABLED=false`.
 
 ### How to Enable Federation
 
@@ -295,11 +295,10 @@ Federation lets your Gratonite instance communicate with other Gratonite instanc
 nano deploy/self-host/.env
 ```
 
-**Step 2:** Find the federation section and change these values:
+**Step 2:** Confirm your federation settings:
 
 ```bash
 FEDERATION_ENABLED=true
-FEDERATION_DISCOVER_REGISTRATION=true
 ```
 
 **Step 3:** Save the file and restart the API:
@@ -318,7 +317,7 @@ You should see a JSON response containing your instance's public key and federat
 
 ### How to List Your Servers on Gratonite Discover
 
-Once federation is enabled, you need to mark which of your servers should be publicly discoverable:
+Once federation is enabled, mark which of your servers should be publicly discoverable:
 
 1. Open your Gratonite instance in a browser and log in
 2. Go to a server you want to list publicly
@@ -327,11 +326,11 @@ Once federation is enabled, you need to mark which of your servers should be pub
 5. Enable the **"Listed in Server Discovery"** toggle
 6. Optionally add a description and tags to help people find your server
 
-Your discoverable servers will automatically sync to [gratonite.chat/app/discover](https://gratonite.chat/app/discover) every 30 minutes and appear in the **"Self-Hosted Servers"** section.
+Your discoverable servers sync automatically and appear in the **"Self-Hosted Servers"** section after trust checks.
 
 ### How to Verify Your Servers Appear on Discover
 
-After enabling federation and marking servers as discoverable, wait up to 30 minutes, then:
+After enabling federation and marking servers as discoverable, allow time for trust checks (typically ~48h with no abuse reports), then:
 
 1. Visit [gratonite.chat/app/discover](https://gratonite.chat/app/discover)
 2. Scroll to the **"Self-Hosted Servers"** section
@@ -347,7 +346,7 @@ If they don't appear after 30 minutes, check:
 - All instance-to-instance communication is signed with **Ed25519 HTTP Signatures** — no instance can impersonate another
 - Inbound content is sanitized (HTML stripped, URLs validated, size limits enforced)
 - You can block specific domains via the admin panel
-- Federation is fully opt-in — disabled by default
+- Federation is operator-controlled — enabled by default in self-host templates, and can be disabled any time
 
 See the [Federation Guide](federation-guide.md) for more details.
 
@@ -409,12 +408,11 @@ docker compose -f deploy/self-host/docker-compose.yml --profile voice up -d
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `FEDERATION_ENABLED` | `false` | Master switch — enables all federation features |
+| `FEDERATION_ENABLED` | `true` (self-host template) | Master switch — enables all federation features |
 | `FEDERATION_ALLOW_INBOUND` | `true` | Accept requests from other Gratonite instances |
 | `FEDERATION_ALLOW_OUTBOUND` | `true` | Send requests to other Gratonite instances |
 | `FEDERATION_ALLOW_JOINS` | `true` | Allow users from other instances to join your servers |
 | `FEDERATION_ALLOW_REPLICATION` | `false` | Enable server replication for redundancy |
-| `FEDERATION_DISCOVER_REGISTRATION` | `false` | Register your servers with the Gratonite Discover directory |
 | `FEDERATION_HUB_URL` | `https://gratonite.chat` | Hub URL for Discover registration (only change for private networks) |
 
 ### Advanced

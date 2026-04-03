@@ -38,7 +38,7 @@ When prompted, choose **option 1 (local)**.
 The installer will:
 
 - Pull the latest Gratonite images
-- Generate a `.env` file with random secrets (JWT keys, database password, MFA encryption key)
+- Generate a `.env` file with random secrets (JWT keys, database password, MFA encryption key, Bull Board admin token)
 - Create an admin account with auto-generated credentials
 - Start all services via Docker Compose
 
@@ -97,6 +97,20 @@ cd ~/gratonite
 | Stop everything | `docker compose down` |
 | Start after stopping | `docker compose up -d` |
 | Update to latest version | `docker compose pull && docker compose up -d` |
+
+## 8. Collect Logs for Support
+
+If anything fails, run this in `~/gratonite` and share the generated archive:
+
+```bash
+bash ./collect-logs.sh
+```
+
+On PowerShell:
+
+```powershell
+pwsh ./collect-logs.ps1
+```
 
 ## 7. Voice and Video
 
