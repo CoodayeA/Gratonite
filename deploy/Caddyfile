@@ -18,8 +18,10 @@ gratonite.chat {
         file_server
         header Content-Type "text/plain; charset=utf-8"
     }
+    # SPA + static app — must match the container that receives deploy/rsync (`gratonite-web` in docker-compose.production.yml).
+    # Do not use a second web container here or production will stay on an old bundle (What's New, etc.).
     handle {
-        reverse_proxy gratonite-web-1:80
+        reverse_proxy gratonite-web:80
     }
 }
 

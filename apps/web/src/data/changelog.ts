@@ -10,16 +10,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    id: '2026-04-03a',
-    date: 'April 3, 2026',
-    title: 'Smarter search, notification controls & privacy',
+    id: '2026-04-10a',
+    date: 'April 10, 2026',
+    title: 'Search, quiet hours, privacy & admin tools',
     entries: [
       { type: 'feature', text: 'Server-wide search filters — narrow results by server, person, date range, “mentions me,” or messages that have files, images, links, or embeds' },
-      { type: 'improvement', text: 'Do Not Disturb schedule — your DND hours now save reliably and apply automatically in the background (Settings → Notifications)' },
-      { type: 'feature', text: 'Notification quiet hours — pause notification alerts and unread digest emails during the hours you choose; your online status stays the same (Settings → Notifications)' },
-      { type: 'improvement', text: 'Email defaults — mention, DM, and digest emails are opt-in by default; verification and password reset messages still send when needed' },
+      { type: 'improvement', text: 'Do Not Disturb schedule — your DND hours save to the server and apply automatically in the background (Settings → Notifications)' },
+      { type: 'feature', text: 'Notification quiet hours — pause notification alerts and unread digest emails during the hours you choose; your online status stays separate (Settings → Notifications)' },
+      { type: 'improvement', text: 'Email defaults — mention, DM, and digest emails are opt-in; verification and password reset still send when needed' },
       { type: 'feature', text: 'Download your account data — request a GDPR-style export under Settings → Privacy & Safety' },
-      { type: 'improvement', text: 'Admins: instance health snapshot on the admin dashboard, plus a quick link to self-host backup documentation' },
+      { type: 'improvement', text: 'Admins: live instance health on the dashboard plus a shortcut to self-host backup documentation' },
     ],
   },
   {
