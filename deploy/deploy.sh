@@ -174,6 +174,19 @@ cd "$REMOTE_DIR"
 # Recreate app services, including the canonical public proxy and LiveKit.
 docker compose -f docker-compose.production.yml up -d --force-recreate api web caddy livekit
 
+# API entrypoint runs pnpm install --prod before node; wait so migrate does not race.
+echo "Waiting for API dependencies inside container..."
+for _ in $(seq 1 90); do
+  if docker exec gratonite-api test -f /app/node_modules/dotenv/package.json 2>/dev/null; then
+    break
+  fi
+  sleep 2
+done
+if ! docker exec gratonite-api test -f /app/node_modules/dotenv/package.json 2>/dev/null; then
+  echo "Timed out waiting for pnpm install in gratonite-api."
+  exit 1
+fi
+
 # Run any new database migrations
 echo "Running database migrations..."
 docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js"
