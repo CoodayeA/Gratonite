@@ -1265,6 +1265,17 @@ ipcMain.on('update-tray-badge', (_event, data) => {
   updateTrayMenu();
 });
 
+ipcMain.on('network-status-changed', (_event, { online }) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (online) {
+    mainWindow.setTitle('Gratonite');
+    if (tray) tray.setToolTip(trayUnreadCount > 0 ? `Gratonite (${trayUnreadCount} unread)` : 'Gratonite');
+  } else {
+    mainWindow.setTitle('Gratonite [Offline]');
+    if (tray) tray.setToolTip('Gratonite — Offline');
+  }
+});
+
 ipcMain.handle('get-minimize-to-tray', () => minimizeToTray);
 ipcMain.on('set-minimize-to-tray', (_event, value) => {
   minimizeToTray = !!value;

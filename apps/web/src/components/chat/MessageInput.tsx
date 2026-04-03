@@ -1,4 +1,4 @@
-import React, { useRef, useState, lazy, Suspense } from 'react';
+import React, { useRef, useState, useEffect, lazy, Suspense } from 'react';
 import {
     Send, Smile, Image as ImageIcon, Reply, X, Plus, Mic, BarChart2, Clock,
     Edit2, Eye, Volume2, Square, Trash2, Hash, FileText, Scissors
@@ -226,6 +226,18 @@ const MessageInput: React.FC<MessageInputProps> = ({
     draftSaveTimerRef,
     processEmojis,
 }) => {
+    const [isOffline, setIsOffline] = useState(() => !navigator.onLine);
+    useEffect(() => {
+        const onOnline = () => setIsOffline(false);
+        const onOffline = () => setIsOffline(true);
+        window.addEventListener('online', onOnline);
+        window.addEventListener('offline', onOffline);
+        return () => {
+            window.removeEventListener('online', onOnline);
+            window.removeEventListener('offline', onOffline);
+        };
+    }, []);
+
     const [editingFileIndex, setEditingFileIndex] = useState<number | null>(null);
     const [editingFileType, setEditingFileType] = useState<'image' | 'video' | null>(null);
 
@@ -682,10 +694,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
                                 </button>
                                 <button
                                     className="input-icon-btn primary"
-                                    aria-label={rateLimitRemaining > 0 ? `Rate limited, wait ${rateLimitRemaining}s` : 'Send message'}
+                                    aria-label={isOffline ? 'Offline — message will be queued' : rateLimitRemaining > 0 ? `Rate limited, wait ${rateLimitRemaining}s` : 'Send message'}
+                                    title={isOffline ? 'You are offline. The message will be queued and sent when you reconnect.' : undefined}
                                     onClick={handleSendMessage}
-                                    disabled={rateLimitRemaining > 0 || inputValue.trim().length === 0}
-                                    style={{ position: 'relative', opacity: rateLimitRemaining > 0 ? 0.5 : 1, cursor: rateLimitRemaining > 0 ? 'not-allowed' : undefined }}
+                                    disabled={rateLimitRemaining > 0 || inputValue.trim().length === 0 || isOffline}
+                                    style={{ position: 'relative', opacity: rateLimitRemaining > 0 || isOffline ? 0.5 : 1, cursor: rateLimitRemaining > 0 || isOffline ? 'not-allowed' : undefined }}
                                 >
                                     {rateLimitRemaining > 0 ? <span style={{ fontSize: '12px', fontWeight: 700 }}>{rateLimitRemaining}s</span> : <Send size={18} />}
                                     <span className="shortcut-hint" style={{ position: 'absolute', bottom: '-14px', left: '50%', transform: 'translateX(-50%)', fontSize: '9px', color: 'var(--text-muted)', opacity: 0.6, whiteSpace: 'nowrap', pointerEvents: 'none', fontWeight: 500 }}>Enter</span>

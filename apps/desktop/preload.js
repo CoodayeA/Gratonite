@@ -23,6 +23,9 @@ contextBridge.exposeInMainWorld('gratoniteDesktop', {
     new Notification(title, { body });
   },
 
+  // Desktop IPC: report network status to Electron main process
+  setNetworkStatus: (online) => ipcRenderer.send('network-status-changed', { online }),
+
   // Item 260: Badge count — renderer tells main process about unread count
   setBadgeCount: (count) => {
     ipcRenderer.send('set-badge-count', count);
