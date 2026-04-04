@@ -19,6 +19,9 @@ export default defineConfig(({ mode }) => ({
       : []),
   ],
   base: '/app/',
+  worker: {
+    format: 'es',
+  },
   build: {
     sourcemap: mode === 'analyze' ? true : 'hidden',
     rollupOptions: {
