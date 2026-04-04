@@ -5,6 +5,7 @@ import { useToast } from '../../components/ui/ToastManager';
 import { api, setAccessToken } from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
 import gsap from 'gsap';
+import splashIcon from '../../assets/splash-icon.png';
 
 const Login = () => {
     const [showPw, setShowPw] = useState(false);
@@ -98,7 +99,7 @@ const Login = () => {
             {/* Mascot with glow */}
             <div className="auth-mascot" data-auth-anim>
                 <div className="auth-mascot-glow" />
-                <img src={`${import.meta.env.BASE_URL}splash-icon.png`} alt="Gratonite" />
+                <img src={splashIcon} alt="Gratonite" />
             </div>
 
             {/* Heading */}

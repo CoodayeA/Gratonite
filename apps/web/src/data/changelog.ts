@@ -10,6 +10,21 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-04-04a',
+    date: 'April 4, 2026',
+    title: 'Federation wizard, OpenAPI, accessibility & encryption roadmap',
+    entries: [
+      { type: 'feature', text: 'Connect Instance wizard — a guided 3-step flow to link your instance with another: enter a domain, preview its federation info, and send a handshake, all from the Federation admin panel' },
+      { type: 'feature', text: 'Remote instance badges — a globe indicator now appears next to users from federated instances everywhere: chat messages, profiles, member lists, and DMs' },
+      { type: 'feature', text: 'Cross-instance moderation escalation — server admins can now escalate federated reports to the remote instance with one click; escalated reports get a distinct status badge' },
+      { type: 'improvement', text: 'Operator dashboard — extended metrics now include memory usage, CPU load, BullMQ queue depths, Redis history, and LiveKit room count' },
+      { type: 'improvement', text: 'API docs coverage — 33 endpoints are now documented in the public OpenAPI spec, with a CI threshold to keep coverage growing' },
+      { type: 'improvement', text: 'Block & privacy — block/unblock controls and privacy settings are consolidated into one place in Settings → Privacy & Safety' },
+      { type: 'improvement', text: 'Accessibility — keyboard navigation improved across the app: settings sidebar items, close buttons, and auth page links all work with Tab and Enter/Space' },
+      { type: 'security', text: 'Encryption roadmap published — architectural decision records for Double Ratchet forward secrecy and multi-device key sync are now in the open-source repo' },
+    ],
+  },
+  {
     id: '2026-04-03d',
     date: 'April 3, 2026',
     title: 'Quality & stability: calls, voice, and UI polish',
