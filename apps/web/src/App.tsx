@@ -71,6 +71,7 @@ const MemberDirectory = lazy(() => import('./pages/guilds/MemberDirectory'));
 const Gacha = lazy(() => import('./pages/app/Gacha'));
 const DailyChallenges = lazy(() => import('./pages/app/DailyChallenges'));
 const MiniMode = lazy(() => import('./components/desktop/MiniMode'));
+const VoicePopout = lazy(() => import('./pages/VoicePopout'));
 const EmbedDocumentPage = lazy(() => import('./pages/EmbedDocument'));
 const VanityProfile = lazy(() => import('./pages/app/VanityProfile'));
 const UnifiedInbox = lazy(() => import('./pages/app/UnifiedInbox'));
@@ -4353,6 +4354,7 @@ const appRouter = createBrowserRouter(
 
             {/* Task #89: Desktop Mini Mode */}
             <Route path="mini-mode" element={<Suspense fallback={<LazyFallback />}><MiniMode /></Suspense>} />
+            <Route path="voice-popout" element={<Suspense fallback={<LazyFallback />}><VoicePopout /></Suspense>} />
 
             {/* Self-host setup wizard */}
             <Route path="setup" element={<Suspense fallback={<LazyFallback />}><SetupPage /></Suspense>} />
