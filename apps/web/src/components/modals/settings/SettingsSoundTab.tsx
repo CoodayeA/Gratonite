@@ -6,6 +6,11 @@ import type { SettingsTabProps } from './types';
 
 type Props = SettingsTabProps;
 
+const VOICE_SETTINGS_KEY = 'gratonite:voice-settings';
+const loadVoiceSettings = () => {
+  try { return JSON.parse(localStorage.getItem(VOICE_SETTINGS_KEY) || '{}'); } catch { return {}; }
+};
+
 const SettingsSoundTab = ({ addToast }: Props) => {
   const [soundMutedState, setSoundMutedState] = useState(isSoundMuted());
   const [soundVolume, setSoundVolumeState] = useState(getSoundVolume());
@@ -44,6 +49,10 @@ const SettingsSoundTab = ({ addToast }: Props) => {
   );
   const [listeningForKey, setListeningForKey] = useState(false);
   const keyListenerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
+
+  const [noiseGateEnabled, setNoiseGateEnabled] = useState(() => loadVoiceSettings().noiseGate ?? false);
+  const [noiseGateThreshold, setNoiseGateThreshold] = useState<number>(() => loadVoiceSettings().noiseGateThreshold ?? -40);
+  const [micSensitivity, setMicSensitivity] = useState<number>(() => loadVoiceSettings().micSensitivity ?? 70);
 
   // Keybind picker logic
   useEffect(() => {
@@ -225,7 +234,7 @@ const SettingsSoundTab = ({ addToast }: Props) => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px' }}>
           <div>
             <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>Noise Suppression</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.4' }}>Filters background noise from your microphone using Web Audio processing.</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.4' }}>Filters background noise from your microphone using Web Audio processing (Browser-based).</div>
           </div>
           <div
             onClick={() => { const next = !noiseSuppressionEnabled; setNoiseSuppressionEnabledState(next); try { localStorage.setItem('noiseSuppression', String(next)); } catch {} }}
@@ -260,6 +269,79 @@ const SettingsSoundTab = ({ addToast }: Props) => {
             style={{ width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', flexShrink: 0, background: musicModeEnabled ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: `1px solid ${musicModeEnabled ? 'transparent' : 'var(--stroke)'}`, position: 'relative', transition: 'background 0.2s ease' }}
           >
             <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: musicModeEnabled ? '22px' : '2px', transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Voice Input Controls */}
+      <div style={{ height: '1px', background: 'var(--stroke)', margin: '24px 0' }} />
+      <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Voice Input Controls</h3>
+      <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
+        {/* Noise Gate */}
+        <div style={{ padding: '16px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: noiseGateEnabled ? '12px' : '0' }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>Noise Gate</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.4' }}>Suppresses your mic when input falls below a threshold. Reduces background noise between speech.</div>
+            </div>
+            <div
+              onClick={() => {
+                const next = !noiseGateEnabled;
+                setNoiseGateEnabled(next);
+                const s = loadVoiceSettings();
+                s.noiseGate = next;
+                localStorage.setItem(VOICE_SETTINGS_KEY, JSON.stringify(s));
+                window.dispatchEvent(new CustomEvent('voice-settings-change', { detail: s }));
+              }}
+              style={{ width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', flexShrink: 0, background: noiseGateEnabled ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: `1px solid ${noiseGateEnabled ? 'transparent' : 'var(--stroke)'}`, position: 'relative', transition: 'background 0.2s ease', marginLeft: '16px' }}
+            >
+              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: noiseGateEnabled ? '22px' : '2px', transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+            </div>
+          </div>
+          {noiseGateEnabled && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>Gate Threshold</div>
+                <span style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: 600, fontFamily: 'monospace' }}>{noiseGateThreshold} dB</span>
+              </div>
+              <input type="range" min={-60} max={-10} step={5} value={noiseGateThreshold}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  setNoiseGateThreshold(v);
+                  const s = loadVoiceSettings();
+                  s.noiseGateThreshold = v;
+                  localStorage.setItem(VOICE_SETTINGS_KEY, JSON.stringify(s));
+                  window.dispatchEvent(new CustomEvent('voice-settings-change', { detail: s }));
+                }}
+                style={{ width: '100%', accentColor: 'var(--accent-primary)', cursor: 'pointer' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                <span>-60 dB (strict)</span><span>-10 dB (permissive)</span>
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{ height: '1px', background: 'var(--stroke)' }} />
+        {/* Mic Sensitivity */}
+        <div style={{ padding: '16px 20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>Mic Sensitivity</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.4' }}>Adjusts the gain applied to your microphone input. Higher values amplify your voice more.</div>
+            </div>
+            <span style={{ fontSize: '13px', color: 'var(--accent-primary)', fontWeight: 600, fontFamily: 'monospace', marginLeft: '16px', flexShrink: 0 }}>{micSensitivity}%</span>
+          </div>
+          <input type="range" min={0} max={100} step={5} value={micSensitivity}
+            onChange={(e) => {
+              const v = parseInt(e.target.value, 10);
+              setMicSensitivity(v);
+              const s = loadVoiceSettings();
+              s.micSensitivity = v;
+              localStorage.setItem(VOICE_SETTINGS_KEY, JSON.stringify(s));
+              window.dispatchEvent(new CustomEvent('voice-settings-change', { detail: s }));
+            }}
+            style={{ width: '100%', accentColor: 'var(--accent-primary)', cursor: 'pointer' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+            <span>0% (silent)</span><span>50%</span><span>100% (max)</span>
           </div>
         </div>
       </div>
