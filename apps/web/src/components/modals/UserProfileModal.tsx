@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { MoreHorizontal, MessageSquare, X, Star, Palette, Lock, Copy, ShieldOff, ShieldCheck, Flag, Check, Loader2, Code, Tv, Gamepad2, Play, Headphones, Eye, Music } from 'lucide-react';
+import { MoreHorizontal, MessageSquare, X, Star, Palette, Lock, Copy, ShieldOff, ShieldCheck, Flag, Check, Loader2, Code, Tv, Gamepad2, Play, Headphones, Eye, Music, Globe } from 'lucide-react';
 import { onPresenceUpdate, type PresenceUpdatePayload } from '../../lib/socket';
 import { Tooltip } from '../ui/Tooltip';
 import { useToast } from '../ui/ToastManager';
 import { useUser } from '../../contexts/UserContext';
 import Avatar from '../ui/Avatar';
 import { RemoteBadge } from '../ui/RemoteBadge';
+import { FederatedReportModal } from './FederatedReportModal';
 import { api, API_BASE, getAccessToken } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
 import { copyToClipboard } from '../../utils/clipboard';
@@ -169,6 +170,7 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
     const [showReportConfirm, setShowReportConfirm] = useState(false);
     const [isBlockLoading, setIsBlockLoading] = useState(false);
     const [isReportLoading, setIsReportLoading] = useState(false);
+    const [showFedReportModal, setShowFedReportModal] = useState(false);
     const { addToast } = useToast();
     const { user: currentUser } = useUser();
     const optionsRef = useRef<HTMLDivElement>(null);
@@ -573,6 +575,33 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
 
                     <div style={{ height: '1px', background: 'var(--stroke)', margin: '16px 0' }} />
 
+                    {/* Federation section — shown only for remote/federated users */}
+                    {isFederated && (
+                        <div style={{ marginBottom: '16px' }}>
+                            <h3 style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px', letterSpacing: '0.5px' }}>Federation</h3>
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '10px',
+                                padding: '10px 12px', background: 'var(--bg-tertiary)',
+                                border: '1px solid var(--stroke)', borderRadius: '8px',
+                            }}>
+                                <Globe size={16} style={{ color: '#60a5fa', flexShrink: 0 }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>Home Instance</p>
+                                    <p style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 600, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {federationAddress
+                                            ? federationAddress.split('@')[1] ?? federationAddress
+                                            : 'Remote instance'}
+                                    </p>
+                                    {federationAddress && (
+                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {federationAddress}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {mutuals && mutuals.mutualServers.length > 0 && (
                         <>
                             <h3 style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px', letterSpacing: '0.5px' }}>Mutual Servers — {mutuals.mutualServers.length}</h3>
@@ -790,6 +819,25 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* Report Federated Content — shown only for remote users */}
+                                    {isFederated && (
+                                        <button
+                                            onClick={() => {
+                                                setShowUserOptions(false);
+                                                setShowFedReportModal(true);
+                                            }}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '10px',
+                                                padding: '8px 10px', borderRadius: '6px', border: 'none',
+                                                background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)',
+                                                fontSize: '13px', width: '100%', textAlign: 'left',
+                                            }}
+                                            className="hover-bg-tertiary"
+                                        >
+                                            <Globe size={14} /> Report Federated Content
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -797,6 +845,14 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                 </div>
             </div>
         </div>
+        {showFedReportModal && (
+            <FederatedReportModal
+                instanceDomain={federationAddress ? federationAddress.split('@')[1] : undefined}
+                federationAddress={federationAddress ?? undefined}
+                reportedUserId={userProfile?.id}
+                onClose={() => setShowFedReportModal(false)}
+            />
+        )}
         {showGiftModal && (
             <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
                 <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-lg)', padding: '24px', width: '320px' }}>

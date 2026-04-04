@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, memo } from 'react';
+import { Globe } from 'lucide-react';
 import { API_BASE } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
 import { useUser } from '../../contexts/UserContext';
@@ -16,6 +17,8 @@ export interface AvatarProps {
   statusRingColor?: string;
   style?: React.CSSProperties;
   onClick?: (e: React.MouseEvent) => void;
+  /** When set, shows a small globe indicator for federated/remote users */
+  instanceDomain?: string | null;
 }
 
 const STATUS_DOT_COLORS: Record<string, string> = {
@@ -71,6 +74,7 @@ const Avatar = memo(({
   statusRingColor = 'var(--bg-secondary)',
   style,
   onClick,
+  instanceDomain,
 }: AvatarProps) => {
   const { user } = useUser();
   const [imgError, setImgError] = useState(false);
@@ -303,6 +307,32 @@ const Avatar = memo(({
           </div>
         );
       })()}
+
+      {/* Remote instance globe indicator */}
+      {instanceDomain && (
+        <div
+          title={`From ${instanceDomain}`}
+          aria-label={`Federated user from ${instanceDomain}`}
+          style={{
+            position: 'absolute',
+            top: -3,
+            left: -3,
+            width: Math.max(10, Math.round(size * 0.32)),
+            height: Math.max(10, Math.round(size * 0.32)),
+            background: 'var(--bg-secondary)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+          }}
+        >
+          <Globe
+            size={Math.max(7, Math.round(size * 0.22))}
+            style={{ color: '#60a5fa', strokeWidth: 2.5 }}
+          />
+        </div>
+      )}
     </div>
   );
 });
