@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Check, Search, Download, Upload, Palette, ShoppingBag, Edit3, Trash2, Share2, Sparkles, Dices, Star, Eye } from 'lucide-react';
-import { useTheme, type AppTheme, type ColorMode } from '../../ui/ThemeProvider';
+import { useTheme, type AppTheme, type ColorMode, type MessageDensity } from '../../ui/ThemeProvider';
 import { playSound } from '../../../utils/SoundManager';
 import { api } from '../../../lib/api';
 import {
@@ -26,6 +26,7 @@ const SettingsThemeTab = ({ addToast }: Props) => {
     glassMode, setGlassMode, compactMode, setCompactMode,
     buttonShape, setButtonShape, highContrast, setHighContrast,
     lowPower, setLowPower, previewTheme,
+    messageDensity, setMessageDensity,
   } = useTheme();
 
   const [themeSearchQuery, setThemeSearchQuery] = useState('');
@@ -347,6 +348,30 @@ const SettingsThemeTab = ({ addToast }: Props) => {
         <option value="mono">Monospace</option>
         <option value="serif">Serif</option>
       </select>
+
+      {/* Message Density */}
+      <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Message Density</h3>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '32px' }}>
+        {([
+          { value: 'compact',     label: 'Compact',     desc: 'Dense layout, no avatar on grouped messages' },
+          { value: 'comfortable', label: 'Comfortable', desc: 'Balanced spacing (default)' },
+          { value: 'cozy',        label: 'Cozy',        desc: 'Relaxed spacing with extra breathing room' },
+        ] as { value: MessageDensity; label: string; desc: string }[]).map(opt => (
+          <div
+            key={opt.value}
+            onClick={() => setMessageDensity(opt.value)}
+            style={{
+              flex: 1, padding: '12px', borderRadius: '10px', cursor: 'pointer', userSelect: 'none',
+              border: `2px solid ${messageDensity === opt.value ? 'var(--accent-primary)' : 'var(--stroke)'}`,
+              background: messageDensity === opt.value ? 'color-mix(in srgb, var(--accent-primary) 10%, var(--bg-tertiary))' : 'var(--bg-tertiary)',
+              transition: 'border-color 0.15s, background 0.15s',
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: '13px', color: messageDensity === opt.value ? 'var(--accent-primary)' : 'var(--text-primary)', marginBottom: '4px' }}>{opt.label}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.4 }}>{opt.desc}</div>
+          </div>
+        ))}
+      </div>
 
       {/* Glass & Layout */}
       <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Layout & Effects</h3>

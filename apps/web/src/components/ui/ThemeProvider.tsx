@@ -13,6 +13,7 @@ export type GlassMode = 'off' | 'subtle' | 'full';
 export type ButtonShape = 'rounded' | 'sharp' | 'pill';
 export type FocusIndicatorSize = 'normal' | 'large';
 export type ColorBlindMode = 'none' | 'deuteranopia' | 'protanopia' | 'tritanopia';
+export type MessageDensity = 'compact' | 'comfortable' | 'cozy';
 
 type ThemeContextType = {
     theme: AppTheme;
@@ -51,6 +52,8 @@ type ThemeContextType = {
     setColorBlindMode: (cb: ColorBlindMode) => void;
     lowDataMode: boolean;
     setLowDataMode: (ldm: boolean) => void;
+    messageDensity: MessageDensity;
+    setMessageDensity: (density: MessageDensity) => void;
     /** Preview a theme temporarily (revert with null) */
     previewTheme: (themeId: string | null) => void;
     isPreviewActive: boolean;
@@ -170,6 +173,12 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         return false;
     });
 
+    const [messageDensity, setMessageDensityState] = useState<MessageDensity>(() => {
+        const saved = localStorage.getItem('gratonite:density');
+        if (saved === 'compact' || saved === 'comfortable' || saved === 'cozy') return saved;
+        return 'comfortable';
+    });
+
     // Preview state
     const [previewThemeId, setPreviewThemeId] = useState<string | null>(null);
     const isPreviewActive = previewThemeId !== null;
@@ -266,7 +275,12 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('gratonite_low_data_mode', ldm.toString());
     };
 
-    const previewTheme = (themeId: string | null) => {
+    const setMessageDensity = (density: MessageDensity) => {
+        setMessageDensityState(density);
+        localStorage.setItem('gratonite:density', density);
+    };
+
+    const previewTheme= (themeId: string | null) => {
         setPreviewThemeId(themeId);
     };
 
@@ -309,6 +323,18 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
             el.style.setProperty('--accent-primary', accentColor);
         }
 
+        // Message density CSS custom properties and data attribute
+        const densityMap: Record<MessageDensity, { padding: string; gap: string; avatarSize: string }> = {
+            compact:     { padding: '2px 16px', gap: '0px',  avatarSize: '32px' },
+            comfortable: { padding: '4px 16px', gap: '2px',  avatarSize: '40px' },
+            cozy:        { padding: '8px 16px', gap: '8px',  avatarSize: '40px' },
+        };
+        const dm = densityMap[messageDensity] ?? densityMap.comfortable;
+        el.style.setProperty('--msg-padding', dm.padding);
+        el.style.setProperty('--msg-gap', dm.gap);
+        el.style.setProperty('--avatar-size', dm.avatarSize);
+        el.setAttribute('data-density', messageDensity);
+
         // Font family
         const fontMap: Record<FontFamily, string> = {
             'inter': "'Inter', sans-serif",
@@ -328,7 +354,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         el.style.fontSize = fontSizeMap[fontSize] ?? '100%';
         el.style.setProperty('--font-scale', (scaleMap[fontSize] ?? 1.0).toString());
 
-    }, [activeThemeId, colorMode, fontFamily, fontSize, glassMode, reducedEffects, lowPower, accentColor, highContrast, compactMode, buttonShape, screenReaderMode, linkUnderlines, focusIndicatorSize, colorBlindMode, lowDataMode, previewThemeId]);
+    }, [activeThemeId, colorMode, fontFamily, fontSize, glassMode, reducedEffects, lowPower, accentColor, highContrast, compactMode, buttonShape, screenReaderMode, linkUnderlines, focusIndicatorSize, colorBlindMode, lowDataMode, messageDensity, previewThemeId]);
 
     // --- B7: OS Accent Color Sync on desktop ---
     useEffect(() => {
@@ -388,6 +414,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
             focusIndicatorSize, setFocusIndicatorSize,
             colorBlindMode, setColorBlindMode,
             lowDataMode, setLowDataMode,
+            messageDensity, setMessageDensity,
             previewTheme, isPreviewActive,
         }}>
             <MotionConfig reducedMotion={reducedEffects ? 'always' : 'user'}>

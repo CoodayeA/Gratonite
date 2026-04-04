@@ -165,17 +165,21 @@
 
             /* Spoiler tags */
             .spoiler {
-                background: var(--text-primary, #dcddde);
+                background: rgba(255, 255, 255, 0.1);
                 color: transparent;
+                text-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
                 border-radius: 3px;
                 padding: 0 2px;
                 cursor: pointer;
                 user-select: none;
-                transition: all 0.15s;
+                transition: all 0.2s;
+                filter: blur(2px);
             }
             .spoiler.revealed {
                 background: var(--bg-tertiary, #202225);
                 color: var(--text-primary, #dcddde);
+                text-shadow: none;
+                filter: none;
             }
 
             /* Code blocks with syntax highlighting */
@@ -414,4 +418,49 @@
             @media (max-width: 768px) {
               .embed-card { max-width: 100% !important; }
               .code-block, pre { max-width: calc(100vw - 48px) !important; }
+            }
+
+            /* ── Message Density Presets ── */
+            /* Comfortable (default) — mirrors existing .message padding */
+            [data-density="comfortable"] .message {
+                padding: var(--msg-padding, 4px 16px);
+            }
+            [data-density="comfortable"] .message-standalone {
+                margin-top: 16px;
+            }
+
+            /* Compact — tighter spacing, hide avatar on consecutive messages more aggressively */
+            [data-density="compact"] .message {
+                padding: var(--msg-padding, 2px 16px);
+                gap: var(--msg-gap, 0px);
+            }
+            [data-density="compact"] .message-standalone {
+                margin-top: 4px;
+                padding-top: 4px;
+            }
+            [data-density="compact"] .message-grouped {
+                margin-top: 0;
+                padding-top: 1px;
+            }
+            /* In compact mode the avatar column is always hidden (compact-message already handles this) */
+            [data-density="compact"] .message .msg-avatar-col {
+                display: none;
+            }
+
+            /* Cozy — relaxed spacing, always show author line */
+            [data-density="cozy"] .message {
+                padding: var(--msg-padding, 8px 16px);
+                gap: var(--msg-gap, 8px);
+            }
+            [data-density="cozy"] .message-standalone {
+                margin-top: 20px;
+                padding-top: 8px;
+            }
+            [data-density="cozy"] .message-grouped {
+                margin-top: 4px;
+                padding-top: 4px;
+            }
+            /* In cozy mode show the author row on every message */
+            [data-density="cozy"] .msg-grouped-author {
+                display: flex !important;
             }
