@@ -4335,7 +4335,7 @@ function GuildInsightsPanel({ guildId }: { guildId: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// ImportWizard — Upload Discord/Slack export JSON and import channels & roles
+// ImportWizard — Upload server/workspace export JSON and import channels & roles
 // ---------------------------------------------------------------------------
 function ImportWizard({ guildId, addToast }: { guildId: string; addToast: (t: any) => void }) {
     const [step, setStep] = useState<'upload' | 'preview' | 'importing' | 'done'>('upload');
@@ -4351,11 +4351,11 @@ function ImportWizard({ guildId, addToast }: { guildId: string; addToast: (t: an
         reader.onload = (e) => {
             try {
                 const json = JSON.parse(e.target?.result as string);
-                // Discord exports have guild.channels and guild.roles, or top-level channels/roles
+                // Server exports have guild.channels and guild.roles, or top-level channels/roles
                 const channels = json.channels || json.guild?.channels || [];
                 const roles = json.roles || json.guild?.roles || [];
                 if (channels.length === 0 && roles.length === 0) {
-                    setError('No channels or roles found in the export file. Make sure the file is a valid Discord or Slack export.');
+                    setError('No channels or roles found in the export file. Make sure the file is a valid server or workspace export.');
                     return;
                 }
                 setParsedData({ channels, roles });
@@ -4430,7 +4430,7 @@ function ImportWizard({ guildId, addToast }: { guildId: string; addToast: (t: an
             <>
                 <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Preview Import</h2>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '13px' }}>
-                    Review what will be imported from your {source === 'discord' ? 'Discord' : 'Slack'} export.
+                    Review what will be imported from your {source === 'discord' ? 'server' : 'workspace'} export.
                 </p>
                 {error && <div style={{ background: 'var(--error)', color: 'white', padding: '8px 12px', borderRadius: '8px', marginBottom: '12px', fontSize: '13px' }}>{error}</div>}
 
@@ -4486,7 +4486,7 @@ function ImportWizard({ guildId, addToast }: { guildId: string; addToast: (t: an
         <>
             <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Import Server</h2>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
-                Import channels and roles from a Discord or Slack server export.
+                Import channels and roles from another platform's JSON export.
             </p>
 
             <div style={{ marginBottom: '20px' }}>
@@ -4500,7 +4500,7 @@ function ImportWizard({ guildId, addToast }: { guildId: string; addToast: (t: an
                                 color: source === s ? '#000' : 'var(--text-secondary)',
                                 border: source === s ? 'none' : '1px solid var(--stroke)',
                             }}>
-                            {s === 'discord' ? 'Discord' : 'Slack'}
+                            {s === 'discord' ? 'Server Export' : 'Workspace Export'}
                         </button>
                     ))}
                 </div>
@@ -4526,16 +4526,16 @@ function ImportWizard({ guildId, addToast }: { guildId: string; addToast: (t: an
             </div>
 
             <div style={{ marginTop: '20px', background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '10px', border: '1px solid var(--stroke)' }}>
-                <div style={{ fontWeight: 600, marginBottom: '8px', fontSize: '13px' }}>How to export from {source === 'discord' ? 'Discord' : 'Slack'}</div>
+                <div style={{ fontWeight: 600, marginBottom: '8px', fontSize: '13px' }}>How to export in {source === 'discord' ? 'server' : 'workspace'} JSON format</div>
                 {source === 'discord' ? (
                     <ol style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0, paddingLeft: '16px', lineHeight: 1.8 }}>
-                        <li>Use a Discord export tool (e.g. DiscordChatExporter) to export your server</li>
-                        <li>Select JSON format and include channels and roles</li>
+                        <li>Use a server export tool to export your server in JSON format</li>
+                        <li>Include channels and roles in the export</li>
                         <li>Upload the exported .json file above</li>
                     </ol>
                 ) : (
                     <ol style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0, paddingLeft: '16px', lineHeight: 1.8 }}>
-                        <li>Go to your Slack workspace settings</li>
+                        <li>Go to your workspace settings</li>
                         <li>Navigate to Import/Export Data and click Export</li>
                         <li>Extract the .zip and upload the channels.json file above</li>
                     </ol>

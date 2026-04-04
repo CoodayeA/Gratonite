@@ -215,7 +215,7 @@ Planning intent for the next engineering cycles. Cryptography work is a **multi-
 These are **large bets**; prefer **one primary initiative per half** unless capacity expands.
 
 - **Plugin/extension SDK** — Third-party developers can build and distribute plugins
-- **Matrix / ActivityPub bridge** — Interop with Matrix rooms and Mastodon/Misskey
+- **ActivityPub bridge** — Interop with federated social platforms (Mastodon, Misskey)
 - **Tauri migration** — Replace Electron with Tauri for a smaller, faster desktop app
 - **Relay operator incentives** — Reputation rewards and visibility for relay operators
 - **Federation protocol v2** — Batched activities, partial sync, conflict resolution

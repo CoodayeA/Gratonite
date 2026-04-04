@@ -12,7 +12,7 @@ export const metadata: Metadata = createPageMetadata({
   keywords: [
     "Gratonite federation",
     "decentralized chat",
-    "federated Discord alternative",
+    "federated community platform",
     "self-hosted chat federation",
     "open source federated messaging",
   ],
@@ -283,7 +283,7 @@ export default function FederationPage() {
               <h3 className="font-semibold mb-2">Your Data, Your Rules</h3>
               <p className="text-sm text-gray-400">
                 Schools can enforce FERPA compliance. Companies can meet GDPR.
-                Gaming communities can allow what Discord bans. You set the rules.
+                Gaming communities can set their own moderation standards. You set the rules.
               </p>
             </Card>
             <Card className="p-6 bg-gray-900/50">

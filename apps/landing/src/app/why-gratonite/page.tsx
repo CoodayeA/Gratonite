@@ -6,31 +6,18 @@ import { ScrollReveal } from "@/components/effects/ScrollReveal";
 import { createPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Gratonite vs Discord | Free, Open-Source Discord Alternative",
+  title: "Why Gratonite | Open-Source Community Platform",
   description:
-    "Compare Gratonite vs Discord side by side. See why Gratonite Chat stands out with open source transparency, no tracking, no phone verification, spatial voice, and community-first design.",
+    "See what makes Gratonite different: open source, no ads, no tracking, no phone verification, spatial voice, and a community-created economy. Your space, your rules.",
   path: "/why-gratonite/",
   keywords: [
-    "Gratonite vs Discord",
-    "Gratonite alternative to Discord",
-    "Discord competitor",
-    "free Discord alternative",
-    "open source Discord alternative",
+    "why Gratonite",
+    "open source community platform",
+    "no ads chat app",
+    "privacy-first community",
+    "federated community platform",
   ],
 });
-
-const comparisonRows = [
-  { feature: "Price", gratonite: "Free forever", discord: "Free tier + Nitro ($9.99/mo)", win: true },
-  { feature: "Open Source", gratonite: "Yes", discord: "No", win: true },
-  { feature: "User Tracking", gratonite: "None", discord: "Extensive", win: true },
-  { feature: "Phone Verification", gratonite: "Not required", discord: "Required for some servers", win: true },
-  { feature: "Spatial Voice", gratonite: "Built-in", discord: "No", win: true },
-  { feature: "Cosmetics & Collectibles", gratonite: "User-created marketplace", discord: "Nitro-only cosmetics", win: true },
-  { feature: "Auction House", gratonite: "Built-in economy", discord: "No equivalent", win: true },
-  { feature: "Ads", gratonite: "None", discord: "Promoted content", win: true },
-  { feature: "Data Privacy", gratonite: "No data selling", discord: "Data shared with partners", win: true },
-  { feature: "Community Ownership", gratonite: "Your data, your rules", discord: "Platform-controlled", win: true },
-];
 
 const differentiators = [
   {
@@ -57,9 +44,9 @@ const differentiators = [
 
 const faqs = [
   {
-    question: "Is Gratonite really a Discord alternative?",
+    question: "What makes Gratonite different?",
     answer:
-      "Yes. Gratonite offers real-time text chat, voice channels, servers, and roles \u2014 the core of what makes Discord useful. But we also add spatial voice, a cosmetics marketplace, and an auction house that Discord doesn\u2019t have.",
+      "Gratonite is fully open source, has no ads, requires no phone number, and gives your community actual ownership of their space. We also ship things most platforms don't — spatial voice, a cosmetics marketplace, and a built-in auction house.",
   },
   {
     question: "Can I use Gratonite without a phone number?",
@@ -133,54 +120,36 @@ export default function WhyGratonitePage() {
           </div>
         </ScrollReveal>
 
-        {/* Comparison Table */}
+        {/* What you get */}
         <section className="mb-20">
           <ScrollReveal>
-            <h2 className="font-display text-3xl sm:text-4xl font-bold mb-10">
-              Gratonite vs Discord
+            <h2 className="font-display text-3xl sm:text-4xl font-bold mb-4">
+              What you get with Gratonite
             </h2>
+            <p className="text-foreground/60 mb-10 max-w-xl">
+              Everything you need to run a community — without the compromises.
+            </p>
           </ScrollReveal>
-          <ScrollReveal delay={0.05}>
-            <div className="overflow-x-auto -mx-6 px-6">
-              <table className="w-full bg-surface neo-border rounded-xl overflow-hidden">
-                <thead>
-                  <tr className="border-b-2 border-foreground/10">
-                    <th className="text-left font-display font-bold p-4 sm:p-5">
-                      Feature
-                    </th>
-                    <th className="text-left font-display font-bold p-4 sm:p-5 text-purple">
-                      Gratonite
-                    </th>
-                    <th className="text-left font-display font-bold p-4 sm:p-5 text-foreground/50">
-                      Discord
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {comparisonRows.map((row, i) => (
-                    <tr
-                      key={row.feature}
-                      className={
-                        i < comparisonRows.length - 1
-                          ? "border-b border-foreground/5"
-                          : ""
-                      }
-                    >
-                      <td className="p-4 sm:p-5 font-medium whitespace-nowrap">
-                        {row.feature}
-                      </td>
-                      <td className="p-4 sm:p-5 text-purple font-semibold">
-                        {row.gratonite}
-                      </td>
-                      <td className="p-4 sm:p-5 text-foreground/40">
-                        {row.discord}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </ScrollReveal>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[
+              { label: "Free forever", detail: "No paywalled core features, ever." },
+              { label: "Open source", detail: "Full code on GitHub. Audit us." },
+              { label: "No ads, no tracking", detail: "Your data is not our business model." },
+              { label: "No phone number needed", detail: "Sign up without giving up your digits." },
+              { label: "Spatial voice", detail: "Move around a room. Hear who's near you." },
+              { label: "Community economy", detail: "Cosmetics, collectibles, auction house." },
+              { label: "Federated", detail: "Self-host. Connect instances. Own your data." },
+              { label: "E2E encrypted DMs", detail: "Auto-on encryption. No setup needed." },
+              { label: "Your rules", detail: "Your community, your moderation policies." },
+            ].map((item, i) => (
+              <ScrollReveal key={item.label} delay={i * 0.05}>
+                <div className="bg-surface neo-border rounded-xl p-5">
+                  <p className="font-display font-bold text-base mb-1">{item.label}</p>
+                  <p className="text-foreground/55 text-sm">{item.detail}</p>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
         </section>
 
         {/* Differentiators */}

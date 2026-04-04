@@ -7,14 +7,14 @@ import { createPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = createPageMetadata({
   title: "Release Notes & Roadmap | Gratonite",
   description:
-    "See what's new in Gratonite Chat. Release notes, changelogs, and upcoming features for the free, open-source Discord alternative.",
+    "See what's new in Gratonite Chat. Release notes, changelogs, and upcoming features for the free, open-source community platform.",
   path: "/releases/",
   keywords: [
     "Gratonite release notes",
     "Gratonite changelog",
     "Gratonite roadmap",
     "Gratonite updates",
-    "Discord alternative updates",
+    "open source community platform updates",
   ],
 });
 
@@ -55,7 +55,7 @@ const releases = [
   {
     version: "1.0.2",
     date: "March 6, 2026",
-    summary: "Discord parity and Wave 2. Stickers, push notifications, slow mode, and more.",
+    summary: "Wave 2 feature expansion. Stickers, push notifications, slow mode, and more.",
     accent: "blue" as const,
     changes: [
       "Sticker system with upload and management",
@@ -67,7 +67,7 @@ const releases = [
       "Member screening and server rules gate",
       "Server discovery tags and insights dashboard",
       "Referral system",
-      "20 new database migrations for Discord-parity features",
+      "20 new database migrations for Wave 2 features",
       "Channel read states, message embeds, and webhooks",
       "Forum channels, announcement channels, and server folders",
       "Rich presence, status emoji, and automod system",

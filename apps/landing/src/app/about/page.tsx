@@ -7,7 +7,7 @@ import { createPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = createPageMetadata({
   title: "About Gratonite | The Open-Source Community Platform",
   description:
-    "Learn the story behind Gratonite Chat, the free and open-source Discord alternative built by friends who wanted a better place to hang out online.",
+    "Learn the story behind Gratonite Chat, the free and open-source community platform built by friends who wanted a better place to hang out online.",
   path: "/about/",
 });
 
