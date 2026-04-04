@@ -316,6 +316,13 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     const [hasDraft, setHasDraft] = useState(false);
     const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Upload progress per file (0–100; -1 = failed)
+    const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+    // Flag to skip re-processing our own storage events
+    const isLocalStorageDispatchRef = useRef(false);
+    // Undo history buffer (last 50 textarea values)
+    const undoBufferRef = useRef<string[]>([]);
+
     // Mentions display map: maps display token (@username) to wire format (<@userId>)
     const mentionsMapRef = useRef<Map<string, string>>(new Map());
 
@@ -424,6 +431,19 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         return () => window.removeEventListener('storage', handleStorage);
     }, []);
 
+    // t3-read-unread: sync read state across tabs via storage events
+    useEffect(() => {
+        if (!channelId) return;
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key === `gratonite:read-state:${channelId}` && e.newValue) {
+                // Another tab marked this channel as read — mirror the change
+                markRead(channelId);
+            }
+        };
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
+    }, [channelId]);
+
     // Fetch current user info
     useEffect(() => {
         api.users.getMe().then(me => {
@@ -457,6 +477,27 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             // Server failed to persist — restore unread indicator so it's not silently lost
             setChannelHasUnread(channelId);
         });
+    }, [channelId]);
+
+    // t3-read-unread: auto-mark as read when a new message arrives and the tab is focused.
+    // Uses a 1.5s grace period so the user has a moment to see the notification badge.
+    const autoMarkReadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => {
+        return () => {
+            if (autoMarkReadTimerRef.current) clearTimeout(autoMarkReadTimerRef.current);
+        };
+    }, [channelId]);
+    const scheduleAutoMarkRead = useCallback(() => {
+        if (!channelId) return;
+        if (autoMarkReadTimerRef.current) clearTimeout(autoMarkReadTimerRef.current);
+        autoMarkReadTimerRef.current = setTimeout(() => {
+            if (document.visibilityState !== 'hidden') {
+                markRead(channelId);
+                // Broadcast to other tabs so their sidebar badges clear immediately
+                try { localStorage.setItem(`gratonite:read-state:${channelId}`, Date.now().toString()); } catch { /* ignore */ }
+                api.messages.markRead(channelId).catch(() => {});
+            }
+        }, 1500);
     }, [channelId]);
 
     // Listen for remote typing events
@@ -1206,6 +1247,17 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     useEffect(() => {
         if (!channelId) return;
         mentionsMapRef.current.clear();
+        // Fast-path: load draft from localStorage immediately (server will override)
+        try {
+            const localDraft = localStorage.getItem(`gratonite:draft:${channelId}`);
+            if (localDraft) {
+                setInputValue(localDraft);
+                setHasDraft(true);
+            } else {
+                setInputValue('');
+                setHasDraft(false);
+            }
+        } catch { /* ignore */ }
         // Load draft
         fetch(`${API_BASE}/channels/${channelId}/draft`, {
             headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
@@ -1456,6 +1508,32 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         c.name.toLowerCase().includes(channelSearch.toLowerCase())
     );
 
+    // Close mention popup when there are no matching results
+    useEffect(() => {
+        if (mentionSearch !== null && filteredUsers.length === 0) {
+            setMentionSearch(null);
+        }
+    }, [mentionSearch, filteredUsers]);
+
+    // Cross-tab draft sync: listen for storage events from other tabs
+    useEffect(() => {
+        if (!channelId) return;
+        const draftKey = `gratonite:draft:${channelId}`;
+        const handler = (e: StorageEvent) => {
+            if (e.key !== draftKey) return;
+            if (isLocalStorageDispatchRef.current) return;
+            if (e.newValue !== null) {
+                setInputValue(e.newValue);
+                setHasDraft(true);
+            } else {
+                setInputValue('');
+                setHasDraft(false);
+            }
+        };
+        window.addEventListener('storage', handler);
+        return () => window.removeEventListener('storage', handler);
+    }, [channelId]);
+
     // Batch-decrypt encrypted messages when E2E key becomes available (for history messages)
     useEffect(() => {
         if (!channelE2EKey) return;
@@ -1538,12 +1616,17 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         socketJoinChannel(channelId);
         const unsubReconnect = onSocketReconnect(() => {
             socketJoinChannel(channelId);
+            // Re-fetch read state after reconnect so the unread divider stays accurate
+            api.messages.getReadState(channelId).then((states: any[]) => {
+                const myState = states.find((s: any) => s.userId === currentUserId) || states[0];
+                setLastReadMessageId(myState?.lastReadMessageId ?? null);
+            }).catch(() => {});
         });
         return () => {
             unsubReconnect();
             socketLeaveChannel(channelId);
         };
-    }, [channelId]);
+    }, [channelId, currentUserId]);
 
     // Listen for channel background updates from other users/admins
     useEffect(() => {
@@ -1675,6 +1758,8 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 ...(!incomingPollData && isVoiceMsg ? { type: 'voice' as const } : {}),
             }]);
             playSound('messageReceive');
+            // Auto-mark as read when tab is focused (1.5s delay)
+            scheduleAutoMarkRead();
         });
 
         const unsubUpdate = onMessageUpdate((data: MessageUpdatePayload) => {
@@ -1740,7 +1825,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         });
 
         return () => { unsubCreate(); unsubUpdate(); unsubDelete(); unsubDeleteBulk(); unsubReactionAdd(); unsubReactionRemove(); unsubThreadCreate(); };
-    }, [channelId, currentUserId]);
+    }, [channelId, currentUserId, scheduleAutoMarkRead]);
 
     // Socket listener for MESSAGE_READ events (read receipts real-time update)
     useEffect(() => {
@@ -2056,6 +2141,27 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         });
     }, [addToast, clearRetryBackoff, markRetryBackoff]);
 
+    const uploadWithProgress = useCallback(
+        (file: File, purpose: string, onProgress: (pct: number) => void) =>
+            new Promise<{ id: string; url: string; filename: string; size: number; mimeType: string }>((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                const fd = new FormData();
+                fd.append('file', file);
+                fd.append('purpose', purpose);
+                xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round(e.loaded / e.total * 100)); };
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
+                    else reject(new Error(xhr.statusText));
+                };
+                xhr.onerror = () => reject(new Error('Network error'));
+                xhr.open('POST', `${API_BASE}/files/upload`);
+                const token = getAccessToken();
+                if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                xhr.send(fd);
+            }),
+        [],
+    );
+
     const handleSendMessage = async () => {
         if (inputValue.trim() === '' && chatAttachedFiles.length === 0) return;
         if (!channelId) return;
@@ -2120,19 +2226,37 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         let attachmentIds: string[] = [];
         const encryptedFileMeta: Array<{ id: string; iv: string; ef: string; mt: string }> = [];
         if (chatAttachedFiles.length > 0) {
+            setUploadProgress(Object.fromEntries(chatAttachedFiles.map(f => [f.name, 0])));
             try {
                 if (channelE2EKey && channelIsEncrypted) {
-                    // Encrypt files before upload
                     for (const f of chatAttachedFiles) {
                         const { encryptedBlob, encryptedFilename, iv } = await encryptFile(channelE2EKey, f.file);
                         const encFile = new File([encryptedBlob], 'encrypted.bin', { type: 'application/octet-stream' });
-                        const result = await api.files.upload(encFile, 'attachment');
+                        let result: { id: string; url: string; filename: string; size: number; mimeType: string };
+                        try {
+                            result = await uploadWithProgress(encFile, 'attachment', (pct) => {
+                                setUploadProgress(prev => ({ ...prev, [f.name]: pct }));
+                            });
+                        } catch (fileErr) {
+                            setUploadProgress(prev => ({ ...prev, [f.name]: -1 }));
+                            throw fileErr;
+                        }
                         attachmentIds.push(result.id);
                         encryptedFileMeta.push({ id: result.id, iv, ef: encryptedFilename, mt: f.file.type || 'application/octet-stream' });
                     }
                 } else {
                     const uploadResults = await Promise.all(
-                        chatAttachedFiles.map(f => api.files.upload(f.file, 'attachment'))
+                        chatAttachedFiles.map(async (f) => {
+                            try {
+                                const result = await uploadWithProgress(f.file, 'attachment', (pct) => {
+                                    setUploadProgress(prev => ({ ...prev, [f.name]: pct }));
+                                });
+                                return result;
+                            } catch (fileErr) {
+                                setUploadProgress(prev => ({ ...prev, [f.name]: -1 }));
+                                throw fileErr;
+                            }
+                        })
                     );
                     attachmentIds = uploadResults.map(r => r.id);
                 }
@@ -2218,6 +2342,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         mentionsMapRef.current.clear();
         chatAttachedFiles.forEach(f => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl); });
         setChatAttachedFiles([]);
+        setUploadProgress({});
         setReplyingTo(null);
         setMentionSearch(null);
         setChannelSearch(null);
@@ -2404,22 +2529,37 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         const val = e.target.value;
         const cursor = e.target.selectionStart ?? val.length;
         cursorPosRef.current = cursor;
+        // Push current value onto undo buffer before updating
+        undoBufferRef.current = [...undoBufferRef.current.slice(-49), inputValue];
         setInputValue(val);
 
-        // Debounced draft auto-save (2s)
+        // Debounced draft auto-save (500ms) — server API + localStorage for cross-tab sync
         if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
         if (channelId) {
+            const draftKey = `gratonite:draft:${channelId}`;
             if (val.trim().length > 0) {
                 setHasDraft(true);
+                try {
+                    localStorage.setItem(draftKey, val);
+                    isLocalStorageDispatchRef.current = true;
+                    window.dispatchEvent(new StorageEvent('storage', { key: draftKey, newValue: val }));
+                    isLocalStorageDispatchRef.current = false;
+                } catch { /* ignore */ }
                 draftSaveTimerRef.current = setTimeout(() => {
                     fetch(`${API_BASE}/channels/${channelId}/draft`, {
                         method: 'PUT',
                         headers: { Authorization: `Bearer ${getAccessToken() ?? ''}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ content: resolveWireContent(val) }),
                     }).catch(() => {});
-                }, 2000);
+                }, 500);
             } else {
                 setHasDraft(false);
+                try {
+                    localStorage.removeItem(draftKey);
+                    isLocalStorageDispatchRef.current = true;
+                    window.dispatchEvent(new StorageEvent('storage', { key: draftKey, newValue: null }));
+                    isLocalStorageDispatchRef.current = false;
+                } catch { /* ignore */ }
                 fetch(`${API_BASE}/channels/${channelId}/draft`, {
                     method: 'DELETE',
                     headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
@@ -2579,6 +2719,16 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     };
 
     const handleInputKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        // Undo buffer: Ctrl+Z / Cmd+Z
+        if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+            if (undoBufferRef.current.length > 0) {
+                e.preventDefault();
+                const prev = undoBufferRef.current[undoBufferRef.current.length - 1];
+                undoBufferRef.current = undoBufferRef.current.slice(0, -1);
+                setInputValue(prev);
+                return;
+            }
+        }
         // Slash command navigation
         if (slashSearch !== null && filteredCommands.length > 0) {
             if (e.key === 'ArrowDown') {
@@ -3308,8 +3458,8 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 {!isLoadingMessages && messages.length === 0 && (
                     <EmptyState
                         type="chat"
-                        title={`Welcome to #${channelName}`}
-                        description="Be the first to say something! This channel is waiting for its first message."
+                        title={`No messages yet. Say hello! 👋`}
+                        description="Be the first to say something in this channel."
                         actionLabel="Break the ice"
                         onAction={() => {
                             document.querySelector<HTMLInputElement>('.chat-input')?.focus();
@@ -3318,7 +3468,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 )}
 
                 {isLoadingMessages ? (
-                    <SkeletonMessageList count={6} />
+                    <SkeletonMessageList count={10} />
                 ) : messagesError ? (
                     <ErrorState
                         message="Failed to load messages"
@@ -3840,16 +3990,32 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 {/* Attached file chips */}
                 {chatAttachedFiles.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '0 16px 8px' }}>
-                        {chatAttachedFiles.map((f, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                {f.previewUrl ? <img src={f.previewUrl} style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover' }} alt="" /> : <ImageIcon size={12} />}
-                                <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
-                                <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{f.size}</span>
-                                <button onClick={() => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl); setChatAttachedFiles(prev => prev.filter((_, idx) => idx !== i)); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex' }}>
-                                    <X size={12} />
-                                </button>
-                            </div>
-                        ))}
+                        {chatAttachedFiles.map((f, i) => {
+                            const pct = uploadProgress[f.name];
+                            const isUploading = pct !== undefined && pct >= 0 && pct < 100;
+                            const isFailed = pct === -1;
+                            return (
+                                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: 'var(--bg-tertiary)', border: `1px solid ${isFailed ? 'var(--error)' : 'var(--stroke)'}`, borderRadius: '16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                        {f.previewUrl ? <img src={f.previewUrl} style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover' }} alt="" /> : <ImageIcon size={12} />}
+                                        <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                                        <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{f.size}</span>
+                                        {isUploading && <span style={{ color: 'var(--accent-primary)', fontSize: '10px' }}>{pct}%</span>}
+                                        {isFailed && (
+                                            <button onClick={handleSendMessage} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', padding: '0 2px', fontSize: '13px', lineHeight: 1 }} title="Retry upload">↺</button>
+                                        )}
+                                        <button onClick={() => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl); setChatAttachedFiles(prev => prev.filter((_, idx) => idx !== i)); setUploadProgress(prev => { const next = { ...prev }; delete next[f.name]; return next; }); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex' }}>
+                                            <X size={12} />
+                                        </button>
+                                    </div>
+                                    {isUploading && (
+                                        <div style={{ height: '2px', background: 'var(--stroke)', borderRadius: '1px', overflow: 'hidden' }}>
+                                            <div style={{ height: '100%', width: `${pct}%`, background: 'var(--accent-primary)', transition: 'width 0.2s ease' }} />
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
 
@@ -4441,6 +4607,18 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                         originalMessage={activeThreadMessage}
                         channelId={channelId}
                         onClose={() => setActiveThreadMessage(null)}
+                        onJumpToParent={() => {
+                            if (!activeThreadMessage?.apiId) return;
+                            const el = document.querySelector<HTMLElement>(`[data-message-id="${activeThreadMessage.apiId}"]`);
+                            if (el) {
+                                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                setHighlightedMessageId(activeThreadMessage.id);
+                                setTimeout(() => setHighlightedMessageId(null), 2500);
+                            } else {
+                                setHighlightedMessageId(activeThreadMessage.id);
+                                setTimeout(() => setHighlightedMessageId(null), 2500);
+                            }
+                        }}
                     />
                 )
             }

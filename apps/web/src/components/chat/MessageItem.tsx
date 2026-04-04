@@ -839,6 +839,19 @@ export const MemoizedMessageItem = memo(({
                                 }
                             </div>
                         )}
+                        {/* "Thread continues here" indicator when this message's thread is open */}
+                        {activeThreadMessageId === msg.id && (
+                            <div
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                    marginTop: '4px', fontSize: '11px', color: 'var(--accent-primary)',
+                                    opacity: 0.75, fontStyle: 'italic',
+                                }}
+                            >
+                                <MessageSquare size={10} />
+                                thread continues here ↗
+                            </div>
+                        )}
                     </div>
                 </div>
                 {/* Reaction Picker Popup */}

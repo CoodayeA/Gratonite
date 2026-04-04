@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, MessageSquare, Send, Smile, Filter, Clock, Archive, Search } from 'lucide-react';
+import { X, MessageSquare, Send, Smile, Filter, Clock, Archive, Search, ArrowLeft, ArrowUpRight } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { api } from '../../lib/api';
 import { onThreadCreate } from '../../lib/socket';
 import Avatar from '../ui/Avatar';
 import { useToast } from '../ui/ToastManager';
+import { SkeletonMessageList } from '../ui/SkeletonLoader';
 
 type Message = {
     id: number;
@@ -23,6 +24,7 @@ interface ThreadPanelProps {
     originalMessage: Message | null;
     channelId: string;
     onClose: () => void;
+    onJumpToParent?: () => void;
 }
 
 const ARCHIVE_OPTIONS = [
@@ -45,7 +47,7 @@ type ThreadListItem = {
 type ThreadFilterTab = 'active' | 'archived' | 'mine';
 type ThreadSortOption = 'recent' | 'created' | 'replies';
 
-const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) => {
+const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: ThreadPanelProps) => {
     const { addToast } = useToast();
     const [replies, setReplies] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
@@ -237,23 +239,54 @@ const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) 
 
     return (
         <div className="thread-panel">
-            <div className="thread-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <MessageSquare size={20} color="var(--text-muted)" />
-                    <h3 style={{ fontSize: '16px', fontWeight: 600 }}>Thread</h3>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <button
-                        onClick={() => setShowThreadList(prev => !prev)}
-                        className="message-action-btn"
-                        style={{ width: '28px', height: '28px', color: showThreadList ? 'var(--accent-primary)' : undefined }}
-                        title="All Threads"
-                    >
-                        <Filter size={16} />
-                    </button>
-                    <button onClick={onClose} className="message-action-btn" style={{ width: '28px', height: '28px' }} title="Close (Esc)">
-                        <X size={18} />
-                    </button>
+            <div className="thread-header" style={{ flexDirection: 'column', alignItems: 'stretch', height: 'auto', padding: '8px 12px 0', gap: 0 }}>
+                {/* Breadcrumb: Return to channel */}
+                <button
+                    onClick={onClose}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: 'var(--text-muted)', fontSize: '11px', fontWeight: 600,
+                        padding: '4px 0 6px', textTransform: 'uppercase', letterSpacing: '0.05em',
+                    }}
+                    title="Return to channel"
+                >
+                    <ArrowLeft size={12} />
+                    Return to channel
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px solid var(--stroke)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <MessageSquare size={18} color="var(--accent-primary)" />
+                        <h3 style={{ fontSize: '15px', fontWeight: 600 }}>Thread</h3>
+                        {replies.length > 0 && (
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '1px 7px', borderRadius: '10px' }}>
+                                {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
+                            </span>
+                        )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {onJumpToParent && (
+                            <button
+                                onClick={onJumpToParent}
+                                className="message-action-btn"
+                                style={{ width: '28px', height: '28px' }}
+                                title="Jump to original message"
+                            >
+                                <ArrowUpRight size={16} />
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setShowThreadList(prev => !prev)}
+                            className="message-action-btn"
+                            style={{ width: '28px', height: '28px', color: showThreadList ? 'var(--accent-primary)' : undefined }}
+                            title="All Threads"
+                        >
+                            <Filter size={16} />
+                        </button>
+                        <button onClick={onClose} className="message-action-btn" style={{ width: '28px', height: '28px' }} title="Close (Esc)">
+                            <X size={18} />
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -338,14 +371,17 @@ const ThreadPanel = ({ originalMessage, channelId, onClose }: ThreadPanelProps) 
                 </div>
 
                 {isLoading ? (
-                    <div style={{ display: 'flex', justifyContent: 'center', padding: '32px' }}>
-                        <div style={{ width: '24px', height: '24px', border: '2px solid var(--text-muted)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    </div>
+                    <SkeletonMessageList count={4} />
                 ) : (
                     <>
                         <div style={{ padding: '16px 16px 8px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px' }}>
                             {replies.length} {replies.length === 1 ? 'Reply' : 'Replies'}
                         </div>
+                        {replies.length === 0 && (
+                            <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+                                No replies yet. Start the conversation.
+                            </div>
+                        )}
 
                         {/* Replies */}
                         <div style={{ flex: 1, overflowY: 'auto' }}>
