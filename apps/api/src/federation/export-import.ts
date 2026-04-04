@@ -7,8 +7,10 @@ import { guildMembers, guilds } from '../db/schema/guilds';
 import { userSettings } from '../db/schema/settings';
 import { accountImports } from '../db/schema/account-imports';
 import { federatedInstances } from '../db/schema/federation-instances';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { signData, verifySignature } from './crypto';
+import crypto from 'node:crypto';
+import * as argon2 from 'argon2';
 import { getInstanceDomain } from './index';
 
 export interface ExportData {

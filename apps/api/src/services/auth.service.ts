@@ -266,8 +266,10 @@ export async function register(data: RegisterData): Promise<RegisterResult> {
   if (RESERVED_USERNAMES.has(lowerUsername) ||
       lowerUsername.startsWith('admin') ||
       lowerUsername.startsWith('gratonite') ||
+      lowerUsername.startsWith('mod') ||
+      lowerUsername.startsWith('bot') ||
       lowerUsername.endsWith('official')) {
-    throw new ServiceError('VALIDATION_ERROR', 'This username is reserved');
+    throw new ServiceError('VALIDATION_ERROR', 'This username is reserved. Please choose a different username.');
   }
 
   // Block internal email domains

@@ -4,8 +4,16 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Globe, User, Wifi, Check, ArrowRight, ArrowLeft, Server, Lock } from 'lucide-react';
 import { api } from '../lib/api';
+
+function getPasswordStrength(password: string): { label: string; color: string } | null {
+  if (!password) return null;
+  if (password.length >= 16) return { label: 'Strong', color: '#22c55e' };
+  if (password.length >= 10) return { label: 'Fair', color: '#f59e0b' };
+  return { label: 'Weak', color: '#ef4444' };
+}
 
 type Step = 'domain' | 'admin' | 'relay' | 'done';
 

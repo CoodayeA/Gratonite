@@ -368,7 +368,29 @@ const registerSchema = z.object({
     .string()
     .min(3, 'Username must be at least 3 characters')
     .max(32, 'Username must be at most 32 characters')
-    .regex(/^[a-zA-Z0-9_]+$/, 'Username may only contain letters, numbers, and underscores'),
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username may only contain letters, numbers, and underscores')
+    .superRefine((val, ctx) => {
+      const lower = val.toLowerCase();
+      const RESERVED = new Set([
+        'admin', 'moderator', 'owner', 'staff', 'support', 'system',
+        'gratonite', 'root', 'superuser', 'operator', 'mod', 'bot',
+      ]);
+      if (
+        RESERVED.has(lower) ||
+        lower.startsWith('admin') ||
+        lower.startsWith('gratonite') ||
+        lower.startsWith('mod') ||
+        lower.startsWith('bot_') ||
+        lower.endsWith('official') ||
+        lower.endsWith('_official')
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'This username is reserved. Please choose a different username.',
+          path: [],
+        });
+      }
+    }),
   email: z.string().email('Must be a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   displayName: z.string().min(1).max(64).optional(),
@@ -441,6 +463,7 @@ authRouter.post('/register', authRateLimit, asyncHandler(async (req: Request, re
       // Preserve original error codes for conflict types
       const code = err.message === 'Username is already taken' ? 'USERNAME_TAKEN'
         : err.message === 'Email is already registered' ? 'EMAIL_TAKEN'
+        : err.message === 'This username is reserved. Please choose a different username.' ? 'RESERVED_USERNAME'
         : err.code === 'VALIDATION_ERROR' ? 'INVALID_EMAIL_DOMAIN'
         : err.code;
       res.status(status).json({ code, message: err.message });

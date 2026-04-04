@@ -237,6 +237,12 @@ const Register = () => {
                 <Link to="/login" style={{ color: 'var(--accent-primary)' }}>Sign in</Link>
             </p>
 
+            {/* Import account link */}
+            <p data-auth-anim style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+                Already have a Gratonite account from another instance?{' '}
+                <Link to="/import-account" style={{ color: '#818cf8' }}>Import it →</Link>
+            </p>
+
             {/* Terms / Privacy Modal */}
             {activeModal && (
                 <div
