@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import {
   Shield, Users, FileText, MessageSquare, Globe, Bot, Server,
   Search, UserPlus, Check, X, AlertTriangle, Palette, Activity, Database,
+  Download, Zap, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { ApiRequestError } from '../../lib/api/_core';
@@ -87,6 +88,10 @@ export default function AdminDashboard() {
   const [systemHealth, setSystemHealth] = useState<SystemHealthPayload | null>(null);
   const [systemHealthError, setSystemHealthError] = useState<string | null>(null);
   const [healthHistory, setHealthHistory] = useState<SystemHealthPayload[]>([]);
+  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
+  const [preflightLoading, setPreflightLoading] = useState(false);
+  const [preflightResult, setPreflightResult] = useState<{ checks: { id: string; label: string; ok: boolean | null; value?: string; info?: boolean }[]; allOk: boolean; checkedAt: string } | null>(null);
+  const [preflightOpen, setPreflightOpen] = useState(false);
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -179,6 +184,57 @@ export default function AdminDashboard() {
     setPromoting(null);
   };
 
+  const downloadDiagnostics = async () => {
+    setDiagnosticsLoading(true);
+    try {
+      const bundle = await api.get<any>('/admin/diagnostics/bundle');
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `gratonite-diagnostics-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      addToast({ title: 'Diagnostics bundle downloaded', variant: 'success' });
+    } catch {
+      addToast({ title: 'Failed to generate diagnostics', variant: 'error' });
+    }
+    setDiagnosticsLoading(false);
+  };
+
+  const runPreflight = async () => {
+    setPreflightLoading(true);
+    try {
+      const result = await api.get<any>('/admin/upgrade/preflight');
+      setPreflightResult(result);
+      setPreflightOpen(true);
+    } catch {
+      addToast({ title: 'Failed to run preflight checks', variant: 'error' });
+    }
+    setPreflightLoading(false);
+  };
+
+  // Derive active alerts from system health
+  const activeAlerts: { id: string; label: string; level: 'warning' | 'critical' }[] = [];
+  if (systemHealth) {
+    if (systemHealth.disk && (systemHealth.disk.freeMb / systemHealth.disk.totalMb) < 0.1) {
+      activeAlerts.push({ id: 'disk-critical', label: `Disk critically low: ${systemHealth.disk.freeMb} MB free`, level: 'critical' });
+    } else if (systemHealth.disk && (systemHealth.disk.freeMb / systemHealth.disk.totalMb) < 0.25) {
+      activeAlerts.push({ id: 'disk-warning', label: `Disk space low: ${systemHealth.disk.freeMb} MB free`, level: 'warning' });
+    }
+    if (!systemHealth.db.ok) activeAlerts.push({ id: 'db', label: 'Database connection failed', level: 'critical' });
+    if (!systemHealth.redis.ok) activeAlerts.push({ id: 'redis', label: 'Redis connection failed', level: 'critical' });
+    if (systemHealth.cpu && systemHealth.cpu.loadAvg1m > 4) {
+      activeAlerts.push({ id: 'cpu-critical', label: `CPU load critical: ${systemHealth.cpu.loadAvg1m} (1m avg)`, level: 'critical' });
+    } else if (systemHealth.cpu && systemHealth.cpu.loadAvg1m > 2) {
+      activeAlerts.push({ id: 'cpu-warning', label: `CPU load elevated: ${systemHealth.cpu.loadAvg1m} (1m avg)`, level: 'warning' });
+    }
+    if (systemHealth.queues) {
+      const failedQueues = systemHealth.queues.filter(q => q.failed > 100);
+      failedQueues.forEach(q => activeAlerts.push({ id: `queue-${q.name}`, label: `Queue "${q.name}" has ${q.failed} failed jobs`, level: 'warning' }));
+    }
+  }
+
   return (
     <div style={{ height: '100%', overflowY: 'auto', padding: '32px', color: 'var(--text-primary)', fontFamily: 'var(--font-body)' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
@@ -250,6 +306,32 @@ export default function AdminDashboard() {
                 </span>
               )}
             </div>
+
+            {/* Active Alerts */}
+            {activeAlerts.length > 0 && (
+              <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>⚡ Active Alerts</div>
+                {activeAlerts.map(alert => (
+                  <div key={alert.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: alert.level === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)', border: `1px solid ${alert.level === 'critical' ? '#ef4444' : '#f59e0b'}` }}>
+                    <AlertTriangle size={14} color={alert.level === 'critical' ? '#ef4444' : '#f59e0b'} />
+                    <span style={{ fontSize: '12px', fontWeight: 500, color: alert.level === 'critical' ? '#f87171' : '#fbbf24' }}>{alert.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {activeAlerts.length === 0 && (
+              <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)' }}>
+                <Check size={14} color="#34d399" />
+                <span style={{ fontSize: '12px', fontWeight: 500, color: '#34d399' }}>All systems nominal — no active alerts</span>
+              </div>
+            )}
+
+            {/* Alert thresholds legend */}
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', fontSize: '11px', color: 'var(--text-muted)' }}>
+              <span>⚠ Warning thresholds: Disk &lt;25%, CPU &gt;2.0, Queue failed &gt;100</span>
+              <span style={{ color: '#f87171' }}>🔴 Critical: Disk &lt;10%, CPU &gt;4.0, DB/Redis down</span>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px', fontSize: '13px' }}>
               <div>
                 <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Disk free</div>
@@ -257,8 +339,17 @@ export default function AdminDashboard() {
                   {systemHealth.disk ? `${systemHealth.disk.freeMb} MB / ${systemHealth.disk.totalMb} MB` : '—'}
                 </div>
                 {systemHealth.disk && (
-                  <div style={{ marginTop: '4px', height: '4px', borderRadius: '2px', background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', borderRadius: '2px', background: (systemHealth.disk.freeMb / systemHealth.disk.totalMb) < 0.1 ? '#ef4444' : (systemHealth.disk.freeMb / systemHealth.disk.totalMb) < 0.25 ? '#f59e0b' : '#10b981', width: `${(systemHealth.disk.freeMb / systemHealth.disk.totalMb) * 100}%` }} />
+                  <div style={{ marginTop: '6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>
+                      <span>Used</span>
+                      <span>{Math.round((1 - systemHealth.disk.freeMb / systemHealth.disk.totalMb) * 100)}%</span>
+                    </div>
+                    <div style={{ height: '6px', borderRadius: '3px', background: 'var(--bg-tertiary)', overflow: 'hidden', position: 'relative' }}>
+                      <div style={{ height: '100%', borderRadius: '3px', background: (systemHealth.disk.freeMb / systemHealth.disk.totalMb) < 0.1 ? '#ef4444' : (systemHealth.disk.freeMb / systemHealth.disk.totalMb) < 0.25 ? '#f59e0b' : '#10b981', width: `${(1 - systemHealth.disk.freeMb / systemHealth.disk.totalMb) * 100}%` }} />
+                      {/* Warning threshold line at 75% */}
+                      <div style={{ position: 'absolute', top: 0, bottom: 0, left: '75%', width: '1px', background: '#f59e0b', opacity: 0.7 }} title="Warning threshold (75% used)" />
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{systemHealth.disk.path}</div>
                   </div>
                 )}
               </div>
@@ -271,10 +362,12 @@ export default function AdminDashboard() {
               <div>
                 <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>DB ping</div>
                 <div style={{ fontWeight: 600, color: systemHealth.db.ok ? '#34d399' : '#f87171' }}>{systemHealth.db.ok ? 'OK' : 'Fail'}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Critical threshold: down</div>
               </div>
               <div>
                 <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Redis ping</div>
                 <div style={{ fontWeight: 600, color: systemHealth.redis.ok ? '#34d399' : '#f87171' }}>{systemHealth.redis.ok ? 'OK' : 'Fail'}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Critical threshold: down</div>
               </div>
               {systemHealth.memory && (
                 <div>
@@ -288,21 +381,26 @@ export default function AdminDashboard() {
                   <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>CPU load avg</div>
                   <div style={{ fontWeight: 600, color: systemHealth.cpu.loadAvg1m > 4 ? '#f87171' : systemHealth.cpu.loadAvg1m > 2 ? '#fbbf24' : '#34d399' }}>
                     {systemHealth.cpu.loadAvg1m}
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 400, marginLeft: '4px' }}>1m avg</span>
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{systemHealth.cpu.loadAvg5m} / {systemHealth.cpu.loadAvg15m} (5m/15m)</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>⚠ &gt;2.0 · 🔴 &gt;4.0</div>
                 </div>
               )}
             </div>
             {systemHealth.queues && systemHealth.queues.length > 0 && (
               <div style={{ marginTop: '16px' }}>
-                <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>BullMQ Queues</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+                  BullMQ Queues
+                  <span style={{ marginLeft: '8px', fontSize: '10px', fontWeight: 400 }}>(w=waiting, a=active, f=failed · ⚠ f&gt;100)</span>
+                </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {systemHealth.queues.map(q => (
-                    <div key={q.name} style={{ padding: '6px 10px', borderRadius: '8px', background: 'var(--bg-tertiary)', fontSize: '12px' }}>
+                    <div key={q.name} style={{ padding: '6px 10px', borderRadius: '8px', background: q.failed > 100 ? 'rgba(245,158,11,0.1)' : 'var(--bg-tertiary)', border: `1px solid ${q.failed > 100 ? '#f59e0b' : 'transparent'}`, fontSize: '12px' }}>
                       <span style={{ fontWeight: 600 }}>{q.name}</span>
                       <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>
                         {q.waiting >= 0 ? `${q.waiting}w ${q.active}a` : '?'}
-                        {q.failed > 0 && <span style={{ color: '#f87171', marginLeft: '4px' }}>{q.failed}f</span>}
+                        {q.failed > 0 && <span style={{ color: q.failed > 100 ? '#fbbf24' : '#f87171', marginLeft: '4px' }}>{q.failed}f</span>}
                       </span>
                     </div>
                   ))}
@@ -311,13 +409,28 @@ export default function AdminDashboard() {
             )}
             {healthHistory.length > 1 && systemHealth.memory && (
               <div style={{ marginTop: '16px' }}>
-                <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Memory trend (RSS, last {healthHistory.length} snapshots)</div>
-                <svg width="100%" height="32" viewBox={`0 0 ${healthHistory.length * 12} 32`} preserveAspectRatio="none" style={{ display: 'block' }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
+                  Memory trend — RSS (MB), last {healthHistory.length} snapshots
+                </div>
+                <svg width="100%" height="40" viewBox={`0 0 ${Math.max(healthHistory.length * 12, 1)} 40`} preserveAspectRatio="none" style={{ display: 'block' }}>
                   {(() => {
                     const vals = [...healthHistory].reverse().map(h => h.memory?.rssMb ?? 0);
                     const max = Math.max(...vals, 1);
-                    const pts = vals.map((v, i) => `${i * 12},${32 - (v / max) * 28}`).join(' ');
-                    return <polyline points={pts} fill="none" stroke="#0ea5e9" strokeWidth="1.5" />;
+                    const min = Math.min(...vals, 0);
+                    const range = max - min || 1;
+                    const pts = vals.map((v, i) => `${i * 12},${36 - ((v - min) / range) * 30}`).join(' ');
+                    return (
+                      <>
+                        <polyline points={pts} fill="none" stroke="#0ea5e9" strokeWidth="1.5" />
+                        {vals.map((v, i) => (
+                          <circle key={i} cx={i * 12} cy={36 - ((v - min) / range) * 30} r="2" fill="#0ea5e9" opacity="0.8">
+                            <title>{v} MB</title>
+                          </circle>
+                        ))}
+                        <text x="0" y="38" fill="var(--text-muted)" fontSize="8" fontFamily="monospace">{min}MB</text>
+                        <text x="0" y="8" fill="var(--text-muted)" fontSize="8" fontFamily="monospace">{max}MB</text>
+                      </>
+                    );
                   })()}
                 </svg>
               </div>
@@ -329,6 +442,85 @@ export default function AdminDashboard() {
         )}
         {systemHealthError && (
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '-20px 0 28px' }}>{systemHealthError}</p>
+        )}
+
+        {/* Diagnostics Bundle */}
+        {systemHealth && (
+          <div style={{ background: 'var(--bg-secondary, #1a1a2e)', borderRadius: '14px', border: '1px solid var(--stroke, #2a2a3e)', padding: '20px', marginBottom: '28px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <Download size={18} color="#6366f1" />
+              <h2 style={{ fontSize: '15px', fontWeight: 600, margin: 0 }}>Diagnostics Bundle</h2>
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 12px', lineHeight: 1.45 }}>
+              Download a JSON bundle containing system info, error counts (24h), slow query metrics, and active connection data. Use when troubleshooting or filing support requests.
+            </p>
+            <button
+              type="button"
+              onClick={() => void downloadDiagnostics()}
+              disabled={diagnosticsLoading}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 18px', borderRadius: '8px', border: 'none', background: diagnosticsLoading ? 'var(--bg-tertiary)' : '#6366f1', color: diagnosticsLoading ? 'var(--text-muted)' : '#fff', fontSize: '13px', fontWeight: 600, cursor: diagnosticsLoading ? 'not-allowed' : 'pointer' }}
+            >
+              <Download size={14} />
+              {diagnosticsLoading ? 'Collecting...' : 'Download Bundle'}
+            </button>
+          </div>
+        )}
+
+        {/* Upgrade Preflight */}
+        {systemHealth && (
+          <div style={{ background: 'var(--bg-secondary, #1a1a2e)', borderRadius: '14px', border: '1px solid var(--stroke, #2a2a3e)', padding: '20px', marginBottom: '28px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <Zap size={18} color="#f59e0b" />
+              <h2 style={{ fontSize: '15px', fontWeight: 600, margin: 0 }}>Upgrade Preflight</h2>
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 12px', lineHeight: 1.45 }}>
+              Run preflight checks before upgrading your instance. Verifies disk space, database connectivity, Redis, and active session count.
+            </p>
+            <button
+              type="button"
+              onClick={() => void runPreflight()}
+              disabled={preflightLoading}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 18px', borderRadius: '8px', border: 'none', background: preflightLoading ? 'var(--bg-tertiary)' : '#f59e0b', color: preflightLoading ? 'var(--text-muted)' : '#000', fontSize: '13px', fontWeight: 600, cursor: preflightLoading ? 'not-allowed' : 'pointer', marginBottom: preflightResult ? '12px' : '0' }}
+            >
+              <Zap size={14} />
+              {preflightLoading ? 'Running checks...' : 'Run Preflight Checks'}
+            </button>
+            {preflightResult && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <button type="button" onClick={() => setPreflightOpen(o => !o)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', padding: 0 }}>
+                    {preflightOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    {preflightOpen ? 'Hide' : 'Show'} results
+                  </button>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: preflightResult.allOk ? '#34d399' : '#f87171' }}>
+                    {preflightResult.allOk ? '✓ All checks passed' : '⚠ Some checks failed'}
+                  </span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
+                    {new Date(preflightResult.checkedAt).toLocaleTimeString()}
+                  </span>
+                </div>
+                {preflightOpen && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {preflightResult.checks.map(c => (
+                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', background: 'var(--bg-tertiary)', fontSize: '13px' }}>
+                        {c.info ? (
+                          <Activity size={14} color="#0ea5e9" />
+                        ) : c.ok === true ? (
+                          <Check size={14} color="#34d399" />
+                        ) : c.ok === false ? (
+                          <X size={14} color="#f87171" />
+                        ) : (
+                          <AlertTriangle size={14} color="#f59e0b" />
+                        )}
+                        <span style={{ flex: 1 }}>{c.label}</span>
+                        {c.value && <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{c.value}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         <div style={{ background: 'var(--bg-secondary, #1a1a2e)', borderRadius: '14px', border: '1px solid var(--stroke, #2a2a3e)', padding: '20px', marginBottom: '28px' }}>
