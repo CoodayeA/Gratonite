@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, BookOpen, Rocket, Hash, ExternalLink } from 'lucide-react';
+import { X, BookOpen, Rocket, Hash, ExternalLink, Globe, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE, api, getAccessToken } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
@@ -21,10 +21,15 @@ interface GuildWelcomeModalProps {
     welcomeMessage: string;
     rulesChannelId?: string | null;
     onClose: () => void;
+    /** When true, shows a federation onboarding banner for remote members. */
+    isRemoteUser?: boolean;
+    /** The joining user's home instance domain, e.g. "example.social". */
+    remoteInstanceDomain?: string;
 }
 
 const WELCOME_STORAGE_KEY = 'gratonite-welcome-config';
 const DISMISS_KEY = 'gratonite-welcome-dismissed';
+const FED_BANNER_KEY = 'gratonite-fed-banner-dismissed';
 
 const GuildWelcomeModal = ({
     guildId,
@@ -35,6 +40,8 @@ const GuildWelcomeModal = ({
     welcomeMessage,
     rulesChannelId,
     onClose,
+    isRemoteUser = false,
+    remoteInstanceDomain,
 }: GuildWelcomeModalProps) => {
     const navigate = useNavigate();
     const { addToast } = useToast();
@@ -48,6 +55,13 @@ const GuildWelcomeModal = ({
     const [dontShowAgain, setDontShowAgain] = useState(false);
     const [blocks, setBlocks] = useState<WelcomeBlock[]>([]);
     const [channels, setChannels] = useState<{ id: string; name: string; topic: string | null }[]>([]);
+    const [fedBannerDismissed, setFedBannerDismissed] = useState(() => {
+        try {
+            const raw = localStorage.getItem(FED_BANNER_KEY);
+            const map = raw ? JSON.parse(raw) : {};
+            return !!map[guildId];
+        } catch { return false; }
+    });
 
     // Load welcome blocks from localStorage
     useEffect(() => {
@@ -113,6 +127,16 @@ const GuildWelcomeModal = ({
     const bannerUrl = bannerHash ? `${API_BASE}/files/${bannerHash}` : null;
     const guildInitial = guildName.charAt(0).toUpperCase();
     const enabledBlocks = blocks.filter(b => b.enabled);
+
+    const dismissFedBanner = () => {
+        try {
+            const raw = localStorage.getItem(FED_BANNER_KEY);
+            const map = raw ? JSON.parse(raw) : {};
+            map[guildId] = true;
+            localStorage.setItem(FED_BANNER_KEY, JSON.stringify(map));
+        } catch { /* ignore */ }
+        setFedBannerDismissed(true);
+    };
 
     return (
         <div
@@ -192,6 +216,55 @@ const GuildWelcomeModal = ({
                     <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>
                         {memberCount.toLocaleString()} {memberCount === 1 ? 'member' : 'members'}
                     </p>
+
+                    {/* Federation onboarding banner — one-time, for remote/federated members */}
+                    {isRemoteUser && !fedBannerDismissed && (
+                        <div style={{
+                            background: 'rgba(59,130,246,0.08)',
+                            border: '1px solid rgba(59,130,246,0.25)',
+                            borderRadius: '10px',
+                            padding: '14px 16px',
+                            marginBottom: '20px',
+                            position: 'relative',
+                        }}>
+                            <button
+                                onClick={dismissFedBanner}
+                                aria-label="Dismiss federation notice"
+                                style={{
+                                    position: 'absolute', top: 8, right: 8,
+                                    background: 'none', border: 'none', cursor: 'pointer',
+                                    color: 'var(--text-muted)', padding: '2px', display: 'flex',
+                                }}
+                            >
+                                <X size={14} />
+                            </button>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                                <Globe size={18} style={{ color: '#60a5fa', flexShrink: 0, marginTop: '1px' }} />
+                                <div>
+                                    <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>
+                                        You're joining from {remoteInstanceDomain ?? 'a federated instance'}
+                                    </p>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 8px', lineHeight: 1.6 }}>
+                                        Some features may behave differently for federated members. Your profile and messages
+                                        are shared with this server from your home instance.
+                                    </p>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#60a5fa', fontWeight: 600 }}>
+                                            <ShieldCheck size={12} /> Trust &amp; Safety applies across instances
+                                        </div>
+                                        <a
+                                            href="https://gratonite.app/docs/federation"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{ fontSize: '11px', color: '#60a5fa', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}
+                                        >
+                                            Learn more <ExternalLink size={10} />
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Configurable blocks */}
                     {enabledBlocks.map(block => (
