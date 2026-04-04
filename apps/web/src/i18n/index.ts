@@ -96,6 +96,13 @@ export function t(key: string, params?: Record<string, string | number>): string
     return text;
 }
 
+// t6-translation-qa: The i18n infrastructure (t(), setLocale, AVAILABLE_LOCALES) is in place
+// and the locale files exist for 9 languages. However, key user flows — Login, Register,
+// MessageInput (composer), channel list, and call controls — currently use hardcoded English
+// strings rather than calling t(). These flows are out of scope for this pass but are tracked
+// here for a future i18n sprint. The system is ready; adoption only requires replacing
+// hard-coded strings with t('key') calls and adding the corresponding keys to all locale files.
+
 export function initI18n(): void {
     const saved = localStorage.getItem('gratonite:locale') as Locale | null;
     if (saved && AVAILABLE_LOCALES.some(l => l.code === saved)) {
