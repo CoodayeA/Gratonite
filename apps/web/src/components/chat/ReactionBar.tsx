@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { API_BASE, getAccessToken } from '../../lib/api';
 import Avatar from '../ui/Avatar';
 import { ReactionSummaryPopover } from './ReactionSummaryPopover';
@@ -6,6 +6,7 @@ import { ReactionSummaryPopover } from './ReactionSummaryPopover';
 export const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApiId, channelId, onReaction }: { emoji: string; emojiUrl?: string; isCustom?: boolean; count: number; me: boolean; messageApiId?: string; channelId?: string; onReaction?: (apiId: string, emoji: string, me: boolean) => void }) => {
     const [tooltip, setTooltip] = useState<{ users: Array<{ id?: string; displayName?: string; username: string; avatarHash?: string | null }>; total: number } | null>(null);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const handleMouseEnter = () => {
         if (!messageApiId || !channelId) return;
@@ -25,12 +26,21 @@ export const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApi
         setTooltip(null);
     };
 
+    // Debounce rapid reaction toggles to prevent duplicate API calls
+    const handleClick = useCallback(() => {
+        if (!messageApiId) return;
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+            onReaction?.(messageApiId, emoji, me);
+        }, 500);
+    }, [messageApiId, emoji, me, onReaction]);
+
     const [showAllReactors, setShowAllReactors] = useState(false);
 
     return (
         <>
             <button
-                onClick={() => onReaction?.(messageApiId!, emoji, me)}
+                onClick={handleClick}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
                 style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '12px', background: me ? 'rgba(var(--accent-primary-rgb, 139,92,246), 0.15)' : 'var(--bg-tertiary)', border: `1px solid ${me ? 'var(--accent-primary)' : 'var(--stroke)'}`, cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'all 0.15s', position: 'relative' }}

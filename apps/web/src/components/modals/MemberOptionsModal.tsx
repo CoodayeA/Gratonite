@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Link2, Bell, BellOff, User, EyeOff, LogOut, Check, Copy, Clock, AlertTriangle, FileText } from 'lucide-react';
+import { X, Link2, Bell, BellOff, User, EyeOff, LogOut, Check, Copy, Clock, AlertTriangle, FileText, Ban, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
@@ -81,6 +81,12 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
     const [modNoteLoading, setModNoteLoading] = useState(false);
     const [modNoteSaving, setModNoteSaving] = useState(false);
     const modNoteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [incidentTarget, setIncidentTarget] = useState('');
+    const [incidentLoading, setIncidentLoading] = useState(false);
+    const [incidentOpen, setIncidentOpen] = useState(true);
+    const [incidentWarnings, setIncidentWarnings] = useState<Array<{ id: string; reason: string; createdAt: string }>>([]);
+    const [incidentBanned, setIncidentBanned] = useState(false);
+    const [incidentBanReason, setIncidentBanReason] = useState<string | null>(null);
 
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -185,6 +191,31 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
             .catch(() => {})
             .finally(() => { if (mountedRef.current) setModNoteLoading(false); });
     }, [guildId, modNoteTarget]);
+
+    // Load incident history when incident target changes
+    useEffect(() => {
+        if (!guildId || !incidentTarget) {
+            setIncidentWarnings([]);
+            setIncidentBanned(false);
+            setIncidentBanReason(null);
+            return;
+        }
+        setIncidentLoading(true);
+        Promise.all([
+            api.guilds.getMemberWarnings?.(guildId, incidentTarget).catch(() => []),
+            api.guilds.getBans(guildId).catch(() => []),
+        ]).then(([warns, bans]) => {
+            if (!mountedRef.current) return;
+            setIncidentWarnings(
+                (warns as Array<{ id: string; reason: string; createdAt: string }>).sort(
+                    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                )
+            );
+            const ban = (bans as Array<{ userId: string; reason: string | null }>).find(b => b.userId === incidentTarget);
+            setIncidentBanned(!!ban);
+            setIncidentBanReason(ban?.reason ?? null);
+        }).finally(() => { if (mountedRef.current) setIncidentLoading(false); });
+    }, [guildId, incidentTarget]);
 
     const handleModNoteSave = useCallback(async (content: string) => {
         if (!guildId || !modNoteTarget) return;
@@ -464,6 +495,100 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
                                         {modNoteSaving ? 'Saving...' : 'Auto-saved · visible to moderators only'}
                                     </div>
                                 </div>
+                            )}
+
+                            <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />
+
+                            {/* Incident History */}
+                            <button
+                                onClick={() => setIncidentOpen(v => !v)}
+                                style={{
+                                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                                }}
+                            >
+                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                                    Incident History
+                                </label>
+                                <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: incidentOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                            </button>
+
+                            {incidentOpen && (
+                                <>
+                                    <select
+                                        value={incidentTarget}
+                                        onChange={e => setIncidentTarget(e.target.value)}
+                                        style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
+                                    >
+                                        <option value="">Select a member...</option>
+                                        {members.filter(m => m.userId !== (localStorage.getItem('userId') || '')).map(m => (
+                                            <option key={m.userId} value={m.userId}>
+                                                {m.displayName || m.username}
+                                            </option>
+                                        ))}
+                                    </select>
+
+                                    {incidentTarget && (
+                                        <div style={{ background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
+                                            {incidentLoading ? (
+                                                <div style={{ padding: '16px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>Loading...</div>
+                                            ) : (incidentWarnings.length === 0 && !incidentBanned && !members.find(m => m.userId === incidentTarget)?.timeoutUntil) ? (
+                                                <div style={{ padding: '16px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>No incidents on record.</div>
+                                            ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    {/* Active timeout */}
+                                                    {(() => {
+                                                        const target = members.find(m => m.userId === incidentTarget);
+                                                        const isTimedOut = target?.timeoutUntil && new Date(target.timeoutUntil) > new Date();
+                                                        if (!isTimedOut) return null;
+                                                        return (
+                                                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', borderBottom: '1px solid var(--stroke)' }}>
+                                                                <Clock size={14} style={{ color: '#f59e0b', flexShrink: 0, marginTop: '1px' }} />
+                                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#f59e0b' }}>Active Timeout</span>
+                                                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>
+                                                                        Until {new Date(target!.timeoutUntil!).toLocaleString()}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                    {/* Ban */}
+                                                    {incidentBanned && (
+                                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', borderBottom: '1px solid var(--stroke)' }}>
+                                                            <Ban size={14} style={{ color: 'var(--error)', flexShrink: 0, marginTop: '1px' }} />
+                                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--error)' }}>Banned</span>
+                                                                {incidentBanReason && (
+                                                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>{incidentBanReason}</div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {/* Warnings */}
+                                                    {incidentWarnings.map((w, i) => (
+                                                        <div
+                                                            key={w.id}
+                                                            style={{
+                                                                display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px',
+                                                                borderBottom: i < incidentWarnings.length - 1 ? '1px solid var(--stroke)' : 'none',
+                                                            }}
+                                                        >
+                                                            <AlertTriangle size={14} style={{ color: '#f59e0b', flexShrink: 0, marginTop: '1px' }} />
+                                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>Warning</span>
+                                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '1px', wordBreak: 'break-word' }}>{w.reason}</div>
+                                                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                                    {new Date(w.createdAt).toLocaleString()}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </>
                     )}
