@@ -1,12 +1,35 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, Hash, MessageSquare, User, Loader, X, SlidersHorizontal, HelpCircle } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Search, Hash, MessageSquare, User, Loader, X, SlidersHorizontal, HelpCircle, Bookmark, Trash2, Check, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { api } from '../../lib/api';
 import Avatar from '../ui/Avatar';
 import { RemoteBadge } from '../ui/RemoteBadge';
 import { buildDmRoute, buildGuildChannelRoute, normalizeLegacyRoute } from '../../lib/routes';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useDebounce } from '../../hooks/useDebounce';
+
+const SAVED_SEARCHES_KEY = 'gratonite:saved-searches';
+
+type SavedSearch = {
+    id: string;
+    query: string;
+    createdAt: string;
+};
+
+function loadSavedSearches(): SavedSearch[] {
+    try {
+        return JSON.parse(localStorage.getItem(SAVED_SEARCHES_KEY) || '[]');
+    } catch {
+        return [];
+    }
+}
+
+function persistSavedSearches(list: SavedSearch[]) {
+    try {
+        localStorage.setItem(SAVED_SEARCHES_KEY, JSON.stringify(list));
+    } catch { /* ignore */ }
+}
 
 type SearchResult = {
     id: string;
@@ -66,10 +89,44 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
     const [searchError, setSearchError] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
     const [showSyntaxHelp, setShowSyntaxHelp] = useState(false);
+    const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(loadSavedSearches);
+    const [renamingId, setRenamingId] = useState<string | null>(null);
+    const [renameValue, setRenameValue] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
+    const resultsScrollRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
     const isMobile = useIsMobile();
     const debouncedQuery = useDebounce(query, 300);
+
+    const saveSearch = useCallback((q: string) => {
+        const trimmed = q.trim();
+        if (!trimmed) return;
+        setSavedSearches(prev => {
+            if (prev.some(s => s.query === trimmed)) return prev;
+            const next = [{ id: Date.now().toString(), query: trimmed, createdAt: new Date().toISOString() }, ...prev].slice(0, 20);
+            persistSavedSearches(next);
+            return next;
+        });
+    }, []);
+
+    const deleteSearch = useCallback((id: string) => {
+        setSavedSearches(prev => {
+            const next = prev.filter(s => s.id !== id);
+            persistSavedSearches(next);
+            return next;
+        });
+    }, []);
+
+    const commitRename = useCallback((id: string) => {
+        const trimmed = renameValue.trim();
+        if (!trimmed) { setRenamingId(null); return; }
+        setSavedSearches(prev => {
+            const next = prev.map(s => s.id === id ? { ...s, query: trimmed } : s);
+            persistSavedSearches(next);
+            return next;
+        });
+        setRenamingId(null);
+    }, [renameValue]);
 
     // Parse inline operators from the query
     const parsed = useMemo(() => parseSearchOperators(query), [query]);
@@ -171,6 +228,32 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
 
     const users = results.filter(r => r.type === 'user');
     const msgs = results.filter(r => r.type === 'message');
+
+    // Flat virtualized result rows: section headers + items
+    type VRow =
+        | { kind: 'section'; label: string }
+        | { kind: 'user'; result: SearchResult }
+        | { kind: 'message'; result: SearchResult };
+
+    const virtualRows = useMemo<VRow[]>(() => {
+        const rows: VRow[] = [];
+        if (users.length > 0) {
+            rows.push({ kind: 'section', label: 'Users' });
+            users.forEach(u => rows.push({ kind: 'user', result: u }));
+        }
+        if (msgs.length > 0) {
+            rows.push({ kind: 'section', label: 'Messages' });
+            msgs.forEach(m => rows.push({ kind: 'message', result: m }));
+        }
+        return rows;
+    }, [users, msgs]);
+
+    const rowVirtualizer = useVirtualizer({
+        count: virtualRows.length,
+        getScrollElement: () => resultsScrollRef.current,
+        estimateSize: (i) => virtualRows[i]?.kind === 'section' ? 32 : 52,
+        overscan: 5,
+    });
 
     return (
         <div className="modal-backdrop" onClick={onClose} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: isMobile ? '0' : '15vh' }}>
@@ -310,12 +393,49 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                     </div>
                 )}
 
-                <div style={{ flex: isMobile ? 1 : undefined, maxHeight: isMobile ? undefined : '400px', overflowY: 'auto', background: 'var(--bg-primary)' }}>
+                <div style={{ flex: isMobile ? 1 : undefined, maxHeight: isMobile ? undefined : '400px', overflowY: 'auto', background: 'var(--bg-primary)' }} ref={resultsScrollRef}>
                     {!query ? (
-                        <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                            <Search size={32} style={{ opacity: 0.5 }} />
-                            <div>Search for messages, users, or channels</div>
-                        </div>
+                        /* Empty query — show saved searches or hint */
+                        savedSearches.length === 0 ? (
+                            <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                <Search size={32} style={{ opacity: 0.5 }} />
+                                <div>Search for messages, users, or channels</div>
+                            </div>
+                        ) : (
+                            <div style={{ padding: '8px 0' }}>
+                                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '6px 16px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span>Saved Searches</span>
+                                    <button onClick={() => { setSavedSearches([]); persistSavedSearches([]); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 11, padding: '2px 4px', borderRadius: 4 }}>Clear all</button>
+                                </div>
+                                {savedSearches.map(s => (
+                                    <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 16px', cursor: 'pointer' }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                    >
+                                        {renamingId === s.id ? (
+                                            <>
+                                                <input
+                                                    autoFocus
+                                                    value={renameValue}
+                                                    onChange={e => setRenameValue(e.target.value)}
+                                                    onKeyDown={e => { if (e.key === 'Enter') commitRename(s.id); if (e.key === 'Escape') setRenamingId(null); }}
+                                                    style={{ flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--accent-primary)', borderRadius: 4, padding: '3px 6px', fontSize: 13, color: 'var(--text-primary)', outline: 'none' }}
+                                                />
+                                                <button onClick={() => commitRename(s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-primary)', display: 'flex', padding: 2 }}><Check size={14} /></button>
+                                                <button onClick={() => setRenamingId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 2 }}><X size={14} /></button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Bookmark size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                                                <span onClick={() => setQuery(s.query)} style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.query}</span>
+                                                <button onClick={() => { setRenamingId(s.id); setRenameValue(s.query); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 2, opacity: 0.7 }} title="Rename"><Pencil size={12} /></button>
+                                                <button onClick={() => deleteSearch(s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 2, opacity: 0.7 }} title="Delete"><Trash2 size={12} /></button>
+                                            </>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )
                     ) : searching ? (
                         <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                             <Loader size={24} style={{ opacity: 0.5, animation: 'spin 1s linear infinite' }} />
@@ -327,43 +447,69 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
                             <button onClick={() => { setSearchError(false); setRetryCount(c => c + 1); }} style={{ background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: '6px', padding: '6px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
                         </div>
                     ) : results.length === 0 ? (
-                        <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
-                            No results found for &quot;{query}&quot;
+                        <div style={{ padding: '24px 24px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+                                No results found for &quot;{query}&quot;
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                <button
+                                    onClick={() => saveSearch(query)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 6, padding: '6px 12px', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}
+                                >
+                                    <Bookmark size={12} /> Save search
+                                </button>
+                            </div>
                         </div>
                     ) : (
-                        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            {users.length > 0 && (
-                                <>
-                                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', padding: '0 8px', marginTop: '8px', marginBottom: '4px' }}>Users</div>
-                                    {users.map(u => (
-                                        <div key={u.id} className="channel-item" onClick={() => handleResultClick(u)} style={{ cursor: 'pointer' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <Avatar userId={u.id} displayName={u.title} avatarHash={u.avatarHash} size={24} />
-                                                <div>
-                                                    <div style={{ fontSize: '14px', fontWeight: 500, color: 'white', display: 'flex', alignItems: 'center' }}>{u.title}{u.isFederated && <RemoteBadge address={u.federationAddress} />}</div>
-                                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{u.subtitle}</div>
+                        /* Virtualized results */
+                        <div>
+                            {/* Save search toolbar */}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 16px 2px', borderBottom: '1px solid var(--stroke)' }}>
+                                <button
+                                    onClick={() => saveSearch(query)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer', padding: '2px 4px', borderRadius: 4 }}
+                                    title="Save this search"
+                                >
+                                    <Bookmark size={12} /> Save search
+                                </button>
+                            </div>
+                            <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                                {rowVirtualizer.getVirtualItems().map(vItem => {
+                                    const row = virtualRows[vItem.index];
+                                    return (
+                                        <div
+                                            key={vItem.key}
+                                            data-index={vItem.index}
+                                            ref={rowVirtualizer.measureElement}
+                                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${vItem.start}px)` }}
+                                        >
+                                            {row.kind === 'section' ? (
+                                                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', padding: '8px 24px 4px' }}>{row.label}</div>
+                                            ) : row.kind === 'user' ? (
+                                                <div className="channel-item" onClick={() => handleResultClick(row.result)} style={{ cursor: 'pointer', padding: '8px 16px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                        <Avatar userId={row.result.id} displayName={row.result.title} avatarHash={row.result.avatarHash} size={24} />
+                                                        <div>
+                                                            <div style={{ fontSize: '14px', fontWeight: 500, color: 'white', display: 'flex', alignItems: 'center' }}>{row.result.title}{row.result.isFederated && <RemoteBadge address={row.result.federationAddress} />}</div>
+                                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{row.result.subtitle}</div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </>
-                            )}
-                            {msgs.length > 0 && (
-                                <>
-                                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', padding: '0 8px', marginTop: '16px', marginBottom: '4px' }}>Messages</div>
-                                    {msgs.map(m => (
-                                        <div key={m.id} className="channel-item" onClick={() => handleResultClick(m)} style={{ cursor: 'pointer' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <MessageSquare size={18} color="var(--text-secondary)" />
-                                                <div>
-                                                    <div style={{ fontSize: '14px', fontWeight: 500, color: 'white' }}>{m.title}</div>
-                                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{m.subtitle}</div>
+                                            ) : (
+                                                <div className="channel-item" onClick={() => handleResultClick(row.result)} style={{ cursor: 'pointer', padding: '8px 16px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                        <MessageSquare size={18} color="var(--text-secondary)" />
+                                                        <div>
+                                                            <div style={{ fontSize: '14px', fontWeight: 500, color: 'white' }}>{row.result.title}</div>
+                                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{row.result.subtitle}</div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
-                                    ))}
-                                </>
-                            )}
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
                 </div>
