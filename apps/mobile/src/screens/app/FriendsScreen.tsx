@@ -217,50 +217,34 @@ export default function FriendsScreen({ navigation }: Props) {
     },
     tabs: {
       flexDirection: 'row',
-      paddingHorizontal: spacing.lg,
-      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
       marginTop: spacing.sm,
-      marginBottom: spacing.md,
+      marginBottom: 0,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
     },
     tab: {
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.sm,
-      borderRadius: borderRadius.full,
-      backgroundColor: glass
-        ? glass.glassBackground
-        : colors.bgSecondary,
+      borderBottomWidth: 2,
+      borderBottomColor: 'transparent',
       ...(neo ? {
-        borderWidth: 2,
-        borderColor: colors.border,
-        borderRadius: 0,
-      } : {}),
-      ...(glass ? {
-        borderWidth: 1,
-        borderColor: glass.glassBorder,
-        borderRadius: borderRadius.full,
+        borderBottomWidth: 3,
+        borderBottomColor: 'transparent',
       } : {}),
     },
     tabActive: {
-      ...(neo ? {
-        backgroundColor: neo.palette.coral,
-      } : {
-        backgroundColor: colors.accentPrimary,
-      }),
-      shadowColor: colors.accentPrimary,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
-      elevation: 3,
+      borderBottomColor: neo ? neo.palette.coral : colors.accentPrimary,
     },
     tabText: {
-      color: colors.textSecondary,
+      color: colors.textMuted,
       fontSize: fontSize.sm,
       fontWeight: neo ? '700' : '500',
       ...(neo ? { textTransform: 'uppercase' as const } : {}),
     },
     tabTextActive: {
-      color: neo ? '#000000' : colors.white,
-      fontWeight: '800',
+      color: neo ? neo.palette.coral : colors.accentPrimary,
+      fontWeight: '700',
     },
     list: {
       paddingTop: spacing.sm,
