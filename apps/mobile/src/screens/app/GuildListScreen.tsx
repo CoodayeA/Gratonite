@@ -362,10 +362,6 @@ export default function GuildListScreen({ navigation }: Props) {
         }
       : undefined;
 
-    const accentColor = neo !== null
-      ? neo.palette[NEO_PALETTE_KEYS[(index + 2) % 6]]
-      : colors.accentPrimary;
-
     return (
       <AnimatedListItem index={index}>
         <PressableScale
