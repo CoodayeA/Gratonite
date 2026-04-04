@@ -1069,6 +1069,12 @@ const DirectMessage = () => {
         return () => { cancelled = true; };
     }, [currentUserId, recipientId, isGroupDm]);
 
+    // Auto-enable E2E encryption for 1-on-1 DMs as soon as the shared key is ready
+    useEffect(() => {
+        if (!e2eSupported || !e2eKey || isGroupDm || !dmChannelId || e2eEnabled) return;
+        api.encryption.toggleE2E(dmChannelId, true).catch(() => {});
+    }, [e2eSupported, e2eKey, isGroupDm, dmChannelId, e2eEnabled]);
+
     // E2E setup — fetches or creates group key for GROUP_DM channels
     useEffect(() => {
         if (!isE2ESupported() || !currentUserId || !dmChannelId || !isGroupDm || groupParticipants.length === 0) return;
@@ -1291,22 +1297,12 @@ const DirectMessage = () => {
         return unsub;
     }, [isGroupDm, recipientId]);
 
-    // Listen for E2E toggle from either user (syncs both sides)
+    // Listen for E2E state changes (e.g. when the other person's key becomes available)
     useEffect(() => {
         if (!dmChannelId) return;
         const unsub = onE2EStateChanged((payload: E2EStateChangedPayload) => {
             if (payload.channelId !== dmChannelId) return;
             setE2eEnabled(payload.enabled);
-            const emoji = payload.enabled ? '🔒' : '🔓';
-            const action = payload.enabled ? 'enabled' : 'disabled';
-            setMessages(prev => [...prev, {
-                id: Date.now(),
-                author: 'System',
-                system: true,
-                avatar: '',
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                content: `${emoji} ${payload.toggledByName} ${action} end-to-end encryption for this conversation.`,
-            }]);
         });
         return unsub;
     }, [dmChannelId]);
@@ -1960,27 +1956,11 @@ const DirectMessage = () => {
                                         )}
                                         {e2eSupported && e2eKey && !isGroupDm && (
                                             <span
-                                                title={e2eEnabled ? 'Encrypted — click for safety number' : 'Not encrypted — click to enable'}
-                                                onClick={() => {
-                                                    if (e2eEnabled) {
-                                                        handleShowSafetyNumber();
-                                                    } else if (dmChannelId) {
-                                                        api.encryption.toggleE2E(dmChannelId, true).catch(() => {
-                                                            addToast({ title: 'Failed to enable encryption', variant: 'error' });
-                                                        });
-                                                    }
-                                                }}
-                                                onContextMenu={(e) => {
-                                                    if (e2eEnabled && dmChannelId) {
-                                                        e.preventDefault();
-                                                        api.encryption.toggleE2E(dmChannelId, false).catch(() => {
-                                                            addToast({ title: 'Failed to disable encryption', variant: 'error' });
-                                                        });
-                                                    }
-                                                }}
+                                                title="End-to-end encrypted — click to verify safety number"
+                                                onClick={handleShowSafetyNumber}
                                                 style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', marginLeft: '4px' }}
                                             >
-                                                <Lock size={14} style={{ color: e2eEnabled ? 'var(--success, #22c55e)' : 'var(--text-muted)' }} aria-label={e2eEnabled ? 'End-to-end encrypted' : 'Encryption disabled'} />
+                                                <Lock size={14} style={{ color: 'var(--success, #22c55e)' }} aria-label="End-to-end encrypted" />
                                             </span>
                                         )}
                                         {e2eKey && isGroupDm && groupE2eAllMembersHaveKeys && (
@@ -2083,19 +2063,18 @@ const DirectMessage = () => {
                             <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                                     <Shield size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
-                                    <strong style={{ color: 'var(--text-primary)', fontSize: '13px' }}>End-to-End Encryption</strong>
+                                    <strong style={{ color: 'var(--text-primary)', fontSize: '13px' }}>End-to-End Encrypted</strong>
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <span><Lock size={11} style={{ color: 'var(--text-muted)', verticalAlign: 'middle', marginRight: '4px' }} />
-                                        <strong style={{ color: 'var(--text-primary)' }}>Gray lock</strong> next to username = encryption off. Click to enable.</span>
+                                    <span>This conversation is end-to-end encrypted. Only you and the other person can read it.</span>
                                     <span><Lock size={11} style={{ color: 'var(--success, #22c55e)', verticalAlign: 'middle', marginRight: '4px' }} />
-                                        <strong style={{ color: 'var(--text-primary)' }}>Green lock</strong> = encryption on. Click to view your <strong style={{ color: 'var(--text-primary)' }}>safety number</strong> — compare it with the other person to verify your connection is secure.</span>
-                                    <span style={{ paddingLeft: '15px' }}>Right-click the green lock to disable encryption.</span>
+                                        Click the <strong style={{ color: 'var(--text-primary)' }}>green lock</strong> to view your <strong style={{ color: 'var(--text-primary)' }}>safety number</strong> — compare it with the other person to confirm your connection is secure.</span>
                                 </div>
                             </div>
                             <button
                                 onClick={() => { setShowE2eGuide(false); localStorage.setItem('gratonite:e2e-guide-dismissed', 'true'); }}
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', flexShrink: 0 }}
+                                aria-label="Close"
                             >
                                 <X size={16} />
                             </button>
