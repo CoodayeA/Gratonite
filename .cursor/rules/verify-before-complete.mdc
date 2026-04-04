@@ -1,0 +1,17 @@
+---
+description: Verify before claiming done; run checks yourself—do not delegate to the user
+alwaysApply: true
+---
+
+## Do not delegate verification to the user
+
+- **Run** builds, `npm run verify:prod-static-contract`, `npm run verify:nginx-docker-smoke` (when Docker is available), `curl` smoke checks, and deploy steps **in the agent shell** as part of the same turn of work. Do **not** end with a list of commands for the user to run for things you can execute yourself.
+- Only ask the user to run something when it is **impossible** from this environment (e.g. secrets on their machine only, interactive 2FA, production access the sandbox lacks). In that case, say what you could not run and why—still do everything else you can.
+
+## Verification before “done”
+
+- **Never** tell the user something is fixed, deployed, or working based only on code reasoning. **Confirm** with at least one of: successful `build`/`test` for the touched app, targeted `curl`/HTTP check for URL or API changes, or a browser MCP check when the change is UI.
+- If the environment cannot reach production (403, VPN, missing SSH), **say so explicitly** and list what was **not** verified instead of implying success.
+- **Gratonite production** (`gratonite.chat`): deploy changes are not verified until HTTP checks succeed from a shell that can reach the host. Attempt `curl` from the agent; if it returns 403 or fails, state that production was **not** verified from this environment—do not ask the user to “go run curl” unless they need to confirm from their network.
+- **Service worker** (`apps/web/public/sw.js`): precache URLs must be concrete files (`/app/index.html`, not `/app/` alone); `cache.addAll` fails the whole install if any URL is not OK — use per-URL try/catch and bump `CACHE_NAME` when precache logic changes.
+- **Before claiming nginx or static-hosting work**: the agent must **run** `npm run verify:prod-static-contract` and `npm run verify:nginx-docker-smoke` when Docker is available. These catch `/app/login` 404 and SW `addAll` failures; CI also runs them via `.github/workflows/release-gates.yml`.

@@ -26,6 +26,16 @@ Gratonite is production-ready with **140** database schemas, **134** API route m
 - **Mobile quiet hours** — same JSON as web in notification settings
 - **Public API docs** — `docs/api/openapi.yaml` + `docs/api/WEBHOOK-EVENTS.md`
 - **Quality & stability (April 2026)** — Call and screen-share error mapping, LiveKit + native fallback behavior (no false success on cancel), throttled voice join/leave toasts, guild overview loading skeleton and global search “before you search” empty state, API/socket/federation hardening (payload limits, LiveKit token TTL helper, hostname checks), desktop main-process test coverage and safer `second-instance` handling; `docs/SECURITY-AUDIT.md`, `docs/QUALITY-CHECKLIST.md`, What’s New `2026-04-03d`
+- **Search UX polish** — empty/loading states, active-filter chips, `has:` type badges in `GlobalSearch`
+- **Service worker / precache** — invalid-URL guard in `sw.js` registration, precache manifest validated
+- **OpenAPI coverage** — 33 documented paths in `docs/api/openapi.yaml`; `tools/check-openapi-coverage.mjs` threshold check wired into `release-gates.yml` CI
+- **Block / privacy consolidation** — block/unblock API surface + privacy settings unified in `SettingsModal`
+- **Extended infra metrics** — memory, CPU load, BullMQ queue depth, Redis history, LiveKit room count in operator dashboard
+- **Federation: ConnectInstanceWizard** — 3-step guided modal (domain entry → `.well-known` preview → handshake) in `FederationAdmin` discover tab
+- **Federation: RemoteBadge** — remote-instance indicator on all user surfaces (chat, profile, member list, DMs)
+- **Federation: cross-instance moderation escalation** — `POST /federation/admin/reports/:id/escalate`, escalate button + status badge, federated member counts
+- **Encryption ADRs** — `docs/adr/0004-double-ratchet-forward-secrecy.md` (X25519 DR + AES-GCM-256) and `docs/adr/0005-multi-device-key-sync.md`
+- **Accessibility Pass 1** — `eslint-plugin-jsx-a11y` expanded to 21 rules; icon-only buttons labelled; `SettingsModal` nav promoted to `role=button`; WCAG 2.1 AA checklist started
 
 ---
 

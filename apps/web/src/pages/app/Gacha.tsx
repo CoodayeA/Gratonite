@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+﻿import { useState, useRef, useEffect, useCallback } from 'react';
 import { Package, Sparkles, Gem, HelpCircle, History, Grid, X, Lock, ChevronRight } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import { GachaReveal } from '../../components/ui/GachaReveal';
@@ -311,7 +311,7 @@ const CollectionModal = ({ items, totalCount, onClose }: { items: CollectibleIte
                             <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{ownedCount}</span> / {totalCount} unlocked
                         </p>
                     </div>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label="Close"><X size={24} /></button>
                 </div>
 
                 {/* Filters */}
@@ -380,7 +380,7 @@ const PullHistoryModal = ({ history, onClose }: { history: PullHistoryEntry[]; o
             <div style={{ width: 'min(560px, 95vw)', maxHeight: '80vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', borderRadius: '20px', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
                 <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--stroke)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h2 style={{ fontSize: '20px', fontWeight: 700 }}>Pull History</h2>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label="Close"><X size={24} /></button>
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
                     {history.length === 0 && (

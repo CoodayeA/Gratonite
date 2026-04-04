@@ -206,7 +206,7 @@ const Register = () => {
                 <div className="auth-checkbox-wrapper">
                     <input type="checkbox" id="terms" checked={agreed} onChange={e => setAgreed(e.target.checked)} />
                     <label htmlFor="terms">
-                        I agree to the <span onClick={(e) => { e.preventDefault(); setActiveModal('terms'); }} className="auth-link" style={{ cursor: 'pointer' }}>Terms of Service</span> and <span onClick={(e) => { e.preventDefault(); setActiveModal('privacy'); }} className="auth-link" style={{ cursor: 'pointer' }}>Privacy Policy</span>
+                        I agree to the <button type="button" onClick={(e) => { e.preventDefault(); setActiveModal('terms'); }} className="auth-link" style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit', textDecoration: 'underline' }}>Terms of Service</button> and <button type="button" onClick={(e) => { e.preventDefault(); setActiveModal('privacy'); }} className="auth-link" style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit', textDecoration: 'underline' }}>Privacy Policy</button>
                     </label>
                 </div>
 

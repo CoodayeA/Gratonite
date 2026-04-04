@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { ShoppingBag, Search, Filter, Gavel, ArrowUpRight, Clock, Star, Users, X, Gem, Check, Package, Plus, ChevronRight, TrendingUp, Minus, Upload, ChevronDown, Sparkles, Frame, Type, Volume2 } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import { useToast } from '../../components/ui/ToastManager';
@@ -258,7 +258,7 @@ const CreateItemModal = ({ onClose }: { onClose: () => void }) => {
                             <h2 style={{ fontSize: '20px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <Upload size={20} /> Upload Your Creation
                             </h2>
-                            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={22} /></button>
+                            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label="Close"><X size={22} /></button>
                         </div>
                         <div style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
                             {/* Type Selector */}
@@ -382,7 +382,7 @@ const BidModal = ({ auction, balance, onClose, onBidSuccess }: {
                     <>
                         <div style={{ padding: '24px', borderBottom: '1px solid var(--stroke)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h2 style={{ fontSize: '20px', fontWeight: 700 }}>Place a Bid</h2>
-                            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={22} /></button>
+                            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label="Close"><X size={22} /></button>
                         </div>
                         <div style={{ padding: '24px', display: 'flex', gap: '20px' }}>
                             {/* Left: Item info */}
