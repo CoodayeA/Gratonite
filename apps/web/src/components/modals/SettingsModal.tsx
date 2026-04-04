@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+﻿import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { X, Check, ZoomIn, ZoomOut, RotateCw, Volume2, VolumeX, UserX, Copy, Info, Link2, Globe, Search, Download, Upload, Star, Sun, Moon, Dices, Eye, Sparkles, Palette, ShoppingBag, Edit3, Trash2, Share2 } from 'lucide-react';
 import { useTheme, ButtonShape, AppTheme, ColorMode, FontFamily, FontSize, GlassMode, FocusIndicatorSize, ColorBlindMode } from '../ui/ThemeProvider';
 import { haptic } from '../../utils/haptics';
@@ -156,7 +156,7 @@ const CropModal = ({
                     <h3 style={{ fontWeight: 600, fontSize: '17px' }}>
                         {aspect === 'circle' ? 'Crop Avatar' : 'Crop Banner'}
                     </h3>
-                    <button onClick={onCancel} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
+                    <button onClick={onCancel} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label="Close"><X size={20} /></button>
                 </div>
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>Drag to reposition. Use the zoom slider to adjust.</p>
 
@@ -765,45 +765,45 @@ const SettingsModal = ({
                         {(!matchingTabs || matchingTabs.has('account') || matchingTabs.has('profile') || matchingTabs.has('sessions') || matchingTabs.has('privacy') || matchingTabs.has('connections') || matchingTabs.has('achievements') || matchingTabs.has('stats') || matchingTabs.has('wardrobe')) && (
                         <div>
                             <div className="sidebar-section-label">ACCOUNT</div>
-                            {(!matchingTabs || matchingTabs.has('account')) && <div className={`sidebar-nav-item ${activeTab === 'account' ? 'active' : ''}`} onClick={() => { setActiveTab('account'); setSettingsSearch(''); }}>My Account</div>}
-                            {(!matchingTabs || matchingTabs.has('profile')) && <div className={`sidebar-nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => { setActiveTab('profile'); setSettingsSearch(''); }}>Profile</div>}
-                            {(!matchingTabs || matchingTabs.has('sessions')) && <div className={`sidebar-nav-item ${activeTab === 'sessions' ? 'active' : ''}`} onClick={() => { setActiveTab('sessions'); setSettingsSearch(''); }}>Sessions</div>}
-                            {(!matchingTabs || matchingTabs.has('privacy')) && <div className={`sidebar-nav-item ${activeTab === 'privacy' ? 'active' : ''}`} onClick={() => { setActiveTab('privacy'); setSettingsSearch(''); }}>Privacy &amp; Safety</div>}
-                            {(!matchingTabs || matchingTabs.has('connections')) && <div className={`sidebar-nav-item ${activeTab === 'connections' ? 'active' : ''}`} onClick={() => { setActiveTab('connections'); setSettingsSearch(''); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Link2 size={14} />Connections</div>}
-                            {(!matchingTabs || matchingTabs.has('achievements')) && <div className={`sidebar-nav-item ${activeTab === 'achievements' ? 'active' : ''}`} onClick={() => { setActiveTab('achievements'); setSettingsSearch(''); }}>🏆 Achievements</div>}
-                            {(!matchingTabs || matchingTabs.has('stats')) && <div className={`sidebar-nav-item ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => { setActiveTab('stats'); setSettingsSearch(''); }}>📊 Stats</div>}
-                            {(!matchingTabs || matchingTabs.has('wardrobe')) && <div className={`sidebar-nav-item ${activeTab === 'wardrobe' ? 'active' : ''}`} onClick={() => { setActiveTab('wardrobe'); setSettingsSearch(''); }}>👗 Wardrobe</div>}
+                            {(!matchingTabs || matchingTabs.has('account')) && <div className={`sidebar-nav-item ${activeTab === 'account' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('account'); setSettingsSearch(''); }}>My Account</div>}
+                            {(!matchingTabs || matchingTabs.has('profile')) && <div className={`sidebar-nav-item ${activeTab === 'profile' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('profile'); setSettingsSearch(''); }}>Profile</div>}
+                            {(!matchingTabs || matchingTabs.has('sessions')) && <div className={`sidebar-nav-item ${activeTab === 'sessions' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('sessions'); setSettingsSearch(''); }}>Sessions</div>}
+                            {(!matchingTabs || matchingTabs.has('privacy')) && <div className={`sidebar-nav-item ${activeTab === 'privacy' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('privacy'); setSettingsSearch(''); }}>Privacy &amp; Safety</div>}
+                            {(!matchingTabs || matchingTabs.has('connections')) && <div className={`sidebar-nav-item ${activeTab === 'connections' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('connections'); setSettingsSearch(''); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Link2 size={14} />Connections</div>}
+                            {(!matchingTabs || matchingTabs.has('achievements')) && <div className={`sidebar-nav-item ${activeTab === 'achievements' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('achievements'); setSettingsSearch(''); }}>🏆 Achievements</div>}
+                            {(!matchingTabs || matchingTabs.has('stats')) && <div className={`sidebar-nav-item ${activeTab === 'stats' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('stats'); setSettingsSearch(''); }}>📊 Stats</div>}
+                            {(!matchingTabs || matchingTabs.has('wardrobe')) && <div className={`sidebar-nav-item ${activeTab === 'wardrobe' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('wardrobe'); setSettingsSearch(''); }}>👗 Wardrobe</div>}
                         </div>
                         )}
                         {(!matchingTabs || matchingTabs.has('theme') || matchingTabs.has('sound') || matchingTabs.has('accessibility')) && (
                         <div>
                             <div className="sidebar-section-label">APPEARANCE</div>
-                            {(!matchingTabs || matchingTabs.has('theme')) && <div className={`sidebar-nav-item ${activeTab === 'theme' ? 'active' : ''}`} onClick={() => { setActiveTab('theme'); setSettingsSearch(''); }}>Theme</div>}
-                            {(!matchingTabs || matchingTabs.has('sound')) && <div className={`sidebar-nav-item ${activeTab === 'sound' ? 'active' : ''}`} onClick={() => { setActiveTab('sound'); setSettingsSearch(''); }}>Sound</div>}
-                            {(!matchingTabs || matchingTabs.has('accessibility')) && <div className={`sidebar-nav-item ${activeTab === 'accessibility' ? 'active' : ''}`} onClick={() => { setActiveTab('accessibility'); setSettingsSearch(''); }}>Accessibility</div>}
+                            {(!matchingTabs || matchingTabs.has('theme')) && <div className={`sidebar-nav-item ${activeTab === 'theme' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('theme'); setSettingsSearch(''); }}>Theme</div>}
+                            {(!matchingTabs || matchingTabs.has('sound')) && <div className={`sidebar-nav-item ${activeTab === 'sound' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('sound'); setSettingsSearch(''); }}>Sound</div>}
+                            {(!matchingTabs || matchingTabs.has('accessibility')) && <div className={`sidebar-nav-item ${activeTab === 'accessibility' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('accessibility'); setSettingsSearch(''); }}>Accessibility</div>}
                         </div>
                         )}
                         {(!matchingTabs || matchingTabs.has('notifications') || matchingTabs.has('muted-users') || matchingTabs.has('referrals')) && (
                         <div>
                             <div className="sidebar-section-label">NOTIFICATIONS & SOCIAL</div>
-                            {(!matchingTabs || matchingTabs.has('notifications')) && <div className={`sidebar-nav-item ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => { setActiveTab('notifications'); setSettingsSearch(''); }}>Notifications</div>}
-                            {(!matchingTabs || matchingTabs.has('muted-users')) && <div className={`sidebar-nav-item ${activeTab === 'muted-users' ? 'active' : ''}`} onClick={() => { setActiveTab('muted-users'); setSettingsSearch(''); }}>Blocked &amp; Muted</div>}
-                            {(!matchingTabs || matchingTabs.has('referrals')) && <div className={`sidebar-nav-item ${activeTab === 'referrals' ? 'active' : ''}`} onClick={() => { setActiveTab('referrals'); setSettingsSearch(''); }}>Referrals</div>}
-                            {(!matchingTabs || matchingTabs.has('dnd-schedule')) && <div className={`sidebar-nav-item ${activeTab === 'dnd-schedule' ? 'active' : ''}`} onClick={() => { setActiveTab('dnd-schedule'); setSettingsSearch(''); }}>DND Schedule</div>}
-                            {(!matchingTabs || matchingTabs.has('snippets')) && <div className={`sidebar-nav-item ${activeTab === 'snippets' ? 'active' : ''}`} onClick={() => { setActiveTab('snippets'); setSettingsSearch(''); }}>Snippets</div>}
+                            {(!matchingTabs || matchingTabs.has('notifications')) && <div className={`sidebar-nav-item ${activeTab === 'notifications' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('notifications'); setSettingsSearch(''); }}>Notifications</div>}
+                            {(!matchingTabs || matchingTabs.has('muted-users')) && <div className={`sidebar-nav-item ${activeTab === 'muted-users' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('muted-users'); setSettingsSearch(''); }}>Blocked &amp; Muted</div>}
+                            {(!matchingTabs || matchingTabs.has('referrals')) && <div className={`sidebar-nav-item ${activeTab === 'referrals' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('referrals'); setSettingsSearch(''); }}>Referrals</div>}
+                            {(!matchingTabs || matchingTabs.has('dnd-schedule')) && <div className={`sidebar-nav-item ${activeTab === 'dnd-schedule' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('dnd-schedule'); setSettingsSearch(''); }}>DND Schedule</div>}
+                            {(!matchingTabs || matchingTabs.has('snippets')) && <div className={`sidebar-nav-item ${activeTab === 'snippets' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('snippets'); setSettingsSearch(''); }}>Snippets</div>}
                         </div>
                         )}
                         {(!matchingTabs || matchingTabs.has('developer')) && (
                         <div>
                             <div className="sidebar-section-label">DEVELOPER</div>
-                            {(!matchingTabs || matchingTabs.has('developer')) && <div className={`sidebar-nav-item ${activeTab === 'developer' ? 'active' : ''}`} onClick={() => { setActiveTab('developer'); setSettingsSearch(''); }}>Applications</div>}
-                            <div className="sidebar-nav-item" onClick={() => setShowPluginStore(true)}>Plugins</div>
+                            {(!matchingTabs || matchingTabs.has('developer')) && <div className={`sidebar-nav-item ${activeTab === 'developer' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('developer'); setSettingsSearch(''); }}>Applications</div>}
+                            <div className="sidebar-nav-item" role="button" tabIndex={0} onClick={() => setShowPluginStore(true)}>Plugins</div>
                         </div>
                         )}
                         {(!matchingTabs || matchingTabs.has('feedback')) && (
                         <div>
                             <div className="sidebar-section-label">SUPPORT</div>
-                            <div className={`sidebar-nav-item ${activeTab === 'feedback' ? 'active' : ''}`} onClick={() => { setActiveTab('feedback'); setSettingsSearch(''); }}>Send Feedback</div>
+                            <div className={`sidebar-nav-item ${activeTab === 'feedback' ? 'active' : ''}`} role="button" tabIndex={0} onClick={() => { setActiveTab('feedback'); setSettingsSearch(''); }}>Send Feedback</div>
                         </div>
                         )}
                     </div>

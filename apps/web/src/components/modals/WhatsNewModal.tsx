@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+﻿import { useEffect } from 'react';
 import { X, Sparkles, Zap, Shield, Bug } from 'lucide-react';
 import { CHANGELOG } from '../../data/changelog';
 
@@ -38,7 +38,7 @@ export default function WhatsNewModal({ onClose }: { onClose: () => void }) {
             <Sparkles size={22} style={{ color: '#6366f1' }} />
             <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>What's New</h2>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}><X size={20} /></button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }} aria-label="Close"><X size={20} /></button>
         </div>
         {CHANGELOG.map(release => (
           <div key={release.id} style={{ marginBottom: 24 }}>

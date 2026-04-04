@@ -1,10 +1,10 @@
-# Gratonite product program
+﻿# Gratonite product program
 
 Execution-focused tracker for initiatives that span **search, notifications, federation, desktop, operators, and platform**. Priorities and “what shipped” are also summarized in [`ROADMAP.md`](../../ROADMAP.md) at the repo root — **keep both in sync** when status changes.
 
 **Legend:** ✅ shipped on `main` | 🔶 partial / next slice | 📋 not started
 
-**Last reviewed:** 2026-04-03 — reconciled with [`ROADMAP.md`](../../ROADMAP.md) and current tree.
+**Last reviewed:** 2026-04-04 — reconciled with [`ROADMAP.md`](../../ROADMAP.md) and current tree.
 
 ---
 
@@ -25,7 +25,7 @@ Execution-focused tracker for initiatives that span **search, notifications, fed
 | Channel message search | ✅ | Channel chat + search APIs |
 | Global search (modal + command palette) | ✅ | `GlobalSearchModal`, `CommandPalette`, `TopBarActions` |
 | Dedicated search page + filters | ✅ | Guild-scoped search with filters (channel, author, date, `has:*`, mentions-me); saved searches — see *Shipped → Core Platform* in [`ROADMAP.md`](../../ROADMAP.md) |
-| Search UX polish | 🔶 | More empty/loading states, very-large-guild performance — see *Maintenance* in [`ROADMAP.md`](../../ROADMAP.md) |
+| Search UX polish | ✅ | Empty/loading states, active-filter chips, `has:` type badges — see *Recently shipped* in [`ROADMAP.md`](../../ROADMAP.md) |
 
 **Next slices:** in-app search syntax help (see ideas backlog #10 in [`ROADMAP.md`](../../ROADMAP.md)).
 
@@ -53,8 +53,8 @@ Execution-focused tracker for initiatives that span **search, notifications, fed
 |------------|--------|--------|
 | Federation protocol, admin dashboard, help | ✅ | API routes, `FederationAdmin`, help articles |
 | Guild discovery / directory | ✅ | [`ROADMAP.md`](../../ROADMAP.md) *Federation* |
-| Discover / remote user entry (e.g. address lookup + DM) | 🔶 | Core flows exist; **richer** “connect instance” wizard, `.well-known` preview, and ubiquitous remote badges remain |
-| Cross-instance moderation escalation | 🔶 | Reports exist; transparency/escalation UX and docs still improving |
+| Discover / remote user entry (e.g. address lookup + DM) | ✅ | `ConnectInstanceWizard` (3-step: domain → `.well-known` preview → handshake), `RemoteBadge` on all user surfaces — see *Recently shipped* in [`ROADMAP.md`](../../ROADMAP.md) |
+| Cross-instance moderation escalation | ✅ | `POST /federation/admin/reports/:id/escalate`, escalate button + status badge in `FederationAdmin`, federated member counts — see *Recently shipped* in [`ROADMAP.md`](../../ROADMAP.md) |
 
 **Next slices:** federation transparency / abuse reporting ideas in [`ROADMAP.md`](../../ROADMAP.md) backlog (#25–26).
 
@@ -65,7 +65,7 @@ Execution-focused tracker for initiatives that span **search, notifications, fed
 | Initiative | Status | Where |
 |------------|--------|--------|
 | LiveKit voice/video/screen | ✅ | Web + API — [`ROADMAP.md`](../../ROADMAP.md) |
-| Call polish / error handling | 🔶 | Ongoing — *Maintenance* in [`ROADMAP.md`](../../ROADMAP.md) |
+| Call polish / error handling | ✅ | LiveKit error mapping, false-success guard on cancel, throttled join/leave toasts — see *Recently shipped* in [`ROADMAP.md`](../../ROADMAP.md) |
 | Noise suppression / music mode | 📋 | Ideas backlog #18 (noise / input controls) in [`ROADMAP.md`](../../ROADMAP.md) |
 
 ---
@@ -75,7 +75,7 @@ Execution-focused tracker for initiatives that span **search, notifications, fed
 | Initiative | Status | Where |
 |------------|--------|--------|
 | Tray, deep links, hotkeys, mini mode | ✅ | Desktop app — [`ROADMAP.md`](../../ROADMAP.md) |
-| Offline / reconnect UX | 🔶 | [`ROADMAP.md`](../../ROADMAP.md) *Maintenance*; ideas #28 |
+| Offline / reconnect UX | ✅ | Desktop `second-instance` safety, reconnect toasts + safer main-process handling — see *Recently shipped* in [`ROADMAP.md`](../../ROADMAP.md) |
 
 ---
 
@@ -88,7 +88,7 @@ Execution-focused tracker for initiatives that span **search, notifications, fed
 | Admin API health snapshot | ✅ | `AdminDashboard` + `GET /health` |
 | Operator backup entry point | ✅ | Admin → self-host backups + docs — [`ROADMAP.md`](../../ROADMAP.md) *Recently shipped* |
 | Web container nginx | ✅ | `deploy/web/nginx.conf` (SPA under `/app/` in the web image; front door often Caddy in `docker-compose.production.yml`) |
-| Extended infra metrics (disk, LiveKit, etc.) | 🔶 | Partial — deeper signals still optional |
+| Extended infra metrics (disk, LiveKit, etc.) | ✅ | Memory, CPU load, BullMQ queues, Redis history, LiveKit room count — `apps/api/src/routes/metrics.ts` — see *Recently shipped* in [`ROADMAP.md`](../../ROADMAP.md) |
 
 **CI note:** `.github/workflows/release-gates.yml` runs i18n strict, E2E doc audit, API build/lint/guard, **OpenAPI validate**, web lint/guard/**Vite build**. Run root `pnpm verify:release:all` locally for the full release gate (includes API `verify:release` + web smoke) when you have DB/env — see root `package.json` and [`DEVELOPMENT.md`](../../DEVELOPMENT.md).
 
@@ -100,7 +100,7 @@ Execution-focused tracker for initiatives that span **search, notifications, fed
 |------------|--------|--------|
 | Reports, audit, moderation tooling | ✅ | Admin surfaces |
 | GDPR-compliant deletion and **data export** | ✅ | [`ROADMAP.md`](../../ROADMAP.md) *Moderation* |
-| Block / privacy settings | 🔶 | Consolidation possible across surfaces |
+| Block / privacy settings | ✅ | Block/unblock API + UI, privacy settings consolidation in SettingsModal — see *Recently shipped* in [`ROADMAP.md`](../../ROADMAP.md) |
 
 ---
 
@@ -110,7 +110,7 @@ Execution-focused tracker for initiatives that span **search, notifications, fed
 |------------|--------|--------|
 | Webhooks + delivery logs | ✅ | API + UI |
 | **Public API docs** | ✅ | `docs/api/openapi.yaml`, `docs/api/WEBHOOK-EVENTS.md` — [`ROADMAP.md`](../../ROADMAP.md) *Recently shipped* |
-| OpenAPI generation / coverage | 🔶 | Validate in CI; expand generated coverage over time |
+| OpenAPI generation / coverage | ✅ | 33 documented paths, `tools/check-openapi-coverage.mjs` threshold check wired into CI (`release-gates.yml`) — see *Recently shipped* in [`ROADMAP.md`](../../ROADMAP.md) |
 
 ---
 
@@ -119,7 +119,31 @@ Execution-focused tracker for initiatives that span **search, notifications, fed
 | Initiative | Status | Notes |
 |------------|--------|--------|
 | Landing + SPA | ✅ | Landing (`apps/landing`) + Vite app under `/app/` in production |
-| Service worker / precache | 🔶 | After `sw.js` or precache list changes, run a full web build and smoke-test install; avoid precaching invalid URLs |
+| Service worker / precache | ✅ | Precache manifest validated; invalid-URL guard added to `sw.js` registration — see *Recently shipped* in [`ROADMAP.md`](../../ROADMAP.md) |
+
+---
+
+## 10. Encryption (E2E / forward secrecy)
+
+| Initiative | Status | Where |
+|------------|--------|--------|
+| E2E encryption for DMs (ECDH P-256 + AES-GCM-256) | ✅ | Automatic for all DMs — see *Shipped → Encryption* in [`ROADMAP.md`](../../ROADMAP.md) |
+| Forward secrecy — Double Ratchet ADR | ✅ | `docs/adr/0004-double-ratchet-forward-secrecy.md` — X25519 DR + AES-GCM-256, X3DH pre-key bundles, wire format `_e2e: 3` |
+| Multi-device key sync ADR | ✅ | `docs/adr/0005-multi-device-key-sync.md` — device registration, key sync envelope, revocation, 6-phase rollout |
+
+**Next slices:** implement Double Ratchet protocol per ADR-0004 (replace ECDH one-shot with ratcheting); implement device registration API per ADR-0005.
+
+---
+
+## 11. Accessibility (WCAG 2.1 AA)
+
+| Initiative | Status | Where |
+|------------|--------|--------|
+| jsx-a11y lint rules (full recommended) | ✅ | `apps/web/eslint.config.js` — 21 rules; high-volume interaction rules enabled incrementally |
+| Icon-only button labels | ✅ | `aria-label="Close"` added to all `<X>` icon buttons; SettingsModal nav `role="button"` — Pass 2 |
+| WCAG 2.1 AA audit checklist | 🔶 | `docs/a11y/WCAG-AUDIT-CHECKLIST.md` — Pass 2 done; focus trap + skip link + div-onClick fixes remain |
+
+**Next slices:** focus trap in modals, skip link in main layout, enable `click-events-have-key-events` after div→button conversions.
 
 ---
 

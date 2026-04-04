@@ -2487,7 +2487,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     {selectedTemplate && newChannelName && (
                         <div style={{ marginBottom: '12px', padding: '8px 12px', background: 'rgba(88, 101, 242, 0.08)', borderRadius: '8px', border: '1px solid rgba(88, 101, 242, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <span style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: 600 }}>Template: {selectedTemplate.name}{selectedTemplate.topic ? ` \u2022 "${selectedTemplate.topic}"` : ''}</span>
-                            <button onClick={() => setSelectedTemplate(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex' }}><X size={14} /></button>
+                            <button onClick={() => setSelectedTemplate(null)} aria-label="Close" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex' }}><X size={14} /></button>
                         </div>
                     )}
 

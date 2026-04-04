@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { GripVertical, X, Plus, Save, Award, Sparkles, BarChart3 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from './ui/ToastManager';
@@ -143,7 +143,7 @@ const ProfileShowcaseEditor = ({ onClose, userId }: ProfileShowcaseEditorProps) 
                 {/* Header */}
                 <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--stroke)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Profile Showcase</h2>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label="Close"><X size={20} /></button>
                 </div>
 
                 <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>

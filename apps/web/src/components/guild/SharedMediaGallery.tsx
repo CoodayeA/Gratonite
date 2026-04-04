@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SharedMediaGallery — Item 106: Per-server gallery of all images/videos
  * Fetches messages with attachments and displays them in a grid.
  */
@@ -70,7 +70,7 @@ export const SharedMediaGallery = ({ guildId, onClose }: Props) => {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid var(--stroke)' }}>
           <h2 style={{ fontSize: '18px', fontWeight: 600 }}>Server Media Gallery</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label="Close"><X size={20} /></button>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', padding: '12px 24px', borderBottom: '1px solid var(--stroke)' }}>

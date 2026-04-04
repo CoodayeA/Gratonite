@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+﻿import { useState, useCallback, useEffect } from 'react';
 import { X, Download, Trash2, ToggleLeft, ToggleRight, Package, Shield } from 'lucide-react';
 import { ModalWrapper } from '../ui/ModalWrapper';
 import { BUILTIN_PLUGINS } from '../../plugins/builtinPlugins';
@@ -59,7 +59,7 @@ export default function PluginStoreModal({ onClose, installedPlugins: propPlugin
                             <Package size={20} style={{ color: 'var(--accent-primary)' }} />
                             <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Plugins</h2>
                         </div>
-                        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}><X size={20} /></button>
+                        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }} aria-label="Close"><X size={20} /></button>
                     </div>
 
                     {/* Tabs */}
