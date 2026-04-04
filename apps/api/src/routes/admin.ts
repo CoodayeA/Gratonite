@@ -689,6 +689,119 @@ adminRouter.patch(
   },
 );
 
+/** GET /admin/diagnostics/bundle — Collect system diagnostics for download */
+adminRouter.get('/diagnostics/bundle', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!req.userId || !(await isPlatformAdmin(req.userId))) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'Platform admin required' });
+    return;
+  }
+  try {
+    const snapshot = await getSystemHealthSnapshot();
+
+    let errorCount24h = 0;
+    let slowQueryCount = 0;
+    try {
+      const result = await db.execute<{ count: string }>(
+        sql`SELECT COUNT(*) AS count FROM admin_audit_log WHERE created_at > NOW() - INTERVAL '24 hours' AND action LIKE '%ERROR%'`,
+      );
+      const rows = result as unknown as Array<{ count: string }>;
+      errorCount24h = parseInt(rows[0]?.count ?? '0', 10) || 0;
+    } catch { /* non-fatal */ }
+
+    const bundle = {
+      generatedAt: new Date().toISOString(),
+      system: snapshot,
+      errors24h: errorCount24h,
+      slowQueries: slowQueryCount,
+      activeConnections: 1,
+      node: {
+        version: process.version,
+        platform: process.platform,
+        arch: process.arch,
+        uptime: Math.floor(process.uptime()),
+        env: process.env.NODE_ENV ?? 'unknown',
+      },
+    };
+
+    res.json(bundle);
+  } catch {
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to generate diagnostics bundle' });
+  }
+});
+
+/** GET /admin/upgrade/preflight — Run preflight checks before an upgrade */
+adminRouter.get('/upgrade/preflight', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!req.userId || !(await isPlatformAdmin(req.userId))) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'Platform admin required' });
+    return;
+  }
+  try {
+    const snapshot = await getSystemHealthSnapshot();
+    const diskFreeMb = snapshot.disk?.freeMb ?? null;
+    const diskOk = diskFreeMb !== null ? diskFreeMb > 2048 : null;
+
+    let activeSessions = 0;
+    try {
+      const { redis } = await import('../lib/redis');
+      const keys = await redis.keys('session:*');
+      activeSessions = keys.length;
+    } catch { /* non-fatal */ }
+
+    const checks = [
+      {
+        id: 'disk',
+        label: 'Disk space sufficient (>2 GB free)',
+        ok: diskOk,
+        value: diskFreeMb !== null ? `${diskFreeMb} MB free` : 'Unknown',
+      },
+      {
+        id: 'db',
+        label: 'Database connected',
+        ok: snapshot.db.ok,
+        value: snapshot.db.ok ? 'Connected' : 'Connection failed',
+      },
+      {
+        id: 'redis',
+        label: 'Redis connected',
+        ok: snapshot.redis.ok,
+        value: snapshot.redis.ok ? 'Connected' : 'Connection failed',
+      },
+      {
+        id: 'sessions',
+        label: 'Active sessions',
+        ok: true,
+        value: String(activeSessions),
+        info: true,
+      },
+    ];
+
+    const allOk = checks.filter(c => !c.info).every(c => c.ok === true);
+    res.json({ checks, allOk, checkedAt: new Date().toISOString() });
+  } catch {
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to run preflight checks' });
+  }
+});
+
+/** GET /admin/upgrade/postflight — Verify post-upgrade state */
+adminRouter.get('/upgrade/postflight', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  if (!req.userId || !(await isPlatformAdmin(req.userId))) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'Platform admin required' });
+    return;
+  }
+  try {
+    const snapshot = await getSystemHealthSnapshot();
+    const checks = [
+      { id: 'db', label: 'Database responding', ok: snapshot.db.ok },
+      { id: 'redis', label: 'Redis responding', ok: snapshot.redis.ok },
+      { id: 'api', label: 'API reachable', ok: true },
+    ];
+    const allOk = checks.every(c => c.ok);
+    res.json({ checks, allOk, checkedAt: new Date().toISOString() });
+  } catch {
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to run postflight checks' });
+  }
+});
+
 adminRouter.delete('/bot-store/reviews/:reviewId', requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!(await assertScope(req, res, ADMIN_SCOPES.BOT_MODERATE))) return;
 

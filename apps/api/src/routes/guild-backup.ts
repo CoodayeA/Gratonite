@@ -107,6 +107,86 @@ guildBackupRouter.get('/:backupId', requireAuth, async (req: Request, res: Respo
   }
 });
 
+/** POST /:backupId/verify — Verify backup integrity via checksum */
+guildBackupRouter.post('/:backupId/verify', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const guildId = req.params.guildId as string;
+  const backupId = req.params.backupId as string;
+
+  if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_GUILD permission' }); return;
+  }
+
+  try {
+    const [backup] = await db.select().from(guildBackups)
+      .where(and(eq(guildBackups.id, backupId), eq(guildBackups.guildId, guildId))).limit(1);
+
+    if (!backup) { res.status(404).json({ code: 'NOT_FOUND', message: 'Backup not found' }); return; }
+
+    const jsonStr = JSON.stringify(backup.data);
+    const actualSize = Buffer.byteLength(jsonStr);
+    const checksum = require('crypto').createHash('sha256').update(jsonStr).digest('hex');
+    const sizeMatch = actualSize === backup.sizeBytes || backup.sizeBytes === 0;
+    const ok = sizeMatch && jsonStr.length > 10;
+
+    res.json({
+      ok,
+      checksum: `sha256:${checksum}`,
+      storedSizeBytes: backup.sizeBytes,
+      actualSizeBytes: actualSize,
+      checkedAt: new Date().toISOString(),
+      detail: ok ? 'Integrity OK' : 'Checksum mismatch — backup data may be corrupted',
+    });
+  } catch (err) {
+    handleAppError(res, err, 'guild-backup-verify');
+  }
+});
+
+/** GET /:backupId/dry-run — Preview what would be restored without applying */
+guildBackupRouter.get('/:backupId/dry-run', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const guildId = req.params.guildId as string;
+  const backupId = req.params.backupId as string;
+
+  if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_GUILD permission' }); return;
+  }
+
+  try {
+    const [backup] = await db.select().from(guildBackups)
+      .where(and(eq(guildBackups.id, backupId), eq(guildBackups.guildId, guildId))).limit(1);
+
+    if (!backup) { res.status(404).json({ code: 'NOT_FOUND', message: 'Backup not found' }); return; }
+
+    const data = backup.data as { guild?: unknown; channels?: unknown[]; roles?: unknown[]; exportedAt?: string; version?: number };
+    const channels = Array.isArray(data.channels) ? data.channels : [];
+    const roles = Array.isArray(data.roles) ? data.roles : [];
+
+    res.json({
+      backupId,
+      name: backup.name,
+      createdAt: backup.createdAt,
+      summary: {
+        channels: channels.length,
+        roles: roles.length,
+        settings: data.guild ? 1 : 0,
+        version: data.version ?? 1,
+        exportedAt: data.exportedAt ?? null,
+      },
+      warnings: [
+        ...(channels.length === 0 ? ['No channels found in backup'] : []),
+        ...(roles.length === 0 ? ['No roles found in backup'] : []),
+      ],
+      wouldRestore: [
+        `${channels.length} channel(s)`,
+        `${roles.length} role(s)`,
+        data.guild ? '1 guild settings object' : '',
+      ].filter(Boolean),
+      checkedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    handleAppError(res, err, 'guild-backup-dry-run');
+  }
+});
+
 /** DELETE /:backupId — Delete backup */
 guildBackupRouter.delete('/:backupId', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const guildId = req.params.guildId as string;

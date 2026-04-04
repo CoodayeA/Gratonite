@@ -771,6 +771,7 @@ export const pushApi = {
   getVapidPublicKey: () => apiFetch<{ key: string }>('/push/vapid-public-key'),
   subscribe: (sub: Record<string, unknown>) => apiFetch<any>('/push/subscribe', { method: 'POST', body: JSON.stringify(sub) }),
   unsubscribe: (endpoint: string) => apiFetch<any>('/push/subscribe', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
+  sendTest: () => apiFetch<any>('/push/test', { method: 'POST' }),
 };
 
 export const draftsApi = {
@@ -1245,6 +1246,10 @@ export const guildBackupApi = {
   get: (guildId: string, backupId: string) => apiFetch<any>(`/guilds/${guildId}/backups/${backupId}`),
   delete: (guildId: string, backupId: string) =>
     apiFetch<any>(`/guilds/${guildId}/backups/${backupId}`, { method: 'DELETE' }),
+  verify: (guildId: string, backupId: string) =>
+    apiFetch<any>(`/guilds/${guildId}/backups/${backupId}/verify`, { method: 'POST' }),
+  dryRun: (guildId: string, backupId: string) =>
+    apiFetch<any>(`/guilds/${guildId}/backups/${backupId}/dry-run`),
 };
 
 export const modQueueApi = {
@@ -1585,6 +1590,60 @@ export const federationApi = {
 
   /** Admin: discover guilds (including unapproved). */
   adminDiscover: () => apiFetch('/federation/admin/discover'),
+};
+
+/** Per-guild federation management. */
+export const guildFederationApi = {
+  /** Get federation settings and status for a guild. */
+  getSettings: (guildId: string) =>
+    apiFetch<{ enabled: boolean; allowedInstances: string[] }>(`/guilds/${guildId}/federation/settings`),
+
+  /** Enable or disable federation for a guild. */
+  setEnabled: (guildId: string, enabled: boolean) =>
+    apiFetch(`/guilds/${guildId}/federation/settings`, {
+      method: 'PATCH',
+      body: JSON.stringify({ enabled }),
+    }),
+
+  /** List instances that have members in this guild. */
+  listInstances: (guildId: string) =>
+    apiFetch<Array<{
+      instanceId: string;
+      domain: string;
+      trustLevel: 'verified' | 'manually_trusted' | 'auto_discovered';
+      memberCount: number;
+      connectedAt: string;
+    }>>(`/guilds/${guildId}/federation/instances`),
+
+  /** Block a federated instance from this guild. */
+  blockInstance: (guildId: string, domain: string) =>
+    apiFetch(`/guilds/${guildId}/federation/instances/block`, {
+      method: 'POST',
+      body: JSON.stringify({ domain }),
+    }),
+
+  /** Get recent federation activity log for a guild. */
+  getActivityLog: (guildId: string) =>
+    apiFetch<Array<{
+      id: string;
+      type: 'join' | 'leave' | 'message' | 'sync';
+      instanceDomain: string;
+      username: string;
+      federationAddress: string;
+      timestamp: string;
+    }>>(`/guilds/${guildId}/federation/activity`),
+};
+
+/** Report federated content or instances. */
+export const instanceReportsApi = {
+  /** Submit a report about federated content or a remote user/instance. */
+  submit: (data: {
+    instanceDomain: string;
+    category: 'spam' | 'harassment' | 'csam' | 'other';
+    description: string;
+    contentUrl?: string;
+    reportedUserId?: string;
+  }) => apiFetch('/federation/reports', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 export const relayApi = {
