@@ -2,9 +2,9 @@
 
 # Gratonite
 
-**A privacy-first, open-source alternative to Discord.**
+**Discord, but you own it.**
 
-Real-time chat, voice, video, federation, and 140+ features — fully self-hostable.
+Real-time chat, voice, video, E2E encryption, and federation — fully self-hostable, forever free, no phone number required.
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/CoodayeA/Gratonite?style=social)](https://github.com/CoodayeA/Gratonite)
@@ -16,17 +16,11 @@ Real-time chat, voice, video, federation, and 140+ features — fully self-hosta
 
 ---
 
-## Contributing
-
-**Documentation index:** [`docs/README.md`](docs/README.md). **CI, deployment, and engineering conventions:** [`DEVELOPMENT.md`](DEVELOPMENT.md).
-
----
-
 > Your server, your rules. No ads, no tracking, no phone number required.
 
 ## What is Gratonite?
 
-Gratonite is a community platform for people who want control over their online spaces. Text, voice, video, threads, bots, moderation — plus federation so independent instances can communicate, a relay network for NAT traversal, and end-to-end encryption for DMs.
+Gratonite is a community platform built for people who don't want some corporation owning their conversations. Text, voice, video, threads, bots, moderation, economy, games — and end-to-end encryption that just works, automatically. Run it yourself in one command, or use [gratonite.chat](https://gratonite.chat). Either way, your data stays yours.
 
 ### Self-Host in One Command
 
@@ -46,6 +40,17 @@ Or download the [Gratonite Server](https://github.com/CoodayeA/Gratonite/release
 
 ---
 
+## Why Gratonite?
+
+- **It's yours.** Self-host in minutes. Your data lives on your hardware.
+- **Automatic E2E encryption.** Every DM is encrypted before it leaves your device — no toggle, no setup, no opt-in.
+- **Federation.** Independent instances connect into a network. Your community isn't locked behind one server.
+- **No paywalled basics.** Voice, video, threads, moderation — all free, all open source.
+- **No phone number.** Sign up with just a username and password.
+- **No engagement loops.** No algorithmic feed, no notification spam, no dark patterns.
+
+---
+
 ## Features
 
 ### Messaging
@@ -58,20 +63,14 @@ Or download the [Gratonite Server](https://github.com/CoodayeA/Gratonite/release
 - Scheduled messages and draft auto-save
 - Message bookmarks with folder organization
 - Voice messages and inline media player
-- Message reminders
-- Polls with multiple choice and expiry
-- Global search (PostgreSQL full-text)
+- Polls, message reminders, clips
+- Global search (PostgreSQL full-text) with filters, active-filter chips, and `has:` type badges
 
 ### Voice and Video
 - LiveKit-powered voice and video channels
-- Screen sharing
-- Stage channels for presentations
-- Voice effects and soundboard
-- Music rooms and study rooms (co-working)
-- Watch parties (synchronized video)
-- Collaborative playlists
-- Call history
-- Clips (short recordings)
+- Screen sharing and stage channels
+- Music rooms, study rooms (co-working), watch parties
+- Collaborative playlists and call history
 
 ### Guilds and Community
 - Guild creation with custom icons, banners, accent colors
@@ -80,110 +79,70 @@ Or download the [Gratonite Server](https://github.com/CoodayeA/Gratonite/release
 - Public server discovery with interest tags and ratings
 - 9 channel types: text, voice, forum, announcement, wiki, Q&A, stage, confession, task (Kanban)
 - Server templates, vanity URLs, welcome screens
-- Server folders and favorite channels
 - Guild timeline, digest, insights, and analytics
-- Onboarding wizard for new members
-- Photo albums, mood boards, whiteboards
-- Guild forms, quests, workflows
+- Onboarding wizard, photo albums, mood boards, whiteboards, guild forms, quests, workflows
 - Server boosts
-- Confession boards
 
 ### Moderation and Safety
-- Audit logs for all administrative actions
-- AutoMod with keyword filtering and configurable actions (block/delete/warn)
-- User timeouts, temp bans, permanent bans
-- Ban appeals system
-- Raid protection mode
-- Slow mode per channel
-- Member screening and server rules gate
-- Starboard for community highlights
-- Reaction roles and auto-roles
-- Ticket system for support
-- Moderation dashboard
+- Audit logs, AutoMod with keyword filtering, configurable actions (block/delete/warn)
+- User timeouts, temp bans, permanent bans, ban appeals
+- Raid protection, slow mode, member screening, server rules gate
+- Starboard, reaction roles, auto-roles, ticket system
+- Moderation dashboard with cross-instance escalation for federated reports
 - GDPR-compliant account deletion and data export
 
 ### Encryption and Privacy
-- End-to-end encryption for all DMs and group DMs (AES-GCM-256 via ECDH P-256)
-- One-click enable per conversation — no setup or key management
-- Private keys stored in IndexedDB, never transmitted
+- **All DMs and group DMs are end-to-end encrypted by default** — no toggle, no setup
+- Keys generated in your browser, stored in IndexedDB, never transmitted to the server
 - Group key rotation on membership changes
 - Identity verification via safety numbers
-- Encryption failure warnings when enabled
+- E2E encrypted file attachments
+- Encryption failure warnings (never silently falls back to plaintext)
 
 ### Federation
-- **Federation addresses**: Every user gets `@username@domain` — your portable identity across the network
-- **Login with Gratonite**: Users from gratonite.chat can log into any self-hosted instance with one click (OAuth2 SSO)
-- **Trust & Safety tiers**: New → Trusted (72h + 10 members) → Verified (manual review). Guilds only appear in Discover after verification
-- **Discover badges**: Official (hub guilds), Verified (green checkmark), Community (approved external)
-- **Abuse reporting**: Users report instances, 3+ reports auto-suspends pending review
+- **Federation addresses**: Every user gets `@username@domain` — a portable identity across the network
+- **Login with Gratonite**: SSO from gratonite.chat into any self-hosted instance
+- **Trust & Safety tiers**: New → Trusted (72h + 10 members) → Verified (manual review)
+- **Discover badges**: Official, Verified, Community
+- **Cross-instance moderation**: Escalate reports to remote instance admins directly from the mod queue
+- **RemoteBadge**: Remote-instance indicators on chat, profiles, member lists, and DMs — always know who's from where
+- **ConnectInstanceWizard**: 3-step guided flow to federate with a new instance (domain entry → `.well-known` preview → confirm)
 - **Protocol**: HTTP Signatures with Ed25519 keys
 - **Inbox handlers**: GuildJoinRequest, MessageCreate, GuildLeave, UserProfileSync, VoiceJoinRequest
 - **Shadow users**: Remote members represented locally with deterministic usernames
-- **Account portability**: Export/import profiles, settings, relationships between instances
-- **Guild discovery**: Federated servers appear in the Discover directory after trust review
+- **Account portability**: Export/import profiles, settings, and relationships between instances
 - **Relay network**: E2E encrypted envelope routing for instances behind NAT
   - Traffic-padded envelopes (4KB/16KB/64KB buckets) prevent content-size analysis
-  - Relay mesh with bloom filter routing (max 2-hop chain)
-  - Relay reputation scoring (uptime, delivery rate, latency, age, reports)
-  - Auto-discovery and relay selection by score
+  - Relay mesh with bloom filter routing (max 2-hop)
+  - Relay reputation scoring and auto-discovery
 - **Voice federation**: Relay-mediated LiveKit token exchange with TURN proxy fallback
-- **Zero breaking changes**: All federation features are opt-in
 
 ### User Features
 - Profiles with display names, bios, banners, custom nameplate styles
-- Custom status with emoji, rich presence, status presets
-- Friend system with requests, blocking, and suggestions
-- Friendship streaks
-- User notes (private, per-user)
-- XP and leveling system with per-server leaderboards
-- Achievements and badge collection
-- FAME system (give/receive fame, leaderboards, daily limits)
-- Notification preferences per channel
-- Web push notifications and email digest
-- Session management (view/revoke)
-- Connected accounts
-- Activity feed
-- Profile showcase and vanity profiles
-- Greeting cards
-- Interest tags
+- Custom status with emoji and rich presence
+- Friend system with requests, blocking, suggestions, and friendship streaks
+- XP, leveling, achievements, badge collection, FAME system
+- Notification preferences per channel, web push, and email digest
+- Session management, connected accounts, activity feed
 
 ### Economy and Gamification
 - Virtual currency with server-specific currencies
 - Cosmetics shop (avatar frames, nameplates, effects, decorations)
-- User marketplace and auction house
-- Inventory system
+- User marketplace, auction house, inventory
 - Collectible cards (gacha) with trading
-- Daily challenges with rewards
-- Giveaways with automatic winner selection
-- Guild quests
-- Seasonal events
-- Server boosts with perks
-- Reputation system
-- Quizzes
-- User titles
+- Daily challenges, giveaways, seasonal events, guild quests, quizzes, user titles
 
 ### Creative and Productivity
-- Whiteboards for collaborative drawing
-- Mood boards
-- Photo albums
-- Wiki channels for persistent documentation
-- Form builder for applications and surveys
-- Task boards (Kanban per channel)
-- Calendar and meeting scheduler
-- Todo lists
-- Standup (team check-ins)
-- Message reminders
-- Theme builder with visual customization
-- Theme store for community themes
+- Whiteboards, mood boards, photo albums
+- Wiki channels, form builder, task boards (Kanban)
+- Calendar, meeting scheduler, todo lists, standup
+- Theme builder and theme store
 
 ### Bots and Integrations
-- Bot store with discoverable bots
-- Bot builder for custom bots
-- Slash commands (Discord-compatible)
-- Message components (buttons, select menus)
+- Bot store and bot builder
+- Slash commands (Discord-compatible), message components
 - Webhooks with delivery logs and auditing
 - OAuth2 authorization flow
-- Referral system
 
 ---
 
@@ -205,7 +164,6 @@ Or download the [Gratonite Server](https://github.com/CoodayeA/Gratonite/release
 | Encryption | AES-GCM-256, ECDH P-256, Ed25519, X25519 |
 | Federation | HTTP Signatures, E2E relay envelopes |
 | Search | PostgreSQL full-text |
-| Real-money payments | Not enabled (in-game currency only) |
 | Metrics | Prometheus |
 | Email | Nodemailer |
 | Landing | Next.js |
@@ -267,10 +225,10 @@ npm run dev
 ```bash
 curl -fsSL https://gratonite.chat/install | bash
 ```
-The installer handles everything: Docker setup, secret generation, TLS certificates, federation. Works on Mac, Linux, Windows (WSL).
+Handles everything: Docker, secrets, TLS, federation. Works on Mac, Linux, and Windows (WSL).
 
 **Option B: Desktop app** — [Download Gratonite Server](https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.2)
-Double-click to run. No terminal needed. Available for macOS (.dmg), Windows (.exe/.msi), and Linux (.deb/.rpm/.AppImage).
+Double-click to run. No terminal needed. macOS (.dmg), Windows (.exe/.msi), Linux (.deb/.rpm/.AppImage).
 
 **Option C: Manual setup**
 ```bash
@@ -279,37 +237,23 @@ cp .env.example .env    # edit domain, password, etc.
 docker compose up -d
 ```
 
-**Federation is on by default** — your instance connects to the relay network automatically. No ports to open, works behind NAT. Your guilds appear in Discover after 48 hours.
+**Federation is on by default** — your instance joins the relay network automatically. No port forwarding needed. Guilds appear in Discover after 48 hours.
 
 **Enable voice/video** with LiveKit:
 ```bash
 docker compose --profile voice up -d
 ```
 
-**Manage and edit your self-hosted instance**:
+**Collect a support bundle** if setup fails:
 ```bash
-cd ~/gratonite
-nano .env
-docker compose restart
+cd ~/gratonite && bash ./collect-logs.sh
 ```
 
-**Collect a support bundle if setup or startup fails**:
-```bash
-cd ~/gratonite
-bash ./collect-logs.sh
-```
-
-PowerShell:
-```powershell
-Set-Location "$HOME\gratonite"
-pwsh ./collect-logs.ps1
-```
-
-Full guide: [docs/self-hosting.md](docs/self-hosting.md) | Deploy page: [gratonite.chat/deploy](https://gratonite.chat/deploy)
+Full guide: [docs/self-hosting.md](docs/self-hosting.md) | [gratonite.chat/deploy](https://gratonite.chat/deploy)
 
 ### Running a Relay Node
 
-Help the federation network by running a relay (256MB RAM, 1 vCPU):
+Help the federation network — a relay needs just 256MB RAM and 1 vCPU:
 
 ```bash
 cd apps/relay
@@ -323,24 +267,15 @@ Full guide: [docs/relay/README.md](docs/relay/README.md)
 
 ## Federation
 
-Gratonite instances can federate — users on one instance can join guilds on another, send messages, and even join voice channels across instances.
+Gratonite instances federate — users on one instance can join guilds on another, send messages, and join voice channels across instances.
 
 ### How It Works
 
 1. **Discovery**: Instances expose `/.well-known/gratonite` with their public key and endpoints
 2. **Authentication**: All instance-to-instance requests use Ed25519 HTTP Signatures
-3. **Delivery**: Activities are sent directly via HTTP POST, or through the relay network if the target is behind NAT
+3. **Delivery**: Activities go directly via HTTP POST, or through the relay network if the target is behind NAT
 4. **Encryption**: Relay traffic is E2E encrypted (X25519 ECDH + AES-256-GCM) with traffic-padded envelopes
 5. **Voice**: Federated voice uses relay-mediated LiveKit token exchange
-
-### Relay Network
-
-The relay network connects instances that can't reach each other directly:
-- Relays forward encrypted envelopes — they never see message content
-- Fixed-size envelope padding prevents traffic analysis
-- Relay mesh with bloom filter routing enables cross-relay delivery
-- Reputation scoring keeps bad relays out of the directory
-- Optional TURN proxy for federated voice NAT traversal
 
 Protocol reference: [docs/federation/README.md](docs/federation/README.md)
 
@@ -348,30 +283,31 @@ Protocol reference: [docs/federation/README.md](docs/federation/README.md)
 
 ## End-to-End Encryption
 
-All DMs and group DMs are end-to-end encrypted by default.
+All DMs and group DMs are end-to-end encrypted automatically.
 
 - **Key agreement**: ECDH on P-256 (NIST curve)
 - **Symmetric encryption**: AES-GCM with 256-bit keys, unique 12-byte IV per message
-- **Key storage**: Browser IndexedDB (private keys never leave your device)
+- **Key storage**: Browser IndexedDB — private keys never leave your device
 - **Group DMs**: Symmetric group key, wrapped per-member via ephemeral ECDH
 - **Key rotation**: Automatic on membership change; key versioning for backward compatibility
-- **Identity verification**: Safety numbers (SHA-256 hash of combined public keys, displayed as 60-digit grid)
+- **Identity verification**: Safety numbers (SHA-256 hash of combined public keys, 60-digit grid)
 
 | Content | Encrypted? |
 |---|---|
-| DM text messages | Yes (AES-GCM-256) |
-| Group DM text messages | Yes (AES-GCM-256) |
-| Edited messages | Yes (re-encrypted) |
-| Guild channel messages | No |
-| Federated relay traffic | Yes (X25519 + AES-256-GCM) |
-| Voice/video | Encrypted by LiveKit (DTLS-SRTP) |
+| DM text messages | ✅ AES-GCM-256 (automatic) |
+| Group DM text messages | ✅ AES-GCM-256 (automatic) |
+| DM file attachments | ✅ AES-GCM-256 |
+| Edited messages | ✅ Re-encrypted on edit |
+| Guild channel messages | ❌ Server-side only |
+| Federated relay traffic | ✅ X25519 + AES-256-GCM |
+| Voice/video | ✅ LiveKit DTLS-SRTP |
 | Notification previews | Shows "Encrypted message" |
 
 ---
 
 ## Background Jobs
 
-23 BullMQ queues handle automated tasks:
+23 BullMQ queues keep everything running:
 
 | Job | Interval | Purpose |
 |---|---|---|
@@ -425,25 +361,15 @@ docker compose -f deploy/self-host/docker-compose.yml cp api:/app/uploads ./uplo
 
 ---
 
-## Why Gratonite?
-
-- No phone number required to join
-- No ad-driven engagement loops
-- No premium paywall on basic features
-- Privacy-first with automatic E2E encryption
-- Fully open source and self-hostable
-- Federation connects independent instances into one network
-- Relay network works behind NAT — no port forwarding needed
-
----
-
 ## Contributing
 
-Contributions are welcome! Please open an issue to discuss your idea before submitting a pull request. See the [development setup](#development) above to get started locally.
+Contributions are welcome! Open an issue to discuss your idea before submitting a pull request. See [DEVELOPMENT.md](DEVELOPMENT.md) and the [development setup](#development) above to get started locally.
+
+**Documentation index:** [`docs/README.md`](docs/README.md)
 
 ## Security
 
-If you discover a security vulnerability, please report it responsibly. Email **security@gratonite.chat** with details — do not open a public issue. We aim to acknowledge reports within 48 hours.
+Found a vulnerability? Email **security@gratonite.chat** — do not open a public issue. We aim to acknowledge reports within 48 hours.
 
 ---
 
