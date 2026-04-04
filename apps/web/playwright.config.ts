@@ -16,7 +16,10 @@ export default defineConfig({
         { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     ],
     webServer: {
-        command: 'VITE_E2E_BYPASS_AUTH=1 npm run dev',
+        command: 'npm run dev',
+        env: {
+            VITE_E2E_BYPASS_AUTH: '1',
+        },
         url: 'http://localhost:5173',
         reuseExistingServer: true,
         timeout: 30000,

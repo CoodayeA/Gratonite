@@ -7,8 +7,10 @@ import { guildMembers, guilds } from '../db/schema/guilds';
 import { userSettings } from '../db/schema/settings';
 import { accountImports } from '../db/schema/account-imports';
 import { federatedInstances } from '../db/schema/federation-instances';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { signData, verifySignature } from './crypto';
+import crypto from 'node:crypto';
+import * as argon2 from 'argon2';
 import { getInstanceDomain } from './index';
 
 export interface ExportData {
@@ -127,4 +129,56 @@ export async function startImport(
     .returning({ id: accountImports.id });
 
   return importRecord.id;
+}
+
+/** Create a brand-new local account from a portable export bundle. */
+export async function importToNewAccount(
+  data: ExportData,
+  signature: string,
+): Promise<{ userId: string; username: string; tempPassword: string }> {
+  const valid = await verifyImportSignature(data, signature);
+  if (!valid) {
+    throw new Error('Import signature verification failed. Ensure the export came from a trusted Gratonite instance.');
+  }
+
+  const existingFed = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.federationAddress, data.profile.federationAddress))
+    .limit(1);
+  if (existingFed.length > 0) {
+    throw new Error('FEDERATION_ADDRESS_CONFLICT');
+  }
+
+  let username = data.profile.username;
+  const existingUsername = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(sql`lower(${users.username}) = lower(${username})`)
+    .limit(1);
+  if (existingUsername.length > 0) {
+    const suffix = Math.floor(1000 + Math.random() * 9000);
+    username = `${username}_${suffix}`;
+  }
+
+  const tempPassword = crypto.randomBytes(16).toString('hex');
+  const passwordHash = await argon2.hash(tempPassword);
+
+  const [newUser] = await db
+    .insert(users)
+    .values({
+      username,
+      email: `import_${Date.now()}@import.local`,
+      passwordHash,
+      displayName: data.profile.displayName || username,
+      bio: data.profile.bio ?? null,
+      avatarHash: data.profile.avatarHash ?? null,
+      bannerHash: data.profile.bannerHash ?? null,
+      pronouns: data.profile.pronouns ?? null,
+      emailVerified: true,
+      federationAddress: data.profile.federationAddress,
+    })
+    .returning();
+
+  return { userId: newUser.id, username: newUser.username, tempPassword };
 }

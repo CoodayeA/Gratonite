@@ -31,6 +31,7 @@ docker compose restart
 | `FEDERATION_ALLOW_OUTBOUND` | No | `true` | Allow this instance to send messages to other instances |
 | `FEDERATION_ALLOW_JOINS` | No | `true` | Allow users from other instances to join guilds on this instance |
 | `FEDERATION_HUB_URL` | No | `https://gratonite.chat` | URL of the federation hub for discovery registration |
+| `FEDERATION_DISCOVER_REGISTRATION` | No | `true` | Controls both the push (registering your public guilds with the hub) and the pull (syncing hub guilds into your local `remote_guilds` table for the Discover page). The pull job runs on startup (after 5 seconds) and then every 30 minutes. Set to `false` for a fully isolated instance |
 | `RELAY_ENABLED` | No | `true` | Connect to the federation relay |
 | `RELAY_URL` | No | `wss://relay.gratonite.chat` | WebSocket URL of the federation relay |
 | `TLS_MODE` | No | `internal` (local), `email` (server) | TLS certificate mode. `internal` uses a self-signed cert, `email` uses Let's Encrypt |

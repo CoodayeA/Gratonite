@@ -63,26 +63,25 @@ function DMItem({ item, index, onPress, styles, colors, neo, glass, isFocused }:
         showStatus
       />
       <View style={styles.dmInfo}>
-        <Text style={[styles.dmName, unread.count > 0 && styles.dmNameUnread]} numberOfLines={1}>
-          {name}
-        </Text>
+        <View style={styles.dmInfoTop}>
+          <Text style={[styles.dmName, unread.count > 0 && styles.dmNameUnread]} numberOfLines={1}>
+            {name}
+          </Text>
+          {item.lastMessageAt && (
+            <Text style={styles.dmTime}>{formatRelativeTime(item.lastMessageAt)}</Text>
+          )}
+        </View>
         {item.lastMessagePreview ? (
           <Text style={[styles.dmPreview, unread.count > 0 && styles.dmPreviewUnread]} numberOfLines={1}>
             {item.lastMessagePreview}
           </Text>
         ) : null}
-        {item.lastMessageAt && (
-          <Text style={styles.dmMeta} numberOfLines={1}>
-            {formatRelativeTime(item.lastMessageAt)}
-          </Text>
-        )}
       </View>
       {unread.count > 0 && (
         <Animated.View style={[styles.unreadBadge, badgeAnimStyle, neo ? { borderWidth: 2, borderColor: '#000' } : {}]}>
           <Text style={styles.unreadText}>{unread.count > 99 ? '99+' : unread.count}</Text>
         </Animated.View>
       )}
-      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
     </PressableScale>
     </AnimatedListItem>
   );
@@ -198,6 +197,17 @@ export default function DMListScreen({ navigation }: Props) {
     },
     dmInfo: {
       flex: 1,
+    },
+    dmInfoTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    dmTime: {
+      color: colors.textMuted,
+      fontSize: fontSize.xs,
+      flexShrink: 0,
+      marginLeft: spacing.sm,
     },
     dmName: {
       color: colors.textPrimary,

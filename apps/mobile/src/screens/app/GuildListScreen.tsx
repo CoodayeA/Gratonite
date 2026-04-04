@@ -248,9 +248,9 @@ export default function GuildListScreen({ navigation }: Props) {
         backgroundColor: colors.bgElevated,
         borderRadius: borderRadius.xl,
         shadowColor: colors.black,
-        shadowOpacity: 0.18,
+        shadowOpacity: 0.1,
         shadowOffset: { width: 0, height: 3 },
-        shadowRadius: 8,
+        shadowRadius: 6,
         elevation: 4,
       }),
     },
@@ -267,7 +267,7 @@ export default function GuildListScreen({ navigation }: Props) {
     guildIcon: {
       width: 56,
       height: 56,
-      borderRadius: neo !== null ? 0 : borderRadius.xl,
+      borderRadius: neo !== null ? 0 : borderRadius.lg,
       backgroundColor: glass ? 'transparent' : colors.bgHover,
       justifyContent: 'center',
       alignItems: 'center',
@@ -362,17 +362,12 @@ export default function GuildListScreen({ navigation }: Props) {
         }
       : undefined;
 
-    const accentColor = neo !== null
-      ? neo.palette[NEO_PALETTE_KEYS[(index + 2) % 6]]
-      : colors.accentPrimary;
-
     return (
       <AnimatedListItem index={index}>
         <PressableScale
           style={[styles.guildItem, neoItemStyle]}
           onPress={() => navigation.navigate('GuildChannels', { guildId: item.id, guildName: item.name })}
         >
-          <View style={[styles.guildAccentStrip, { backgroundColor: accentColor }]} />
           <View style={styles.guildIcon}>
             {item.iconHash ? (
               <Avatar userId={item.id} avatarHash={item.iconHash} name={item.name} size={56} />
@@ -401,9 +396,6 @@ export default function GuildListScreen({ navigation }: Props) {
                 </>
               ) : null}
             </View>
-          </View>
-          <View style={styles.chevron}>
-            <Ionicons name="chevron-forward" size={16} color={colors.accentPrimary} />
           </View>
         </PressableScale>
       </AnimatedListItem>
