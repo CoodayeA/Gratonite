@@ -475,22 +475,27 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 />
             )}
 
-            <div className="chat-input-wrapper" style={{ position: 'relative' }}>
+            <div className="chat-input-wrapper" role="toolbar" aria-label="Composer" style={{ position: 'relative' }}>
 
                 {/* Mentions Autocomplete */}
                 {mentionSearch !== null && (
-                    <div style={{
-                        position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
-                        background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
-                        borderRadius: 'var(--radius-md)', padding: '8px', minWidth: '300px',
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', flexDirection: 'column', gap: '4px'
-                    }}>
+                    <div
+                        role="listbox"
+                        aria-label="Member suggestions"
+                        style={{
+                            position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
+                            background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+                            borderRadius: 'var(--radius-md)', padding: '8px', minWidth: '300px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', flexDirection: 'column', gap: '4px'
+                        }}>
                         <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, padding: '4px 8px', marginBottom: '4px' }}>
                             Members
                         </div>
                         {filteredUsers.length > 0 ? filteredUsers.map((user, idx) => (
                             <div
                                 key={user.id}
+                                role="option"
+                                aria-selected={mentionIndex === idx}
                                 onClick={() => insertMention(user.id)}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: '12px', padding: '8px',
@@ -518,18 +523,23 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
                 {/* Channel Autocomplete */}
                 {channelSearch !== null && filteredChannels.length > 0 && (
-                    <div style={{
-                        position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
-                        background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
-                        borderRadius: 'var(--radius-md)', padding: '8px', minWidth: '300px',
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', flexDirection: 'column', gap: '4px'
-                    }}>
+                    <div
+                        role="listbox"
+                        aria-label="Channel suggestions"
+                        style={{
+                            position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
+                            background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+                            borderRadius: 'var(--radius-md)', padding: '8px', minWidth: '300px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', flexDirection: 'column', gap: '4px'
+                        }}>
                         <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, padding: '4px 8px', marginBottom: '4px' }}>
                             Channels
                         </div>
                         {filteredChannels.slice(0, 8).map((ch, idx) => (
                             <div
                                 key={ch.id}
+                                role="option"
+                                aria-selected={channelIndex === idx}
                                 onClick={() => insertChannelMention(ch.id)}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: '12px', padding: '8px',
@@ -709,11 +719,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
                 {/* Slash Command Picker Popover */}
                 {slashSearch !== null && filteredCommands.length > 0 && (
-                    <div style={{ position: 'absolute', bottom: 'calc(100% + 12px)', left: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '8px', width: '340px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '2px', maxHeight: '300px', overflowY: 'auto' }}>
+                    <div role="listbox" aria-label="Slash command suggestions" style={{ position: 'absolute', bottom: 'calc(100% + 12px)', left: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '8px', width: '340px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '2px', maxHeight: '300px', overflowY: 'auto' }}>
                         <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px', padding: '0 8px' }}>COMMANDS</div>
                         {filteredCommands.map((cmd, idx) => (
                             <div
                                 key={cmd.id}
+                                role="option"
+                                aria-selected={slashIndex === idx}
                                 onClick={() => selectSlashCommand(cmd)}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: '12px', padding: '8px',
@@ -733,11 +745,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
                 {/* Emoji Autocomplete Popover */}
                 {emojiSearch !== null && filteredEmojis.length > 0 && (
-                    <div style={{ position: 'absolute', bottom: 'calc(100% + 12px)', left: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '8px', width: '260px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div role="listbox" aria-label="Emoji suggestions" style={{ position: 'absolute', bottom: 'calc(100% + 12px)', left: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '8px', width: '260px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px', padding: '0 8px' }}>EMOJIS MATCHING "{emojiSearch}"</div>
                         {filteredEmojis.map((emoji, idx) => (
                             <div
                                 key={emoji.name}
+                                role="option"
+                                aria-selected={emojiIndex === idx}
                                 onClick={() => insertEmoji(emoji.name)}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: '12px', padding: '8px',

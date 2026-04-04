@@ -173,12 +173,18 @@ export function VideoCallPanel({ channelId, participants = [], onLeave, isGroup 
       </div>
 
       {/* Controls */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: '12px', padding: '16px', borderTop: '1px solid var(--stroke)',
-      }}>
+      <div
+        role="toolbar"
+        aria-label="Call controls"
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: '12px', padding: '16px', borderTop: '1px solid var(--stroke)',
+        }}
+      >
         <button
           onClick={toggleMute}
+          aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+          aria-pressed={isMuted}
           title={isMuted ? 'Unmute' : 'Mute'}
           style={{
             width: '44px', height: '44px', borderRadius: '50%',
@@ -192,6 +198,8 @@ export function VideoCallPanel({ channelId, participants = [], onLeave, isGroup 
 
         <button
           onClick={toggleCamera}
+          aria-label={isCameraOn ? 'Turn off camera' : 'Turn on camera'}
+          aria-pressed={!isCameraOn}
           title={isCameraOn ? 'Turn Off Camera' : 'Turn On Camera'}
           style={{
             width: '44px', height: '44px', borderRadius: '50%',
@@ -207,6 +215,7 @@ export function VideoCallPanel({ channelId, participants = [], onLeave, isGroup 
 
         <button
           onClick={toggleFullscreen}
+          aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
           title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
           style={{
             width: '44px', height: '44px', borderRadius: '50%',
@@ -220,6 +229,7 @@ export function VideoCallPanel({ channelId, participants = [], onLeave, isGroup 
 
         <button
           onClick={handleLeave}
+          aria-label="Leave call"
           title="Leave Call"
           style={{
             width: '44px', height: '44px', borderRadius: '50%',
