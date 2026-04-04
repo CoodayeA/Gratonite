@@ -15,6 +15,18 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ url, imageUrls = [], onCl
   const pinchRef = useRef({ active: false, startDist: 0, startZoom: 1 });
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Track object URLs created in this session for cleanup on unmount
+  const objectUrlsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    return () => {
+      // Revoke any object URLs we hold to prevent memory leaks
+      objectUrlsRef.current.forEach(u => {
+        try { URL.revokeObjectURL(u); } catch { /* no-op */ }
+      });
+    };
+  }, []);
+
   const currentIndex = imageUrls.indexOf(url);
   const hasGallery = imageUrls.length > 1 && currentIndex >= 0;
 
