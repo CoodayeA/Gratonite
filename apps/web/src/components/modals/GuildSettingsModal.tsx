@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Shield, Plus, Check, Search, ChevronDown, Trash2, Edit2, Ban, UserPlus, Hash, Mic, Settings, AlertTriangle, Clock, Save, Link2, Copy, RefreshCw, Bot, Power, Sliders, GripVertical, Upload, UserX, Lock, Eye, Type, ExternalLink, ArrowUp, ArrowDown, BookOpen, Activity } from 'lucide-react';
+import { X, Shield, Plus, Check, Search, ChevronDown, Trash2, Edit2, Ban, UserPlus, Hash, Mic, Settings, AlertTriangle, Clock, Save, Link2, Copy, RefreshCw, Bot, Power, Sliders, GripVertical, Upload, UserX, Lock, Eye, Type, ExternalLink, ArrowUp, ArrowDown, BookOpen, Activity, Globe } from 'lucide-react';
 import { useToast } from '../ui/ToastManager';
 import { useUser } from '../../contexts/UserContext';
 import { api, API_BASE } from '../../lib/api';
@@ -8,6 +8,7 @@ import Avatar from '../ui/Avatar';
 import { OnboardingFlowEditor } from '../guild/OnboardingFlowEditor';
 import { NoCodeBotBuilder } from '../guild/NoCodeBotBuilder';
 import { copyToClipboard } from '../../utils/clipboard';
+import { GuildFederationPanel } from './GuildFederationPanel';
 
 interface Role {
     id: string;
@@ -314,7 +315,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const { user: currentUser } = useUser();
     const navigate = useNavigate();
     const actorName = currentUser.name || currentUser.handle || 'Unknown';
-    const [activeTab, setActiveTab] = useState<'overview' | 'channels' | 'roles' | 'members' | 'bans' | 'invites' | 'emojis' | 'automod' | 'audit' | 'branding' | 'webhooks' | 'bots' | 'templates' | 'insights' | 'onboarding' | 'wordfilter' | 'security' | 'import' | 'boosts' | 'welcome' | 'currency' | 'stickers' | 'rules' | 'discovery' | 'soundboard' | 'spam' | 'backups' | 'modqueue' | 'highlights'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'channels' | 'roles' | 'members' | 'bans' | 'invites' | 'emojis' | 'automod' | 'audit' | 'branding' | 'webhooks' | 'bots' | 'templates' | 'insights' | 'onboarding' | 'wordfilter' | 'security' | 'import' | 'boosts' | 'welcome' | 'currency' | 'stickers' | 'rules' | 'discovery' | 'soundboard' | 'spam' | 'backups' | 'modqueue' | 'highlights' | 'federation'>('overview');
     const [roles, setRoles] = useState<Role[]>([]);
     const [activeRole, setActiveRole] = useState<Role | null>(null);
     const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
@@ -333,6 +334,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [membersLoading, setMembersLoading] = useState(false);
     const [rolesSaving, setRolesSaving] = useState(false);
     const [deletingGuild, setDeletingGuild] = useState(false);
+    const [previewRoleId, setPreviewRoleId] = useState<string | null>(null);
 
     // Confirmation dialog state for destructive actions
     const [confirmDialog, setConfirmDialog] = useState<{title: string; description: string; onConfirm: () => void} | null>(null);
@@ -1525,6 +1527,13 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             style={tabStyle('backups')}
                         >Backups</div>
                     </div>
+                    <div>
+                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>FEDERATION</div>
+                        <div onClick={() => setActiveTab('federation')}
+                            onMouseEnter={() => setHoveredBtn('tab-federation')} onMouseLeave={() => setHoveredBtn(null)}
+                            style={tabStyle('federation')}
+                        ><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Globe size={13} />Federation</span></div>
+                    </div>
                 </div>
 
                 {/* Mobile Tab Pills */}
@@ -1532,9 +1541,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     <button onClick={onClose} style={{ marginRight: 'auto', padding: '6px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '16px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600 }}>
                         <X size={14} /> Close
                     </button>
-                    {(['overview', 'channels', 'roles', 'members', 'invites', 'templates', 'import', 'emojis', 'stickers', 'branding', 'webhooks', 'bots', 'automod', 'wordfilter', 'spam', 'bans', 'audit', 'modqueue', 'security', 'insights', 'onboarding', 'rules', 'discovery', 'welcome', 'boosts', 'currency', 'soundboard', 'backups', 'highlights'] as const).map(tab => (
+                    {(['overview', 'channels', 'roles', 'members', 'invites', 'templates', 'import', 'emojis', 'stickers', 'branding', 'webhooks', 'bots', 'automod', 'wordfilter', 'spam', 'bans', 'audit', 'modqueue', 'security', 'insights', 'onboarding', 'rules', 'discovery', 'welcome', 'boosts', 'currency', 'soundboard', 'backups', 'highlights', 'federation'] as const).map(tab => (
                         <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>
-                            {tab === 'emojis' ? 'Emojis' : tab === 'stickers' ? 'Stickers' : tab === 'branding' ? 'Brand' : tab === 'webhooks' ? 'Webhooks' : tab === 'bots' ? 'Bots' : tab === 'automod' ? 'AutoMod' : tab === 'wordfilter' ? 'Word Filter' : tab === 'audit' ? 'Audit Log' : tab === 'welcome' ? 'Welcome' : tab === 'rules' ? 'Server Rules' : tab === 'discovery' ? 'Discovery' : tab === 'boosts' ? 'Boosts' : tab === 'currency' ? 'Currency' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            {tab === 'emojis' ? 'Emojis' : tab === 'stickers' ? 'Stickers' : tab === 'branding' ? 'Brand' : tab === 'webhooks' ? 'Webhooks' : tab === 'bots' ? 'Bots' : tab === 'automod' ? 'AutoMod' : tab === 'wordfilter' ? 'Word Filter' : tab === 'audit' ? 'Audit Log' : tab === 'welcome' ? 'Welcome' : tab === 'rules' ? 'Server Rules' : tab === 'discovery' ? 'Discovery' : tab === 'boosts' ? 'Boosts' : tab === 'currency' ? 'Currency' : tab === 'federation' ? 'Federation' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                         </button>
                     ))}
                 </div>
@@ -2132,7 +2141,72 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     {activeTab === 'roles' && (
                         <>
                             <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Roles</h2>
-                            <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Use roles to group your server members and assign permissions. Higher roles override lower ones.</p>
+                            <p style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '13px' }}>Use roles to group your server members and assign permissions. Higher roles override lower ones.</p>
+
+                            {/* Preview as Role */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Preview as Role:</label>
+                                <select
+                                    value={previewRoleId ?? ''}
+                                    onChange={e => setPreviewRoleId(e.target.value || null)}
+                                    style={{ padding: '6px 10px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', maxWidth: '200px' }}
+                                >
+                                    <option value="">— Select role to preview —</option>
+                                    {roles.map(r => (
+                                        <option key={r.id} value={r.id}>{r.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Preview Banner */}
+                            {previewRoleId && (() => {
+                                const previewRole = roles.find(r => r.id === previewRoleId);
+                                if (!previewRole) return null;
+                                return (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', borderRadius: '8px', background: 'rgba(99,102,241,0.12)', border: '1px solid #6366f1', marginBottom: '16px' }}>
+                                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: previewRole.color, flexShrink: 0 }} />
+                                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#818cf8' }}>
+                                            Previewing permissions as: {previewRole.name}
+                                        </span>
+                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '4px' }}>· Read-only view</span>
+                                        <button
+                                            onClick={() => setPreviewRoleId(null)}
+                                            style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#818cf8', cursor: 'pointer', fontSize: '12px', fontWeight: 600, textDecoration: 'underline', padding: 0 }}
+                                        >
+                                            Exit preview
+                                        </button>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Preview Mode: read-only permission matrix */}
+                            {previewRoleId && (() => {
+                                const previewRole = roles.find(r => r.id === previewRoleId);
+                                if (!previewRole) return null;
+                                return (
+                                    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '10px', padding: '20px', marginBottom: '16px' }}>
+                                        <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '16px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                            Permission Matrix — {previewRole.name}
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '8px' }}>
+                                            {permissionsList.map(perm => {
+                                                const granted = previewRole.id === '1' || previewRole.permissions['administrator'] || previewRole.permissions[perm.key];
+                                                return (
+                                                    <div key={perm.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', background: 'var(--bg-tertiary)' }}>
+                                                        <span style={{ width: '16px', height: '16px', borderRadius: '50%', background: granted ? 'var(--success, #22c55e)' : 'var(--bg-elevated)', border: `1px solid ${granted ? 'var(--success, #22c55e)' : 'var(--stroke)'}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '10px' }}>
+                                                            {granted ? '✓' : ''}
+                                                        </span>
+                                                        <span style={{ fontSize: '12px', color: granted ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: granted ? 500 : 400 }}>{perm.label}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '12px 0 0' }}>
+                                            This is a display-only simulation. Your actual permissions are not changed.
+                                        </p>
+                                    </div>
+                                );
+                            })()}
 
                             <div style={{ display: 'flex', gap: '32px', height: '450px' }}>
                                 <div style={{ width: '240px', display: 'flex', flexDirection: 'column', gap: '8px', borderRight: '1px solid var(--stroke)', paddingRight: '24px' }}>
@@ -3494,22 +3568,50 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     </div>
                                     {viewDeliveriesId === wh.id && (
                                         <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--stroke)', borderRadius: '0 0 12px 12px', marginTop: '-12px', padding: '16px 20px' }}>
-                                            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Recent Deliveries</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                                                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Recent Deliveries</div>
+                                                <div style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '3px 8px', borderRadius: '4px', fontFamily: 'monospace' }}>
+                                                    Signing: HMAC-SHA256 · key: {`${wh.id.slice(0, 8)}…`}
+                                                </div>
+                                            </div>
                                             {deliveryLogs.length === 0 ? (
                                                 <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No delivery logs yet.</p>
                                             ) : (
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflow: 'auto' }}>
-                                                    {deliveryLogs.map(log => (
-                                                        <div key={log.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', background: 'var(--bg-tertiary)', borderRadius: '6px', fontSize: '12px' }}>
-                                                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: log.success ? 'var(--success, #22c55e)' : 'var(--error, #ed4245)', flexShrink: 0 }} />
-                                                            <span style={{ fontWeight: 600, color: 'var(--text-primary)', minWidth: '100px' }}>{log.eventType}</span>
-                                                            <span style={{ color: 'var(--text-muted)' }}>{log.responseStatus ?? '---'}</span>
-                                                            <span style={{ color: 'var(--text-muted)' }}>{log.durationMs != null ? `${log.durationMs}ms` : ''}</span>
-                                                            <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '11px' }}>{new Date(log.attemptedAt).toLocaleString()}</span>
-                                                        </div>
-                                                    ))}
+                                                    {deliveryLogs.map((log, idx) => {
+                                                        const isRetry = idx > 0 && !deliveryLogs[idx - 1].success;
+                                                        const retryReason = !log.success
+                                                            ? log.responseStatus
+                                                                ? `HTTP ${log.responseStatus} — ${log.responseStatus >= 500 ? 'Server error, will retry' : log.responseStatus === 429 ? 'Rate limited, backing off' : 'Client error, check payload'}`
+                                                                : 'No response — connection timeout, will retry'
+                                                            : null;
+                                                        const nextRetry = !log.success
+                                                            ? new Date(new Date(log.attemptedAt).getTime() + 30000 * (idx + 1)).toLocaleTimeString()
+                                                            : null;
+                                                        return (
+                                                            <div key={log.id} style={{ padding: '8px 10px', background: 'var(--bg-tertiary)', borderRadius: '6px', fontSize: '12px' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: log.success ? 'var(--success, #22c55e)' : 'var(--error, #ed4245)', flexShrink: 0 }} />
+                                                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', minWidth: '100px' }}>{log.eventType}</span>
+                                                                    <span style={{ color: 'var(--text-muted)' }}>{log.responseStatus ?? '---'}</span>
+                                                                    <span style={{ color: 'var(--text-muted)' }}>{log.durationMs != null ? `${log.durationMs}ms` : ''}</span>
+                                                                    {isRetry && <span style={{ fontSize: '10px', background: 'rgba(245,158,11,0.15)', color: '#fbbf24', padding: '1px 5px', borderRadius: '4px', fontWeight: 600 }}>RETRY</span>}
+                                                                    <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '11px' }}>{new Date(log.attemptedAt).toLocaleString()}</span>
+                                                                </div>
+                                                                {retryReason && (
+                                                                    <div style={{ marginTop: '4px', fontSize: '11px', color: '#f87171', paddingLeft: '18px' }}>
+                                                                        ↳ {retryReason}
+                                                                        {nextRetry && <span style={{ color: 'var(--text-muted)', marginLeft: '8px' }}>Next retry ~{nextRetry}</span>}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
+                                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '10px 0 0' }}>
+                                                Requests are signed with <code style={{ fontSize: '10px' }}>X-Signature-256: sha256=HMAC(secret, body)</code>. Verify using your webhook token as the secret.
+                                            </p>
                                         </div>
                                     )}
                                     </div>
@@ -3549,7 +3651,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {installedBots.map(bot => (
-                                    <div key={bot.id} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                    <div key={bot.id} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
                                         <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: bot.avatar, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                             <Bot size={24} color="white" />
                                         </div>
@@ -3560,8 +3662,24 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                     {bot.status === 'active' ? 'Active' : 'Paused'}
                                                 </span>
                                             </div>
-                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
                                                 Prefix: <code style={{ background: 'var(--bg-tertiary)', padding: '1px 6px', borderRadius: '4px', fontFamily: 'var(--font-mono, monospace)' }}>{bot.prefix}</code> &middot; {bot.commands} commands &middot; Installed {bot.installedAt}
+                                            </div>
+                                            {/* Permission scope breakdown */}
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                                {[
+                                                    { scope: 'Read Messages', granted: true, safe: true },
+                                                    { scope: 'Send Messages', granted: true, safe: true },
+                                                    { scope: 'Embed Links', granted: true, safe: true },
+                                                    { scope: 'Read Message History', granted: true, safe: true },
+                                                    { scope: 'Manage Messages', granted: false, safe: false },
+                                                    { scope: 'Manage Roles', granted: false, safe: false },
+                                                    { scope: 'Administrator', granted: false, safe: false },
+                                                ].map(s => (
+                                                    <span key={s.scope} style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '4px', fontWeight: 600, background: s.granted ? 'rgba(16,185,129,0.1)' : 'var(--bg-tertiary)', color: s.granted ? 'var(--success, #22c55e)' : 'var(--text-muted)', border: `1px solid ${s.granted ? 'rgba(16,185,129,0.3)' : 'var(--stroke)'}` }}>
+                                                        {s.granted ? '✓' : '○'} {s.scope}
+                                                    </span>
+                                                ))}
                                             </div>
                                         </div>
                                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -3591,6 +3709,49 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                         <p style={{ fontSize: '13px', marginTop: '4px' }}>Use /invite to add bots to this server.</p>
                                     </div>
                                 )}
+                            </div>
+
+                            {/* Slash Command Templates */}
+                            <div style={{ marginTop: '28px', borderTop: '1px solid var(--stroke)', paddingTop: '24px' }}>
+                                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>Slash Command Templates</h3>
+                                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>Starter patterns to help you build your first bot commands. Copy and customize these templates.</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {[
+                                        {
+                                            name: '/ping',
+                                            description: 'Basic health check — responds with "Pong!" and latency.',
+                                            example: `app.command('/ping', async ({ respond }) => {\n  await respond({ text: '🏓 Pong! Latency: ' + Math.round(Date.now() - start) + 'ms' });\n});`,
+                                            tag: 'utility',
+                                        },
+                                        {
+                                            name: '/help',
+                                            description: 'Lists all available commands with descriptions.',
+                                            example: `app.command('/help', async ({ respond, command }) => {\n  const cmds = app.commands.map(c => \`• /\${c.name} — \${c.description}\`);\n  await respond({ text: cmds.join('\\n') });\n});`,
+                                            tag: 'utility',
+                                        },
+                                        {
+                                            name: '/info',
+                                            description: 'Returns information about the current server or user.',
+                                            example: `app.command('/info', async ({ respond, context }) => {\n  await respond({ text: \`Guild: \${context.guild.name}\\nMembers: \${context.guild.memberCount}\` });\n});`,
+                                            tag: 'info',
+                                        },
+                                    ].map(tpl => (
+                                        <div key={tpl.name} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '10px', padding: '14px 16px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                                                <code style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono, monospace)' }}>{tpl.name}</code>
+                                                <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', background: 'var(--bg-tertiary)', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{tpl.tag}</span>
+                                                <button
+                                                    onClick={() => { navigator.clipboard.writeText(tpl.example).catch(() => {}); addToast({ title: `Copied ${tpl.name} template`, variant: 'success' }); }}
+                                                    style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: '5px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-secondary)', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}
+                                                >
+                                                    Copy
+                                                </button>
+                                            </div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>{tpl.description}</div>
+                                            <pre style={{ margin: 0, padding: '10px 12px', background: 'var(--bg-tertiary)', borderRadius: '6px', fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono, monospace)', overflow: 'auto', lineHeight: 1.5 }}>{tpl.example}</pre>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* No-Code Bot Builder (Item 100) */}
@@ -4231,6 +4392,11 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     {/* ===================== HIGHLIGHTS (Item 103) ===================== */}
                     {activeTab === 'highlights' && guildId && (
                         <HighlightsPanel guildId={guildId} addToast={addToast} />
+                    )}
+
+                    {/* ===================== FEDERATION ===================== */}
+                    {activeTab === 'federation' && guildId && (
+                        <GuildFederationPanel guildId={guildId} addToast={addToast} />
                     )}
                 </div>
             </div>
@@ -4908,6 +5074,8 @@ function BackupsPanel({ guildId, addToast }: { guildId: string; addToast: (t: an
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
     const [backupName, setBackupName] = useState('');
+    const [verifyState, setVerifyState] = useState<Record<string, { loading: boolean; result: any | null }>>({});
+    const [dryRunState, setDryRunState] = useState<Record<string, { loading: boolean; result: any | null; open: boolean }>>({});
 
     useEffect(() => {
         api.guildBackup.list(guildId).then(setBackups).catch(() => {}).finally(() => setLoading(false));
@@ -4935,6 +5103,27 @@ function BackupsPanel({ guildId, addToast }: { guildId: string; addToast: (t: an
         } catch { addToast({ title: 'Failed to download', variant: 'error' }); }
     };
 
+    const verifyBackup = async (backupId: string) => {
+        setVerifyState(prev => ({ ...prev, [backupId]: { loading: true, result: null } }));
+        try {
+            const result = await api.guildBackup.verify(guildId, backupId);
+            setVerifyState(prev => ({ ...prev, [backupId]: { loading: false, result } }));
+        } catch {
+            setVerifyState(prev => ({ ...prev, [backupId]: { loading: false, result: { ok: false, detail: 'Verification failed' } } }));
+        }
+    };
+
+    const runDryRun = async (backupId: string) => {
+        setDryRunState(prev => ({ ...prev, [backupId]: { loading: true, result: null, open: true } }));
+        try {
+            const result = await api.guildBackup.dryRun(guildId, backupId);
+            setDryRunState(prev => ({ ...prev, [backupId]: { loading: false, result, open: true } }));
+        } catch {
+            setDryRunState(prev => ({ ...prev, [backupId]: { loading: false, result: null, open: true } }));
+            addToast({ title: 'Failed to run dry-run', variant: 'error' });
+        }
+    };
+
     return (
         <>
             <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Backups</h2>
@@ -4953,20 +5142,73 @@ function BackupsPanel({ guildId, addToast }: { guildId: string; addToast: (t: an
                 <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>No backups yet.</div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {backups.map(b => (
-                        <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '10px' }}>
-                            <div>
-                                <div style={{ fontWeight: 600, fontSize: '14px' }}>{b.name}</div>
-                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{new Date(b.createdAt).toLocaleString()} - {Math.round((b.sizeBytes || 0) / 1024)} KB</div>
+                    {backups.map(b => {
+                        const verify = verifyState[b.id];
+                        const dryRun = dryRunState[b.id];
+                        return (
+                            <div key={b.id}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: dryRun?.open ? '10px 10px 0 0' : '10px' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 600, fontSize: '14px' }}>{b.name}</div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                            {new Date(b.createdAt).toLocaleString()} · {Math.round((b.sizeBytes || 0) / 1024)} KB
+                                            {verify?.result && (
+                                                <span style={{ marginLeft: '10px', color: verify.result.ok ? 'var(--success, #22c55e)' : 'var(--error, #ef4444)', fontWeight: 600 }}>
+                                                    {verify.result.ok ? '✓ Integrity OK' : '⚠ Checksum mismatch'}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                        <button
+                                            onClick={() => void verifyBackup(b.id)}
+                                            disabled={verify?.loading}
+                                            title="Verify backup integrity"
+                                            style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: verify?.result ? (verify.result.ok ? 'var(--success, #22c55e)' : 'var(--error, #ef4444)') : 'var(--text-secondary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600, opacity: verify?.loading ? 0.6 : 1 }}
+                                        >
+                                            {verify?.loading ? '...' : '🔍 Verify'}
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (dryRun?.open && dryRun.result) {
+                                                    setDryRunState(prev => ({ ...prev, [b.id]: { ...prev[b.id], open: !dryRun.open } }));
+                                                } else {
+                                                    void runDryRun(b.id);
+                                                }
+                                            }}
+                                            disabled={dryRun?.loading}
+                                            title="Preview restore without applying"
+                                            style={{ padding: '6px 12px', borderRadius: '6px', background: dryRun?.open ? 'rgba(99,102,241,0.12)' : 'var(--bg-tertiary)', border: `1px solid ${dryRun?.open ? '#6366f1' : 'var(--stroke)'}`, color: dryRun?.open ? '#818cf8' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600, opacity: dryRun?.loading ? 0.6 : 1 }}
+                                        >
+                                            {dryRun?.loading ? '...' : '🔎 Dry Run'}
+                                        </button>
+                                        <button onClick={() => downloadBackup(b.id)} style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>Download</button>
+                                        <button onClick={async () => {
+                                            try { await api.guildBackup.delete(guildId, b.id); setBackups(prev => prev.filter(x => x.id !== b.id)); addToast({ title: 'Backup deleted', variant: 'info' }); } catch {}
+                                        }} style={{ padding: '6px 12px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--error)', color: 'var(--error)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>Delete</button>
+                                    </div>
+                                </div>
+                                {dryRun?.open && dryRun.result && (
+                                    <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--stroke)', borderTop: 'none', borderRadius: '0 0 10px 10px', padding: '12px 16px' }}>
+                                        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Dry Run — What Would Be Restored</div>
+                                        <div style={{ display: 'flex', gap: '16px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                                            {(dryRun.result.wouldRestore as string[]).map((item: string) => (
+                                                <span key={item} style={{ fontSize: '13px', background: 'var(--bg-tertiary)', padding: '4px 10px', borderRadius: '6px', color: 'var(--text-primary)' }}>✓ {item}</span>
+                                            ))}
+                                        </div>
+                                        {dryRun.result.warnings?.length > 0 && (
+                                            <div style={{ fontSize: '12px', color: '#fbbf24', marginTop: '6px' }}>
+                                                ⚠ {(dryRun.result.warnings as string[]).join(' · ')}
+                                            </div>
+                                        )}
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                                            Export version {dryRun.result.summary?.version ?? 1} · {dryRun.result.summary?.exportedAt ? new Date(dryRun.result.summary.exportedAt).toLocaleDateString() : 'Unknown date'}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <button onClick={() => downloadBackup(b.id)} style={{ padding: '6px 14px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>Download</button>
-                                <button onClick={async () => {
-                                    try { await api.guildBackup.delete(guildId, b.id); setBackups(prev => prev.filter(x => x.id !== b.id)); addToast({ title: 'Backup deleted', variant: 'info' }); } catch {}
-                                }} style={{ padding: '6px 14px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--error)', color: 'var(--error)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>Delete</button>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </>
