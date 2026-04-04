@@ -4,6 +4,7 @@ import { Eye, EyeOff, User, Mail, Lock, X } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
 import gsap from 'gsap';
+import splashIcon from '../../assets/splash-icon.png';
 
 const TERMS_TEXT = `Terms of Service for Gratonite
 
@@ -122,7 +123,7 @@ const Register = () => {
             {/* Mascot */}
             <div className="auth-mascot" data-auth-anim>
                 <div className="auth-mascot-glow" />
-                <img src={`${import.meta.env.BASE_URL}splash-icon.png`} alt="Gratonite" />
+                <img src={splashIcon} alt="Gratonite" />
             </div>
 
             {/* Heading */}
