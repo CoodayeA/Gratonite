@@ -208,6 +208,16 @@ export const guildsApi = {
   getMemberWarnings: (guildId: string, userId: string) =>
     apiFetch<Array<{ id: string; userId: string; guildId: string; reason: string; moderatorId: string; createdAt: string }>>(`/guilds/${guildId}/members/${userId}/warnings`),
 
+  getModNote: (guildId: string, userId: string) =>
+    apiFetch<{ content: string; updatedAt: string | null }>(`/guilds/${guildId}/members/${userId}/mod-note`),
+
+  setModNote: (guildId: string, userId: string, content: string) =>
+    apiFetch<{ success: boolean; content: string }>(`/guilds/${guildId}/members/${userId}/mod-note`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    }),
+
   getVanityUrl: (guildId: string) =>
     apiFetch<{ code: string | null }>(`/guilds/${guildId}/vanity-url`),
 

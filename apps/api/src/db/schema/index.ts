@@ -181,6 +181,7 @@ export * from './guild-soundboard';
 export * from './guild-spam-config';
 export * from './message-translations';
 export * from './messageEditHistory';
+export * from './mod-notes';
 export * from './mod-queue';
 export * from './notification-sounds';
 export * from './push-subscriptions';

@@ -47,6 +47,7 @@ import { guildMemberOnboarding } from '../db/schema/guild-onboarding';
 import { channelReadState } from '../db/schema/channel-read-state';
 import { guildRatings } from '../db/schema/guild-ratings';
 import { guildMemberProfiles } from '../db/schema/guild-member-profiles';
+import { modNotes } from '../db/schema/mod-notes';
 import { messages } from '../db/schema/messages';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
@@ -1658,6 +1659,90 @@ guildsRouter.post(
       });
 
       res.json({ success: true, timeoutUntil: timeoutUntil?.toISOString() ?? null });
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// GET/PUT /:guildId/members/:userId/mod-note
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/v1/guilds/:guildId/members/:userId/mod-note
+ * Return the caller's mod note for a guild member.
+ * Requires MODERATE_MEMBERS or KICK_MEMBERS.
+ */
+guildsRouter.get(
+  '/:guildId/members/:userId/mod-note',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { guildId, userId: targetUserId } = req.params as Record<string, string>;
+      await requireMember(guildId, req.userId!);
+
+      const canModerate = await hasPermission(req.userId!, guildId, Permissions.MODERATE_MEMBERS);
+      const canKick = await hasPermission(req.userId!, guildId, Permissions.KICK_MEMBERS);
+      if (!canModerate && !canKick) {
+        throw new AppError(403, 'Missing MODERATE_MEMBERS permission', 'FORBIDDEN');
+      }
+
+      const [note] = await db
+        .select()
+        .from(modNotes)
+        .where(
+          and(
+            eq(modNotes.guildId, guildId),
+            eq(modNotes.targetId, targetUserId),
+            eq(modNotes.authorId, req.userId!),
+          ),
+        )
+        .limit(1);
+
+      res.json({ content: note?.content ?? '', updatedAt: note?.updatedAt ?? null });
+    } catch (err) {
+      handleAppError(res, err);
+    }
+  },
+);
+
+/**
+ * PUT /api/v1/guilds/:guildId/members/:userId/mod-note
+ * Create or update the caller's mod note for a guild member.
+ * Requires MODERATE_MEMBERS or KICK_MEMBERS.
+ */
+guildsRouter.put(
+  '/:guildId/members/:userId/mod-note',
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { guildId, userId: targetUserId } = req.params as Record<string, string>;
+      await requireMember(guildId, req.userId!);
+
+      const canModerate = await hasPermission(req.userId!, guildId, Permissions.MODERATE_MEMBERS);
+      const canKick = await hasPermission(req.userId!, guildId, Permissions.KICK_MEMBERS);
+      if (!canModerate && !canKick) {
+        throw new AppError(403, 'Missing MODERATE_MEMBERS permission', 'FORBIDDEN');
+      }
+
+      const content = typeof req.body?.content === 'string' ? req.body.content.slice(0, 2000) : '';
+
+      await db
+        .insert(modNotes)
+        .values({
+          guildId,
+          targetId: targetUserId,
+          authorId: req.userId!,
+          content,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: [modNotes.guildId, modNotes.targetId, modNotes.authorId],
+          set: { content, updatedAt: new Date() },
+        });
+
+      res.json({ success: true, content });
     } catch (err) {
       handleAppError(res, err);
     }

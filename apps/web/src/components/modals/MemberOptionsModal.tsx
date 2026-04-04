@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, Link2, Bell, BellOff, User, EyeOff, LogOut, Check, Copy, Clock, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { X, Link2, Bell, BellOff, User, EyeOff, LogOut, Check, Copy, Clock, AlertTriangle, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
@@ -76,6 +76,11 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
     const [warnReason, setWarnReason] = useState('');
     const [warnSending, setWarnSending] = useState(false);
     const [warningCounts, setWarningCounts] = useState<Record<string, number>>({});
+    const [modNoteTarget, setModNoteTarget] = useState('');
+    const [modNoteContent, setModNoteContent] = useState('');
+    const [modNoteLoading, setModNoteLoading] = useState(false);
+    const [modNoteSaving, setModNoteSaving] = useState(false);
+    const modNoteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -169,6 +174,34 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
         } finally {
             setWarnSending(false);
         }
+    };
+
+    // Load mod note when target changes
+    useEffect(() => {
+        if (!guildId || !modNoteTarget) { setModNoteContent(''); return; }
+        setModNoteLoading(true);
+        api.guilds.getModNote?.(guildId, modNoteTarget)
+            .then((n: any) => { if (mountedRef.current) setModNoteContent(n?.content ?? ''); })
+            .catch(() => {})
+            .finally(() => { if (mountedRef.current) setModNoteLoading(false); });
+    }, [guildId, modNoteTarget]);
+
+    const handleModNoteSave = useCallback(async (content: string) => {
+        if (!guildId || !modNoteTarget) return;
+        setModNoteSaving(true);
+        try {
+            await api.guilds.setModNote?.(guildId, modNoteTarget, content);
+        } catch {
+            addToast({ title: 'Failed to save mod note', variant: 'error' });
+        } finally {
+            if (mountedRef.current) setModNoteSaving(false);
+        }
+    }, [guildId, modNoteTarget, addToast]);
+
+    const handleModNoteChange = (value: string) => {
+        setModNoteContent(value);
+        if (modNoteDebounceRef.current) clearTimeout(modNoteDebounceRef.current);
+        modNoteDebounceRef.current = setTimeout(() => handleModNoteSave(value), 1000);
     };
 
     const handleMuteToggle = (val: boolean) => {
@@ -396,6 +429,42 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
                                     </div>
                                 );
                             })()}
+
+                            <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />
+
+                            {/* Mod Notes */}
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>Mod Notes</label>
+
+                            <select
+                                value={modNoteTarget}
+                                onChange={e => setModNoteTarget(e.target.value)}
+                                style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
+                            >
+                                <option value="">Select a member...</option>
+                                {members.filter(m => m.userId !== (localStorage.getItem('userId') || '')).map(m => (
+                                    <option key={m.userId} value={m.userId}>
+                                        {m.displayName || m.username}
+                                    </option>
+                                ))}
+                            </select>
+
+                            {modNoteTarget && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <textarea
+                                        value={modNoteLoading ? '' : modNoteContent}
+                                        onChange={e => handleModNoteChange(e.target.value)}
+                                        onBlur={() => { if (modNoteDebounceRef.current) { clearTimeout(modNoteDebounceRef.current); handleModNoteSave(modNoteContent); } }}
+                                        placeholder={modNoteLoading ? 'Loading...' : 'Private note visible only to you and other moderators...'}
+                                        disabled={modNoteLoading}
+                                        rows={3}
+                                        style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit', opacity: modNoteLoading ? 0.5 : 1 }}
+                                    />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                                        <FileText size={11} />
+                                        {modNoteSaving ? 'Saving...' : 'Auto-saved · visible to moderators only'}
+                                    </div>
+                                </div>
+                            )}
                         </>
                     )}
 
