@@ -84,7 +84,7 @@ function MessageBubbleInner({
 
   const styles = useMemo(() => StyleSheet.create({
     messageRow: {
-      marginBottom: spacing.md,
+      marginBottom: spacing.md + 2,
     },
     messageGrouped: {
       marginBottom: spacing.xs,
@@ -120,7 +120,7 @@ function MessageBubbleInner({
       backgroundColor: glass ? glass.glassBackground : colors.bgElevated,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
-      borderRadius: neo ? 0 : glass ? borderRadius.xl : borderRadius.lg,
+      borderRadius: neo ? 0 : glass ? borderRadius.xl : borderRadius.xl,
       maxWidth: windowWidth - 100,
       ...(neo ? {
         borderWidth: 2,
@@ -309,11 +309,6 @@ function MessageBubbleInner({
           )}
           {message.editedAt && <Text style={styles.edited}>(edited)</Text>}
         </View>
-      )}
-
-      {/* Subtle time hint for grouped messages (replaces hidden header timestamp) */}
-      {isGrouped && (
-        <Text style={styles.groupedTimeHint}>{formatTime(message.createdAt)}</Text>
       )}
 
       {(decryptedContent ?? message.content)?.trim() ? (

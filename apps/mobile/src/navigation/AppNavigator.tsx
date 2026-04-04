@@ -192,9 +192,9 @@ function MainTabs() {
               : colors.bgSecondary,
           borderTopColor: neo ? colors.border : glass ? glass.glassBorder : colors.accentPrimary,
           borderTopWidth: neo ? 3 : glass ? 0.5 : 1,
-          height: 60 + insets.bottom,
+          height: 56 + insets.bottom,
           paddingBottom: insets.bottom,
-          paddingTop: 6,
+          paddingTop: 4,
           shadowColor: '#000',
           shadowOpacity: iosGlassTabBar ? 0.06 : 0.1,
           shadowOffset: { width: 0, height: -2 },
@@ -208,7 +208,8 @@ function MainTabs() {
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: neo ? '800' : '600',
+          fontWeight: neo ? '800' as const : '600' as const,
+          marginTop: 2,
           ...(neo ? { textTransform: 'uppercase' as const } : {}),
         },
       }}
@@ -220,18 +221,18 @@ function MainTabs() {
           tabBarLabel: 'Portals',
           tabBarAccessibilityLabel: 'Portals tab',
           tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-              {focused && (
+            <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 2 }}>
+              {focused && !neo && (
                 <View style={{
                   position: 'absolute',
-                  width: 48,
-                  height: 28,
-                  borderRadius: 14,
-                  backgroundColor: neo ? neo.palette.sky : `${colors.accentPrimary}20`,
-                  ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+                  top: -6,
+                  width: 20,
+                  height: 3,
+                  borderRadius: 2,
+                  backgroundColor: colors.accentPrimary,
                 }} />
               )}
-              <Ionicons name={focused ? 'planet' : 'planet-outline'} size={focused ? 24 : 20} color={color} />
+              <Ionicons name={focused ? 'planet' : 'planet-outline'} size={22} color={color} />
             </View>
           ),
         }}
@@ -243,18 +244,18 @@ function MainTabs() {
           tabBarLabel: 'Chats',
           tabBarAccessibilityLabel: 'Chats tab',
           tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-              {focused && (
+            <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 2 }}>
+              {focused && !neo && (
                 <View style={{
                   position: 'absolute',
-                  width: 48,
-                  height: 28,
-                  borderRadius: 14,
-                  backgroundColor: neo ? neo.palette.mint : `${colors.accentPrimary}20`,
-                  ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+                  top: -6,
+                  width: 20,
+                  height: 3,
+                  borderRadius: 2,
+                  backgroundColor: colors.accentPrimary,
                 }} />
               )}
-              <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={focused ? 24 : 20} color={color} />
+              <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={22} color={color} />
             </View>
           ),
         }}
@@ -266,18 +267,18 @@ function MainTabs() {
           tabBarLabel: 'Friends',
           tabBarAccessibilityLabel: 'Friends tab',
           tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-              {focused && (
+            <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 2 }}>
+              {focused && !neo && (
                 <View style={{
                   position: 'absolute',
-                  width: 48,
-                  height: 28,
-                  borderRadius: 14,
-                  backgroundColor: neo ? neo.palette.lavender : `${colors.accentPrimary}20`,
-                  ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+                  top: -6,
+                  width: 20,
+                  height: 3,
+                  borderRadius: 2,
+                  backgroundColor: colors.accentPrimary,
                 }} />
               )}
-              <Ionicons name={focused ? 'people' : 'people-outline'} size={focused ? 24 : 20} color={color} />
+              <Ionicons name={focused ? 'people' : 'people-outline'} size={22} color={color} />
             </View>
           ),
         }}
@@ -289,18 +290,18 @@ function MainTabs() {
           tabBarLabel: 'Alerts',
           tabBarAccessibilityLabel: 'Alerts tab',
           tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-              {focused && (
+            <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 2 }}>
+              {focused && !neo && (
                 <View style={{
                   position: 'absolute',
-                  width: 48,
-                  height: 28,
-                  borderRadius: 14,
-                  backgroundColor: neo ? neo.palette.coral : `${colors.accentPrimary}20`,
-                  ...(neo ? { borderWidth: 2, borderColor: colors.border } : {}),
+                  top: -6,
+                  width: 20,
+                  height: 3,
+                  borderRadius: 2,
+                  backgroundColor: colors.accentPrimary,
                 }} />
               )}
-              <Ionicons name={focused ? 'notifications' : 'notifications-outline'} size={focused ? 24 : 20} color={color} />
+              <Ionicons name={focused ? 'notifications' : 'notifications-outline'} size={22} color={color} />
             </View>
           ),
           tabBarBadge: notificationCount > 0 ? (notificationCount > 99 ? '99+' : notificationCount) : undefined,
