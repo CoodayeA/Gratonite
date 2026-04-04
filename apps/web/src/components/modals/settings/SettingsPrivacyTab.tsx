@@ -7,6 +7,42 @@ import type { SettingsTabProps, UserProfileLike } from './types';
 import { useState } from 'react';
 import { api } from '../../../lib/api';
 
+const ProfileVisibilitySelect = () => {
+  const [visibility, setVisibility] = useState<'public' | 'friends' | 'hidden'>(() => {
+    const stored = localStorage.getItem('privacy-profile-visibility');
+    if (stored === 'friends' || stored === 'hidden') return stored;
+    return 'public';
+  });
+
+  const handleChange = (val: 'public' | 'friends' | 'hidden') => {
+    setVisibility(val);
+    try { localStorage.setItem('privacy-profile-visibility', val); } catch { /* no-op */ }
+    api.users.updateSettings({ profileVisibility: val }).catch(() => { /* no-op */ });
+  };
+
+  return (
+    <div style={{ padding: '16px' }}>
+      <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px' }}>Profile visibility</div>
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.4', marginBottom: '12px' }}>Control who can view your full profile page, including bio, connections, and activity.</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {(['public', 'friends', 'hidden'] as const).map(opt => (
+          <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '8px 10px', borderRadius: '8px', background: visibility === opt ? 'rgba(var(--accent-primary-rgb,139,92,246),0.1)' : 'transparent', border: `1px solid ${visibility === opt ? 'var(--accent-primary)' : 'transparent'}` }}>
+            <input type="radio" name="profile-visibility" value={opt} checked={visibility === opt} onChange={() => handleChange(opt)} style={{ accentColor: 'var(--accent-primary)' }} />
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 600, textTransform: 'capitalize' }}>{opt === 'friends' ? 'Friends only' : opt}</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                {opt === 'public' && 'Anyone on Gratonite can view your profile'}
+                {opt === 'friends' && 'Only mutual friends can view your profile'}
+                {opt === 'hidden' && 'Your profile is hidden from everyone'}
+              </div>
+            </div>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const PrivacyToggle = ({
   label,
   description,
@@ -114,6 +150,22 @@ const SettingsPrivacyTab = ({ userProfile, onNavigateTab }: Props) => {
             <span>Direct Message Privacy</span>
             <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Control who can send you DMs</span>
           </button>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '32px' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>Profile Visibility</h3>
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Control who can view your profile and find you by username.</p>
+        <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
+          <ProfileVisibilitySelect />
+          <div style={{ height: '1px', background: 'var(--stroke)' }} />
+          <PrivacyToggle
+            label="Searchable by username"
+            description="Allow other users to find your account by searching your username. When disabled, you can only be found via direct invite links."
+            storageKey="privacy-searchable-by-username"
+            defaultValue={true}
+            onChange={(val) => { api.users.updateSettings({ searchableByUsername: val }).catch(() => {}); }}
+          />
         </div>
       </div>
 
