@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mic, MicOff, Headphones, HeadphoneOff, PhoneOff, Settings, Users } from 'lucide-react';
+import { Mic, MicOff, Headphones, HeadphoneOff, PhoneOff, Settings, Users, ExternalLink } from 'lucide-react';
 import { useVoice } from '../../contexts/VoiceContext';
 import { leaveVoiceSession } from '../../lib/voiceSession';
 
 export default function VoiceBar() {
-  const { connected, channelName, guildName, guildId, channelId, muted, deafened, toggleMute, toggleDeafen, leaveVoice, participantCount } = useVoice();
+  const { connected, channelName, guildName, guildId, channelId, muted, deafened, toggleMute, toggleDeafen, leaveVoice, participantCount, connectionQuality } = useVoice();
   const navigate = useNavigate();
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
-  const [connectionQuality] = useState<'good' | 'fair' | 'poor'>('good');
 
   // PTT state
   const [pttMode, setPttMode] = useState(() => localStorage.getItem('gratonite_voice_mode') === 'push_to_talk');
@@ -169,6 +168,23 @@ export default function VoiceBar() {
               background: connectionQuality === 'good' ? '#43b581' : connectionQuality === 'fair' ? '#faa61a' : '#ed4245',
               boxShadow: `0 0 4px ${connectionQuality === 'good' ? '#43b581' : connectionQuality === 'fair' ? '#faa61a' : '#ed4245'}`,
             }} />
+            {/* WiFi bars quality indicator */}
+            {(() => {
+              const barCount = connectionQuality === 'good' ? 3 : connectionQuality === 'fair' ? 2 : 1;
+              const color = connectionQuality === 'good' ? '#43b581' : connectionQuality === 'fair' ? '#faa61a' : '#ed4245';
+              return (
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '12px', flexShrink: 0 }}>
+                  {[1, 2, 3].map(i => (
+                    <div key={i} style={{
+                      width: '3px',
+                      height: `${3 + i * 3}px`,
+                      borderRadius: '1px',
+                      background: i <= barCount ? color : 'rgba(255,255,255,0.15)',
+                    }} />
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -280,6 +296,31 @@ export default function VoiceBar() {
           }}
         >
           <PhoneOff size={16} />
+        </button>
+
+        {/* Divider */}
+        <div style={{ width: '1px', height: '24px', background: 'rgba(255, 255, 255, 0.08)', margin: '0 2px' }} />
+        {/* Pop out button */}
+        <button
+          type="button"
+          onClick={() => window.open(
+            window.location.origin + '/voice-popout?channelId=' + channelId + '&guildId=' + guildId + '&channelName=' + encodeURIComponent(channelName),
+            'gratoniteVoicePopout',
+            'width=420,height=580,resizable=yes,scrollbars=no'
+          )}
+          onMouseEnter={() => setHoveredBtn('popout')}
+          onMouseLeave={() => setHoveredBtn(null)}
+          title="Pop out call"
+          aria-label="Pop out call window"
+          style={{
+            width: '32px', height: '32px', borderRadius: '50%', border: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', transition: 'background 0.15s',
+            background: hoveredBtn === 'popout' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          <ExternalLink size={15} />
         </button>
       </div>
 

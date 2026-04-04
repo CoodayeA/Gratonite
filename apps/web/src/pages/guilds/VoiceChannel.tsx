@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Settings, Users, Headphones, HeadphoneOff, Volume2, X, Loader2, MessageSquare, Send, Hash, Wifi, ChevronDown, Check, Radio, Hand, Crown, Compass, Pin, PictureInPicture2, MoreHorizontal, Edit3 } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Settings, Users, Headphones, HeadphoneOff, Volume2, X, Loader2, MessageSquare, Send, Hash, Wifi, ChevronDown, Check, Radio, Hand, Crown, Compass, Pin, PictureInPicture2, MoreHorizontal, Edit3, Music } from 'lucide-react';
 import { useOutletContext, useParams } from 'react-router-dom';
 import { TopBarActions } from '../../components/ui/TopBarActions';
 import { useToast } from '../../components/ui/ToastManager';
@@ -14,6 +14,7 @@ import { SpatialAudioEngine } from '../../lib/spatialAudio';
 import { useSpatialPositions } from '../../hooks/useSpatialPositions';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import SpatialCanvas from '../../components/voice/SpatialCanvas';
+import GuildSoundboardPanel from '../../components/voice/GuildSoundboardPanel';
 import { Track, ConnectionState as LiveKitConnectionState } from 'livekit-client';
 import { getConnectionErrorHint } from '../../lib/callErrors';
 
@@ -134,6 +135,11 @@ const VoiceChannel = () => {
 
     // Connection panel state
     const [showConnectionPanel, setShowConnectionPanel] = useState(false);
+    const [callRtt, setCallRtt] = useState<number | null>(null);
+    const [callPacketLoss, setCallPacketLoss] = useState<number | null>(null);
+
+    // Soundboard panel state
+    const [showSoundboard, setShowSoundboard] = useState(false);
 
     // Resizable chat sidebar state (I4)
     const [chatWidth, setChatWidth] = useState(420);
@@ -612,6 +618,55 @@ const VoiceChannel = () => {
     useEffect(() => {
         voiceCtx.syncMuted(isMuted);
     }, [isMuted]);
+
+    // Sync local participant connection quality to VoiceContext
+    useEffect(() => {
+        if (!localParticipant) return;
+        const q = localParticipant.connectionQuality;
+        const mapped: 'good' | 'fair' | 'poor' =
+            (q === 'excellent' || q === 'good') ? 'good' : q === 'poor' ? 'fair' : 'poor';
+        voiceCtx.syncConnectionQuality(mapped);
+    }, [localParticipant?.connectionQuality]);
+
+    // Poll RTT and packet loss every 3 seconds when connected
+    useEffect(() => {
+        if (!isConnected) { setCallRtt(null); setCallPacketLoss(null); return; }
+        const poll = async () => {
+            const room = roomRef.current;
+            if (!room) return;
+            try {
+                const pc: RTCPeerConnection | undefined = (room as any).engine?.pcManager?.publisher?.pc;
+                if (!pc) return;
+                const stats = await pc.getStats();
+                let rtt: number | null = null;
+                let lost = 0, sent = 0;
+                stats.forEach((report) => {
+                    if (report.type === 'remote-inbound-rtp' && typeof report.roundTripTime === 'number') {
+                        rtt = Math.round(report.roundTripTime * 1000);
+                    }
+                    if (report.type === 'outbound-rtp') {
+                        lost += (report as any).retransmittedPacketsSent ?? 0;
+                        sent += (report as any).packetsSent ?? 0;
+                    }
+                });
+                setCallRtt(rtt);
+                setCallPacketLoss(sent > 0 ? Math.round((lost / sent) * 100) : null);
+            } catch { /* ignore */ }
+        };
+        const id = setInterval(poll, 3000);
+        void poll();
+        return () => clearInterval(id);
+    }, [isConnected]);
+
+    // Track reconnect → connected transition to show toast
+    const prevConnectionStateRef = useRef<LiveKitConnectionState>(LiveKitConnectionState.Disconnected);
+    useEffect(() => {
+        const prev = prevConnectionStateRef.current;
+        prevConnectionStateRef.current = connectionState;
+        if (prev === LiveKitConnectionState.Reconnecting && connectionState === LiveKitConnectionState.Connected) {
+            addToast({ title: 'Reconnected ✓', description: 'Voice connection restored.', variant: 'success' });
+        }
+    }, [connectionState]);
 
     // Handle connection errors (dedupe identical strings to avoid reconnect toast spam)
     const lastVoiceConnectionErrRef = useRef<string | null>(null);
@@ -1490,6 +1545,18 @@ const VoiceChannel = () => {
                 </div>
             )}
 
+            {/* Soundboard Panel */}
+            {showSoundboard && guildId && (
+                <div style={{ position: 'absolute', bottom: '110px', right: '24px', zIndex: 15 }}>
+                    <GuildSoundboardPanel
+                        guildId={guildId}
+                        currentUserId={userProfile?.id}
+                        isAdmin={false}
+                        onClose={() => setShowSoundboard(false)}
+                    />
+                </div>
+            )}
+
             {/* Voice Controls with Tooltips */}
             {(isConnected || isConnecting) && (
                 <div className="voice-controls" style={{ position: 'absolute', bottom: '32px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '16px', alignItems: 'center', background: 'var(--bg-elevated)', padding: '12px 24px', borderRadius: 'var(--radius-xl)', border: '1px solid var(--stroke)', boxShadow: 'var(--shadow-panel)', zIndex: 10 }}>
@@ -1806,7 +1873,23 @@ const VoiceChannel = () => {
                                             fontSize: '12px', fontWeight: 600, transition: 'all 0.15s',
                                         }}
                                     >
+                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0, background: localParticipant ? getQualityColor(localParticipant.connectionQuality) : '#43b581' }} />
                                         <Wifi size={16} /> Connection
+                                    </button>
+
+                                    {/* Soundboard */}
+                                    <button
+                                        onClick={() => { setShowSoundboard(!showSoundboard); setShowMoreControls(false); }}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px',
+                                            background: showSoundboard ? 'rgba(var(--accent-primary-rgb, 88, 101, 242), 0.15)' : 'var(--bg-tertiary)',
+                                            border: showSoundboard ? '1px solid var(--accent-primary)' : '1px solid var(--stroke)',
+                                            borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                                            color: showSoundboard ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                            fontSize: '12px', fontWeight: 600, transition: 'all 0.15s',
+                                        }}
+                                    >
+                                        <Music size={16} /> Soundboard
                                     </button>
                                 </div>
 
@@ -1840,6 +1923,20 @@ const VoiceChannel = () => {
                                                     </div>
                                                 </div>
                                             )}
+                                            {/* RTT */}
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>RTT</span>
+                                                <span style={{ fontSize: '12px', fontWeight: 600, color: callRtt !== null && callRtt > 200 ? '#faa61a' : 'var(--text-primary)' }}>
+                                                    {callRtt !== null ? `${callRtt}ms` : '—'}
+                                                </span>
+                                            </div>
+                                            {/* Packet Loss */}
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Packet Loss</span>
+                                                <span style={{ fontSize: '12px', fontWeight: 600, color: (callPacketLoss ?? 0) > 5 ? '#faa61a' : 'var(--text-primary)' }}>
+                                                    {callPacketLoss !== null ? `${callPacketLoss}%` : '—'}
+                                                </span>
+                                            </div>
                                             {/* Network Hint */}
                                             <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.4', paddingTop: '6px', borderTop: '1px solid var(--stroke)' }}>
                                                 Experiencing issues? Check your network connection or try switching networks.
@@ -2067,6 +2164,19 @@ const VoiceChannel = () => {
                             />
                         </div>
                     </div>
+                </div>
+            )}
+            {/* Reconnect overlay */}
+            {connectionState === LiveKitConnectionState.Reconnecting && (
+                <div style={{
+                    position: 'absolute', inset: 0, zIndex: 50,
+                    background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    gap: '16px',
+                }}>
+                    <Loader2 size={40} style={{ animation: 'spin 1s linear infinite', color: '#faa61a' }} />
+                    <p style={{ color: '#faa61a', fontSize: '18px', fontWeight: 600 }}>Reconnecting...</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Hold tight, restoring your connection</p>
                 </div>
             )}
         </main>

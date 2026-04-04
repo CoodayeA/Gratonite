@@ -21,6 +21,7 @@ interface VoiceState {
   participants: VoiceParticipant[];
   /** Number of participants currently in the connected voice channel (including self) */
   participantCount: number;
+  connectionQuality: 'good' | 'fair' | 'poor';
 }
 
 interface VoiceContextValue extends VoiceState {
@@ -36,6 +37,8 @@ interface VoiceContextValue extends VoiceState {
   registerDisconnectHandler: (fn: (() => Promise<void>) | null) => void;
   /** Called by VoiceChannel to push the authoritative isMuted value into context */
   syncMuted: (muted: boolean) => void;
+  /** Called by VoiceChannel to sync connection quality */
+  syncConnectionQuality: (quality: 'good' | 'fair' | 'poor') => void;
 }
 
 const defaultState: VoiceState = {
@@ -48,6 +51,7 @@ const defaultState: VoiceState = {
   deafened: false,
   participants: [],
   participantCount: 0,
+  connectionQuality: 'good',
 };
 
 const VoiceContext = createContext<VoiceContextValue | null>(null);
@@ -72,6 +76,10 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, muted }));
   }, []);
 
+  const syncConnectionQuality = useCallback((connectionQuality: 'good' | 'fair' | 'poor') => {
+    setState(prev => ({ ...prev, connectionQuality }));
+  }, []);
+
   const joinVoice = useCallback((channelId: string, channelName: string, guildName: string, guildId: string) => {
     setState({
       channelId,
@@ -83,6 +91,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       deafened: false,
       participants: [],
       participantCount: 1, // self
+      connectionQuality: 'good',
     });
   }, []);
 
@@ -118,7 +127,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <VoiceContext.Provider value={{ ...state, joinVoice, leaveVoice, toggleMute, toggleDeafen, setParticipantCount, registerMuteHandler, registerDisconnectHandler, syncMuted }}>
+    <VoiceContext.Provider value={{ ...state, joinVoice, leaveVoice, toggleMute, toggleDeafen, setParticipantCount, registerMuteHandler, registerDisconnectHandler, syncMuted, syncConnectionQuality }}>
       {children}
     </VoiceContext.Provider>
   );
