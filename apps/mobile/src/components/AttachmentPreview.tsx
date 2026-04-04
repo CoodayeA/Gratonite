@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Linking, Dimensions } from 'r
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../lib/theme';
+import { formatFileSize } from '../lib/formatters';
 import type { Attachment } from '../types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -103,10 +104,4 @@ export default function AttachmentPreview({ attachment, displayUri, onImagePress
       <Ionicons name="download-outline" size={20} color={colors.textMuted} />
     </TouchableOpacity>
   );
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

@@ -55,6 +55,10 @@ const SOUND_NAMES: SoundName[] = [
 let loadedSounds: Map<SoundName, any> = new Map();
 let currentPack = 'default';
 
+// In-memory cache to avoid SecureStore reads on every playSound call
+let cachedMuted = false;
+let cachedVolume = 1;
+
 async function unloadAll(): Promise<void> {
   const promises: Promise<void>[] = [];
   for (const sound of loadedSounds.values()) {
@@ -88,7 +92,16 @@ export async function initSounds(): Promise<void> {
       shouldDuckAndroid: true,
     });
 
-    const savedPack = await SecureStore.getItemAsync('gratonite_sound_pack');
+    const [savedPack, mutedStr, volumeStr] = await Promise.all([
+      SecureStore.getItemAsync('gratonite_sound_pack'),
+      SecureStore.getItemAsync('gratonite_sound_muted'),
+      SecureStore.getItemAsync('gratonite_sound_volume'),
+    ]);
+
+    cachedMuted = mutedStr === 'true';
+    const parsedVolume = parseInt(volumeStr ?? '', 10);
+    cachedVolume = !isNaN(parsedVolume) ? Math.max(0, Math.min(1, parsedVolume / 100)) : 1;
+
     const pack = savedPack || 'default';
     await loadPack(pack);
   } catch {
@@ -99,17 +112,13 @@ export async function initSounds(): Promise<void> {
 export async function playSound(name: SoundName): Promise<void> {
   if (!Audio) return;
   try {
-    const mutedStr = await SecureStore.getItemAsync('gratonite_sound_muted');
-    if (mutedStr === 'true') return;
+    if (cachedMuted) return;
 
     const sound = loadedSounds.get(name);
     if (!sound) return;
 
-    const volumeStr = await SecureStore.getItemAsync('gratonite_sound_volume');
-    const volume = volumeStr != null ? parseInt(volumeStr, 10) / 100 : 1;
-
     await sound.setPositionAsync(0);
-    await sound.setVolumeAsync(Math.max(0, Math.min(1, volume)));
+    await sound.setVolumeAsync(cachedVolume);
     await sound.playAsync();
   } catch {
     // Ignore playback failures
@@ -123,6 +132,27 @@ export async function switchSoundPack(pack: string): Promise<void> {
   await loadPack(pack);
   try {
     await SecureStore.setItemAsync('gratonite_sound_pack', pack);
+  } catch {
+    // Ignore persist failure
+  }
+}
+
+/** Update the muted state in memory and persist to SecureStore. */
+export async function setMuted(muted: boolean): Promise<void> {
+  cachedMuted = muted;
+  try {
+    await SecureStore.setItemAsync('gratonite_sound_muted', String(muted));
+  } catch {
+    // Ignore persist failure
+  }
+}
+
+/** Update the volume (0–100) in memory and persist to SecureStore. */
+export async function setVolume(volume: number): Promise<void> {
+  const clamped = Math.max(0, Math.min(100, Math.round(volume)));
+  cachedVolume = clamped / 100;
+  try {
+    await SecureStore.setItemAsync('gratonite_sound_volume', String(clamped));
   } catch {
     // Ignore persist failure
   }
