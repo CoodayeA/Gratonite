@@ -233,6 +233,33 @@ function renderInline(text: string, ctx: InlineCtx, depth = 0): React.ReactNode[
     if (!text) return [];
     const kp = `${ctx.keyPrefix}-d${depth}`;
 
+    // Handle escape sequences: \* \_ \~ \| \` \> \\ → literal char
+    if (depth === 0 && /\\[*_~|`>\\]/.test(text)) {
+        // Replace escape sequences with Unicode private-use placeholders, process, then restore
+        const escapeMap: Record<string, string> = {
+            '\\*': '\uE001', '\\_': '\uE002', '\\~': '\uE003',
+            '\\|': '\uE004', '\\`': '\uE005', '\\>': '\uE006', '\\\\': '\uE007',
+        };
+        const restoreMap: Record<string, string> = {
+            '\uE001': '*', '\uE002': '_', '\uE003': '~',
+            '\uE004': '|', '\uE005': '`', '\uE006': '>', '\uE007': '\\',
+        };
+        let escaped = text;
+        for (const [seq, ph] of Object.entries(escapeMap)) {
+            escaped = escaped.split(seq).join(ph);
+        }
+        const nodes = renderInline(escaped, ctx, depth + 1);
+        const restoreText = (node: React.ReactNode): React.ReactNode => {
+            if (typeof node === 'string') {
+                let s = node;
+                for (const [ph, ch] of Object.entries(restoreMap)) s = s.split(ph).join(ch);
+                return s;
+            }
+            return node;
+        };
+        return nodes.map(n => restoreText(n));
+    }
+
     // Pipeline of inline rules, processed in order.
     // Each rule: [regex, wrapper factory]
     // The regex MUST have exactly one capture group for the inner content.

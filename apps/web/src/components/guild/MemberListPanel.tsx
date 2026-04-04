@@ -4,6 +4,7 @@ import { api } from '../../lib/api';
 import { onPresenceUpdate, onSocketReconnect } from '../../lib/socket';
 import Avatar from '../ui/Avatar';
 import { RemoteBadge } from '../ui/RemoteBadge';
+import { SkeletonMemberList } from '../ui/SkeletonLoader';
 
 interface Member {
   id: string;
@@ -160,7 +161,7 @@ export function MemberListPanel({ guildId, onMemberClick }: Props) {
     <div className="member-list-panel">
       <div className="member-list-scroll" ref={scrollRef}>
         {loading ? (
-          <div className="member-list-loading">Loading...</div>
+          <SkeletonMemberList count={8} />
         ) : (
           <div style={{ height: virtualizer.getTotalSize(), width: '100%', position: 'relative' }}>
             {virtualizer.getVirtualItems().map((vItem) => {
