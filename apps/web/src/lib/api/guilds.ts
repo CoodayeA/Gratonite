@@ -316,4 +316,17 @@ export const guildsApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  getAutomodRules: (guildId: string) =>
+    apiFetch<Array<{
+      id: string;
+      guildId: string;
+      name: string;
+      enabled: boolean;
+      triggerType: string;
+      triggerMetadata: Record<string, unknown>;
+      actions: Array<Record<string, unknown>>;
+      exemptRoles: string[];
+      exemptChannels: string[];
+    }>>(`/guilds/${guildId}/auto-moderation/rules`),
 };

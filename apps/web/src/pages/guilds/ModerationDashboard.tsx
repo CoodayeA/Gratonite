@@ -49,6 +49,60 @@ interface TriageTicket {
     snoozedUntil?: string | null;
 }
 
+interface AutomodRule {
+    id: string;
+    name: string;
+    enabled: boolean;
+    triggerType: string;
+    triggerMetadata: Record<string, unknown>;
+    actions: Array<Record<string, unknown>>;
+    exemptRoles: string[];
+    exemptChannels: string[];
+}
+
+/** Evaluate a single automod rule against a test message client-side. */
+function evaluateRule(rule: AutomodRule, message: string): boolean {
+    if (!rule.enabled || !message) return false;
+    const msg = message.toLowerCase();
+    const meta = rule.triggerMetadata;
+    switch (rule.triggerType) {
+        case 'keyword':
+        case 'keyword_filter': {
+            const kws = (meta.keywords as string[] | undefined) ?? [];
+            return kws.some(kw => msg.includes(kw.toLowerCase()));
+        }
+        case 'mention_spam': {
+            const limit = (meta.mentionTotalLimit as number | undefined) ?? 5;
+            return (message.match(/@/g) ?? []).length >= limit;
+        }
+        case 'spam_link': {
+            return /https?:\/\/[^\s]+/i.test(message);
+        }
+        case 'profanity': {
+            const words = (meta.words as string[] | undefined) ?? [];
+            return words.some(w => msg.includes(w.toLowerCase()));
+        }
+        default:
+            return false;
+    }
+}
+
+const ESCALATION_STATUS_COLORS: Record<string, string> = {
+    open: 'var(--warning)',
+    in_progress: 'var(--accent-primary)',
+    escalated: '#a855f7',
+    resolved: 'var(--success)',
+    dismissed: 'var(--text-muted)',
+};
+
+const ESCALATION_STATUS_LABELS: Record<string, string> = {
+    open: 'Pending',
+    in_progress: 'In Review',
+    escalated: 'Escalated to Instance',
+    resolved: 'Resolved',
+    dismissed: 'Dismissed',
+};
+
 function StatCard({ icon: Icon, label, value, color }: { icon: typeof Shield; label: string; value: number; color: string }) {
     return (
         <div style={{
@@ -97,6 +151,10 @@ export default function ModerationDashboard() {
     const [triageLoading, setTriageLoading] = useState(false);
     const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
     const [currentUserId, setCurrentUserId] = useState('');
+    const [automodRules, setAutomodRules] = useState<AutomodRule[]>([]);
+    const [automodLoading, setAutomodLoading] = useState(false);
+    const [testMessage, setTestMessage] = useState('');
+    const [escalatedTickets, setEscalatedTickets] = useState<Set<string>>(new Set());
 
     const fetchModerationData = useCallback(async () => {
         if (!guildId) return;
@@ -145,11 +203,28 @@ export default function ModerationDashboard() {
         }
     }, [guildId]);
 
+    const fetchAutomodRules = useCallback(async () => {
+        if (!guildId) return;
+        setAutomodLoading(true);
+        try {
+            const rules = await api.guilds.getAutomodRules(guildId);
+            setAutomodRules(rules);
+        } catch {
+            // non-fatal — user may not have MANAGE_GUILD
+        } finally {
+            setAutomodLoading(false);
+        }
+    }, [guildId]);
+
     useEffect(() => {
         if (!guildId) return;
         void fetchModerationData();
         void fetchTriageTickets();
     }, [guildId, fetchModerationData, fetchTriageTickets]);
+
+    useEffect(() => {
+        if (activeTab === 'automod') void fetchAutomodRules();
+    }, [activeTab, fetchAutomodRules]);
 
     useEffect(() => {
         api.users.getMe().then(me => setCurrentUserId(me.id)).catch(() => {});
@@ -200,6 +275,21 @@ export default function ModerationDashboard() {
             addToast({ title: 'Failed to resolve selected tickets', variant: 'error' });
         }
     };
+
+    const escalateTicket = async (ticketId: string) => {
+        if (!guildId) return;
+        try {
+            await api.tickets.update(guildId, ticketId, { status: 'open' });
+            setEscalatedTickets(prev => new Set([...prev, ticketId]));
+            addToast({ title: 'Ticket escalated to Instance Admin', variant: 'success' });
+        } catch {
+            addToast({ title: 'Failed to escalate ticket', variant: 'error' });
+        }
+    };
+
+    const triggeredRules = testMessage
+        ? automodRules.filter(r => evaluateRule(r, testMessage))
+        : [];
 
     const tabs = [
         { key: 'overview' as const, label: 'Overview', icon: Activity },
@@ -352,12 +442,137 @@ export default function ModerationDashboard() {
                     )}
                 </div>
             ) : activeTab === 'automod' ? (
-                <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: '24px', border: '1px solid var(--stroke)', textAlign: 'center' }}>
-                    <Filter size={32} style={{ color: 'var(--text-muted)', margin: '0 auto 12px' }} />
-                    <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Automod triggers and settings can be configured in Server Settings.</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {/* Test Message Simulator */}
+                    <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: '16px', border: '1px solid var(--stroke)' }}>
+                        <h3 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Filter size={14} style={{ color: 'var(--accent-primary)' }} /> Test Message Simulator
+                        </h3>
+                        <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: 'var(--text-muted)' }}>
+                            Type a test message to see which automod rules would trigger.
+                        </p>
+                        <input
+                            type="text"
+                            placeholder="Type a message to test..."
+                            value={testMessage}
+                            onChange={e => setTestMessage(e.target.value)}
+                            style={{
+                                width: '100%', padding: '10px 12px',
+                                background: 'var(--bg-primary)', border: '1px solid var(--stroke)',
+                                borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)',
+                                fontSize: '14px', outline: 'none', boxSizing: 'border-box',
+                            }}
+                        />
+                        {testMessage && (
+                            <div style={{ marginTop: '8px', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {triggeredRules.length === 0 ? (
+                                    <span style={{ color: 'var(--success)' }}>✓ Pass — no rules triggered</span>
+                                ) : (
+                                    <span style={{ color: 'var(--error)' }}>
+                                        ⚠ Would trigger {triggeredRules.length} rule{triggeredRules.length !== 1 ? 's' : ''}:{' '}
+                                        {triggeredRules.map(r => r.name).join(', ')}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Rules list */}
+                    <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: '16px', border: '1px solid var(--stroke)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                            <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>
+                                Automod Rules ({automodRules.length})
+                            </h3>
+                            <button
+                                onClick={() => { void fetchAutomodRules(); }}
+                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+                                title="Refresh rules"
+                            >
+                                <RefreshCw size={13} />
+                            </button>
+                        </div>
+                        {automodLoading ? (
+                            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px', fontSize: '13px' }}>Loading rules...</div>
+                        ) : automodRules.length === 0 ? (
+                            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px', fontSize: '13px' }}>
+                                No automod rules configured. Set them up in Server Settings.
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {automodRules.map(rule => {
+                                    const triggered = testMessage ? evaluateRule(rule, testMessage) : false;
+                                    return (
+                                        <div
+                                            key={rule.id}
+                                            style={{
+                                                padding: '10px 12px', borderRadius: 'var(--radius-sm)',
+                                                background: triggered ? 'rgba(239,68,68,0.08)' : 'var(--bg-primary)',
+                                                border: `1px solid ${triggered ? 'rgba(239,68,68,0.4)' : 'var(--stroke)'}`,
+                                                transition: 'all 0.2s',
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{
+                                                    width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+                                                    background: rule.enabled ? 'var(--success)' : 'var(--text-muted)',
+                                                }} />
+                                                <span style={{ fontSize: '13px', fontWeight: 600, flex: 1 }}>{rule.name}</span>
+                                                {testMessage && (
+                                                    <span style={{
+                                                        fontSize: '11px', fontWeight: 700, padding: '2px 8px',
+                                                        borderRadius: '999px',
+                                                        background: triggered ? 'var(--error)' : 'var(--success)',
+                                                        color: '#fff',
+                                                    }}>
+                                                        {triggered ? '⚠ Would trigger' : '✓ Pass'}
+                                                    </span>
+                                                )}
+                                                {!rule.enabled && (
+                                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>disabled</span>
+                                                )}
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', paddingLeft: '16px' }}>
+                                                {rule.triggerType.replace(/_/g, ' ')}
+                                                {rule.exemptRoles.length > 0 && ` · ${rule.exemptRoles.length} exempt role(s)`}
+                                                {rule.exemptChannels.length > 0 && ` · ${rule.exemptChannels.length} exempt channel(s)`}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </div>
             ) : (
                 <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: '16px', border: '1px solid var(--stroke)' }}>
+                    {/* Escalation Chain */}
+                    <div style={{
+                        marginBottom: '14px', padding: '10px 14px',
+                        background: 'var(--bg-primary)', borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--stroke)',
+                    }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                            Escalation Chain
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            {(['Guild Mod', 'Instance Admin', 'Federation'] as const).map((level, i, arr) => (
+                                <>
+                                    <span key={level} style={{
+                                        fontSize: '12px', fontWeight: 600, padding: '3px 10px',
+                                        borderRadius: '999px', background: 'var(--bg-tertiary)',
+                                        border: '1px solid var(--stroke)', color: 'var(--text-secondary)',
+                                    }}>
+                                        {level}
+                                    </span>
+                                    {i < arr.length - 1 && (
+                                        <span key={`arrow-${i}`} style={{ fontSize: '12px', color: 'var(--text-muted)' }}>→</span>
+                                    )}
+                                </>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Triage Queue */}
                     <div style={{
                         marginBottom: '14px',
                         border: '1px solid var(--stroke)',
@@ -390,64 +605,82 @@ export default function ModerationDashboard() {
                         ) : triageTickets.length === 0 ? (
                             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No open triage tickets.</div>
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto' }}>
-                                {triageTickets.map(ticket => (
-                                    <div key={ticket.id} style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: '20px 1fr auto',
-                                        alignItems: 'center',
-                                        gap: '10px',
-                                        padding: '8px',
-                                        background: 'var(--bg-tertiary)',
-                                        borderRadius: 'var(--radius-sm)',
-                                        border: '1px solid var(--stroke)',
-                                    }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedTicketIds.has(ticket.id)}
-                                            onChange={() => toggleTicketSelection(ticket.id)}
-                                            aria-label={`Select ticket ${ticket.subject}`}
-                                        />
-                                        <div style={{ minWidth: 0 }}>
-                                            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                {ticket.subject || 'Untitled ticket'}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '260px', overflowY: 'auto' }}>
+                                {triageTickets.map(ticket => {
+                                    const effectiveStatus = escalatedTickets.has(ticket.id) ? 'escalated' : ticket.status;
+                                    const statusColor = ESCALATION_STATUS_COLORS[effectiveStatus] ?? 'var(--text-muted)';
+                                    const statusLabel = ESCALATION_STATUS_LABELS[effectiveStatus] ?? effectiveStatus.replace('_', ' ');
+                                    return (
+                                        <div key={ticket.id} style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: '20px 1fr auto',
+                                            alignItems: 'start',
+                                            gap: '10px',
+                                            padding: '8px',
+                                            background: 'var(--bg-tertiary)',
+                                            borderRadius: 'var(--radius-sm)',
+                                            border: '1px solid var(--stroke)',
+                                        }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedTicketIds.has(ticket.id)}
+                                                onChange={() => toggleTicketSelection(ticket.id)}
+                                                aria-label={`Select ticket ${ticket.subject}`}
+                                                style={{ marginTop: '2px' }}
+                                            />
+                                            <div style={{ minWidth: 0 }}>
+                                                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {ticket.subject || 'Untitled ticket'}
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px', flexWrap: 'wrap' }}>
+                                                    <span style={{
+                                                        fontSize: '10px', fontWeight: 700, padding: '1px 6px',
+                                                        borderRadius: '999px', background: statusColor, color: '#fff',
+                                                    }}>
+                                                        {statusLabel}
+                                                    </span>
+                                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                                        {ticket.priority || 'medium'} · {new Date(ticket.createdAt).toLocaleDateString()}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                                {ticket.status.replace('_', ' ')} · {ticket.priority || 'medium'} · {new Date(ticket.createdAt).toLocaleDateString()}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                <button
+                                                    onClick={() => { void assignTicketToMe(ticket.id); }}
+                                                    style={{
+                                                        padding: '4px 8px', borderRadius: 'var(--radius-sm)',
+                                                        border: '1px solid var(--stroke)', background: 'var(--bg-primary)',
+                                                        color: 'var(--text-secondary)', fontSize: '11px', cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    Assign Me
+                                                </button>
+                                                <button
+                                                    onClick={() => { void snoozeTicket(ticket.id, 120); }}
+                                                    style={{
+                                                        padding: '4px 8px', borderRadius: 'var(--radius-sm)',
+                                                        border: '1px solid var(--stroke)', background: 'var(--bg-primary)',
+                                                        color: 'var(--text-secondary)', fontSize: '11px', cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    Snooze 2h
+                                                </button>
+                                                {!escalatedTickets.has(ticket.id) && (
+                                                    <button
+                                                        onClick={() => { void escalateTicket(ticket.id); }}
+                                                        style={{
+                                                            padding: '4px 8px', borderRadius: 'var(--radius-sm)',
+                                                            border: '1px solid #a855f7', background: 'rgba(168,85,247,0.1)',
+                                                            color: '#a855f7', fontSize: '11px', cursor: 'pointer', fontWeight: 600,
+                                                        }}
+                                                    >
+                                                        ↑ Escalate
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', gap: '6px' }}>
-                                            <button
-                                                onClick={() => { void assignTicketToMe(ticket.id); }}
-                                                style={{
-                                                    padding: '4px 8px',
-                                                    borderRadius: 'var(--radius-sm)',
-                                                    border: '1px solid var(--stroke)',
-                                                    background: 'var(--bg-primary)',
-                                                    color: 'var(--text-secondary)',
-                                                    fontSize: '11px',
-                                                    cursor: 'pointer',
-                                                }}
-                                            >
-                                                Assign Me
-                                            </button>
-                                            <button
-                                                onClick={() => { void snoozeTicket(ticket.id, 120); }}
-                                                style={{
-                                                    padding: '4px 8px',
-                                                    borderRadius: 'var(--radius-sm)',
-                                                    border: '1px solid var(--stroke)',
-                                                    background: 'var(--bg-primary)',
-                                                    color: 'var(--text-secondary)',
-                                                    fontSize: '11px',
-                                                    cursor: 'pointer',
-                                                }}
-                                            >
-                                                Snooze 2h
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
