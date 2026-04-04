@@ -18,6 +18,7 @@ function getPasswordStrength(password: string): { label: string; color: string }
 type Step = 'domain' | 'admin' | 'relay' | 'done';
 
 export default function Setup() {
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>('domain');
   const [domain, setDomain] = useState('');
   const [domainValid, setDomainValid] = useState<boolean | null>(null);
@@ -31,6 +32,20 @@ export default function Setup() {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Redirect to app if setup is already complete
+    fetch('/api/v1/setup/status')
+      .then(r => r.json())
+      .then((data: { configured: boolean }) => {
+        if (data.configured) {
+          navigate('/');
+        }
+      })
+      .catch(() => {
+        // If endpoint is unavailable, assume not configured yet
+      });
+  }, [navigate]);
 
   const testDomain = async () => {
     if (!domain) return;
@@ -195,6 +210,11 @@ export default function Setup() {
                 <div>
                   <label style={labelStyle}>Username</label>
                   <input type="text" value={adminUsername} onChange={e => setAdminUsername(e.target.value)} placeholder="admin" style={inputStyle} />
+                  {adminUsername.toLowerCase().includes('admin') && (
+                    <p style={{ fontSize: '12px', color: '#f59e0b', marginTop: '4px' }}>
+                      Tip: Consider a less predictable username for better security.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label style={labelStyle}>Email</label>
@@ -203,6 +223,14 @@ export default function Setup() {
                 <div>
                   <label style={labelStyle}>Password</label>
                   <input type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} placeholder="At least 8 characters" style={inputStyle} />
+                  {(() => {
+                    const strength = getPasswordStrength(adminPassword);
+                    return strength ? (
+                      <p style={{ fontSize: '12px', color: strength.color, marginTop: '4px' }}>
+                        Password strength: {strength.label}
+                      </p>
+                    ) : null;
+                  })()}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>

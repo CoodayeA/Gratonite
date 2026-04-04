@@ -21,13 +21,16 @@ import { messages } from '../db/schema/messages';
 import { channels } from '../db/schema/channels';
 import { eq, and, desc, sql, ilike, or, notInArray } from 'drizzle-orm';
 import { requireAuth } from '../middleware/auth';
+import { authRateLimit } from '../middleware/rateLimit';
+import { signAccessToken, signRefreshToken } from '../lib/jwt';
+import { refreshTokens } from '../db/schema/auth';
 import { requireFederationAuth } from '../middleware/federation-auth';
 import { federationSanitizeMiddleware, sanitizeFederationContent } from '../middleware/federation-sanitize';
 import { isFederationEnabled, getFederationFlags, getInstanceDomain } from '../federation/index';
 import { getPublicKeyPem, getKeyId } from '../federation/crypto';
 import { recordInboundActivity, queueOutboundActivity } from '../federation/activities';
 import { parseFederationAddress, createShadowUser, resolveRemoteUser } from '../federation/user-resolver';
-import { exportAccount, verifyImportSignature, startImport, ExportData } from '../federation/export-import';
+import { exportAccount, verifyImportSignature, startImport, importToNewAccount, ExportData } from '../federation/export-import';
 import { emitFederationEvent } from '../federation/realtime';
 import { isRelayEnabled, getRelayConfig, getRelayClient } from '../relay/index';
 import { assertNotPrivateHost } from '../lib/ssrf-guard';
@@ -1506,6 +1509,59 @@ federationRouter.get('/resolve/:address', requireAuth, async (req: Request, res:
   }
 
   res.status(404).json({ code: 'NOT_FOUND', message: 'Could not resolve federation address' });
+});
+
+// Public endpoint — no requireAuth — creates a new account from an export bundle
+federationRouter.post('/import-new-account', authRateLimit, async (req: Request, res: Response) => {
+  const { data, signature } = req.body as { data?: ExportData; signature?: string };
+
+  if (!data || !signature) {
+    res.status(400).json({ code: 'MISSING_FIELDS', message: 'Both data and signature are required.' });
+    return;
+  }
+
+  try {
+    const { userId, username, tempPassword } = await importToNewAccount(data, signature);
+
+    const accessToken = signAccessToken(userId);
+    const refreshToken = signRefreshToken(userId);
+
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    await db.insert(refreshTokens).values({
+      userId,
+      tokenHash,
+      device: req.headers['user-agent'] ?? 'Unknown',
+      ip: req.ip ?? '',
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+
+    res.cookie('gratonite_refresh', refreshToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(201).json({
+      accessToken,
+      username,
+      tempPassword,
+      message: 'Account imported successfully. Save your temporary password — you will need it to log in.',
+    });
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      if (err.message === 'FEDERATION_ADDRESS_CONFLICT') {
+        res.status(409).json({ code: 'CONFLICT', message: 'An account with this federation address already exists. Please log in instead.' });
+        return;
+      }
+      if (err.message.includes('signature verification failed')) {
+        res.status(400).json({ code: 'INVALID_SIGNATURE', message: err.message });
+        return;
+      }
+    }
+    console.error('[federation] import-new-account error:', err);
+    res.status(500).json({ code: 'IMPORT_FAILED', message: 'Account import failed. Please try again.' });
+  }
 });
 
 // Export account for portability
