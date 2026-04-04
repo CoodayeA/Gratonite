@@ -2017,14 +2017,9 @@ function SettingsNotificationsPanel() {
 function NotificationQuietHoursPanel() {
     const { addToast } = useToast();
     const [enabled, setEnabled] = useState(false);
-    const [startHour, setStartHour] = useState(22);
-    const [startMinute, setStartMinute] = useState(0);
-    const [endHour, setEndHour] = useState(7);
-    const [endMinute, setEndMinute] = useState(0);
+    const [startTime, setStartTime] = useState('22:00');
+    const [endTime, setEndTime] = useState('07:00');
     const [saving, setSaving] = useState(false);
-
-    const padHour = (n: number) => String(Math.min(23, Math.max(0, n))).padStart(2, '0');
-    const padMinute = (n: number) => String(Math.min(59, Math.max(0, n))).padStart(2, '0');
 
     useEffect(() => {
         api.users.getSettings().then((s: Record<string, unknown>) => {
@@ -2035,28 +2030,44 @@ function NotificationQuietHoursPanel() {
             } | null | undefined;
             if (!qh) return;
             setEnabled(qh.enabled === true);
-            if (qh.startTime) {
-                const [sh, sm] = qh.startTime.split(':').map(Number);
-                if (Number.isFinite(sh)) setStartHour(sh);
-                if (Number.isFinite(sm)) setStartMinute(sm);
-            }
-            if (qh.endTime) {
-                const [eh, em] = qh.endTime.split(':').map(Number);
-                if (Number.isFinite(eh)) setEndHour(eh);
-                if (Number.isFinite(em)) setEndMinute(em);
-            }
+            if (qh.startTime) setStartTime(qh.startTime);
+            if (qh.endTime) setEndTime(qh.endTime);
         }).catch(() => {});
     }, []);
+
+    const isActiveNow = (() => {
+        if (!enabled) return false;
+        const now = new Date();
+        const nowMins = now.getHours() * 60 + now.getMinutes();
+        const [sh, sm] = startTime.split(':').map(Number);
+        const [eh, em] = endTime.split(':').map(Number);
+        const startMins = (sh || 0) * 60 + (sm || 0);
+        const endMins = (eh || 0) * 60 + (em || 0);
+        if (startMins <= endMins) return nowMins >= startMins && nowMins < endMins;
+        return nowMins >= startMins || nowMins < endMins;
+    })();
+
+    const barPercent = (() => {
+        const [sh, sm] = startTime.split(':').map(Number);
+        const [eh, em] = endTime.split(':').map(Number);
+        const startMins = (sh || 0) * 60 + (sm || 0);
+        const endMins = (eh || 0) * 60 + (em || 0);
+        const totalMins = 24 * 60;
+        const duration = endMins >= startMins ? endMins - startMins : totalMins - startMins + endMins;
+        return { start: startMins / totalMins * 100, width: duration / totalMins * 100 };
+    })();
 
     const save = async () => {
         setSaving(true);
         try {
             const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+            const [sh, sm] = startTime.split(':').map(Number);
+            const [eh, em] = endTime.split(':').map(Number);
             await api.users.updateSettings({
                 notificationQuietHours: {
                     enabled,
-                    startTime: `${padHour(startHour)}:${padMinute(startMinute)}`,
-                    endTime: `${padHour(endHour)}:${padMinute(endMinute)}`,
+                    startTime: `${String(sh).padStart(2,'0')}:${String(sm).padStart(2,'0')}`,
+                    endTime: `${String(eh).padStart(2,'0')}:${String(em).padStart(2,'0')}`,
                     timezone: tz,
                     days: [0, 1, 2, 3, 4, 5, 6],
                 },
@@ -2067,31 +2078,61 @@ function NotificationQuietHoursPanel() {
         } finally { setSaving(false); }
     };
 
-    const timeInput = { padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', width: '60px', textAlign: 'center' as const };
+    const PRESETS = [
+        { label: 'Night', sub: '10pm–8am', start: '22:00', end: '08:00' },
+        { label: 'Work', sub: '9am–6pm', start: '09:00', end: '18:00' },
+        { label: 'Weekend', sub: 'Sat & Sun all day', start: '00:00', end: '23:59' },
+    ];
 
     return (
         <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', padding: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
                 <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '14px', fontWeight: 500 }}>Enable quiet hours</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 500 }}>Enable quiet hours</div>
+                        {isActiveNow && (
+                            <span style={{ fontSize: '10px', fontWeight: 700, background: 'var(--accent-primary)', color: '#fff', borderRadius: '10px', padding: '1px 7px' }}>ACTIVE NOW</span>
+                        )}
+                    </div>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>While on, new notification toasts are held until after this window (inbox still updates).</div>
                 </div>
                 <div
-                    onClick={() => { setEnabled(!enabled); }}
+                    onClick={() => setEnabled(!enabled)}
                     style={{ width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', background: enabled ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: `1px solid ${enabled ? 'transparent' : 'var(--stroke)'}`, position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
                 >
                     <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'white', position: 'absolute', top: '2px', left: enabled ? '22px' : '2px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
                 </div>
             </div>
+
+            {/* Quick presets */}
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+                {PRESETS.map(p => (
+                    <button key={p.label} onClick={() => { setStartTime(p.start); setEndTime(p.end); setEnabled(true); }} style={{ flex: 1, padding: '6px 4px', borderRadius: '6px', border: `1px solid ${startTime === p.start && endTime === p.end ? 'var(--accent-primary)' : 'var(--stroke)'}`, background: startTime === p.start && endTime === p.end ? 'rgba(82,109,245,0.15)' : 'var(--bg-elevated)', cursor: 'pointer', textAlign: 'center' as const }}>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{p.label}</div>
+                        <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{p.sub}</div>
+                    </button>
+                ))}
+            </div>
+
+            {/* Visual bar */}
+            <div style={{ marginBottom: '12px' }}>
+                <div style={{ height: '8px', borderRadius: '4px', background: 'var(--bg-elevated)', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', left: `${barPercent.start}%`, width: `${Math.min(barPercent.width, 100 - barPercent.start)}%`, height: '100%', background: enabled ? 'var(--accent-primary)' : 'var(--text-muted)', borderRadius: '4px', opacity: enabled ? 0.8 : 0.3, transition: 'all 0.2s' }} />
+                    {barPercent.start + barPercent.width > 100 && (
+                        <div style={{ position: 'absolute', left: 0, width: `${barPercent.start + barPercent.width - 100}%`, height: '100%', background: enabled ? 'var(--accent-primary)' : 'var(--text-muted)', borderRadius: '4px', opacity: enabled ? 0.8 : 0.3, transition: 'all 0.2s' }} />
+                    )}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '10px', color: 'var(--text-muted)' }}>
+                    <span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>12am</span>
+                </div>
+            </div>
+
+            {/* Time inputs */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>From</span>
-                <input type="number" min={0} max={23} value={startHour} onChange={e => setStartHour(+e.target.value)} style={timeInput} />
-                <span>:</span>
-                <input type="number" min={0} max={59} value={startMinute} onChange={e => setStartMinute(+e.target.value)} style={timeInput} />
-                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', marginLeft: '8px' }}>To</span>
-                <input type="number" min={0} max={23} value={endHour} onChange={e => setEndHour(+e.target.value)} style={timeInput} />
-                <span>:</span>
-                <input type="number" min={0} max={59} value={endMinute} onChange={e => setEndMinute(+e.target.value)} style={timeInput} />
+                <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} style={{ padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer' }} />
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>To</span>
+                <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} style={{ padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer' }} />
                 <button type="button" onClick={save} disabled={saving} style={{ marginLeft: 'auto', padding: '6px 16px', borderRadius: '6px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 600, cursor: 'pointer', fontSize: '12px' }}>
                     {saving ? '...' : 'Save'}
                 </button>
