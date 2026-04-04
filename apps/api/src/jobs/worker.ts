@@ -25,7 +25,7 @@ import { processAutoArchiveChannels } from './autoArchiveChannels';
 import { processAutoRoles } from './autoRoles';
 import { processExpireStatuses } from './expireStatuses';
 import { processFederationCleanup } from './federationCleanup';
-import { processFederationDiscoverSync } from './federationDiscoverSync';
+import { processFederationDiscoverSync, processFederationDiscoverPull } from './federationDiscoverSync';
 import { processFederationHeartbeat } from './federationHeartbeat';
 import { processFriendshipStreaks } from './friendshipStreaks';
 import { processGiveaways } from './giveaways';
@@ -59,6 +59,7 @@ export const autoRolesQueue = createQueue('auto-roles');
 export const expireStatusesQueue = createQueue('expire-statuses');
 export const federationCleanupQueue = createQueue('federation-cleanup');
 export const federationDiscoverSyncQueue = createQueue('federation-discover-sync');
+export const federationDiscoverPullQueue = createQueue('federation-discover-pull');
 export const federationHeartbeatQueue = createQueue('federation-heartbeat');
 export const friendshipStreaksQueue = createQueue('friendship-streaks');
 export const giveawaysQueue = createQueue('giveaways');
@@ -191,6 +192,22 @@ export async function startBullWorkers(): Promise<void> {
     { every: 30 * 60_000 },
     { name: 'federation-discover-sync-tick' },
   );
+
+  // --- Federation Discover Pull (every 30 min + immediate on startup) ---
+  createWorker('federation-discover-pull', async () => {
+    await processFederationDiscoverPull();
+  });
+  await federationDiscoverPullQueue.upsertJobScheduler(
+    'federation-discover-pull-repeat',
+    { every: 30 * 60_000 },
+    { name: 'federation-discover-pull-tick' },
+  );
+  // Fire once shortly after startup so new instances populate remote_guilds immediately
+  setTimeout(() => {
+    federationDiscoverPullQueue
+      .add('federation-discover-pull-startup', {})
+      .catch((err: unknown) => logger.warn('[federation-discover-pull] Could not enqueue startup job:', err));
+  }, 5_000);
 
   // --- Federation Heartbeat (every 5 min) ---
   createWorker('federation-heartbeat', async () => {

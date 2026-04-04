@@ -9,6 +9,7 @@ import { db } from '../db/index';
 import { logger } from '../lib/logger';
 import { guilds } from '../db/schema/guilds';
 import { federatedInstances } from '../db/schema/federation-instances';
+import { remoteGuilds } from '../db/schema/remote-guilds';
 import { eq } from 'drizzle-orm';
 import { isFederationEnabled, getFederationFlags, getInstanceDomain, getFederationHubUrl } from '../federation/index';
 import { getActiveKeyPair } from '../federation/crypto';
@@ -154,6 +155,149 @@ export async function processFederationDiscoverSync(): Promise<void> {
   await syncDiscoverableGuilds();
 }
 
+/**
+ * Pulls the hub's discoverable guilds into the local remote_guilds table.
+ * Runs on startup and every 30 minutes. Safe to call in background — never throws.
+ */
+export async function pullGuildsFromHub(): Promise<void> {
+  try {
+    if (!isFederationEnabled()) return;
+    const flags = getFederationFlags();
+    if (!flags.discoverRegistration) return;
+
+    const hubUrl = getFederationHubUrl();
+
+    let keyPair: ReturnType<typeof getActiveKeyPair>;
+    try {
+      keyPair = getActiveKeyPair();
+    } catch {
+      console.warn('[federation-discover-pull] No active keypair, skipping pull');
+      return;
+    }
+
+    // Find or create the hub's federated_instances row, ensuring inDiscover=true
+    // so pulled guilds appear on the local Discover page.
+    const [existingHub] = await db
+      .select({ id: federatedInstances.id })
+      .from(federatedInstances)
+      .where(eq(federatedInstances.baseUrl, hubUrl))
+      .limit(1);
+
+    let hubInstanceId: string;
+    if (existingHub) {
+      hubInstanceId = existingHub.id;
+      await db
+        .update(federatedInstances)
+        .set({ inDiscover: true, status: 'active', lastSeenAt: new Date() })
+        .where(eq(federatedInstances.id, hubInstanceId));
+    } else {
+      const [inserted] = await db
+        .insert(federatedInstances)
+        .values({
+          baseUrl: hubUrl,
+          trustLevel: 'verified',
+          status: 'active',
+          inDiscover: true,
+          trustScore: 100,
+          lastSeenAt: new Date(),
+        })
+        .returning({ id: federatedInstances.id });
+      hubInstanceId = inserted.id;
+    }
+
+    // Authenticated GET to the hub's federation guilds endpoint
+    const url = `${hubUrl}/api/v1/federation/guilds?limit=100`;
+    const signatureHeaders = signRequest('GET', url, '', keyPair.keyId, keyPair.privateKeyPem);
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15_000);
+
+    let guildList: any[];
+    try {
+      const resp = await fetch(url, {
+        method: 'GET',
+        headers: signatureHeaders,
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+
+      if (!resp.ok) {
+        console.warn(`[federation-discover-pull] Hub returned ${resp.status}, skipping pull`);
+        return;
+      }
+
+      guildList = await resp.json() as any[];
+    } catch (err) {
+      clearTimeout(timer);
+      console.warn('[federation-discover-pull] Hub unreachable:', err);
+      return;
+    }
+
+    if (!Array.isArray(guildList) || guildList.length === 0) {
+      console.info('[federation-discover-pull] No guilds returned from hub');
+      return;
+    }
+
+    const hubDomain = new URL(hubUrl).hostname;
+    let upsertCount = 0;
+
+    for (const guild of guildList) {
+      if (!guild.id || !guild.name) continue;
+
+      const federationAddress: string = guild.federationAddress || `${guild.id}@${hubDomain}`;
+      const iconUrl: string | null = guild.iconUrl
+        ? ((guild.iconUrl as string).startsWith('http') ? guild.iconUrl : `${hubUrl}${guild.iconUrl}`)
+        : null;
+
+      try {
+        await db
+          .insert(remoteGuilds)
+          .values({
+            instanceId: hubInstanceId,
+            remoteGuildId: String(guild.id),
+            federationAddress,
+            name: String(guild.name).slice(0, 100),
+            description: guild.description ?? null,
+            iconUrl,
+            bannerUrl: null,
+            memberCount: guild.memberCount ?? 0,
+            onlineCount: 0,
+            category: guild.category ?? null,
+            tags: Array.isArray(guild.tags) ? guild.tags : [],
+            isApproved: true,
+            lastSyncedAt: new Date(),
+          })
+          .onConflictDoUpdate({
+            target: remoteGuilds.federationAddress,
+            set: {
+              name: String(guild.name).slice(0, 100),
+              description: guild.description ?? null,
+              iconUrl,
+              memberCount: guild.memberCount ?? 0,
+              category: guild.category ?? null,
+              tags: Array.isArray(guild.tags) ? guild.tags : [],
+              isApproved: true,
+              lastSyncedAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+        upsertCount++;
+      } catch (err) {
+        console.warn(`[federation-discover-pull] Failed to upsert guild ${guild.id}:`, err);
+      }
+    }
+
+    console.info(`[federation-discover-pull] Upserted ${upsertCount} guilds from hub`);
+  } catch (err) {
+    console.error('[federation-discover-pull] Pull job error:', err);
+  }
+}
+
+/** BullMQ processor — pulls discoverable guilds from the federation hub. */
+export async function processFederationDiscoverPull(): Promise<void> {
+  await pullGuildsFromHub();
+}
+
 let syncTimer: ReturnType<typeof setInterval> | null = null;
 
 /** @deprecated Use BullMQ scheduler in worker.ts instead. */
@@ -162,7 +306,7 @@ export function startFederationDiscoverSyncJob(): void {
 
   console.info('[federation-discover] Starting discover sync job (every 30m)');
 
-  // Initial sync after 10 seconds to let the server finish starting
+  // Initial push after 10 seconds to let the server finish starting
   setTimeout(() => {
     syncDiscoverableGuilds().catch((err) =>
       logger.error('[federation-discover] Sync error:', err),
@@ -172,6 +316,19 @@ export function startFederationDiscoverSyncJob(): void {
   syncTimer = setInterval(() => {
     syncDiscoverableGuilds().catch((err) =>
       logger.error('[federation-discover] Sync error:', err),
+    );
+  }, SYNC_INTERVAL_MS);
+
+  // Pull from hub after 5 seconds and then every 30 minutes
+  setTimeout(() => {
+    pullGuildsFromHub().catch((err) =>
+      logger.error('[federation-discover-pull] Pull error:', err),
+    );
+  }, 5_000);
+
+  setInterval(() => {
+    pullGuildsFromHub().catch((err) =>
+      logger.error('[federation-discover-pull] Pull error:', err),
     );
   }, SYNC_INTERVAL_MS);
 }

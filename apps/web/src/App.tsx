@@ -15,6 +15,7 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Verify from './pages/auth/Verify';
 import ResetPassword from './pages/auth/ResetPassword';
+import ImportAccount from './pages/auth/ImportAccount';
 
 import Download from './pages/Download';
 import RequireAdmin from './components/guards/RequireAdmin';
@@ -4356,6 +4357,7 @@ const appRouter = createBrowserRouter(
                 <Route path="register" element={<Register />} />
                 <Route path="verify" element={<Verify />} />
                 <Route path="reset-password" element={<ResetPassword />} />
+                <Route path="import-account" element={<ImportAccount />} />
             </Route>
 
             {/* OAuth consent screen (must be logged in) */}

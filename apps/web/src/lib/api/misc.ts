@@ -1556,6 +1556,13 @@ export const federationApi = {
   importAccount: (data: unknown, signature: string) =>
     apiFetch('/federation/import', { method: 'POST', body: JSON.stringify({ data, signature }) }),
 
+  /** Import a new account from another instance (public endpoint, returns temp credentials). */
+  importNewAccount: (data: unknown, signature: string) =>
+    apiFetch<{ accessToken: string; username: string; tempPassword: string; message: string }>(
+      '/federation/import-new-account',
+      { method: 'POST', body: JSON.stringify({ data, signature }) },
+    ),
+
   /** Admin: list instances. */
   adminInstances: () => apiFetch('/federation/admin/instances'),
 
