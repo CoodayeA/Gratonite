@@ -524,6 +524,7 @@ export async function apiFetch<T = any>(
   path: string,
   options: RequestInit = {},
   retried = false,
+  _5xxRetry = 0,
 ): Promise<T> {
   if (isAuthRuntimeExpired() && !shouldBypassAuthGate(path)) {
     emitClientTelemetry({
@@ -633,6 +634,11 @@ export async function apiFetch<T = any>(
   if (!res.ok) {
     const apiErr = body as ApiError;
     window.Sentry?.addBreadcrumb?.({ category: 'api', message: `${options.method || 'GET'} ${path} → ${res.status} ${apiErr.code}`, level: res.status >= 500 ? 'error' : 'warning', data: { status: res.status, code: apiErr.code, requestId } });
+    // Auto-retry 5xx errors (max 2 retries, 1s backoff) for non-upload requests
+    if (res.status >= 500 && _5xxRetry < 2 && !isUpload) {
+      await new Promise(r => setTimeout(r, 1000 * (_5xxRetry + 1)));
+      return apiFetch<T>(path, options, retried, _5xxRetry + 1);
+    }
     throw new ApiRequestError(res.status, apiErr, requestId);
   }
 
