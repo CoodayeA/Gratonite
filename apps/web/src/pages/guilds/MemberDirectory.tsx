@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { Search, Users, ChevronDown, Download, Shield, X } from 'lucide-react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { useToast } from '../../components/ui/ToastManager';
 import { api, type PresenceStatus } from '../../lib/api';
 import Avatar from '../../components/ui/Avatar';
@@ -68,6 +69,7 @@ const MemberDirectory = () => {
 
     const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
     const roleDropdownRef = useRef<HTMLDivElement>(null);
+    const memberListScrollRef = useRef<HTMLDivElement>(null);
 
     // Close role dropdown on outside click
     useEffect(() => {
@@ -147,15 +149,15 @@ const MemberDirectory = () => {
     }, [fetchMembers, search, statusFilter]);
 
     // Sort and filter
-    const filtered = members.filter(m => {
+    const filtered = useMemo(() => members.filter(m => {
         if (selectedRoles.length > 0) {
             const memberRoles = m.roleIds || [];
             if (!selectedRoles.some(r => memberRoles.includes(r))) return false;
         }
         return true;
-    });
+    }), [members, selectedRoles]);
 
-    const sorted = [...filtered].sort((a, b) => {
+    const sorted = useMemo(() => [...filtered].sort((a, b) => {
         if (sortBy === 'name') {
             const aName = (a.displayName || a.nickname || a.username || '').toLowerCase();
             const bName = (b.displayName || b.nickname || b.username || '').toLowerCase();
@@ -169,6 +171,13 @@ const MemberDirectory = () => {
             return (order[a.status || 'offline'] ?? 3) - (order[b.status || 'offline'] ?? 3);
         }
         return 0;
+    }), [filtered, sortBy]);
+
+    const memberVirtualizer = useVirtualizer({
+        count: sorted.length,
+        getScrollElement: () => memberListScrollRef.current,
+        estimateSize: () => 66,
+        overscan: 14,
     });
 
     const handleExportCSV = () => {
@@ -344,70 +353,82 @@ const MemberDirectory = () => {
                                 <span>Joined</span>
                             </div>
 
-                            {sorted.map(member => {
-                                const name = member.displayName || member.nickname || member.username || 'Unknown';
-                                const memberRoles = (member.roleIds || []).map(rid => roles.find(r => r.id === rid)).filter(Boolean) as Role[];
-                                const statusColor = STATUS_COLORS[member.status || 'offline'] || STATUS_COLORS.offline;
-                                const statusLabel = STATUS_LABELS[member.status || 'offline'] || 'Offline';
+                            <div ref={memberListScrollRef} style={{ maxHeight: '66vh', overflowY: 'auto' }}>
+                                <div style={{ height: `${memberVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                                    {memberVirtualizer.getVirtualItems().map(virtualRow => {
+                                        const member = sorted[virtualRow.index];
+                                        if (!member) return null;
 
-                                return (
-                                    <div
-                                        key={member.userId}
-                                        onClick={(e) => handleMemberClick(member, e)}
-                                        style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: '1fr 120px 200px',
-                                            padding: '10px 16px',
-                                            borderRadius: '8px',
-                                            cursor: 'pointer',
-                                            alignItems: 'center',
-                                            transition: 'background 0.1s',
-                                        }}
-                                        onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
-                                        onMouseOut={e => { e.currentTarget.style.background = 'transparent'; }}
-                                    >
-                                        {/* Member info */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                                            <Avatar
-                                                userId={member.userId}
-                                                avatarHash={member.avatarHash}
-                                                displayName={name}
-                                                size={36}
-                                                status={member.status}
-                                            />
-                                            <div style={{ minWidth: 0 }}>
-                                                <div style={{ fontSize: '14px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {name}
+                                        const name = member.displayName || member.nickname || member.username || 'Unknown';
+                                        const memberRoles = (member.roleIds || []).map(rid => roles.find(r => r.id === rid)).filter(Boolean) as Role[];
+                                        const statusColor = STATUS_COLORS[member.status || 'offline'] || STATUS_COLORS.offline;
+                                        const statusLabel = STATUS_LABELS[member.status || 'offline'] || 'Offline';
+
+                                        return (
+                                            <div
+                                                key={member.userId}
+                                                onClick={(e) => handleMemberClick(member, e)}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    width: '100%',
+                                                    transform: `translateY(${virtualRow.start}px)`,
+                                                    display: 'grid',
+                                                    gridTemplateColumns: '1fr 120px 200px',
+                                                    padding: '10px 16px',
+                                                    borderRadius: '8px',
+                                                    cursor: 'pointer',
+                                                    alignItems: 'center',
+                                                    transition: 'background 0.1s',
+                                                }}
+                                                onMouseOver={e => { e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+                                                onMouseOut={e => { e.currentTarget.style.background = 'transparent'; }}
+                                            >
+                                                {/* Member info */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                                                    <Avatar
+                                                        userId={member.userId}
+                                                        avatarHash={member.avatarHash}
+                                                        displayName={name}
+                                                        size={36}
+                                                        status={member.status}
+                                                    />
+                                                    <div style={{ minWidth: 0 }}>
+                                                        <div style={{ fontSize: '14px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                            {name}
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
+                                                            {member.username && (
+                                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>@{member.username}</span>
+                                                            )}
+                                                            {memberRoles.slice(0, 3).map(role => (
+                                                                <span key={role.id} style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '10px', background: `${role.color}22`, color: role.color, fontWeight: 600, border: `1px solid ${role.color}44` }}>
+                                                                    {role.name}
+                                                                </span>
+                                                            ))}
+                                                            {memberRoles.length > 3 && (
+                                                                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>+{memberRoles.length - 3}</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
-                                                    {member.username && (
-                                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>@{member.username}</span>
-                                                    )}
-                                                    {memberRoles.slice(0, 3).map(role => (
-                                                        <span key={role.id} style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '10px', background: `${role.color}22`, color: role.color, fontWeight: 600, border: `1px solid ${role.color}44` }}>
-                                                            {role.name}
-                                                        </span>
-                                                    ))}
-                                                    {memberRoles.length > 3 && (
-                                                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>+{memberRoles.length - 3}</span>
-                                                    )}
+
+                                                {/* Status */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: statusColor, flexShrink: 0 }} />
+                                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{statusLabel}</span>
                                                 </div>
+
+                                                {/* Join date */}
+                                                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                                    {new Date(member.joinedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                </span>
                                             </div>
-                                        </div>
-
-                                        {/* Status */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: statusColor, flexShrink: 0 }} />
-                                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{statusLabel}</span>
-                                        </div>
-
-                                        {/* Join date */}
-                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                                            {new Date(member.joinedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                                        );
+                                    })}
+                                </div>
+                            </div>
 
                             {/* Load more */}
                             {hasMore && (

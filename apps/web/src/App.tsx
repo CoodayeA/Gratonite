@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, type Dispatch, type SetStateAction } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { createPortal } from 'react-dom';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -1509,6 +1510,120 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
 
     const userAvatarUrl = userProfile.avatarHash ? `${API_BASE}/files/${userProfile.avatarHash}` : null;
 
+    // ─── Channel list virtualization ────────────────────────────────────────
+    type ChannelVirtualRow =
+      | { kind: 'nav-events' }
+      | { kind: 'nav-members' }
+      | { kind: 'nav-search' }
+      | { kind: 'error'; code: string }
+      | { kind: 'loading' }
+      | { kind: 'empty-state' }
+      | { kind: 'section-header'; sectionKey: string; label: string; addType?: 'text' | 'voice' | 'document'; marginTop?: number }
+      | { kind: 'category'; cat: typeof guildChannels[0]; defaultType: 'text' | 'voice' }
+      | { kind: 'channel'; ch: typeof guildChannels[0] }
+      | { kind: 'recent-channels' };
+
+    const channelScrollRef = useRef<HTMLDivElement>(null);
+
+    const channelFlatRows = useMemo<ChannelVirtualRow[]>(() => {
+        const rows: ChannelVirtualRow[] = [];
+        if (activeGuildId) {
+            rows.push({ kind: 'nav-events' });
+            rows.push({ kind: 'nav-members' });
+            rows.push({ kind: 'nav-search' });
+        }
+        if (guildLoadErrorCode === 'FORBIDDEN') { rows.push({ kind: 'error', code: 'FORBIDDEN' }); return rows; }
+        if (guildLoadErrorCode === 'NOT_FOUND') { rows.push({ kind: 'error', code: 'NOT_FOUND' }); return rows; }
+        if (isChannelsLoading && guildChannels.length === 0) { rows.push({ kind: 'loading' }); return rows; }
+        if (guildChannels.length === 0) { rows.push({ kind: 'empty-state' }); return rows; }
+
+        const isCatType = (t: string) => t === 'category' || t === 'GUILD_CATEGORY';
+        const dedupeKey = (ch: typeof guildChannels[0]) =>
+            isCatType(ch.type) ? `${ch.type}:${ch.name.toLowerCase()}` : `${ch.parentId ?? 'root'}:${ch.type}:${ch.name.toLowerCase()}`;
+        const dedupe = (list: typeof guildChannels) => {
+            const seen = new Set<string>();
+            return list.filter(ch => { const k = dedupeKey(ch); if (seen.has(k)) return false; seen.add(k); return true; });
+        };
+        const seenCatKeys = new Set<string>();
+        const categories = guildChannels
+            .filter(c => isCatType(c.type))
+            .sort((a, b) => a.position - b.position)
+            .filter(cat => { const k = `${cat.type}:${cat.name.toLowerCase()}`; if (seenCatKeys.has(k)) return false; seenCatKeys.add(k); return true; });
+        const uncategorized = dedupe(
+            guildChannels.filter(c => !isCatType(c.type) && !c.parentId).sort((a, b) => a.position - b.position)
+        );
+        const byParent = new Map<string, typeof guildChannels>();
+        for (const ch of guildChannels) {
+            if (isCatType(ch.type) || !ch.parentId) continue;
+            const list = byParent.get(ch.parentId) || [];
+            list.push(ch);
+            byParent.set(ch.parentId, list);
+        }
+        for (const [key, list] of byParent) {
+            byParent.set(key, dedupe(list.sort((a, b) => a.position - b.position)));
+        }
+        const uncatText = uncategorized.filter(c => !isVoiceChannelType(c.type) && c.type !== 'GUILD_DOCUMENT');
+        const uncatVoice = uncategorized.filter(c => isVoiceChannelType(c.type));
+        const textCats: typeof categories = [];
+        const voiceCats: typeof categories = [];
+        for (const cat of categories) {
+            const children = byParent.get(cat.id) || [];
+            const allVoice = children.length > 0 && children.every(c => isVoiceChannelType(c.type));
+            (allVoice || (cat.name.toLowerCase().includes('voice') && children.length === 0) ? voiceCats : textCats).push(cat);
+        }
+        const addCatChildren = (cat: typeof categories[0]) => {
+            const children = byParent.get(cat.id) || [];
+            const catCollapsed = !!collapsed[cat.id];
+            const visible = catCollapsed
+                ? children.filter(ch => {
+                    const entry = unreadMap.get(ch.id);
+                    return location.pathname.includes(`/channel/${ch.id}`) || location.pathname.includes(`/voice/${ch.id}`) || !!(entry?.hasUnread);
+                  })
+                : children;
+            visible.forEach(ch => rows.push({ kind: 'channel', ch }));
+        };
+
+        const favChannels = guildChannels.filter(c => favoriteChannelIds.has(c.id));
+        if (favChannels.length > 0) {
+            rows.push({ kind: 'section-header', sectionKey: '__favorites__', label: 'Favorites' });
+            if (!collapsed['__favorites__']) favChannels.forEach(ch => rows.push({ kind: 'channel', ch }));
+        }
+        rows.push({ kind: 'recent-channels' });
+        rows.push({ kind: 'section-header', sectionKey: '__text_channels__', label: 'Text Channels', addType: 'text' });
+        if (!collapsed['__text_channels__']) {
+            uncatText.forEach(ch => rows.push({ kind: 'channel', ch }));
+            textCats.forEach(cat => { rows.push({ kind: 'category', cat, defaultType: 'text' }); addCatChildren(cat); });
+        }
+        rows.push({ kind: 'section-header', sectionKey: '__voice_channels__', label: 'Voice Channels', addType: 'voice', marginTop: 12 });
+        if (!collapsed['__voice_channels__']) {
+            uncatVoice.forEach(ch => rows.push({ kind: 'channel', ch }));
+            voiceCats.forEach(cat => { rows.push({ kind: 'category', cat, defaultType: 'voice' }); addCatChildren(cat); });
+        }
+        const docChannels = guildChannels.filter(ch => ch.type === 'GUILD_DOCUMENT');
+        if (docChannels.length > 0 || canManageChannels) {
+            rows.push({ kind: 'section-header', sectionKey: '__document_channels__', label: 'Document Channels', addType: 'document', marginTop: 12 });
+            if (!collapsed['__document_channels__']) docChannels.forEach(ch => rows.push({ kind: 'channel', ch }));
+        }
+        return rows;
+    }, [guildChannels, favoriteChannelIds, collapsed, unreadMap, location.pathname, isChannelsLoading, guildLoadErrorCode, activeGuildId, canManageChannels, isVoiceChannelType]);
+
+    const channelVirtualizer = useVirtualizer({
+        count: channelFlatRows.length,
+        getScrollElement: () => channelScrollRef.current,
+        estimateSize: (i) => {
+            const row = channelFlatRows[i];
+            if (row.kind === 'nav-events' || row.kind === 'nav-members' || row.kind === 'nav-search') return 34;
+            if (row.kind === 'section-header' || row.kind === 'category') return 30;
+            if (row.kind === 'loading') return 100;
+            if (row.kind === 'empty-state') return 80;
+            if (row.kind === 'error') return 50;
+            if (row.kind === 'recent-channels') return 60;
+            return 34;
+        },
+        measureElement: typeof window !== 'undefined' ? (el: Element) => el.getBoundingClientRect().height : undefined,
+        overscan: 5,
+    });
+
     const UserPanel = () => (
         <div className="user-panel">
             <span data-presence-toggle style={{ display: 'contents' }}>
@@ -2013,7 +2128,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 </div>
             </div>
 
-            <div className="channel-list" role="listbox" aria-label="Channels" onKeyDown={(e) => {
+            <div ref={channelScrollRef} className="channel-list" role="listbox" aria-label="Channels" onKeyDown={(e) => {
                 const container = e.currentTarget;
                 const items = Array.from(container.querySelectorAll<HTMLElement>('.channel-item[tabindex]'));
                 const focused = document.activeElement as HTMLElement;
@@ -2025,418 +2140,271 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 else if (e.key === 'Enter' && idx >= 0) { e.preventDefault(); items[idx].click(); }
                 else if (e.key === 'Escape') { focused?.blur(); }
             }}>
-                <div
-                    className={`channel-item ${location.pathname.includes('/events') ? 'active' : ''}`}
-                    role="option"
-                    aria-selected={location.pathname.includes('/events')}
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '6px 8px' }}
-                    onClick={() => navigate(`/guild/${activeGuildId}/events`)}
-                >
-                    <Calendar size={18} style={{ opacity: 0.7 }} />
-                    <span>Events</span>
-                </div>
-                <div
-                    className={`channel-item ${location.pathname.includes('/members') ? 'active' : ''}`}
-                    role="option"
-                    aria-selected={location.pathname.includes('/members')}
-                    tabIndex={0}
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '6px 8px' }}
-                    onClick={() => navigate(`/guild/${activeGuildId}/members`)}
-                >
-                    <Users size={18} style={{ opacity: 0.7 }} />
-                    <span>Members</span>
-                </div>
-                <div
-                    className={`channel-item ${location.pathname.includes('/search') ? 'active' : ''}`}
-                    role="option"
-                    aria-selected={location.pathname.includes('/search')}
-                    tabIndex={0}
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '6px 8px' }}
-                    onClick={() => navigate(`/guild/${activeGuildId}/search`)}
-                >
-                    <Search size={18} style={{ opacity: 0.7 }} />
-                    <span>Search</span>
-                </div>
-                {guildLoadErrorCode === 'FORBIDDEN' && (
-                    <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '13px' }}>
-                        You no longer have access to this server.
-                    </div>
-                )}
-                {guildLoadErrorCode === 'NOT_FOUND' && (
-                    <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '13px' }}>
-                        Server not found or deleted.
-                    </div>
-                )}
-                {isChannelsLoading && guildChannels.length === 0 ? (
-                    <>
-                        <SkeletonChannelGroup channels={3} />
-                        <SkeletonChannelGroup channels={4} />
-                    </>
-                ) : null}
-                {(() => {
-                    if (guildLoadErrorCode === 'FORBIDDEN' || guildLoadErrorCode === 'NOT_FOUND') return null;
-                    if (isChannelsLoading && guildChannels.length === 0) return null;
-                    // Group channels by category (parentId)
-                    const isCategoryType = (type: string) => type === 'category' || type === 'GUILD_CATEGORY';
-                    const dedupeKeyForChannel = (channel: typeof guildChannels[number]) => {
-                        const normalizedName = channel.name.toLowerCase();
-                        if (isCategoryType(channel.type)) return `${channel.type}:${normalizedName}`;
-                        return `${channel.parentId ?? 'root'}:${channel.type}:${normalizedName}`;
-                    };
-                    const dedupeChannelList = (channels: typeof guildChannels) => {
-                        const seen = new Set<string>();
-                        return channels.filter((channel) => {
-                            const key = dedupeKeyForChannel(channel);
-                            if (seen.has(key)) return false;
-                            seen.add(key);
-                            return true;
-                        });
-                    };
-
-                    const seenCategoryKeys = new Set<string>();
-                    const categories = guildChannels
-                        .filter(c => isCategoryType(c.type))
-                        .sort((a, b) => a.position - b.position)
-                        .filter((cat) => {
-                            const key = `${cat.type}:${cat.name.toLowerCase()}`;
-                            if (seenCategoryKeys.has(key)) return false;
-                            seenCategoryKeys.add(key);
-                            return true;
-                        });
-                    const uncategorized = dedupeChannelList(
-                        guildChannels.filter(c => !isCategoryType(c.type) && !c.parentId).sort((a, b) => a.position - b.position)
-                    );
-                    const channelsByParent = new Map<string, typeof guildChannels>();
-                    for (const ch of guildChannels) {
-                        if (isCategoryType(ch.type) || !ch.parentId) continue;
-                        const list = channelsByParent.get(ch.parentId) || [];
-                        list.push(ch);
-                        channelsByParent.set(ch.parentId, list);
-                    }
-                    for (const [key, list] of channelsByParent) {
-                        channelsByParent.set(key, dedupeChannelList(list.sort((a, b) => a.position - b.position)));
-                    }
-
-                    const renderChannel = (ch: typeof guildChannels[0]) => {
-                        const isVoice = isVoiceChannelType(ch.type);
-                        const gId = activeGuildId!;
-                        const isConnectedChannel = isVoice && voiceState.connected && voiceState.channelId === ch.id;
-                        const voiceMembers = voiceMembersByChannel[ch.id] || [];
-                        const voiceCount = voiceMembers.length;
-
-                        // Drag-and-drop indicator styles
-                        const isDragging = dragChannelId === ch.id;
-                        const isDropTarget = dragOverChannelId === ch.id && dragChannelId !== ch.id;
-                        const dropIndicatorStyle: React.CSSProperties = isDropTarget ? {
-                            [dragOverPosition === 'above' ? 'borderTop' : 'borderBottom']: '2px solid var(--accent-primary, #526df5)',
-                        } : {};
-
-                        // Common drag props for channel items
-                        const dragProps = canManageChannels ? {
-                            draggable: true,
-                            onDragStart: (e: React.DragEvent) => handleChannelDragStart(e, ch.id),
-                            onDragOver: (e: React.DragEvent) => handleChannelDragOver(e, ch.id),
-                            onDragLeave: handleChannelDragLeave,
-                            onDragEnd: handleChannelDragEnd,
-                            onDrop: (e: React.DragEvent) => handleChannelDrop(e, ch.id),
-                        } : {};
-
-                        if (isVoice) {
-                            // Voice channels: click joins voice, doesn't navigate away
-                            return (
-                                <div key={ch.id} onContextMenu={(e) => handleChannelContext(e, ch)} {...dragProps} style={{ opacity: isDragging ? 0.5 : undefined, ...dropIndicatorStyle }}>
-                                    <div
-                                        className={`channel-item ${isConnectedChannel ? 'active' : ''}`}
-                                        tabIndex={0}
-                                        role="option"
-                                        aria-selected={isConnectedChannel}
-                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: canManageChannels ? 'grab' : 'pointer' }}
-                                        onClick={() => {
-                                            if (isConnectedChannel) {
-                                                // Already connected — navigate to the voice channel view
-                                                navigate(`/guild/${gId}/voice/${ch.id}`);
-                                            } else {
-                                                // Join voice channel
-                                                navigate(`/guild/${gId}/voice/${ch.id}`);
-                                            }
-                                        }}
-                                    >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                                            <Volume2 size={18} style={{ flexShrink: 0, opacity: 0.7 }} />
-                                            <div style={{ minWidth: 0 }}>
-                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{ch.name}</span>
-                                                {ch.topic && (
-                                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', lineHeight: '14px', maxWidth: '140px' }}>{ch.topic}</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        {(voiceCount > 0 || ((ch as any).userLimit ?? 0) > 0) && (
-                                            <span style={{
-                                                fontSize: '11px',
-                                                fontWeight: 600,
-                                                color: ((ch as any).userLimit ?? 0) > 0 && voiceCount >= ((ch as any).userLimit ?? 0) ? 'var(--error, #ed4245)' : isConnectedChannel ? '#43b581' : 'var(--text-muted)',
-                                                background: isConnectedChannel ? 'rgba(67, 181, 129, 0.15)' : 'var(--bg-tertiary)',
-                                                padding: '1px 6px',
-                                                borderRadius: '8px', flexShrink: 0, lineHeight: '16px',
-                                            }}>
-                                                {((ch as any).userLimit ?? 0) > 0 ? `${voiceCount}/${(ch as any).userLimit}` : voiceCount}
-                                            </span>
-                                        )}
-                                    </div>
-                                    {voiceMembers.length > 0 && (
-                                        <div style={{ margin: '4px 0 8px 30px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            {voiceMembers.map((member) => (
-                                                <div key={`${ch.id}-${member.userId}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                                                    <Avatar
-                                                        userId={member.userId}
-                                                        avatarHash={null}
-                                                        displayName={member.displayName}
-                                                        frame={member.userId === userProfile.id ? (userProfile.avatarFrame as 'none' | 'neon' | 'gold' | 'glass') : 'none'}
-                                                        size={16}
-                                                    />
-                                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {member.displayName}
-                                                    </span>
-                                                    {member.selfMute && (
-                                                        <Mic size={11} style={{ color: 'var(--text-muted)', opacity: 0.8, marginLeft: 'auto', flexShrink: 0 }} />
+                {/* Virtualized channel list */}
+                {!activeGuildId ? null : (
+                <div style={{ height: `${channelVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                    {channelVirtualizer.getVirtualItems().map((vItem) => {
+                        const row = channelFlatRows[vItem.index];
+                        const gId = activeGuildId;
+                        // Render the row — the outer div is the measurable absolutely-positioned slot
+                        const renderChannelItem = (ch: typeof guildChannels[0]) => {
+                            const isVoice = isVoiceChannelType(ch.type);
+                            const isConnectedChannel = isVoice && voiceState.connected && voiceState.channelId === ch.id;
+                            const voiceMembers = voiceMembersByChannel[ch.id] || [];
+                            const isDragging = dragChannelId === ch.id;
+                            const isDropTarget = dragOverChannelId === ch.id && dragChannelId !== ch.id;
+                            const dropIndicatorStyle: React.CSSProperties = isDropTarget ? {
+                                [dragOverPosition === 'above' ? 'borderTop' : 'borderBottom']: '2px solid var(--accent-primary, #526df5)',
+                            } : {};
+                            const dragProps = canManageChannels ? {
+                                draggable: true as const,
+                                onDragStart: (e: React.DragEvent) => handleChannelDragStart(e, ch.id),
+                                onDragOver: (e: React.DragEvent) => handleChannelDragOver(e, ch.id),
+                                onDragLeave: handleChannelDragLeave,
+                                onDragEnd: handleChannelDragEnd,
+                                onDrop: (e: React.DragEvent) => handleChannelDrop(e, ch.id),
+                            } : {};
+                            if (isVoice) {
+                                return (
+                                    <div key={ch.id} onContextMenu={(e) => handleChannelContext(e, ch)} {...dragProps} style={{ opacity: isDragging ? 0.5 : undefined, ...dropIndicatorStyle }}>
+                                        <div
+                                            className={`channel-item ${isConnectedChannel ? 'active' : ''}`}
+                                            tabIndex={0}
+                                            role="option"
+                                            aria-selected={isConnectedChannel}
+                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: canManageChannels ? 'grab' : 'pointer' }}
+                                            onClick={() => navigate(`/guild/${gId}/voice/${ch.id}`)}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                                                <Volume2 size={18} style={{ flexShrink: 0, opacity: 0.7 }} />
+                                                <div style={{ minWidth: 0 }}>
+                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{ch.name}</span>
+                                                    {ch.topic && (
+                                                        <span style={{ fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', lineHeight: '14px', maxWidth: '140px' }}>{ch.topic}</span>
                                                     )}
                                                 </div>
-                                            ))}
+                                            </div>
+                                            {((voiceMembers.length > 0) || ((ch as any).userLimit ?? 0) > 0) && (
+                                                <span style={{
+                                                    fontSize: '11px', fontWeight: 600,
+                                                    color: ((ch as any).userLimit ?? 0) > 0 && voiceMembers.length >= ((ch as any).userLimit ?? 0) ? 'var(--error, #ed4245)' : isConnectedChannel ? '#43b581' : 'var(--text-muted)',
+                                                    background: isConnectedChannel ? 'rgba(67, 181, 129, 0.15)' : 'var(--bg-tertiary)',
+                                                    padding: '1px 6px', borderRadius: '8px', flexShrink: 0, lineHeight: '16px',
+                                                }}>
+                                                    {((ch as any).userLimit ?? 0) > 0 ? `${voiceMembers.length}/${(ch as any).userLimit}` : voiceMembers.length}
+                                                </span>
+                                            )}
                                         </div>
+                                        {voiceMembers.length > 0 && (
+                                            <div style={{ margin: '4px 0 8px 30px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                {voiceMembers.map((member) => (
+                                                    <div key={`${ch.id}-${member.userId}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                                                        <Avatar
+                                                            userId={member.userId}
+                                                            avatarHash={null}
+                                                            displayName={member.displayName}
+                                                            frame={member.userId === userProfile.id ? (userProfile.avatarFrame as 'none' | 'neon' | 'gold' | 'glass') : 'none'}
+                                                            size={16}
+                                                        />
+                                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                            {member.displayName}
+                                                        </span>
+                                                        {member.selfMute && (
+                                                            <Mic size={11} style={{ color: 'var(--text-muted)', opacity: 0.8, marginLeft: 'auto', flexShrink: 0 }} />
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            }
+                            const linkTo = `/guild/${gId}/channel/${ch.id}`;
+                            const isActive = location.pathname === linkTo;
+                            const unreadEntry = unreadMap.get(ch.id);
+                            const hasUnread = !!unreadEntry?.hasUnread && !isActive;
+                            const mentions = unreadEntry?.mentionCount ?? 0;
+                            const isMuted = mutedChannelIds.has(ch.id);
+                            const isPrivate = ch.type === 'GUILD_PRIVATE';
+                            return (
+                                <div key={ch.id} {...dragProps} style={{ opacity: isDragging ? 0.5 : undefined, ...dropIndicatorStyle }}>
+                                    <Link to={linkTo} style={{ textDecoration: 'none' }} draggable={false} onContextMenu={(e) => handleChannelContext(e, ch)}
+                                        onMouseEnter={() => {
+                                            const timer = setTimeout(() => {
+                                                queryClient.prefetchQuery({
+                                                    queryKey: messagesQueryKey(ch.id),
+                                                    queryFn: () => api.messages.list(ch.id, { limit: 50 }),
+                                                    staleTime: 30_000,
+                                                });
+                                            }, 200);
+                                            prefetchTimers.current.set(ch.id, timer);
+                                        }}
+                                        onMouseLeave={() => {
+                                            const timer = prefetchTimers.current.get(ch.id);
+                                            if (timer) { clearTimeout(timer); prefetchTimers.current.delete(ch.id); }
+                                        }}>
+                                        <div className={`channel-item ${isActive ? 'active' : ''}`} tabIndex={0} role="option" aria-selected={isActive} data-channel-type={ch.type === 'GUILD_DOCUMENT' ? 'document' : undefined} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: isMuted ? 0.5 : undefined, cursor: canManageChannels ? 'grab' : undefined, position: 'relative' }}>
+                                            {hasUnread && mentions === 0 && (
+                                                <span style={{ position: 'absolute', left: '-4px', top: '50%', transform: 'translateY(-50%)', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--text-primary)' }} />
+                                            )}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                                                {ch.type === 'GUILD_DOCUMENT' ? <FileText size={18} style={{ flexShrink: 0, opacity: 0.7 }} /> : isPrivate ? <Lock size={18} style={{ flexShrink: 0, opacity: 0.7 }} /> : <HashIcon size={18} style={{ flexShrink: 0, opacity: 0.7 }} />}
+                                                {ch.topic ? (
+                                                    <Tooltip content={ch.topic} position="right" delay={400}>
+                                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: hasUnread ? 600 : undefined, color: hasUnread ? 'var(--text-primary)' : undefined }}>{ch.name}</span>
+                                                    </Tooltip>
+                                                ) : (
+                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: hasUnread ? 600 : undefined, color: hasUnread ? 'var(--text-primary)' : undefined }}>{ch.name}</span>
+                                                )}
+                                                {draftChannelIds.has(ch.id) && <PenLine size={12} style={{ flexShrink: 0, opacity: 0.7, color: 'var(--accent-primary)' }} />}
+                                                {isMuted && <BellOff size={12} style={{ flexShrink: 0, opacity: 0.5, color: 'var(--text-muted)' }} />}
+                                            </div>
+                                            {mentions > 0 && !isActive && (
+                                                <span style={{ background: 'var(--error, #ed4245)', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>
+                                                    {mentions}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </Link>
+                                    {channelTyping.has(ch.id) && (
+                                        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontStyle: 'italic', padding: '0 0 2px 30px', display: 'block' }}>
+                                            {channelTyping.get(ch.id)!.join(', ')} typing...
+                                        </span>
                                     )}
                                 </div>
                             );
-                        }
+                        };
 
-                        // Text channels: navigate normally
-                        const linkTo = `/guild/${gId}/channel/${ch.id}`;
-                        const isActive = location.pathname === linkTo;
-                        const unreadEntry = unreadMap.get(ch.id);
-                        const hasUnread = !!unreadEntry?.hasUnread && !isActive;
-                        const mentions = unreadEntry?.mentionCount ?? 0;
-                        const isMuted = mutedChannelIds.has(ch.id);
-                        const isPrivate = ch.type === 'GUILD_PRIVATE';
+                        const sectionHeaderStyle = {
+                            fontSize: '0.7rem', fontWeight: 700 as const, textTransform: 'uppercase' as const,
+                            color: 'var(--text-muted)', padding: '16px 8px 4px 16px',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            letterSpacing: '0.02em', cursor: 'pointer',
+                        };
+
                         return (
-                            <div key={ch.id} {...dragProps} style={{ opacity: isDragging ? 0.5 : undefined, ...dropIndicatorStyle }}>
-                                <Link to={linkTo} style={{ textDecoration: 'none' }} draggable={false} onContextMenu={(e) => handleChannelContext(e, ch)}
-                                    onMouseEnter={() => {
-                                        const timer = setTimeout(() => {
-                                            queryClient.prefetchQuery({
-                                                queryKey: messagesQueryKey(ch.id),
-                                                queryFn: () => api.messages.list(ch.id, { limit: 50 }),
-                                                staleTime: 30_000,
-                                            });
-                                        }, 200);
-                                        prefetchTimers.current.set(ch.id, timer);
-                                    }}
-                                    onMouseLeave={() => {
-                                        const timer = prefetchTimers.current.get(ch.id);
-                                        if (timer) { clearTimeout(timer); prefetchTimers.current.delete(ch.id); }
-                                    }}>
-                                    <div className={`channel-item ${isActive ? 'active' : ''}`} tabIndex={0} role="option" aria-selected={isActive} data-channel-type={ch.type === 'GUILD_DOCUMENT' ? 'document' : undefined} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: isMuted ? 0.5 : undefined, cursor: canManageChannels ? 'grab' : undefined, position: 'relative' }}>
-                                        {hasUnread && mentions === 0 && (
-                                            <span style={{
-                                                position: 'absolute', left: '-4px', top: '50%', transform: 'translateY(-50%)',
-                                                width: '6px', height: '6px', borderRadius: '50%', background: 'var(--text-primary)',
-                                            }} />
-                                        )}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                                            {ch.type === 'GUILD_DOCUMENT' ? <FileText size={18} style={{ flexShrink: 0, opacity: 0.7 }} /> : isPrivate ? <Lock size={18} style={{ flexShrink: 0, opacity: 0.7 }} /> : <HashIcon size={18} style={{ flexShrink: 0, opacity: 0.7 }} />}
-                                            {ch.topic ? (
-                                                <Tooltip content={ch.topic} position="right" delay={400}>
-                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: hasUnread ? 600 : undefined, color: hasUnread ? 'var(--text-primary)' : undefined }}>{ch.name}</span>
-                                                </Tooltip>
-                                            ) : (
-                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: hasUnread ? 600 : undefined, color: hasUnread ? 'var(--text-primary)' : undefined }}>{ch.name}</span>
-                                            )}
-                                            {draftChannelIds.has(ch.id) && <PenLine size={12} style={{ flexShrink: 0, opacity: 0.7, color: 'var(--accent-primary)' }} />}
-                                            {isMuted && <BellOff size={12} style={{ flexShrink: 0, opacity: 0.5, color: 'var(--text-muted)' }} />}
-                                        </div>
-                                        {mentions > 0 && !isActive && (
-                                            <span style={{ background: 'var(--error, #ed4245)', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>
-                                                {mentions}
-                                            </span>
-                                        )}
-                                    </div>
-                                </Link>
-                                {channelTyping.has(ch.id) && (
-                                    <span style={{ fontSize: 10, color: 'var(--text-muted)', fontStyle: 'italic', padding: '0 0 2px 30px', display: 'block' }}>
-                                        {channelTyping.get(ch.id)!.join(', ')} typing...
-                                    </span>
-                                )}
-                            </div>
-                        );
-                    };
-
-                    if (guildChannels.length === 0) {
-                        return (
-                            <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                                <p>No channels yet.</p>
-                                {canManageChannels && (
-                                <button
-                                    onClick={() => { setShowCreateChannel({ type: 'text' }); setNewChannelName(''); }}
-                                    style={{ marginTop: '8px', padding: '8px 16px', background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
-                                >
-                                    Create a Channel
-                                </button>
-                                )}
-                            </div>
-                        );
-                    }
-
-                    // Separate uncategorized channels into text and voice
-                    const uncatText = uncategorized.filter(c => !isVoiceChannelType(c.type) && c.type !== 'GUILD_DOCUMENT');
-                    const uncatVoice = uncategorized.filter(c => isVoiceChannelType(c.type));
-
-                    // Separate categories into text-oriented and voice-oriented
-                    // A category is voice if ALL its children are voice, or its name suggests voice
-                    const textCategories: typeof categories = [];
-                    const voiceCategories: typeof categories = [];
-                    for (const cat of categories) {
-                        const children = channelsByParent.get(cat.id) || [];
-                        const allVoice = children.length > 0 && children.every(c => isVoiceChannelType(c.type));
-                        const nameHint = cat.name.toLowerCase().includes('voice');
-                        if (allVoice || (nameHint && children.length === 0)) {
-                            voiceCategories.push(cat);
-                        } else {
-                            textCategories.push(cat);
-                        }
-                    }
-
-                    const sectionHeaderStyle = {
-                        fontSize: '0.7rem', fontWeight: 700 as const, textTransform: 'uppercase' as const,
-                        color: 'var(--text-muted)', padding: '16px 8px 4px 16px',
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        letterSpacing: '0.02em', cursor: 'pointer',
-                    };
-
-                    const renderCategory = (cat: typeof categories[0], defaultType: 'text' | 'voice') => {
-                        const children = channelsByParent.get(cat.id) || [];
-                        const isCatCollapsed = !!collapsed[cat.id];
-                        // When collapsed, still show channels with unread messages or that are currently active
-                        const visibleChildren = isCatCollapsed
-                            ? children.filter(ch => {
-                                const entry = unreadMap.get(ch.id);
-                                const isActive = location.pathname.includes(`/channel/${ch.id}`) || location.pathname.includes(`/voice/${ch.id}`);
-                                return isActive || !!(entry?.hasUnread);
-                            })
-                            : children;
-                        return (
-                            <div key={cat.id}>
-                                <div className="channel-category" style={{ marginTop: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} onContextMenu={(e) => handleCategoryContext(e, cat, children.map(c => c.id))}>
-                                    <div onClick={() => toggleCategory(cat.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
-                                        <span style={{ transition: 'transform 0.15s ease', transform: isCatCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}>
-                                            <ChevronDown size={14} />
-                                        </span>
-                                        {cat.name.toUpperCase()}
-                                    </div>
-                                    {canManageChannels && <Plus size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)', opacity: 0.7 }}
-                                        onClick={(e) => { e.stopPropagation(); setShowCreateChannel({ type: defaultType, parentId: cat.id }); setNewChannelName(''); }}
-                                    />}
-                                </div>
-                                <div data-category-children={cat.id}>
-                                    {visibleChildren.map(renderChannel)}
-                                </div>
-                            </div>
-                        );
-                    };
-
-                    const favoriteChannels = guildChannels.filter(c => favoriteChannelIds.has(c.id));
-
-                    return (
-                        <>
-                            {/* ── FAVORITES ── */}
-                            {favoriteChannels.length > 0 && (
-                                <>
+                            <div
+                                key={vItem.key}
+                                data-index={vItem.index}
+                                ref={channelVirtualizer.measureElement}
+                                style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${vItem.start}px)` }}
+                            >
+                                {row.kind === 'nav-events' && (
                                     <div
-                                        style={sectionHeaderStyle}
-                                        onClick={() => toggleCategory('__favorites__')}
+                                        className={`channel-item ${location.pathname.includes('/events') ? 'active' : ''}`}
+                                        role="option" aria-selected={location.pathname.includes('/events')}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '6px 8px' }}
+                                        onClick={() => navigate(`/guild/${gId}/events`)}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <span style={{ transition: 'transform 0.15s ease', transform: collapsed['__favorites__'] ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}><ChevronDown size={10} /></span>
-                                            <Star size={10} style={{ color: '#faa61a' }} />
-                                            <span>Favorites</span>
-                                        </div>
+                                        <Calendar size={18} style={{ opacity: 0.7 }} /><span>Events</span>
                                     </div>
-                                    {!collapsed['__favorites__'] && favoriteChannels.map(renderChannel)}
-                                </>
-                            )}
-
-                            {/* ── RECENT CHANNELS (Item 89) ── */}
-                            <RecentChannels guildId={activeGuildId!} onChannelClick={(chId, gId) => {
-                                const ch = guildChannels.find(c => c.id === chId);
-                                if (ch && isVoiceChannelType(ch.type)) {
-                                    navigate(`/guild/${gId}/voice/${chId}`);
-                                } else {
-                                    navigate(`/guild/${gId}/channel/${chId}`);
-                                }
-                            }} />
-
-                            {/* ── TEXT CHANNELS ── */}
-                            <div
-                                style={sectionHeaderStyle}
-                                onClick={() => toggleCategory('__text_channels__')}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <span style={{ transition: 'transform 0.15s ease', transform: collapsed['__text_channels__'] ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}><ChevronDown size={10} /></span>
-                                    <span>Text Channels</span>
-                                </div>
-                                {canManageChannels && <Plus size={14} style={{ cursor: 'pointer', opacity: 0.7 }}
-                                    onClick={(e) => { e.stopPropagation(); setShowCreateChannel({ type: 'text' }); setNewChannelName(''); }}
-                                />}
-                            </div>
-                            {!collapsed['__text_channels__'] && (
-                                <>
-                                    {uncatText.map(renderChannel)}
-                                    {textCategories.map(cat => renderCategory(cat, 'text'))}
-                                </>
-                            )}
-
-                            {/* ── VOICE CHANNELS ── */}
-                            <div
-                                style={{ ...sectionHeaderStyle, marginTop: '12px' }}
-                                onClick={() => toggleCategory('__voice_channels__')}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <span style={{ transition: 'transform 0.15s ease', transform: collapsed['__voice_channels__'] ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}><ChevronDown size={10} /></span>
-                                    <span>Voice Channels</span>
-                                </div>
-                                {canManageChannels && <Plus size={14} style={{ cursor: 'pointer', opacity: 0.7 }}
-                                    onClick={(e) => { e.stopPropagation(); setShowCreateChannel({ type: 'voice' }); setNewChannelName(''); }}
-                                />}
-                            </div>
-                            {!collapsed['__voice_channels__'] && (
-                                <>
-                                    {uncatVoice.map(renderChannel)}
-                                    {voiceCategories.map(cat => renderCategory(cat, 'voice'))}
-                                </>
-                            )}
-
-                            {/* ── DOCUMENT CHANNELS ── */}
-                            {(() => {
-                                const docChannels = guildChannels.filter((ch: any) => ch.type === 'GUILD_DOCUMENT');
-                                if (docChannels.length === 0 && !canManageChannels) return null;
-                                return (
+                                )}
+                                {row.kind === 'nav-members' && (
+                                    <div
+                                        className={`channel-item ${location.pathname.includes('/members') ? 'active' : ''}`}
+                                        role="option" aria-selected={location.pathname.includes('/members')}
+                                        tabIndex={0}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '6px 8px' }}
+                                        onClick={() => navigate(`/guild/${gId}/members`)}
+                                    >
+                                        <Users size={18} style={{ opacity: 0.7 }} /><span>Members</span>
+                                    </div>
+                                )}
+                                {row.kind === 'nav-search' && (
+                                    <div
+                                        className={`channel-item ${location.pathname.includes('/search') ? 'active' : ''}`}
+                                        role="option" aria-selected={location.pathname.includes('/search')}
+                                        tabIndex={0}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '6px 8px' }}
+                                        onClick={() => navigate(`/guild/${gId}/search`)}
+                                    >
+                                        <Search size={18} style={{ opacity: 0.7 }} /><span>Search</span>
+                                    </div>
+                                )}
+                                {row.kind === 'error' && row.code === 'FORBIDDEN' && (
+                                    <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                                        You no longer have access to this server.
+                                    </div>
+                                )}
+                                {row.kind === 'error' && row.code === 'NOT_FOUND' && (
+                                    <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                                        Server not found or deleted.
+                                    </div>
+                                )}
+                                {row.kind === 'loading' && (
                                     <>
+                                        <SkeletonChannelGroup channels={3} />
+                                        <SkeletonChannelGroup channels={4} />
+                                    </>
+                                )}
+                                {row.kind === 'empty-state' && (
+                                    <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                                        <p>No channels yet.</p>
+                                        {canManageChannels && (
+                                            <button
+                                                onClick={() => { setShowCreateChannel({ type: 'text' }); setNewChannelName(''); }}
+                                                style={{ marginTop: '8px', padding: '8px 16px', background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                                            >
+                                                Create a Channel
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                                {row.kind === 'section-header' && (() => {
+                                    const { sectionKey, label, addType, marginTop } = row;
+                                    return (
                                         <div
-                                            style={{ ...sectionHeaderStyle, marginTop: '12px' }}
-                                            onClick={() => toggleCategory('__document_channels__')}
+                                            style={{ ...sectionHeaderStyle, marginTop: marginTop ?? 0 }}
+                                            onClick={() => toggleCategory(sectionKey)}
                                         >
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <span style={{ transition: 'transform 0.15s ease', transform: collapsed['__document_channels__'] ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}><ChevronDown size={10} /></span>
-                                                <span>Document Channels</span>
+                                                <span style={{ transition: 'transform 0.15s ease', transform: collapsed[sectionKey] ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}>
+                                                    <ChevronDown size={10} />
+                                                </span>
+                                                {sectionKey === '__favorites__' && <Star size={10} style={{ color: '#faa61a' }} />}
+                                                <span>{label}</span>
                                             </div>
-                                            {canManageChannels && <Plus size={14} style={{ cursor: 'pointer', opacity: 0.7 }}
-                                                onClick={(e) => { e.stopPropagation(); setShowCreateChannel({ type: 'document' }); setNewChannelName(''); }}
-                                            />}
+                                            {canManageChannels && addType && (
+                                                <Plus size={14} style={{ cursor: 'pointer', opacity: 0.7 }}
+                                                    onClick={(e) => { e.stopPropagation(); setShowCreateChannel({ type: addType }); setNewChannelName(''); }}
+                                                />
+                                            )}
                                         </div>
-                                        {!collapsed['__document_channels__'] && docChannels.map(renderChannel)}
-                                    </>
-                                );
-                            })()}
-                        </>
-                    );
-                })()}
+                                    );
+                                })()}
+                                {row.kind === 'recent-channels' && (
+                                    <RecentChannels guildId={gId} onChannelClick={(chId, gId2) => {
+                                        const ch = guildChannels.find(c => c.id === chId);
+                                        if (ch && isVoiceChannelType(ch.type)) navigate(`/guild/${gId2}/voice/${chId}`);
+                                        else navigate(`/guild/${gId2}/channel/${chId}`);
+                                    }} />
+                                )}
+                                {row.kind === 'category' && (() => {
+                                    const { cat, defaultType } = row;
+                                    const isCatCollapsed = !!collapsed[cat.id];
+                                    return (
+                                        <div key={cat.id} className="channel-category" style={{ marginTop: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                            onContextMenu={(e) => handleCategoryContext(e, cat, guildChannels.filter(c => c.parentId === cat.id).map(c => c.id))}>
+                                            <div onClick={() => toggleCategory(cat.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
+                                                <span style={{ transition: 'transform 0.15s ease', transform: isCatCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}>
+                                                    <ChevronDown size={14} />
+                                                </span>
+                                                {cat.name.toUpperCase()}
+                                            </div>
+                                            {canManageChannels && (
+                                                <Plus size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)', opacity: 0.7 }}
+                                                    onClick={(e) => { e.stopPropagation(); setShowCreateChannel({ type: defaultType, parentId: cat.id }); setNewChannelName(''); }}
+                                                />
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+                                {row.kind === 'channel' && renderChannelItem(row.ch)}
+                            </div>
+                        );
+                    })}
+                </div>
+                )}
             </div>
 
             {/* Create Channel Modal — portal to body to escape contain:paint */}

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Shield, AlertTriangle, Ban, Clock, MessageSquare, Activity, Filter, RefreshCw } from 'lucide-react';
+import { Shield, AlertTriangle, Ban, Clock, Activity, Filter, RefreshCw } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../components/ui/ToastManager';
 
@@ -37,6 +37,16 @@ interface AuditLogItem {
     targetId?: string;
     reason: string | null;
     createdAt: string;
+}
+
+interface TriageTicket {
+    id: string;
+    subject: string;
+    status: string;
+    priority: string;
+    assigneeId?: string | null;
+    createdAt: string;
+    snoozedUntil?: string | null;
 }
 
 function StatCard({ icon: Icon, label, value, color }: { icon: typeof Shield; label: string; value: number; color: string }) {
@@ -83,15 +93,20 @@ export default function ModerationDashboard() {
     const [bans, setBans] = useState<BannedUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'overview' | 'actions' | 'bans' | 'automod'>('overview');
+    const [triageTickets, setTriageTickets] = useState<TriageTicket[]>([]);
+    const [triageLoading, setTriageLoading] = useState(false);
+    const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
+    const [currentUserId, setCurrentUserId] = useState('');
 
-    useEffect(() => {
+    const fetchModerationData = useCallback(async () => {
         if (!guildId) return;
         setLoading(true);
-        Promise.all([
-            api.guilds.getAuditLog(guildId, { limit: 50 }).catch(() => []),
-            Promise.resolve([]),
-            api.guilds.getBans(guildId).catch(() => []),
-        ]).then(([auditLog, warns, bannedUsers]) => {
+        try {
+            const [auditLog, warns, bannedUsers] = await Promise.all([
+                api.guilds.getAuditLog(guildId, { limit: 50 }).catch(() => []),
+                Promise.resolve([]),
+                api.guilds.getBans(guildId).catch(() => []),
+            ]);
             setRecentActions((auditLog as AuditLogItem[]).map((e) => ({
                 id: e.id,
                 action: e.action,
@@ -108,9 +123,83 @@ export default function ModerationDashboard() {
                 createdAt: w.createdAt,
             })));
             setBans(bannedUsers as BannedUser[]);
+        } finally {
             setLoading(false);
-        });
+        }
     }, [guildId]);
+
+    const fetchTriageTickets = useCallback(async () => {
+        if (!guildId) return;
+        setTriageLoading(true);
+        try {
+            const [open, inProgress] = await Promise.all([
+                api.tickets.list(guildId, { status: 'open' }).catch(() => []),
+                api.tickets.list(guildId, { status: 'in_progress' }).catch(() => []),
+            ]);
+            const merged = [...(open as TriageTicket[]), ...(inProgress as TriageTicket[])];
+            merged.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            setTriageTickets(merged);
+            setSelectedTicketIds(prev => new Set(Array.from(prev).filter(id => merged.some(t => t.id === id))));
+        } finally {
+            setTriageLoading(false);
+        }
+    }, [guildId]);
+
+    useEffect(() => {
+        if (!guildId) return;
+        void fetchModerationData();
+        void fetchTriageTickets();
+    }, [guildId, fetchModerationData, fetchTriageTickets]);
+
+    useEffect(() => {
+        api.users.getMe().then(me => setCurrentUserId(me.id)).catch(() => {});
+    }, []);
+
+    const toggleTicketSelection = (ticketId: string) => {
+        setSelectedTicketIds(prev => {
+            const next = new Set(prev);
+            if (next.has(ticketId)) next.delete(ticketId);
+            else next.add(ticketId);
+            return next;
+        });
+    };
+
+    const assignTicketToMe = async (ticketId: string) => {
+        if (!guildId || !currentUserId) return;
+        try {
+            await api.tickets.update(guildId, ticketId, { assigneeId: currentUserId, status: 'in_progress' });
+            addToast({ title: 'Ticket assigned to you', variant: 'success' });
+            await fetchTriageTickets();
+        } catch {
+            addToast({ title: 'Failed to assign ticket', variant: 'error' });
+        }
+    };
+
+    const snoozeTicket = async (ticketId: string, minutes: number) => {
+        if (!guildId) return;
+        const snoozedUntil = new Date(Date.now() + minutes * 60 * 1000).toISOString();
+        try {
+            await api.tickets.update(guildId, ticketId, { status: 'open', snoozedUntil });
+            addToast({ title: `Ticket snoozed for ${minutes}m`, variant: 'success' });
+            await fetchTriageTickets();
+        } catch {
+            addToast({ title: 'Failed to snooze ticket', variant: 'error' });
+        }
+    };
+
+    const bulkResolveSelected = async () => {
+        if (!guildId || selectedTicketIds.size === 0) return;
+        const ids = Array.from(selectedTicketIds);
+        try {
+            await Promise.all(ids.map(id => api.tickets.update(guildId, id, { status: 'resolved' })));
+            addToast({ title: `Resolved ${ids.length} ticket${ids.length === 1 ? '' : 's'}`, variant: 'success' });
+            setSelectedTicketIds(new Set());
+            await fetchTriageTickets();
+            await fetchModerationData();
+        } catch {
+            addToast({ title: 'Failed to resolve selected tickets', variant: 'error' });
+        }
+    };
 
     const tabs = [
         { key: 'overview' as const, label: 'Overview', icon: Activity },
@@ -147,7 +236,10 @@ export default function ModerationDashboard() {
                 <Shield size={24} style={{ color: 'var(--accent-primary)' }} />
                 <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 700 }}>Moderation Dashboard</h1>
                 <button
-                    onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 500); }}
+                    onClick={() => {
+                        void fetchModerationData();
+                        void fetchTriageTickets();
+                    }}
                     style={{
                         marginLeft: 'auto', padding: '6px 12px', borderRadius: 'var(--radius-sm)',
                         background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)',
@@ -266,6 +358,100 @@ export default function ModerationDashboard() {
                 </div>
             ) : (
                 <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: '16px', border: '1px solid var(--stroke)' }}>
+                    <div style={{
+                        marginBottom: '14px',
+                        border: '1px solid var(--stroke)',
+                        borderRadius: 'var(--radius-sm)',
+                        background: 'var(--bg-primary)',
+                        padding: '12px',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '10px' }}>
+                            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 700 }}>Triage Queue</h3>
+                            <button
+                                onClick={bulkResolveSelected}
+                                disabled={selectedTicketIds.size === 0}
+                                style={{
+                                    padding: '6px 10px',
+                                    borderRadius: 'var(--radius-sm)',
+                                    border: '1px solid var(--stroke)',
+                                    background: selectedTicketIds.size > 0 ? 'var(--success)' : 'var(--bg-tertiary)',
+                                    color: selectedTicketIds.size > 0 ? '#fff' : 'var(--text-muted)',
+                                    fontSize: '12px',
+                                    cursor: selectedTicketIds.size > 0 ? 'pointer' : 'not-allowed',
+                                    opacity: selectedTicketIds.size > 0 ? 1 : 0.7,
+                                }}
+                            >
+                                Bulk Resolve ({selectedTicketIds.size})
+                            </button>
+                        </div>
+
+                        {triageLoading ? (
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Loading triage queue...</div>
+                        ) : triageTickets.length === 0 ? (
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No open triage tickets.</div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto' }}>
+                                {triageTickets.map(ticket => (
+                                    <div key={ticket.id} style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '20px 1fr auto',
+                                        alignItems: 'center',
+                                        gap: '10px',
+                                        padding: '8px',
+                                        background: 'var(--bg-tertiary)',
+                                        borderRadius: 'var(--radius-sm)',
+                                        border: '1px solid var(--stroke)',
+                                    }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedTicketIds.has(ticket.id)}
+                                            onChange={() => toggleTicketSelection(ticket.id)}
+                                            aria-label={`Select ticket ${ticket.subject}`}
+                                        />
+                                        <div style={{ minWidth: 0 }}>
+                                            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {ticket.subject || 'Untitled ticket'}
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                                {ticket.status.replace('_', ' ')} · {ticket.priority || 'medium'} · {new Date(ticket.createdAt).toLocaleDateString()}
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                            <button
+                                                onClick={() => { void assignTicketToMe(ticket.id); }}
+                                                style={{
+                                                    padding: '4px 8px',
+                                                    borderRadius: 'var(--radius-sm)',
+                                                    border: '1px solid var(--stroke)',
+                                                    background: 'var(--bg-primary)',
+                                                    color: 'var(--text-secondary)',
+                                                    fontSize: '11px',
+                                                    cursor: 'pointer',
+                                                }}
+                                            >
+                                                Assign Me
+                                            </button>
+                                            <button
+                                                onClick={() => { void snoozeTicket(ticket.id, 120); }}
+                                                style={{
+                                                    padding: '4px 8px',
+                                                    borderRadius: 'var(--radius-sm)',
+                                                    border: '1px solid var(--stroke)',
+                                                    background: 'var(--bg-primary)',
+                                                    color: 'var(--text-secondary)',
+                                                    fontSize: '11px',
+                                                    cursor: 'pointer',
+                                                }}
+                                            >
+                                                Snooze 2h
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600 }}>All Actions</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '500px', overflowY: 'auto' }}>
                         {recentActions.map(a => (

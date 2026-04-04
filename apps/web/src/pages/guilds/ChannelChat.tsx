@@ -1409,6 +1409,12 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     );
 
     const [messages, setMessages] = useState<Message[]>([]);
+    const messagesRef = useRef<Message[]>([]);
+    const retryBackoffRef = useRef<Map<number, { attempts: number; nextAt: number }>>(new Map());
+
+    useEffect(() => {
+        messagesRef.current = messages;
+    }, [messages]);
 
     // Group mention entries shown at top of mention autocomplete
     const GROUP_MENTION_ENTRIES = [
@@ -1999,6 +2005,57 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         return result;
     };
 
+    const markRetryBackoff = useCallback((messageId: number) => {
+        const prev = retryBackoffRef.current.get(messageId);
+        const attempts = (prev?.attempts ?? 0) + 1;
+        const delayMs = Math.min(60000, 1200 * (2 ** Math.max(0, attempts - 1)));
+        retryBackoffRef.current.set(messageId, { attempts, nextAt: Date.now() + delayMs });
+    }, []);
+
+    const clearRetryBackoff = useCallback((messageId: number) => {
+        retryBackoffRef.current.delete(messageId);
+    }, []);
+
+    const sendFailedMessage = useCallback((messageId: number, silent = false) => {
+        const msg = messagesRef.current.find(m => m.id === messageId);
+        if (!msg?._retryPayload || msg.sendStatus !== 'failed') return;
+
+        if (!navigator.onLine) {
+            markRetryBackoff(messageId);
+            return;
+        }
+
+        const { channelId: cId, payload } = msg._retryPayload;
+        setMessages(prev => prev.map(m =>
+            m.id === messageId ? { ...m, sendStatus: 'sending' as const } : m
+        ));
+
+        api.messages.send(cId, payload).then((sent: any) => {
+            if (sent?.id) {
+                clearRetryBackoff(messageId);
+                setMessages(prev => prev.map(m =>
+                    m.id === messageId ? {
+                        ...m,
+                        apiId: sent.id,
+                        authorId: sent.authorId,
+                        authorAvatarHash: sent.author?.avatarHash ?? m.authorAvatarHash,
+                        attachments: sent.attachments?.length > 0 ? sent.attachments : undefined,
+                        sendStatus: undefined,
+                        _retryPayload: undefined,
+                    } : m
+                ));
+            }
+        }).catch(() => {
+            setMessages(prev => prev.map(m =>
+                m.id === messageId ? { ...m, sendStatus: 'failed' as const } : m
+            ));
+            markRetryBackoff(messageId);
+            if (!silent) {
+                addToast({ title: 'Still trying to send message in background.', variant: 'error' });
+            }
+        });
+    }, [addToast, clearRetryBackoff, markRetryBackoff]);
+
     const handleSendMessage = async () => {
         if (inputValue.trim() === '' && chatAttachedFiles.length === 0) return;
         if (!channelId) return;
@@ -2135,6 +2192,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         api.messages.send(channelId, sendPayload).then((sent: any) => {
             // Patch optimistic message with real API ID and clear sending status
             if (sent?.id) {
+                clearRetryBackoff(optimisticId);
                 setMessages(prev => prev.map(m =>
                     m.id === optimisticId ? {
                         ...m,
@@ -2152,7 +2210,8 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             setMessages(prev => prev.map(m =>
                 m.id === optimisticId ? { ...m, sendStatus: 'failed' as const } : m
             ));
-            addToast({ title: 'Failed to send message. Click to retry.', variant: 'error' });
+            markRetryBackoff(optimisticId);
+            addToast({ title: 'Message queued. Retrying automatically.', variant: 'error' });
         });
 
         setInputValue('');
@@ -2173,32 +2232,8 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
 
     // Retry a failed optimistic message
     const handleRetryMessage = useCallback((messageId: number) => {
-        const msg = messages.find(m => m.id === messageId);
-        if (!msg?._retryPayload || msg.sendStatus !== 'failed') return;
-        const { channelId: cId, payload } = msg._retryPayload;
-        setMessages(prev => prev.map(m =>
-            m.id === messageId ? { ...m, sendStatus: 'sending' as const } : m
-        ));
-        api.messages.send(cId, payload).then((sent: any) => {
-            if (sent?.id) {
-                setMessages(prev => prev.map(m =>
-                    m.id === messageId ? {
-                        ...m,
-                        apiId: sent.id,
-                        authorId: sent.authorId,
-                        authorAvatarHash: sent.author?.avatarHash ?? m.authorAvatarHash,
-                        attachments: sent.attachments?.length > 0 ? sent.attachments : undefined,
-                        sendStatus: undefined,
-                        _retryPayload: undefined,
-                    } : m
-                ));
-            }
-        }).catch(() => {
-            setMessages(prev => prev.map(m =>
-                m.id === messageId ? { ...m, sendStatus: 'failed' as const } : m
-            ));
-        });
-    }, [messages]);
+        sendFailedMessage(messageId, false);
+    }, [sendFailedMessage]);
 
     // Dismiss a failed optimistic message
     const handleDismissFailedMessage = useCallback((messageId: number) => {
@@ -2214,6 +2249,29 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             delete (window as any).__gratoniteDismissMessage;
         };
     }, [handleRetryMessage, handleDismissFailedMessage]);
+
+    // Background flush for failed outgoing messages (queue + exponential backoff)
+    useEffect(() => {
+        const flushFailed = () => {
+            if (!navigator.onLine) return;
+            const now = Date.now();
+            const failed = messagesRef.current.filter(m => m.sendStatus === 'failed' && !!m._retryPayload);
+            for (let i = 0; i < failed.length; i++) {
+                const msg = failed[i];
+                const meta = retryBackoffRef.current.get(msg.id);
+                if (!meta || now >= meta.nextAt) {
+                    sendFailedMessage(msg.id, true);
+                }
+            }
+        };
+
+        const intervalId = setInterval(flushFailed, 2500);
+        window.addEventListener('online', flushFailed);
+        return () => {
+            clearInterval(intervalId);
+            window.removeEventListener('online', flushFailed);
+        };
+    }, [sendFailedMessage]);
 
     // Edit message handler
     const handleEditSubmit = useCallback(async () => {

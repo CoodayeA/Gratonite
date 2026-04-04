@@ -124,6 +124,11 @@ test('Settings modal opens and closes', async ({ page }) => {
 
 test('Global search opens with ⌘K and closes with ESC', async ({ page }) => {
     await goToApp(page);
+    // Dismiss onboarding tour if visible, otherwise keyboard shortcuts can be trapped by the modal.
+    const skipTourButton = page.getByRole('button', { name: /Skip tour/i }).first();
+    if (await skipTourButton.isVisible({ timeout: 1200 }).catch(() => false)) {
+        await skipTourButton.click();
+    }
     await page.locator('body').click();
     await page.keyboard.press('Meta+k');
     const searchInput = page.locator('input[placeholder*="search" i], input[placeholder*="Search" i]').first();
@@ -131,8 +136,20 @@ test('Global search opens with ⌘K and closes with ESC', async ({ page }) => {
     if (!(await searchInput.isVisible({ timeout: 1200 }).catch(() => false))) {
         await page.keyboard.press('Control+k');
     }
+    // Some environments swallow key combos; dispatch synthetic key events as a final keyboard fallback.
     if (!(await searchInput.isVisible({ timeout: 1200 }).catch(() => false))) {
-        await page.getByRole('button', { name: /Search/i }).first().click();
+        await page.evaluate(() => {
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }));
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+        });
+    }
+    if (!(await searchInput.isVisible({ timeout: 1200 }).catch(() => false))) {
+        const searchTrigger = page
+            .locator('button:has-text("Search"), [aria-label*="search" i], [title*="search" i]')
+            .first();
+        if (await searchTrigger.isVisible({ timeout: 1200 }).catch(() => false)) {
+            await searchTrigger.click();
+        }
     }
     await expect(searchInput).toBeVisible({ timeout: 3000 });
     await page.keyboard.press('Escape');
