@@ -108,11 +108,12 @@ const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
                     <X size={20} />
                 </button>
 
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '32px' }}>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
                     {[1, 2, 3, 4, 5, 6].map(s => (
                         <div key={s} style={{ height: '4px', flex: 1, background: s <= step ? 'var(--accent-primary)' : 'var(--bg-tertiary)', borderRadius: '2px', transition: 'background 0.3s' }}></div>
                     ))}
                 </div>
+                <div style={{ textAlign: 'right', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '24px' }}>Step {step} of 6</div>
 
                 {step === 1 && (
                     <div style={{ textAlign: 'center' }}>
@@ -120,14 +121,14 @@ const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
                             <Sparkles size={40} color="white" />
                         </div>
                         <h2 className="auth-heading">Welcome to Gratonite</h2>
-                        <p className="auth-subtext">Let's set up your profile so people know who you are.</p>
+                        <p className="auth-subtext">Your community starts here. Let's get your profile ready in under a minute.</p>
                     </div>
                 )}
 
                 {step === 2 && (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>Choose an Avatar</h2>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>You can always change this later.</p>
+                        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>Add a profile photo</h2>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>Put a face to the name. You can always change this later.</p>
                         <input
                             ref={fileInputRef}
                             type="file"
@@ -153,8 +154,8 @@ const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
 
                 {step === 3 && (
                     <div>
-                        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>Who are you?</h2>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Set your display name and a short bio.</p>
+                        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>Tell us about yourself</h2>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Your name and bio appear on your profile and in chat.</p>
 
                         <label className="auth-label">Display Name</label>
                         <input type="text" className="auth-input" value={displayName} onChange={e => setDisplayName(e.target.value)} />
@@ -178,8 +179,8 @@ const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
 
                 {step === 4 && (
                     <div>
-                        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>Customize Your Vibe</h2>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Make Gratonite uniquely yours before we begin.</p>
+                        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>Make it yours</h2>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Pick a look that fits your style. You can change this any time in Settings.</p>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             {/* Color Mode */}
@@ -239,8 +240,8 @@ const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
 
                 {step === 5 && (
                     <div>
-                        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>Your Interests</h2>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Pick a few tags so we can recommend guilds.</p>
+                        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>What are you into?</h2>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Select your interests and we'll recommend communities you'll love.</p>
 
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '32px' }}>
                             {tags.map(tag => (
@@ -271,8 +272,8 @@ const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
                         <div style={{ width: '80px', height: '80px', background: 'var(--success)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
                             <Check size={40} color="white" />
                         </div>
-                        <h2 className="auth-heading">You're all set!</h2>
-                        <p className="auth-subtext">Dive into Gratonite and start exploring.</p>
+                        <h2 className="auth-heading">You're ready to go!</h2>
+                        <p className="auth-subtext">Your profile is set up. Explore guilds, join conversations, and make Gratonite your own.</p>
                     </div>
                 )}
 
