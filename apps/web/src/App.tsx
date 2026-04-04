@@ -97,6 +97,7 @@ import { useDesktopNotifications } from './hooks/useDesktopNotifications';
 import { useGameActivity } from './hooks/useGameActivity';
 import { useKeyboardNav } from './hooks/useKeyboardNav';
 import UpdateBanner from './components/ui/UpdateBanner';
+import { getCombo, eventToCombo } from './utils/keybindings';
 
 // Lazy-loaded modal components for code splitting
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal'));
@@ -3735,7 +3736,8 @@ export const AppLayout = () => {
 
 
 
-    // Global Keyboard Shortcuts
+    // Global Keyboard Shortcuts — combos are resolved via getCombo() so user
+    // customisations saved in localStorage (gratonite-keybindings) are honoured.
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             // Don't trigger shortcuts when typing in inputs
@@ -3743,15 +3745,17 @@ export const AppLayout = () => {
             const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable;
             if (isInput && !(e.metaKey || e.ctrlKey) && e.key !== 'Escape') return;
 
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+            const combo = eventToCombo(e);
+
+            if (combo === getCombo('quickSwitcher')) {
                 e.preventDefault();
                 setActiveModal(prev => prev === 'globalSearch' ? null : 'globalSearch');
             }
-            if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+            if (combo === getCombo('showShortcuts')) {
                 e.preventDefault();
                 setActiveModal(prev => prev === 'shortcuts' ? null : 'shortcuts');
             }
-            if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'b' || e.key === 'B')) {
+            if (combo === getCombo('bugReport')) {
                 e.preventDefault();
                 setActiveModal(prev => prev === 'bugReport' ? null : 'bugReport');
             }
@@ -3760,8 +3764,8 @@ export const AppLayout = () => {
                 setActiveModal(null);
             }
 
-            // Alt+ArrowUp / Alt+ArrowDown: Navigate channels
-            if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+            // Navigate channels (up/down)
+            if (combo === getCombo('nextChannel') || combo === getCombo('prevChannel')) {
                 e.preventDefault();
                 const guildId = location.pathname.match(/\/guild\/([^/]+)/)?.[1];
                 if (!guildId) return;
@@ -3775,8 +3779,9 @@ export const AppLayout = () => {
                 const currentIndex = currentChannelId
                     ? navigableChannels.findIndex((c: any) => c.id === currentChannelId)
                     : -1;
+                const goNext = combo === getCombo('nextChannel');
                 let nextIndex: number;
-                if (e.key === 'ArrowDown') {
+                if (goNext) {
                     nextIndex = currentIndex < navigableChannels.length - 1 ? currentIndex + 1 : 0;
                 } else {
                     nextIndex = currentIndex > 0 ? currentIndex - 1 : navigableChannels.length - 1;
@@ -3787,16 +3792,16 @@ export const AppLayout = () => {
                 navigate(`/guild/${guildId}/${prefix}/${nextChannel.id}`);
             }
 
-            // Ctrl+Shift+M: Toggle mute
-            if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'M') {
+            // Toggle mute
+            if (combo === getCombo('toggleMute')) {
                 e.preventDefault();
                 if (voiceCtx.connected) {
                     voiceCtx.toggleMute();
                 }
             }
 
-            // Ctrl+Shift+D: Toggle deafen
-            if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'D') {
+            // Toggle deafen
+            if (combo === getCombo('toggleDeafen')) {
                 e.preventDefault();
                 if (voiceCtx.connected) {
                     voiceCtx.toggleDeafen();
