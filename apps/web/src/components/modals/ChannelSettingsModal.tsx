@@ -82,6 +82,9 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
     const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
     const [isArchived, setIsArchived] = useState(false);
     const [autoArchiveDays, setAutoArchiveDays] = useState<number | null>(null);
+    const [showLinkPreviews, setShowLinkPreviews] = useState<boolean>(() => {
+        try { const stored = localStorage.getItem(`gratonite:link-previews:${channelId}`); return stored !== null ? stored === 'true' : true; } catch { return true; }
+    });
     const isVoice = channelType === 'GUILD_VOICE' || channelType === 'voice' || channelType === 'GUILD_STAGE_VOICE';
 
     // Permissions state
@@ -143,10 +146,10 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
         try {
             await api.channels.update(channelId, { name, topic, rateLimitPerUser: slowmode, nsfw, isAnnouncement, isEncrypted, attachmentsEnabled, permissionSynced, autoArchiveDays, ...(isVoice ? { userLimit } : {}), ...(Object.keys(roleSlowmodeOverrides).length > 0 ? { slowmodeOverrides: roleSlowmodeOverrides } : {}) });
             onUpdate?.({ name, topic, rateLimitPerUser: slowmode, ...(isVoice ? { userLimit } : {}) });
-            addToast({ title: 'Channel Updated', variant: 'success' });
+            addToast({ title: 'Channel updated', variant: 'success' });
             onClose();
         } catch {
-            addToast({ title: 'Failed to update channel', variant: 'error' });
+            addToast({ title: 'Failed to update channel. Try again.', variant: 'error' });
         } finally {
             setSaving(false);
         }
@@ -168,9 +171,9 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                     });
                 }
             }
-            addToast({ title: 'Permissions Updated', variant: 'success' });
+            addToast({ title: 'Permissions updated', variant: 'success' });
         } catch {
-            addToast({ title: 'Failed to save permissions', variant: 'error' });
+            addToast({ title: 'Failed to save permissions. Try again.', variant: 'error' });
         } finally {
             setPermsSaving(false);
         }
@@ -305,6 +308,16 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                                 Announcement Channel
                             </label>
 
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '12px' }}>
+                                <input type="checkbox" checked={showLinkPreviews} onChange={e => {
+                                    const val = e.target.checked;
+                                    setShowLinkPreviews(val);
+                                    try { localStorage.setItem(`gratonite:link-previews:${channelId}`, String(val)); } catch { /* no-op */ }
+                                }} style={{ accentColor: 'var(--accent-primary)' }} />
+                                Show link previews
+                                <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '2px' }}>— display inline embeds for URLs posted in this channel</span>
+                            </label>
+
                             {/* Disappearing Messages */}
                             <div style={{ marginBottom: '16px' }}>
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
@@ -385,7 +398,7 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                                                 addToast({ title: 'Channel unarchived', variant: 'success' });
                                                 onClose();
                                             } catch {
-                                                addToast({ title: 'Failed to unarchive', variant: 'error' });
+                                                addToast({ title: 'Failed to unarchive channel. Try again.', variant: 'error' });
                                             }
                                         }}
                                         style={{
@@ -414,7 +427,7 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                                                             addToast({ title: 'Channel archived', variant: 'success' });
                                                             onClose();
                                                         } catch {
-                                                            addToast({ title: 'Failed to archive', variant: 'error' });
+                                                            addToast({ title: 'Failed to archive channel. Try again.', variant: 'error' });
                                                         }
                                                     }}
                                                     style={{

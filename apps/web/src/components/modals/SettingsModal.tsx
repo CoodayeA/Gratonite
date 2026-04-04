@@ -659,15 +659,15 @@ const SettingsModal = ({
                 const uploaded = await api.users.uploadAvatar(croppedFile);
                 updateUser({ avatarHash: uploaded.avatarHash });
                 await refetchUser();
-                addToast({ title: 'Avatar Updated', variant: 'success' });
-            } catch { addToast({ title: 'Failed to upload avatar', variant: 'error' }); }
+                addToast({ title: 'Avatar updated', variant: 'success' });
+            } catch { addToast({ title: 'Failed to upload avatar. Try again.', variant: 'error' }); }
         } else if (cropTarget === 'banner') {
             try {
                 const uploaded = await api.users.uploadBanner(croppedFile);
                 updateUser({ bannerHash: uploaded.bannerHash });
                 await refetchUser();
-                addToast({ title: 'Banner Updated', variant: 'success' });
-            } catch { addToast({ title: 'Failed to upload banner', variant: 'error' }); }
+                addToast({ title: 'Banner updated', variant: 'success' });
+            } catch { addToast({ title: 'Failed to upload banner. Try again.', variant: 'error' }); }
         }
         setCropTarget(null);
         setPendingFile(null);
@@ -678,9 +678,9 @@ const SettingsModal = ({
             await api.users.deleteAvatar();
             updateUser({ avatarHash: null });
             await refetchUser();
-            addToast({ title: 'Avatar Removed', variant: 'success' });
+            addToast({ title: 'Avatar removed', variant: 'success' });
         } catch {
-            addToast({ title: 'Failed to remove avatar', variant: 'error' });
+            addToast({ title: 'Failed to remove avatar. Try again.', variant: 'error' });
         }
     };
 
@@ -689,9 +689,9 @@ const SettingsModal = ({
             await api.users.deleteBanner();
             updateUser({ bannerHash: null });
             await refetchUser();
-            addToast({ title: 'Banner Removed', variant: 'success' });
+            addToast({ title: 'Banner removed', variant: 'success' });
         } catch {
-            addToast({ title: 'Failed to remove banner', variant: 'error' });
+            addToast({ title: 'Failed to remove banner. Try again.', variant: 'error' });
         }
     };
 
@@ -703,7 +703,7 @@ const SettingsModal = ({
             setJoinedGuilds((prev) => prev.map((g) => (g.id === guildId ? { ...g, nickname: draft.length ? draft : null } : g)));
             addToast({ title: 'Server nickname updated', variant: 'success' });
         } catch (err: unknown) {
-            addToast({ title: 'Failed to update server nickname', description: (err instanceof Error ? err.message : '') || 'Unknown error', variant: 'error' });
+            addToast({ title: 'Failed to update server nickname. Try again.', description: (err instanceof Error ? err.message : '') || undefined, variant: 'error' });
         } finally {
             setSavingNicknameForGuildId(null);
         }
@@ -720,7 +720,7 @@ const SettingsModal = ({
             });
             addToast({ title: 'Server profile updated', variant: 'success' });
         } catch (err: unknown) {
-            addToast({ title: 'Failed to update server profile', description: (err instanceof Error ? err.message : '') || 'Unknown error', variant: 'error' });
+            addToast({ title: 'Failed to update server profile. Try again.', description: (err instanceof Error ? err.message : '') || undefined, variant: 'error' });
         } finally {
             setSavingServerProfileForGuildId(null);
         }
@@ -731,9 +731,9 @@ const SettingsModal = ({
         try {
             await api.profiles.deleteServerProfile(guildId);
             setServerProfileDrafts((prev) => ({ ...prev, [guildId]: { displayName: '', bio: '' } }));
-            addToast({ title: 'Server profile reset to global', variant: 'success' });
+            addToast({ title: 'Server profile reset', variant: 'success' });
         } catch (err: unknown) {
-            addToast({ title: 'Failed to reset server profile', description: (err instanceof Error ? err.message : '') || 'Unknown error', variant: 'error' });
+            addToast({ title: 'Failed to reset server profile. Try again.', description: (err instanceof Error ? err.message : '') || undefined, variant: 'error' });
         } finally {
             setSavingServerProfileForGuildId(null);
         }
@@ -1946,6 +1946,9 @@ function SettingsNotificationsPanel() {
                         }} />
                     </div>
                 </div>
+
+                {/* Push Notification Status & Diagnostics */}
+                <PushReliabilityPanel pushEnabled={pushEnabled} pushSupported={pushSupported} />
             </div>
 
             <div style={{ marginBottom: '32px' }}>
@@ -2011,6 +2014,96 @@ function SettingsNotificationsPanel() {
                 <DndSchedulePanel />
             </div>
         </>
+    );
+}
+
+function PushReliabilityPanel({ pushEnabled, pushSupported }: { pushEnabled: boolean; pushSupported: boolean }) {
+    const { addToast } = useToast();
+    const [testing, setTesting] = useState(false);
+    const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+    const [swStatus, setSwStatus] = useState<'checking' | 'active' | 'inactive' | 'unsupported'>('checking');
+
+    useEffect(() => {
+        if (!pushSupported) { setSwStatus('unsupported'); return; }
+        navigator.serviceWorker.getRegistration().then(reg => {
+            setSwStatus(reg?.active ? 'active' : 'inactive');
+        }).catch(() => setSwStatus('inactive'));
+    }, [pushSupported]);
+
+    const sendTestPush = async () => {
+        setTesting(true);
+        setTestResult(null);
+        try {
+            await api.push.sendTest?.();
+            setTestResult({ ok: true, message: 'Test push sent — check your notifications.' });
+            addToast({ title: 'Test push sent', variant: 'success' });
+        } catch (err: any) {
+            const msg = err?.message || 'Failed to send test push';
+            setTestResult({ ok: false, message: msg });
+            addToast({ title: 'Test push failed', description: msg, variant: 'error' });
+        }
+        setTesting(false);
+    };
+
+    const statusColor = {
+        active: '#34d399',
+        inactive: '#f87171',
+        unsupported: 'var(--text-muted)',
+        checking: 'var(--text-muted)',
+    }[swStatus];
+
+    const statusLabel = {
+        active: 'Service worker active',
+        inactive: 'Service worker not registered',
+        unsupported: 'Not supported in this browser',
+        checking: 'Checking…',
+    }[swStatus];
+
+    return (
+        <div style={{ marginTop: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', padding: '14px 16px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px', color: 'var(--text-secondary)' }}>Push Notification Status</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Browser support</span>
+                    <span style={{ fontWeight: 600, color: pushSupported ? '#34d399' : '#f87171' }}>{pushSupported ? 'Supported' : 'Not supported'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Subscription status</span>
+                    <span style={{ fontWeight: 600, color: pushEnabled ? '#34d399' : 'var(--text-muted)' }}>{pushEnabled ? 'Subscribed' : 'Not subscribed'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Service worker</span>
+                    <span style={{ fontWeight: 600, color: statusColor }}>{statusLabel}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Notification permission</span>
+                    <span style={{ fontWeight: 600, color: 'Notification' in window && Notification.permission === 'granted' ? '#34d399' : '#f87171' }}>
+                        {'Notification' in window ? Notification.permission : 'unavailable'}
+                    </span>
+                </div>
+            </div>
+            {pushEnabled && (
+                <div>
+                    <button
+                        onClick={sendTestPush}
+                        disabled={testing}
+                        style={{ padding: '7px 16px', borderRadius: '7px', background: testing ? 'var(--bg-elevated)' : 'var(--accent-primary)', border: 'none', color: testing ? 'var(--text-muted)' : '#000', fontWeight: 600, fontSize: '12px', cursor: testing ? 'not-allowed' : 'pointer' }}
+                    >
+                        {testing ? 'Sending…' : 'Send Test Push'}
+                    </button>
+                    {testResult && (
+                        <div style={{ marginTop: '8px', fontSize: '12px', color: testResult.ok ? '#34d399' : '#f87171', fontWeight: 500 }}>
+                            {testResult.ok ? '✓' : '✗'} {testResult.message}
+                        </div>
+                    )}
+                </div>
+            )}
+            {!pushEnabled && pushSupported && (
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
+                    Enable push notifications above to test delivery.
+                </p>
+            )}
+        </div>
     );
 }
 

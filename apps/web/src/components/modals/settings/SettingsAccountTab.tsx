@@ -73,7 +73,7 @@ const SettingsAccountTab = ({ addToast, userProfile, setUserProfile, onNavigateT
             {editingField === 'displayName' && (
               <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                 <input type="text" value={tempEditValue} onChange={e => setTempEditValue(e.target.value)} autoFocus style={{ flex: 1, padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--accent-primary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }} />
-                <button onClick={() => { api.users.updateAccountBasics({ displayName: tempEditValue }).then(() => { setEditDisplayName(tempEditValue); updateUser({ name: tempEditValue }); if (setUserProfile) setUserProfile((prev: UserProfileLike) => ({ ...prev, name: tempEditValue })); setEditingField(null); addToast({ title: 'Display Name Updated', description: `Display name changed to "${tempEditValue}".`, variant: 'success' }); }).catch(() => addToast({ title: 'Failed to update display name', variant: 'error' })); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Save</button>
+                <button onClick={() => { api.users.updateAccountBasics({ displayName: tempEditValue }).then(() => { setEditDisplayName(tempEditValue); updateUser({ name: tempEditValue }); if (setUserProfile) setUserProfile((prev: UserProfileLike) => ({ ...prev, name: tempEditValue })); setEditingField(null); addToast({ title: 'Display name updated', variant: 'success' }); }).catch(() => addToast({ title: 'Failed to update display name. Try again.', variant: 'error' })); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Save</button>
                 <button onClick={() => setEditingField(null)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Cancel</button>
               </div>
             )}
@@ -93,7 +93,7 @@ const SettingsAccountTab = ({ addToast, userProfile, setUserProfile, onNavigateT
             {editingField === 'username' && (
               <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                 <input type="text" value={tempEditValue} onChange={e => setTempEditValue(e.target.value)} autoFocus style={{ flex: 1, padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--accent-primary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }} />
-                <button onClick={() => { api.users.updateAccountBasics({ username: tempEditValue }).then(() => { setEditUsername(tempEditValue); updateUser({ handle: tempEditValue }); setEditingField(null); addToast({ title: 'Username Updated', description: `Username changed to "${tempEditValue}".`, variant: 'success' }); }).catch((e: unknown) => addToast({ title: 'Failed to update username', description: (e as Record<string, string>)?.message || 'Unknown error', variant: 'error' })); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Save</button>
+                <button onClick={() => { api.users.updateAccountBasics({ username: tempEditValue }).then(() => { setEditUsername(tempEditValue); updateUser({ handle: tempEditValue }); setEditingField(null); addToast({ title: 'Username updated', variant: 'success' }); }).catch((e: unknown) => addToast({ title: 'Failed to update username. Try again.', description: (e as Record<string, string>)?.message || undefined, variant: 'error' })); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Save</button>
                 <button onClick={() => setEditingField(null)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Cancel</button>
               </div>
             )}
@@ -113,7 +113,7 @@ const SettingsAccountTab = ({ addToast, userProfile, setUserProfile, onNavigateT
             {editingField === 'email' && (
               <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                 <input type="email" value={tempEditValue} onChange={e => setTempEditValue(e.target.value)} autoFocus style={{ flex: 1, padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--accent-primary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }} />
-                <button onClick={() => { api.users.updateAccountBasics({ email: tempEditValue }).then(() => { setEditEmail(tempEditValue); updateUser({ email: tempEditValue.toLowerCase(), emailVerified: false }); setEditingField(null); addToast({ title: 'Email Updated', description: 'Email saved. Please re-verify this address if required.', variant: 'success' }); }).catch((e: unknown) => addToast({ title: 'Failed to update email', description: (e as Record<string, string>)?.message || 'Unknown error', variant: 'error' })); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Save</button>
+                <button onClick={() => { api.users.updateAccountBasics({ email: tempEditValue }).then(() => { setEditEmail(tempEditValue); updateUser({ email: tempEditValue.toLowerCase(), emailVerified: false }); setEditingField(null); addToast({ title: 'Email updated', description: 'Please re-verify this address if required.', variant: 'success' }); }).catch((e: unknown) => addToast({ title: 'Failed to update email. Try again.', description: (e as Record<string, string>)?.message || undefined, variant: 'error' })); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Save</button>
                 <button onClick={() => setEditingField(null)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Cancel</button>
               </div>
             )}
@@ -154,8 +154,8 @@ const SettingsAccountTab = ({ addToast, userProfile, setUserProfile, onNavigateT
                     if (currentPassword && newPassword && newPassword === confirmPassword) {
                       api.users.changePassword(currentPassword, newPassword).then(() => {
                         setShowPasswordForm(false); setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
-                        addToast({ title: 'Password Changed', description: 'Your password has been updated successfully.', variant: 'success' });
-                      }).catch((e: unknown) => addToast({ title: 'Failed to change password', description: (e as Record<string, string>)?.message || 'Check your current password', variant: 'error' }));
+                        addToast({ title: 'Password changed', variant: 'success' });
+                      }).catch((e: unknown) => addToast({ title: 'Failed to change password. Try again.', description: (e as Record<string, string>)?.message || undefined, variant: 'error' }));
                     }
                   }}
                   disabled={!currentPassword || !newPassword || newPassword !== confirmPassword}
@@ -188,9 +188,9 @@ const SettingsAccountTab = ({ addToast, userProfile, setUserProfile, onNavigateT
                   if (deleteConfirmText === 'DELETE' && deletePassword) {
                     api.users.deleteAccount(deletePassword).then(() => {
                       setShowDeleteConfirm(false); setDeleteConfirmText('');
-                      addToast({ title: 'Account Deleted', description: 'Your account has been scheduled for deletion.', variant: 'success' });
+                      addToast({ title: 'Account deleted', description: 'Your account has been scheduled for deletion.', variant: 'success' });
                       window.location.href = '/login';
-                    }).catch((e: unknown) => addToast({ title: 'Failed to delete account', description: (e as Record<string, string>)?.message || 'Unknown error', variant: 'error' }));
+                    }).catch((e: unknown) => addToast({ title: 'Failed to delete account. Try again.', description: (e as Record<string, string>)?.message || undefined, variant: 'error' }));
                   }
                 }}
                 disabled={deleteConfirmText !== 'DELETE' || !deletePassword}
