@@ -14,6 +14,7 @@ import type {
 import { createPluginSandbox, destroyPluginSandbox, sendMessageToPlugin, invokeSlashCommand } from './PluginSandbox';
 import { BUILTIN_PLUGINS, getBuiltinPluginCode } from './builtinPlugins';
 import { apiFetch } from '../lib/api/_core';
+import { sendDesktopNotification } from '../lib/notificationService';
 
 const STORAGE_KEY = 'gratonite:plugins';
 
@@ -140,9 +141,7 @@ function startPlugin(instance: PluginInstance): void {
       }
     },
     onNotification: (title, body) => {
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, { body });
-      }
+      sendDesktopNotification({ title, body });
     },
     onSidebarPanelUpdate: (title, html) => {
       const idx = sidebarPanels.findIndex(p => p.pluginId === instance.manifest.id && p.title === title);
