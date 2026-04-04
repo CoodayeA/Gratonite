@@ -276,11 +276,7 @@ export default function ThemeEditorModal({ onClose, editingThemeId }: ThemeEdito
       alignItems: 'center',
       justifyContent: 'center',
     }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div role="dialog" aria-modal="true" style={{
-        background: 'var(--bg-primary)',
-        borderRadius: '16px',
-        width: '90vw',
-        maxWidth: '1100px',
+      <div role="dialog" aria-modal="true" aria-label="Theme editor" style={{
         height: '85vh',
         display: 'flex',
         flexDirection: 'column',

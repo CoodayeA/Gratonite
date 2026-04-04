@@ -88,13 +88,13 @@ const KeyboardShortcutsModal = ({ onClose }: { onClose: () => void }) => {
         <div className="modal-backdrop" onClick={onClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div
                 role="dialog" aria-modal="true"
+                aria-label="Keyboard shortcuts"
                 className="glass-panel"
                 onClick={e => e.stopPropagation()}
                 style={{
                     width: 'min(650px, 95vw)',
                     borderRadius: '16px',
                     border: '1px solid var(--stroke)',
-                    boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column',

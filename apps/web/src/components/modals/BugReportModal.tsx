@@ -95,13 +95,13 @@ const BugReportModal = ({ onClose }: { onClose: () => void }) => {
         <div className="modal-backdrop" onClick={onClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div
                 role="dialog" aria-modal="true"
+                aria-label="Report a bug"
                 onClick={e => e.stopPropagation()}
                 style={{
                     width: 'min(460px, 95vw)',
                     background: 'var(--bg-elevated)',
                     borderRadius: 16,
                     border: '1px solid var(--stroke)',
-                    boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
                     overflow: 'hidden',
                     animation: 'scaleIn 0.2s ease-out',
                     maxHeight: '90vh',

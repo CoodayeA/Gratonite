@@ -123,7 +123,7 @@ const ForwardModal = ({ message, onClose, onForward }: ForwardModalProps) => {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
         >
-            <div role="dialog" aria-modal="true" style={{
+            <div role="dialog" aria-modal="true" aria-label="Forward message" style={{
                 width: 'min(520px, 95vw)', position: 'relative', overflow: 'hidden',
                 background: 'var(--bg-elevated)', border: '3px solid #000000',
                 boxShadow: '8px 8px 0 #000000', borderRadius: '0px',

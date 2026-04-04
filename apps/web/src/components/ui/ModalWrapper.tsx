@@ -149,9 +149,10 @@ interface ModalWrapperProps {
     isOpen: boolean;
     children: React.ReactNode;
     onClose?: () => void;
+    ariaLabel?: string;
 }
 
-export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, onClose }) => {
+export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, onClose, ariaLabel }) => {
     const [shouldRender, setShouldRender] = useState(false);
     const { containerRef, handleKeyDown } = useFocusTrap(isOpen);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -229,6 +230,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
                 ref={containerRef}
                 role="dialog"
                 aria-modal="true"
+                aria-label={ariaLabel}
                 tabIndex={-1}
                 onKeyDown={handleKeyDown}
                 style={{
@@ -288,6 +290,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
             ref={containerRef}
             role="dialog"
             aria-modal="true"
+            aria-label={ariaLabel}
             tabIndex={-1}
             onKeyDown={handleKeyDown}
             style={{

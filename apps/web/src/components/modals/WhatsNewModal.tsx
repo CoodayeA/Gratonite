@@ -32,7 +32,7 @@ export default function WhatsNewModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
-      <div role="dialog" aria-modal="true" style={{ width: 500, maxWidth: '95vw', maxHeight: '80vh', overflow: 'auto', padding: 24, background: 'var(--bg-elevated)', borderRadius: 16, border: '1px solid var(--stroke)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label="What's new" style={{ width: 500, maxWidth: '95vw', maxHeight: '80vh', overflow: 'auto', padding: 24, background: 'var(--bg-elevated)', borderRadius: 16, border: '1px solid var(--stroke)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Sparkles size={22} style={{ color: '#6366f1' }} />

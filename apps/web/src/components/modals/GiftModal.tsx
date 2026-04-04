@@ -54,7 +54,7 @@ export default function GiftModal({ recipientId, recipientName, onClose }: GiftM
       <div className="modal-backdrop" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }} onClick={onClose}>
-        <div role="dialog" aria-modal="true" onClick={e => e.stopPropagation()} style={{
+        <div role="dialog" aria-modal="true" aria-label="Gift sent" onClick={e => e.stopPropagation()} style={{
           background: 'var(--bg-secondary)', borderRadius: '16px', padding: '40px',
           width: '420px', maxWidth: '95vw', textAlign: 'center',
         }}>
@@ -80,7 +80,7 @@ export default function GiftModal({ recipientId, recipientName, onClose }: GiftM
     <div className="modal-backdrop" style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }} onClick={onClose}>
-      <div role="dialog" aria-modal="true" onClick={e => e.stopPropagation()} style={{
+      <div role="dialog" aria-modal="true" aria-label="Send a gift" onClick={e => e.stopPropagation()} style={{
         background: 'var(--bg-secondary)', borderRadius: '16px',
         width: '480px', maxWidth: '95vw', overflow: 'hidden',
       }}>

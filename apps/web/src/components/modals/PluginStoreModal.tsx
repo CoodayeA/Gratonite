@@ -52,7 +52,7 @@ export default function PluginStoreModal({ onClose, installedPlugins: propPlugin
     return (
         <ModalWrapper isOpen={true}>
             <div className="modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
-                <div role="dialog" aria-modal="true" style={{ width: 640, maxWidth: '95vw', maxHeight: '80vh', overflow: 'hidden', background: 'var(--bg-elevated)', borderRadius: 16, border: '1px solid var(--stroke)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+                <div role="dialog" aria-modal="true" aria-label="Plugin store" style={{ width: 640, maxWidth: '95vw', maxHeight: '80vh', overflow: 'hidden', background: 'var(--bg-elevated)', borderRadius: 16, border: '1px solid var(--stroke)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
                     {/* Header */}
                     <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--stroke)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

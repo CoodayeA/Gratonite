@@ -62,7 +62,7 @@ export default function IncomingCallModal({
       alignItems: 'center',
       justifyContent: 'center',
     }}>
-      <div role="dialog" aria-modal="true" style={{
+      <div role="dialog" aria-modal="true" aria-label="Incoming call" style={{
         background: 'var(--bg-secondary, #1e1f22)',
         borderRadius: 16,
         padding: '40px 48px',

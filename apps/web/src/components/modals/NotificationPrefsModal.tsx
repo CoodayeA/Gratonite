@@ -71,7 +71,7 @@ export function NotificationPrefsModal({ type, id, name, onClose }: Props) {
 
   return (
     <div className="modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
-      <div role="dialog" aria-modal="true" className="modal-content notif-prefs-modal" onClick={e => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label="Notification preferences" className="modal-content notif-prefs-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Notification Settings</h3>
           <span className="modal-subtitle">{name}</span>

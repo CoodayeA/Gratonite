@@ -250,11 +250,7 @@ export default function ThemeStoreModal({ onClose, preSelectedThemeId }: ThemeSt
       alignItems: 'center',
       justifyContent: 'center',
     }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div role="dialog" aria-modal="true" style={{
-        background: 'var(--bg-primary)',
-        borderRadius: '16px',
-        width: '90vw',
-        maxWidth: '960px',
+      <div role="dialog" aria-modal="true" aria-label="Theme store" style={{
         height: '85vh',
         display: 'flex',
         flexDirection: 'column',

@@ -210,13 +210,13 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
         >
             <div
                 role="dialog" aria-modal="true"
+                aria-label="Channel settings"
                 onClick={e => e.stopPropagation()}
                 style={{
                     background: 'var(--bg-elevated)',
                     border: '1px solid var(--stroke)',
                     borderRadius: '16px',
                     display: 'flex',
-                    width: '860px',
                     maxWidth: '95vw',
                     height: 'min(620px, calc(90vh - var(--desktop-titlebar-inset, 0px)))',
                     maxHeight: 'calc(90vh - var(--desktop-titlebar-inset, 0px))',

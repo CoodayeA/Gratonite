@@ -176,6 +176,7 @@ const GlobalSearchModal = ({ onClose }: { onClose: () => void }) => {
         <div className="modal-backdrop" onClick={onClose} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: isMobile ? '0' : '15vh' }}>
             <div
                 role="dialog" aria-modal="true"
+                aria-label="Search"
                 className="glass-panel"
                 onClick={e => e.stopPropagation()}
                 style={{

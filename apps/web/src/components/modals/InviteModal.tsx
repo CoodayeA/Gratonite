@@ -70,7 +70,7 @@ const InviteModal = ({ onClose, guildId }: { onClose: () => void; guildId: strin
 
     return (
         <div className="modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
-            <div role="dialog" aria-modal="true" className="login-box glass-panel" style={{ width: 'min(480px, 95vw)', padding: '32px', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div role="dialog" aria-modal="true" aria-label="Invite to server" className="login-box glass-panel" style={{ width: 'min(480px, 95vw)', padding: '32px', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
                 <button onClick={onClose} style={{ position: 'absolute', top: 24, right: 24, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                     <X size={24} />
                 </button>
