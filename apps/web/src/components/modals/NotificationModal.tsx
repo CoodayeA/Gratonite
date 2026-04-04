@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, AtSign, CheckCircle2, Trash2, X, ChevronDown, ChevronRight, MessageSquare, Heart, UserPlus, Mail, Settings, Gavel } from 'lucide-react';
+import { Bell, AtSign, CheckCircle2, Trash2, X, ChevronDown, ChevronRight, MessageSquare, Heart, UserPlus, Mail, Settings, Gavel, BellOff } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
 import Avatar from '../ui/Avatar';
@@ -40,6 +40,7 @@ type DaySection = {
 type FilterTab = 'all' | 'mentions' | 'dms' | 'social' | 'system';
 
 const FILTER_STORAGE_KEY = 'gratonite-notif-filter';
+const SNOOZE_KEY = 'gratonite:notif-snooze';
 
 const GROUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -203,17 +204,89 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+    const [snoozedUntil, setSnoozedUntil] = useState<number | null>(() => {
+        try { const v = localStorage.getItem(SNOOZE_KEY); return v ? Number(v) : null; } catch { return null; }
+    });
+    const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
     const handleTabChange = useCallback((tab: FilterTab) => {
         setActiveTab(tab);
         try { localStorage.setItem(FILTER_STORAGE_KEY, tab); } catch {}
     }, []);
 
+    const dismissSnooze = useCallback(() => {
+        setSnoozedUntil(null);
+        try { localStorage.removeItem(SNOOZE_KEY); } catch {}
+    }, []);
+
+    const snooze = (minutes: number | 'tomorrow') => {
+        let until: number;
+        if (minutes === 'tomorrow') {
+            const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(8, 0, 0, 0);
+            until = d.getTime();
+        } else {
+            until = Date.now() + minutes * 60000;
+        }
+        setSnoozedUntil(until);
+        try { localStorage.setItem(SNOOZE_KEY, String(until)); } catch {}
+        setShowSnoozeMenu(false);
+    };
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+    };
+
+    const allVisibleIds = useMemo(() => {
+        const ids: string[] = [];
+        for (const section of daySections) {
+            for (const item of section.items) {
+                if (isGroup(item)) item.items.forEach(n => ids.push(n.id));
+                else ids.push(item.id);
+            }
+        }
+        return ids;
+    }, [daySections]);
+
+    const allSelected = allVisibleIds.length > 0 && allVisibleIds.every(id => selectedIds.has(id));
+    const toggleSelectAll = () => {
+        if (allSelected) setSelectedIds(new Set());
+        else setSelectedIds(new Set(allVisibleIds));
+    };
+
+    const bulkMarkRead = () => {
+        const ids = [...selectedIds];
+        Promise.all(ids.map(id => api.notifications.markRead(id))).catch(() => {});
+        setNotifications(prev => prev.map(n => ids.includes(n.id) ? { ...n, read: true } : n));
+        setSelectedIds(new Set());
+    };
+
+    const bulkDismiss = () => {
+        const ids = [...selectedIds];
+        Promise.all(ids.map(id => api.notifications.dismiss(id))).catch(() => {});
+        setNotifications(prev => prev.filter(n => !ids.includes(n.id)));
+        setSelectedIds(new Set());
+    };
+
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
         window.addEventListener('keydown', handleKey);
         return () => window.removeEventListener('keydown', handleKey);
     }, [onClose]);
+
+    useEffect(() => {
+        if (snoozedUntil && snoozedUntil < Date.now()) dismissSnooze();
+    }, []);
+
+    useEffect(() => {
+        if (!showSnoozeMenu) return;
+        const handler = (e: MouseEvent) => {
+            const target = e.target as Element;
+            if (!target.closest('.snooze-menu-container')) setShowSnoozeMenu(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [showSnoozeMenu]);
 
     useEffect(() => {
         setIsLoading(true);
@@ -310,6 +383,13 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
 
     const renderNotification = (notif: Notification) => (
         <div key={notif.id} onClick={() => handleNotificationClick(notif)} className="hover-notif-item" style={{ padding: '12px 24px', borderBottom: '1px solid var(--stroke)', display: 'flex', gap: '12px', background: notif.read ? 'transparent' : 'rgba(82, 109, 245, 0.05)', cursor: 'pointer', transition: 'background 0.2s' }}>
+            <input
+                type="checkbox"
+                checked={selectedIds.has(notif.id)}
+                onChange={e => { e.stopPropagation(); toggleSelect(notif.id); }}
+                onClick={e => e.stopPropagation()}
+                style={{ marginRight: '8px', marginTop: '4px', cursor: 'pointer', accentColor: 'var(--accent-blue)', flexShrink: 0 }}
+            />
             <div style={{ position: 'relative' }}>
                 <Avatar userId={notif.userId || notif.id} displayName={notif.user} size={36} />
                 {!notif.read && <div style={{ position: 'absolute', top: -2, right: -2, width: '10px', height: '10px', borderRadius: '50%', background: 'var(--accent-blue)', border: '2px solid var(--bg-primary)' }} />}
@@ -377,6 +457,26 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
                         <button onClick={markAllRead} style={{ background: 'transparent', border: 'none', color: 'var(--accent-blue)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <CheckCircle2 size={14} /> Mark Read
                         </button>
+                        <div className="snooze-menu-container" style={{ position: 'relative' }}>
+                            <button onClick={() => setShowSnoozeMenu(v => !v)} title="Snooze notifications" style={{ background: 'transparent', border: 'none', color: snoozedUntil ? 'var(--accent-blue)' : 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <BellOff size={14} /> Snooze
+                            </button>
+                            {showSnoozeMenu && (
+                                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '4px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', zIndex: 100, minWidth: '160px', overflow: 'hidden' }}>
+                                    {([{ label: '15 minutes', value: 15 as const }, { label: '1 hour', value: 60 as const }, { label: '8 hours', value: 480 as const }, { label: 'Tomorrow 8am', value: 'tomorrow' as const }] as { label: string; value: number | 'tomorrow' }[]).map(opt => (
+                                        <button key={opt.label} onClick={() => snooze(opt.value)} style={{ display: 'block', width: '100%', padding: '8px 16px', background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '13px', textAlign: 'left', cursor: 'pointer' }}
+                                            className="hover-notif-item">
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        {selectedIds.size > 0 && (
+                            <button onClick={toggleSelectAll} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                                {allSelected ? 'Deselect All' : 'Select All'}
+                            </button>
+                        )}
                         <button onClick={clearAll} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} title="Clear all notifications">
                             <Trash2 size={14} />
                         </button>
@@ -385,6 +485,17 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
                         </button>
                     </div>
                 </div>
+
+                {/* Snooze banner */}
+                {snoozedUntil && snoozedUntil > Date.now() && (
+                    <div style={{ padding: '8px 16px', background: 'rgba(82, 109, 245, 0.15)', borderBottom: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                        <BellOff size={14} color="var(--accent-blue)" />
+                        <span style={{ flex: 1, color: 'var(--text-primary)' }}>
+                            Notifications snoozed until {new Date(snoozedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <button onClick={dismissSnooze} style={{ background: 'transparent', border: 'none', color: 'var(--accent-blue)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>Dismiss</button>
+                    </div>
+                )}
 
                 {/* Filter Tabs */}
                 <div style={{ padding: '8px 12px', display: 'flex', gap: '4px', borderBottom: '1px solid var(--stroke)', background: 'var(--bg-primary)', overflowX: 'auto' }}>
@@ -434,6 +545,19 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
                         );
                     })}
                 </div>
+
+                {/* Bulk toolbar */}
+                {selectedIds.size > 0 && (
+                    <div style={{ padding: '8px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', flex: 1 }}>{selectedIds.size} selected</span>
+                        <button onClick={bulkMarkRead} style={{ background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', padding: '4px 10px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <CheckCircle2 size={12} />Mark Read
+                        </button>
+                        <button onClick={bulkDismiss} style={{ background: 'var(--bg-tertiary)', border: 'none', color: 'var(--error)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', padding: '4px 10px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Trash2 size={12} />Dismiss
+                        </button>
+                    </div>
+                )}
 
                 {/* Notification List */}
                 <div style={{ overflowY: 'auto', flex: 1, background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}>
