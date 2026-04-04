@@ -14,7 +14,7 @@ export const metadata: Metadata = createPageMetadata({
     "Gratonite self-hosting",
     "deploy Gratonite",
     "Gratonite server",
-    "Discord alternative self-hosted",
+    "self-hosted community platform",
     "federated chat server",
   ],
 });

@@ -97,7 +97,7 @@ export function Showcase() {
           <ScrollReveal delay={0.2}>
             <div className="bg-purple neo-border rounded-xl p-6 neo-shadow text-white">
               <h3 className="font-display font-bold text-lg mb-2">
-                {'"My friend group ditched Discord for this and nobody looked back."'}
+                {'"My friend group moved here and nobody looked back."'}
               </h3>
               <p className="text-white/70 text-sm mt-4">
                 Early Gratonite community feedback

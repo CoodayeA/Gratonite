@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Gratonite Chat",
     short_name: "Gratonite",
     description:
-      "Gratonite Chat is a free, open-source Discord alternative for friend groups and communities.",
+      "Gratonite Chat is a free, open-source community platform for friend groups and communities.",
     start_url: "/",
     display: "standalone",
     background_color: "#f6efe3",

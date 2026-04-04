@@ -9,15 +9,15 @@ import { CTA } from "@/components/landing/CTA";
 import { SITE_URL, createPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Gratonite Chat | Free, Open-Source Discord Alternative",
+  title: "Gratonite Chat | Free, Open-Source Community Platform",
   description:
-    "Gratonite Chat is a free, open-source Discord alternative for friends, gaming communities, guilds, and study groups. Real-time chat, spatial voice, cosmetics, and an auction house with no ads or tracking.",
+    "Gratonite Chat is a free, open-source community platform for friends, gaming communities, guilds, and study groups. Real-time chat, spatial voice, cosmetics, and an auction house with no ads or tracking.",
   path: "/",
   keywords: [
     "Gratonite",
     "Gratonite Chat",
-    "Discord alternative",
-    "free open source Discord alternative",
+    "open source community platform",
+    "free open source chat",
     "chat app for friends",
     "gaming voice chat",
     "spatial voice chat",
@@ -32,7 +32,7 @@ const softwareJsonLd = {
   operatingSystem: "Windows, macOS, Linux, Web",
   applicationCategory: "CommunicationApplication",
   description:
-    "A free, open-source Discord alternative with real-time chat, spatial voice, community cosmetics, and an auction house.",
+    "A free, open-source community platform with real-time chat, spatial voice, community cosmetics, and an auction house.",
   offers: {
     "@type": "Offer",
     price: "0",

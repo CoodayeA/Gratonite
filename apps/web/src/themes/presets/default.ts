@@ -3,7 +3,7 @@ import { ThemeDefinition } from '../types';
 const defaultTheme: ThemeDefinition = {
   id: 'default',
   name: 'Default',
-  description: 'Clean & modern Discord-inspired theme',
+  description: 'Clean & modern dark theme',
   category: 'dark',
   author: 'Gratonite',
   isDark: true,

@@ -7,16 +7,16 @@ import { ScrollReveal } from "@/components/effects/ScrollReveal";
 import { SITE_URL, createPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Gratonite Blog | Open-Source Discord Alternative Updates",
+  title: "Gratonite Blog | Community Platform Updates",
   description:
-    "Follow Gratonite development with product updates, Discord alternative guides, comparison articles, and community insights from the team building Gratonite Chat.",
+    "Follow Gratonite development with product updates, community guides, and insights from the team building Gratonite Chat.",
   path: "/blog/",
   keywords: [
     "Gratonite blog",
     "Gratonite Chat updates",
-    "Discord alternative blog",
+    "open source community platform blog",
     "open source chat app blog",
-    "Gratonite comparison",
+    "Gratonite community",
   ],
 });
 
@@ -72,11 +72,10 @@ export default function BlogPage() {
                     Featured
                   </Badge>
                   <h2 className="font-display text-2xl font-bold mb-2 group-hover:text-purple transition-colors">
-                    Why Gratonite? A Free, Open-Source Alternative to Discord
+                    Why Gratonite? A Free, Open-Source Community Platform
                   </h2>
                   <p className="text-white/60">
-                    Side-by-side feature comparison, what sets us apart, and
-                    answers to common questions about switching.
+                    What sets Gratonite apart and answers to common questions about making the switch.
                   </p>
                 </div>
                 <span className="font-display text-2xl font-bold text-white/20 group-hover:text-purple transition-colors mt-2">
