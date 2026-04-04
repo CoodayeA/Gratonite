@@ -3,6 +3,13 @@ import { api, API_BASE, getAccessToken } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
 
 type NotifLevel = 'all' | 'mentions' | 'nothing';
+
+type Profile = { id: string; label: string; desc: string; level: NotifLevel; muted: boolean };
+const PROFILES: Profile[] = [
+    { id: 'all-alerts', label: 'All Alerts', desc: 'Mentions + DMs', level: 'all', muted: false },
+    { id: 'focus-mode', label: 'Focus Mode', desc: 'DMs only', level: 'mentions', muted: false },
+    { id: 'silent', label: 'Silent', desc: 'No notifications', level: 'nothing', muted: true },
+];
 interface MuteDuration { label: string; minutes: number | null; }
 const MUTE_DURATIONS: MuteDuration[] = [
   { label: '15 minutes', minutes: 15 },
@@ -29,6 +36,7 @@ export function NotificationPrefsModal({ type, id, name, onClose }: Props) {
   const settingKey = `notif:${type}:${id}`;
   const [level, setLevel] = useState<NotifLevel>('all');
   const [muted, setMuted] = useState(false);
+  const activePreset = PROFILES.find(p => p.level === level && p.muted === muted);
   const [muteDuration, setMuteDuration] = useState<number | null>(60);
   const [saving, setSaving] = useState(false);
 
@@ -78,6 +86,34 @@ export function NotificationPrefsModal({ type, id, name, onClose }: Props) {
           <button className="modal-close" onClick={onClose}>&times;</button>
         </div>
         <div className="modal-body">
+          <div className="notif-section" style={{ marginBottom: '16px' }}>
+            <label className="notif-section-title">Quick Profiles</label>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              {PROFILES.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => { setLevel(p.level); setMuted(p.muted); }}
+                  style={{
+                    flex: 1,
+                    padding: '10px 8px',
+                    borderRadius: '8px',
+                    border: `2px solid ${activePreset?.id === p.id ? 'var(--accent-primary)' : 'var(--stroke)'}`,
+                    background: activePreset?.id === p.id ? 'rgba(82, 109, 245, 0.15)' : 'var(--bg-tertiary)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    textAlign: 'center' as const,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <div style={{ fontSize: '13px', fontWeight: 600 }}>{p.label}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{p.desc}</div>
+                  {activePreset?.id === p.id && (
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--accent-primary)', marginTop: '4px' }}>ACTIVE</div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="notif-section">
             <label className="notif-section-title">Notifications</label>
             {(['all', 'mentions', 'nothing'] as NotifLevel[]).map(l => (
