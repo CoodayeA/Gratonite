@@ -75,6 +75,7 @@ function CustomDrawerContent(
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [creating, setCreating] = useState(false);
+  const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
 
   // ---- Fetch channels ----
 
@@ -98,6 +99,7 @@ function CustomDrawerContent(
   const navigateToChannel = useCallback(
     (item: Channel) => {
       const parentNav = (props.navigation as any).getParent?.();
+      setActiveChannelId(item.id);
       switch (item.type) {
         case 'GUILD_TEXT':
           props.navigation.navigate('ChannelChat', {
@@ -312,12 +314,22 @@ function CustomDrawerContent(
           paddingVertical: spacing.sm,
           paddingHorizontal: spacing.lg,
           gap: spacing.sm,
+          borderRadius: borderRadius.md,
+          marginHorizontal: spacing.sm,
+          marginVertical: 1,
+        },
+        channelItemActive: {
+          backgroundColor: colors.accentLight,
         },
         channelName: {
           color: colors.textSecondary,
           fontSize: fontSize.md,
           fontWeight: '500',
           flex: 1,
+        },
+        channelNameActive: {
+          color: colors.textPrimary,
+          fontWeight: '600',
         },
         moveBtn: {
           padding: 4,
@@ -414,16 +426,21 @@ function CustomDrawerContent(
       }
 
       // Channel item
+      const isActive = item.channel.id === activeChannelId;
       return (
         <TouchableOpacity
-          style={s.channelItem}
+          style={[s.channelItem, isActive && s.channelItemActive]}
           onPress={() => {
             if (!isEditing) navigateToChannel(item.channel);
           }}
           activeOpacity={isEditing ? 1 : 0.7}
         >
-          <Ionicons name={getIcon(item.channel.type)} size={20} color={colors.textMuted} />
-          <Text style={s.channelName} numberOfLines={1}>
+          <Ionicons
+            name={getIcon(item.channel.type)}
+            size={20}
+            color={isActive ? colors.accentPrimary : colors.textMuted}
+          />
+          <Text style={[s.channelName, isActive && s.channelNameActive]} numberOfLines={1}>
             {item.channel.name}
           </Text>
           {isEditing && (
@@ -447,7 +464,7 @@ function CustomDrawerContent(
         </TouchableOpacity>
       );
     },
-    [isEditing, colors, s, navigateToChannel, toggleCategory, moveChannel],
+    [isEditing, colors, s, navigateToChannel, toggleCategory, moveChannel, activeChannelId],
   );
 
   const keyExtractor = useCallback((item: ListItem) => item.id, []);
