@@ -6,7 +6,7 @@ export const SITE_BRAND = "Gratonite Chat";
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/Gratonite_logo.png`;
 
 export const DEFAULT_DESCRIPTION =
-  "Gratonite is a free, open-source Discord alternative for friends, gaming communities, guilds, and study groups. Real-time chat, spatial voice, collectibles, cosmetics, and an auction house with no ads or tracking.";
+  "Gratonite is a free, open-source community platform for friends, gaming communities, guilds, and study groups. Real-time chat, spatial voice, collectibles, cosmetics, and an auction house with no ads or tracking.";
 
 type PageMetadataOptions = {
   title: string;
@@ -82,7 +82,7 @@ export function articleKeywords(postTitle: string, slug: string) {
   return [
     "Gratonite",
     "Gratonite Chat",
-    "Discord alternative",
+    "open source community platform",
     "open source chat app",
     "privacy-first chat app",
     "spatial voice chat",

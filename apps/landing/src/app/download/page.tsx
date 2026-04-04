@@ -14,7 +14,7 @@ export const metadata: Metadata = createPageMetadata({
   keywords: [
     "Gratonite download",
     "chat app download",
-    "Discord alternative download",
+    "open source community platform download",
     "self-host chat",
     "open source chat app",
     "macOS chat app",

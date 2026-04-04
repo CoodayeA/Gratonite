@@ -34,8 +34,8 @@ export function ServerSection() {
           Create your portal
         </h2>
         <p className="text-foreground/60 text-base mb-10 max-w-lg">
-          A portal is your own community space, like a Discord server,
-          but entirely yours. Use ours for free, or host it yourself.
+          A portal is your own community space — entirely yours. Use ours for
+          free, or host it yourself.
         </p>
       </ScrollReveal>
 

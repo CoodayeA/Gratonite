@@ -11,7 +11,7 @@ export const metadata: Metadata = createPageMetadata({
   keywords: [
     "Gratonite privacy",
     "Gratonite safety",
-    "private Discord alternative",
+    "private open source chat",
     "no tracking chat app",
   ],
 });

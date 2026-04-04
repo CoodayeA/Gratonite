@@ -29,15 +29,14 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   applicationName: SITE_BRAND,
   title: {
-    default: "Gratonite Chat | Free, Open-Source Discord Alternative",
+    default: "Gratonite Chat | Free, Open-Source Community Platform",
     template: "%s | Gratonite Chat",
   },
   description: DEFAULT_DESCRIPTION,
   keywords: [
     "Gratonite",
     "Gratonite Chat",
-    "Discord alternative",
-    "open source Discord alternative",
+    "open source community platform",
     "free chat app",
     "spatial voice chat",
     "community chat app",
@@ -53,7 +52,7 @@ export const metadata: Metadata = {
     telephone: false,
   },
   openGraph: {
-    title: "Gratonite Chat | Free, Open-Source Discord Alternative",
+    title: "Gratonite Chat | Free, Open-Source Community Platform",
     description: DEFAULT_DESCRIPTION,
     type: "website",
     locale: "en_US",
@@ -70,7 +69,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Gratonite Chat | Free, Open-Source Discord Alternative",
+    title: "Gratonite Chat | Free, Open-Source Community Platform",
     description: DEFAULT_DESCRIPTION,
     images: [DEFAULT_OG_IMAGE],
   },

@@ -2,7 +2,7 @@
 
 # Gratonite
 
-**Discord, but you own it.**
+**Your community platform. You own it.**
 
 Real-time chat, voice, video, E2E encryption, and federation — fully self-hostable, forever free, no phone number required.
 
@@ -140,7 +140,7 @@ Or download the [Gratonite Server](https://github.com/CoodayeA/Gratonite/release
 
 ### Bots and Integrations
 - Bot store and bot builder
-- Slash commands (Discord-compatible), message components
+- Slash commands and message components
 - Webhooks with delivery logs and auditing
 - OAuth2 authorization flow
 

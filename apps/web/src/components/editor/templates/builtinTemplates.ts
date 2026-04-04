@@ -117,7 +117,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       num('No spam or self-promotion'),
       num('No NSFW content'),
       num('No harassment or hate speech'),
-      num('Follow Discord TOS'),
+      num('Follow our community guidelines'),
       p('Breaking rules may result in warnings, mutes, or bans.'),
     ],
   },

@@ -77,7 +77,7 @@ export function MobileSection() {
             </div>
             <p className="text-foreground/40 text-xs mt-3 leading-snug">
               Android is in active development. We will announce availability on
-              our blog and Discord.
+              our blog and in the community.
             </p>
           </Card>
         </ScrollReveal>

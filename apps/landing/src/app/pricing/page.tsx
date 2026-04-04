@@ -5,15 +5,15 @@ import { ScrollReveal } from "@/components/effects/ScrollReveal";
 import { createPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Gratonite Pricing | Free Forever Discord Alternative",
+  title: "Gratonite Pricing | Free Forever",
   description:
-    "See Gratonite pricing: 100% free forever with no ads, no tracking, and no paywalled core features. An open-source Discord alternative that puts community over profit.",
+    "See Gratonite pricing: 100% free forever with no ads, no tracking, and no paywalled core features. An open-source community platform that puts community over profit.",
   path: "/pricing/",
   keywords: [
     "Gratonite pricing",
     "is Gratonite free",
-    "free Discord alternative",
-    "Discord alternative no ads",
+    "free community platform",
+    "open source chat no ads",
   ],
 });
 
