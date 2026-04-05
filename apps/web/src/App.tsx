@@ -1546,14 +1546,17 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
             const seen = new Set<string>();
             return list.filter(ch => { const k = dedupeKey(ch); if (seen.has(k)) return false; seen.add(k); return true; });
         };
+        // Legacy scaffold category names created by the old template setup code.
+        // We promote their children to uncategorized instead of rendering them as
+        // collapsible sub-sections inside the static Text/Voice section headers.
+        const LEGACY_SCAFFOLD_CATS = new Set(['text-channels', 'voice-channels', 'textchannels', 'voicechannels']);
+        const isLegacyScaffold = (name: string) => LEGACY_SCAFFOLD_CATS.has(name.toLowerCase().replace(/\s+/g, '-'));
+
         const seenCatKeys = new Set<string>();
         const categories = guildChannels
             .filter(c => isCatType(c.type))
             .sort((a, b) => a.position - b.position)
             .filter(cat => { const k = `${cat.type}:${cat.name.toLowerCase()}`; if (seenCatKeys.has(k)) return false; seenCatKeys.add(k); return true; });
-        const uncategorized = dedupe(
-            guildChannels.filter(c => !isCatType(c.type) && !c.parentId).sort((a, b) => a.position - b.position)
-        );
         const byParent = new Map<string, typeof guildChannels>();
         for (const ch of guildChannels) {
             if (isCatType(ch.type) || !ch.parentId) continue;
@@ -1564,11 +1567,21 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         for (const [key, list] of byParent) {
             byParent.set(key, dedupe(list.sort((a, b) => a.position - b.position)));
         }
+
+        // Channels with no parent + children of legacy scaffold categories are all "uncategorized"
+        const legacyScaffoldIds = new Set(categories.filter(c => isLegacyScaffold(c.name)).map(c => c.id));
+        const promotedFromLegacy = Array.from(legacyScaffoldIds).flatMap(id => byParent.get(id) || []);
+        const uncategorized = dedupe(
+            [...guildChannels.filter(c => !isCatType(c.type) && !c.parentId), ...promotedFromLegacy]
+                .sort((a, b) => a.position - b.position)
+        );
+
         const uncatText = uncategorized.filter(c => !isVoiceChannelType(c.type) && c.type !== 'GUILD_DOCUMENT');
         const uncatVoice = uncategorized.filter(c => isVoiceChannelType(c.type));
         const textCats: typeof categories = [];
         const voiceCats: typeof categories = [];
         for (const cat of categories) {
+            if (isLegacyScaffold(cat.name)) continue; // skip — children already promoted above
             const children = byParent.get(cat.id) || [];
             const allVoice = children.length > 0 && children.every(c => isVoiceChannelType(c.type));
             (allVoice || (cat.name.toLowerCase().includes('voice') && children.length === 0) ? voiceCats : textCats).push(cat);
