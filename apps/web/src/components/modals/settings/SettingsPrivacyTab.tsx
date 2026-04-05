@@ -4,8 +4,9 @@ import DataExportWidget from '../../../pages/app/DataExport';
 import type { SettingsTabProps, UserProfileLike } from './types';
 
 // PrivacyToggle — self-contained toggle with localStorage + API sync
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { api } from '../../../lib/api';
+import { exportKeyBundle, importKeyBundle, getOrCreateKeyPair } from '../../../lib/e2e';
 
 const ProfileVisibilitySelect = () => {
   const [visibility, setVisibility] = useState<'public' | 'friends' | 'hidden'>(() => {
@@ -98,6 +99,138 @@ interface Props extends SettingsTabProps {
   userProfile?: UserProfileLike;
   onNavigateTab: (tab: string) => void;
 }
+
+// ---------------------------------------------------------------------------
+// E2E Key Backup — export / import the private encryption key so messages
+// can be decrypted on any device.
+// ---------------------------------------------------------------------------
+
+const E2EKeyBackupSection = ({ userId }: { userId: string }) => {
+  const [exportPassword, setExportPassword] = useState('');
+  const [exportConfirm, setExportConfirm] = useState('');
+  const [exportStatus, setExportStatus] = useState<'idle' | 'loading' | 'ok' | 'err'>('idle');
+
+  const [importPassword, setImportPassword] = useState('');
+  const [importStatus, setImportStatus] = useState<'idle' | 'loading' | 'ok' | 'err'>('idle');
+  const [importError, setImportError] = useState('');
+  const importFileRef = useRef<HTMLInputElement>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+
+  const handleExport = async () => {
+    if (!exportPassword || exportPassword !== exportConfirm) return;
+    setExportStatus('loading');
+    try {
+      const bundle = await exportKeyBundle(userId, exportPassword);
+      const blob = new Blob([bundle], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `gratonite-e2e-key-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setExportStatus('ok');
+      setExportPassword('');
+      setExportConfirm('');
+    } catch {
+      setExportStatus('err');
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importFile || !importPassword) return;
+    setImportStatus('loading');
+    setImportError('');
+    try {
+      const text = await importFile.text();
+      await importKeyBundle(userId, text, importPassword);
+      setImportStatus('ok');
+      setImportPassword('');
+      setImportFile(null);
+    } catch (e: any) {
+      setImportStatus('err');
+      setImportError(e?.message?.includes('version') ? 'Unsupported bundle format' : 'Wrong password or corrupted file');
+    }
+  };
+
+  return (
+    <div id="e2e-key-backup-section" style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
+      {/* Export */}
+      <div style={{ padding: '16px', borderBottom: '1px solid var(--stroke)' }}>
+        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Export encryption key</div>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: '1.5' }}>
+          Download a password-protected backup of your private key. Import it on another device to read your encrypted messages there.
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <input
+            type="password"
+            placeholder="Set a strong password for this backup"
+            value={exportPassword}
+            onChange={e => setExportPassword(e.target.value)}
+            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
+          />
+          <input
+            type="password"
+            placeholder="Confirm password"
+            value={exportConfirm}
+            onChange={e => setExportConfirm(e.target.value)}
+            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
+          />
+          {exportPassword && exportConfirm && exportPassword !== exportConfirm && (
+            <div style={{ fontSize: '12px', color: 'var(--color-error, #ef4444)' }}>Passwords do not match</div>
+          )}
+          <button
+            onClick={handleExport}
+            disabled={!exportPassword || exportPassword !== exportConfirm || exportStatus === 'loading'}
+            style={{ padding: '8px 16px', borderRadius: '8px', background: 'var(--accent-primary)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, opacity: (!exportPassword || exportPassword !== exportConfirm) ? 0.5 : 1 }}
+          >
+            {exportStatus === 'loading' ? 'Exporting…' : 'Download key backup'}
+          </button>
+          {exportStatus === 'ok' && <div style={{ fontSize: '12px', color: 'var(--color-success, #22c55e)' }}>✓ Key backup downloaded — keep it safe!</div>}
+          {exportStatus === 'err' && <div style={{ fontSize: '12px', color: 'var(--color-error, #ef4444)' }}>Export failed. Try again.</div>}
+        </div>
+      </div>
+
+      {/* Import */}
+      <div style={{ padding: '16px' }}>
+        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Restore encryption key</div>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: '1.5' }}>
+          Import a key backup file to restore access to encrypted messages on this device. Your existing key will be preserved as a fallback.
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <input
+            ref={importFileRef}
+            type="file"
+            accept=".json"
+            style={{ display: 'none' }}
+            onChange={e => setImportFile(e.target.files?.[0] ?? null)}
+          />
+          <button
+            onClick={() => importFileRef.current?.click()}
+            style={{ padding: '8px 16px', borderRadius: '8px', background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--stroke)', cursor: 'pointer', fontSize: '13px', textAlign: 'left' }}
+          >
+            {importFile ? `📄 ${importFile.name}` : 'Choose key backup file…'}
+          </button>
+          <input
+            type="password"
+            placeholder="Password for this backup"
+            value={importPassword}
+            onChange={e => setImportPassword(e.target.value)}
+            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
+          />
+          <button
+            onClick={handleImport}
+            disabled={!importFile || !importPassword || importStatus === 'loading'}
+            style={{ padding: '8px 16px', borderRadius: '8px', background: 'var(--accent-primary)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, opacity: (!importFile || !importPassword) ? 0.5 : 1 }}
+          >
+            {importStatus === 'loading' ? 'Restoring…' : 'Restore key'}
+          </button>
+          {importStatus === 'ok' && <div style={{ fontSize: '12px', color: 'var(--color-success, #22c55e)' }}>✓ Key restored! Reload the page to see your messages.</div>}
+          {importStatus === 'err' && <div style={{ fontSize: '12px', color: 'var(--color-error, #ef4444)' }}>{importError || 'Import failed. Check your password and file.'}</div>}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const SettingsPrivacyTab = ({ userProfile, onNavigateTab }: Props) => {
   return (
@@ -233,6 +366,15 @@ const SettingsPrivacyTab = ({ userProfile, onNavigateTab }: Props) => {
 
       <div id="data-export-section" style={{ marginBottom: '32px' }}>
         <DataExportWidget />
+      </div>
+
+      <div style={{ marginBottom: '32px' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>Encryption Key Backup</h3>
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+          Back up your private encryption key so you can restore end-to-end encrypted messages on any device.
+          Your key never leaves your device unencrypted — the backup is protected by a password only you know.
+        </p>
+        <E2EKeyBackupSection userId={userProfile?.id || ''} />
       </div>
 
       <div style={{ marginBottom: '32px' }}>

@@ -1098,10 +1098,12 @@ export const confessionsApi = {
 };
 
 export const encryptionApi = {
-  getPublicKey: (userId: string) =>
-    apiFetch<{ publicKeyJwk: string | null }>(`/users/${userId}/public-key`),
+  getPublicKey: (userId: string, version?: 'prev') =>
+    apiFetch<{ publicKeyJwk: string | null; keyVersion: number | null }>(
+      `/users/${userId}/public-key${version ? `?version=${version}` : ''}`,
+    ),
   uploadPublicKey: (publicKeyJwk: string) =>
-    apiFetch<void>('/users/@me/public-key', { method: 'POST', body: JSON.stringify({ publicKeyJwk }) }),
+    apiFetch<{ keyVersion: number }>('/users/@me/public-key', { method: 'POST', body: JSON.stringify({ publicKeyJwk }) }),
   getGroupKey: (channelId: string) =>
     apiFetch<{ version: number | null; encryptedKey: string | null }>(`/channels/${channelId}/group-key`),
   postGroupKey: (channelId: string, data: { version: number; keyData: Record<string, string> }) =>

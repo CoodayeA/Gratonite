@@ -62,14 +62,32 @@ keysRouter.get(
   requireAuth,
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { userId } = req.params as Record<string, string>;
+    const wantPrev = req.query.version === 'prev';
 
     const [row] = await db
-      .select({ publicKeyJwk: userPublicKeys.publicKeyJwk })
+      .select({
+        publicKeyJwk: userPublicKeys.publicKeyJwk,
+        keyVersion: userPublicKeys.keyVersion,
+        previousKeyJwk: userPublicKeys.previousKeyJwk,
+      })
       .from(userPublicKeys)
       .where(eq(userPublicKeys.userId, userId))
       .limit(1);
 
-    res.status(200).json({ publicKeyJwk: row?.publicKeyJwk ?? null });
+    if (!row) {
+      res.status(200).json({ publicKeyJwk: null, keyVersion: null });
+      return;
+    }
+
+    if (wantPrev) {
+      res.status(200).json({
+        publicKeyJwk: row.previousKeyJwk ?? null,
+        keyVersion: row.keyVersion != null ? row.keyVersion - 1 : null,
+      });
+      return;
+    }
+
+    res.status(200).json({ publicKeyJwk: row.publicKeyJwk, keyVersion: row.keyVersion });
   }),
 );
 
@@ -101,17 +119,36 @@ keysRouter.post(
 
     // Check if user already had a key (to detect key rotation vs first upload)
     const [existing] = await db
-      .select({ userId: userPublicKeys.userId })
+      .select({
+        userId: userPublicKeys.userId,
+        publicKeyJwk: userPublicKeys.publicKeyJwk,
+        keyVersion: userPublicKeys.keyVersion,
+      })
       .from(userPublicKeys)
       .where(eq(userPublicKeys.userId, userId))
       .limit(1);
 
+    const newKeyVersion = existing ? (existing.keyVersion ?? 1) + 1 : 1;
+
     await db
       .insert(userPublicKeys)
-      .values({ userId, publicKeyJwk, createdAt: now, updatedAt: now })
+      .values({
+        userId,
+        publicKeyJwk,
+        createdAt: now,
+        updatedAt: now,
+        keyVersion: newKeyVersion,
+        previousKeyJwk: null,
+      })
       .onConflictDoUpdate({
         target: userPublicKeys.userId,
-        set: { publicKeyJwk, updatedAt: now },
+        set: {
+          publicKeyJwk,
+          updatedAt: now,
+          keyVersion: newKeyVersion,
+          // Preserve the outgoing key so DM partners can re-derive old shared keys.
+          previousKeyJwk: existing?.publicKeyJwk ?? null,
+        },
       });
 
     // If this was a key rotation (not first upload), notify all DM partners
@@ -131,6 +168,6 @@ keysRouter.post(
       }
     }
 
-    res.status(200).json({ success: true });
+    res.status(200).json({ success: true, keyVersion: newKeyVersion });
   }),
 );

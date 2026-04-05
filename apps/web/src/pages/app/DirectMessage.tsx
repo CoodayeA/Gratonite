@@ -425,6 +425,10 @@ const DirectMessage = () => {
     // Store key pair ref for group key rotation
     const e2eKeyPairRef = useRef<{ publicKey: CryptoKey; privateKey: CryptoKey } | null>(null);
     const partnerPublicKeyRef = useRef<CryptoKey | null>(null);
+    /** Previous shared key — kept when USER_KEY_CHANGED fires so in-flight messages can still decrypt. */
+    const prevE2eKeyRef = useRef<CryptoKey | null>(null);
+    /** My current key version (from the server) — stamped on outgoing messages. */
+    const myKeyVersionRef = useRef<number>(1);
     const [showSafetyNumber, setShowSafetyNumber] = useState(false);
     const [safetyNumber, setSafetyNumber] = useState<string | null>(null);
     // Map of attachmentId -> decrypted blob URL + metadata (for E2E-encrypted files)
@@ -1051,7 +1055,8 @@ const DirectMessage = () => {
                 // Upload public key if newly generated
                 if (isNew) {
                     const jwk = await exportPublicKey(myKeyPair.publicKey);
-                    await api.encryption.uploadPublicKey(jwk);
+                    const uploadResult = await api.encryption.uploadPublicKey(jwk);
+                    if (uploadResult?.keyVersion) myKeyVersionRef.current = uploadResult.keyVersion;
                 }
 
                 const data = await api.encryption.getPublicKey(recipientId);
@@ -1091,7 +1096,8 @@ const DirectMessage = () => {
 
                 if (isNew) {
                     const jwk = await exportPublicKey(myKeyPair.publicKey);
-                    await api.encryption.uploadPublicKey(jwk);
+                    const uploadResult = await api.encryption.uploadPublicKey(jwk);
+                    if (uploadResult?.keyVersion) myKeyVersionRef.current = uploadResult.keyVersion;
                 }
 
                 // Attempt to fetch the existing group key for this user.
@@ -1168,10 +1174,37 @@ const DirectMessage = () => {
         );
         if (encryptedMsgs.length === 0) return;
 
+        // Capture key references at the start of this batch to avoid the race
+        // where setE2eKey() fires while Promises are in-flight.
+        const currentKey = e2eKey;
+        const prevKey = prevE2eKeyRef.current;
+
+        // Lazily fetch the partner's previous public key (only on first decrypt
+        // failure in the batch; result is reused for all subsequent failures).
+        let prevServerKeyPromise: Promise<CryptoKey | null> | null = null;
+        const getPrevServerKey = (): Promise<CryptoKey | null> => {
+            if (prevServerKeyPromise) return prevServerKeyPromise;
+            if (isGroupDm || !recipientId) {
+                prevServerKeyPromise = Promise.resolve(null);
+                return prevServerKeyPromise;
+            }
+            prevServerKeyPromise = (async () => {
+                try {
+                    const data = await api.encryption.getPublicKey(recipientId, 'prev');
+                    if (!data.publicKeyJwk) return null;
+                    const theirPrevKey = await importPublicKey(data.publicKeyJwk);
+                    const myKeyPair = e2eKeyPairRef.current;
+                    if (!myKeyPair) return null;
+                    return await deriveSharedKey(myKeyPair.privateKey, theirPrevKey);
+                } catch { return null; }
+            })();
+            return prevServerKeyPromise;
+        };
+
         Promise.all(
             encryptedMsgs.map(async (m) => {
                 try {
-                    const plain = await decrypt(e2eKey, m.encryptedContent!);
+                    const plain = await decrypt(currentKey, m.encryptedContent!);
                     // Check for structured E2E payload (v2 — includes file metadata)
                     try {
                         const parsed = JSON.parse(plain);
@@ -1183,7 +1216,7 @@ const DirectMessage = () => {
                                     if (att && !decryptInFlightRef.current.has(fileMeta.id)) {
                                         decryptInFlightRef.current.add(fileMeta.id);
                                         fetch(att.url, { signal: controller.signal }).then(r => r.blob()).then(async (blob) => {
-                                            const decrypted = await decryptFile(e2eKey, blob, fileMeta.iv, fileMeta.ef);
+                                            const decrypted = await decryptFile(currentKey, blob, fileMeta.iv, fileMeta.ef);
                                             const blobUrl = URL.createObjectURL(decrypted);
                                             blobUrlsRef.current.push(blobUrl);
                                             setDecryptedFileUrls(prev => {
@@ -1200,6 +1233,21 @@ const DirectMessage = () => {
                     } catch { /* not JSON — plain text, fall through */ }
                     return [m.id, plain] as const;
                 } catch {
+                    // Primary key failed — try the in-memory previous key first (fastest).
+                    if (prevKey) {
+                        try {
+                            const plain = await decrypt(prevKey, m.encryptedContent!);
+                            return [m.id, plain] as const;
+                        } catch { /* fall through to server prev key */ }
+                    }
+                    // Try the partner's previous server-side key (one generation back).
+                    const prevServerKey = await getPrevServerKey();
+                    if (prevServerKey) {
+                        try {
+                            const plain = await decrypt(prevServerKey, m.encryptedContent!);
+                            return [m.id, plain] as const;
+                        } catch { /* fall through — truly unrecoverable */ }
+                    }
                     return [m.id, '[Decryption failed]'] as const;
                 }
             }),
@@ -1289,7 +1337,11 @@ const DirectMessage = () => {
                         const theirKey = await importPublicKey(d.publicKeyJwk);
                         partnerPublicKeyRef.current = theirKey;
                         const sharedKey = await deriveSharedKey(myKeyPair.privateKey, theirKey);
-                        setE2eKey(sharedKey);
+                        // Preserve the old key so messages already in-flight can still decrypt.
+                        setE2eKey(prev => {
+                            prevE2eKeyRef.current = prev;
+                            return sharedKey;
+                        });
                     } catch { /* keep showing warning */ }
                 })();
             }
@@ -1807,7 +1859,7 @@ const DirectMessage = () => {
                             ? JSON.stringify({ _e2e: 2, text: content, files: encryptedFileMeta })
                             : content;
                         const encryptedContent = await encrypt(e2eKey!, plainPayload ?? '');
-                        sendPayload = { content: null, encryptedContent, isEncrypted: true, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined, ...(groupKeyVersion != null ? { keyVersion: groupKeyVersion } : {}), ...(replyToApiId ? { replyToId: replyToApiId } : {}) };
+                        sendPayload = { content: null, encryptedContent, isEncrypted: true, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined, ...(groupKeyVersion != null ? { keyVersion: groupKeyVersion } : { keyVersion: myKeyVersionRef.current }), ...(replyToApiId ? { replyToId: replyToApiId } : {}) };
                         // Store decrypted version optimistically so sender sees plaintext immediately
                         setDecryptedContents(prev => { const next = new Map(prev); next.set(optimisticId, content ?? ''); return next; });
                     } catch {
@@ -2677,9 +2729,10 @@ const DirectMessage = () => {
                                                     {msg.isEncrypted ? (
                                                         decryptedContents.has(msg.id) ? (
                                                             decryptedContents.get(msg.id) === '[Decryption failed]' ? (
-                                                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                                                    <Shield size={12} />
-                                                                    Unable to decrypt — encryption keys may have changed
+                                                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                                                    <Lock size={12} />
+                                                                    Not available on this device
+                                                                    <button onClick={() => { if (typeof (window as any).__openSettings === 'function') (window as any).__openSettings('privacy'); }} style={{ color: 'var(--accent-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 'inherit', fontStyle: 'inherit', textDecoration: 'underline' }} title="Restore your encryption key in Privacy settings">Restore key →</button>
                                                                 </span>
                                                             ) : (
                                                                 <RichTextRenderer content={decryptedContents.get(msg.id)!} members={dmMembersForMentions} />

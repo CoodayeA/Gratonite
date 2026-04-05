@@ -233,9 +233,17 @@ export async function getOrCreateKeyPair(
     // Generate a new key pair.
     const keyPair = await generateKeyPair();
 
-    // Persist in IndexedDB.
-    const writeTx = db.transaction(STORE_NAME, 'readwrite');
-    writeTx.objectStore(STORE_NAME).put(keyPair, userId);
+    // Persist in IndexedDB — await the write so the key is durable before
+    // we return. A fire-and-forget put() can silently lose the key if the
+    // tab closes before the IDB transaction commits, causing permanent loss.
+    await new Promise<void>((resolve, reject) => {
+      const writeTx = db.transaction(STORE_NAME, 'readwrite');
+      const req = writeTx.objectStore(STORE_NAME).put(keyPair, userId);
+      req.onerror = () => reject(req.error);
+      writeTx.oncomplete = () => resolve();
+      writeTx.onerror = () => reject(writeTx.error);
+      writeTx.onabort = () => reject(writeTx.error);
+    });
 
     return { keyPair, isNew: true };
   } catch {
@@ -253,6 +261,166 @@ export async function getOrCreateKeyPair(
  */
 export function isE2ESupported(): boolean {
   return !!(window.crypto?.subtle && window.indexedDB);
+}
+
+// ---------------------------------------------------------------------------
+// Previous key pair retrieval
+// ---------------------------------------------------------------------------
+
+/**
+ * Load a previously saved "previous" key pair from IndexedDB.
+ *
+ * This is only populated when the user explicitly rotates or imports a key
+ * bundle (the old key pair is stored under `${userId}_prev` before the new
+ * one overwrites the primary slot). Returns null if no previous pair exists.
+ */
+export async function getPreviousKeyPair(
+  userId: string,
+): Promise<{ publicKey: CryptoKey; privateKey: CryptoKey } | null> {
+  try {
+    const idb = await openKeyDB();
+    return await new Promise<{ publicKey: CryptoKey; privateKey: CryptoKey } | null>(
+      (resolve, reject) => {
+        const tx = idb.transaction(STORE_NAME, 'readonly');
+        const req = tx.objectStore(STORE_NAME).get(`${userId}_prev`);
+        req.onsuccess = () =>
+          resolve(
+            (req.result as { publicKey: CryptoKey; privateKey: CryptoKey } | undefined) ?? null,
+          );
+        req.onerror = () => reject(req.error);
+      },
+    );
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Key bundle export / import (Settings → Privacy)
+// ---------------------------------------------------------------------------
+
+/**
+ * Export the user's ECDH key pair as a password-encrypted bundle (JSON).
+ *
+ * The private key is wrapped with AES-GCM using a PBKDF2-derived key so it
+ * can be stored or transferred safely. The bundle is intended to be saved by
+ * the user and imported on another device to restore decryption capability.
+ */
+export async function exportKeyBundle(userId: string, password: string): Promise<string> {
+  const result = await getOrCreateKeyPair(userId);
+  if (!result) throw new Error('No key pair available');
+
+  const enc = new TextEncoder();
+  const privateKeyBytes = await crypto.subtle.exportKey('pkcs8', result.keyPair.privateKey);
+  const publicKeyBytes = await crypto.subtle.exportKey('spki', result.keyPair.publicKey);
+
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const passKey = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, [
+    'deriveKey',
+  ]);
+  const wrapKey = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 200_000, hash: 'SHA-256' },
+    passKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt'],
+  );
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encryptedPrivKey = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    wrapKey,
+    privateKeyBytes,
+  );
+
+  const bundle = {
+    version: 1,
+    salt: btoa(String.fromCharCode(...salt)),
+    iv: btoa(String.fromCharCode(...iv)),
+    encryptedPrivateKey: btoa(String.fromCharCode(...new Uint8Array(encryptedPrivKey))),
+    publicKey: btoa(String.fromCharCode(...new Uint8Array(publicKeyBytes))),
+  };
+  return JSON.stringify(bundle, null, 2);
+}
+
+/**
+ * Import a key bundle previously created by `exportKeyBundle` and store the
+ * recovered key pair in IndexedDB, replacing any existing key for the user.
+ *
+ * The old key pair (if any) is saved under `${userId}_prev` so that messages
+ * encrypted with the old shared key remain decryptable.
+ */
+export async function importKeyBundle(
+  userId: string,
+  bundleJson: string,
+  password: string,
+): Promise<void> {
+  const bundle = JSON.parse(bundleJson) as {
+    version: number;
+    salt: string;
+    iv: string;
+    encryptedPrivateKey: string;
+    publicKey: string;
+  };
+  if (bundle.version !== 1) throw new Error('Unsupported bundle version');
+
+  const enc = new TextEncoder();
+  const salt = Uint8Array.from(atob(bundle.salt), (c) => c.charCodeAt(0));
+  const iv = Uint8Array.from(atob(bundle.iv), (c) => c.charCodeAt(0));
+  const encryptedPrivBytes = Uint8Array.from(atob(bundle.encryptedPrivateKey), (c) =>
+    c.charCodeAt(0),
+  );
+  const publicKeyBytes = Uint8Array.from(atob(bundle.publicKey), (c) => c.charCodeAt(0));
+
+  const passKey = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, [
+    'deriveKey',
+  ]);
+  const wrapKey = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 200_000, hash: 'SHA-256' },
+    passKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt'],
+  );
+
+  const privateKeyBytes = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    wrapKey,
+    encryptedPrivBytes,
+  );
+
+  const privateKey = await crypto.subtle.importKey(
+    'pkcs8',
+    privateKeyBytes,
+    { name: 'ECDH', namedCurve: 'P-256' },
+    true,
+    ['deriveKey'],
+  );
+  const publicKey = await crypto.subtle.importKey(
+    'spki',
+    publicKeyBytes,
+    { name: 'ECDH', namedCurve: 'P-256' },
+    true,
+    [],
+  );
+
+  const idb = await openKeyDB();
+  await new Promise<void>((resolve, reject) => {
+    const tx = idb.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+
+    // Save current key (if any) as previous before overwriting.
+    const readReq = store.get(userId);
+    readReq.onsuccess = () => {
+      if (readReq.result) store.put(readReq.result, `${userId}_prev`);
+      store.put({ publicKey, privateKey }, userId);
+    };
+    readReq.onerror = () => reject(readReq.error);
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
 }
 
 // ---------------------------------------------------------------------------
