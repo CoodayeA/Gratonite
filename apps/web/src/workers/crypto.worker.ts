@@ -70,7 +70,11 @@ async function decryptFileOp(
 // ---------------------------------------------------------------------------
 
 self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
-  const { id, op, payload } = e.data;
+  // Avoid object destructuring here — esbuild ≤ 0.28 cannot transform
+  // destructuring inside Web Worker bundles for legacy browser targets.
+  const id = e.data.id;
+  const op = e.data.op;
+  const payload = e.data.payload;
   try {
     switch (op) {
       case 'encrypt': {
