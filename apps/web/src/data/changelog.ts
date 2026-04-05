@@ -113,6 +113,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       { type: 'fix', text: 'E2E "unable to decrypt" failures eliminated — multi-key fallback now tries your previous key, then retrieves historical partner keys from the server before giving up. Rotated keys no longer break old messages' },
       { type: 'improvement', text: 'E2E encryption auto-enables in DMs as soon as both parties have keys — no more needing to manually toggle the lock icon' },
       { type: 'improvement', text: 'What\'s New redesigned — spotlight cards for major features, settings deep links to jump straight to what\'s new, and a cleaner entry list by category' },
+      { type: 'improvement', text: 'Create Server templates overhauled — 10 fresh templates (Gaming, Friends & Family, Creative Hub, Study Group, Music, Content Creator, Dev & Tech, Roleplay & Story, Professional, Community & Club) each with a curated set of pre-built channels' },
       { type: 'feature', text: 'Upload progress bars — watch each file upload in real time with per-file XHR progress, pause/cancel controls, and a one-click retry if anything fails' },
       { type: 'feature', text: 'Notification snooze — need a break? Hit Snooze on any notification and pick how long. Snooze from 15 minutes to "until I say so"' },
       { type: 'feature', text: 'Bulk notification management — select all, mark all read, or dismiss an entire group in one click from the notifications panel' },
