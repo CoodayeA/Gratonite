@@ -10,6 +10,7 @@
     "audit:e2e": "node tools/audit-e2e-primitives.mjs"
   },
   "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "@sentry/cli"],
     "overrides": {
       "@types/react": "18.3.28",
       "@types/react-dom": "18.3.7",

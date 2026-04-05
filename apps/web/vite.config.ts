@@ -23,6 +23,7 @@ export default defineConfig(({ mode }) => ({
     format: 'es',
   },
   build: {
+    target: 'es2022',
     sourcemap: mode === 'analyze' ? true : 'hidden',
     rollupOptions: {
       output: {
