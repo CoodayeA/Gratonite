@@ -3474,6 +3474,30 @@ export const AppLayout = () => {
         };
     }, []);
 
+    // Listen for guild deleted/left custom events dispatched by GuildSettingsModal.
+    // The WebSocket GUILD_DELETE/GUILD_LEFT events may not fire back to the owner
+    // reliably, so we also handle the client-side custom event directly.
+    useEffect(() => {
+        const handleDeleted = (e: Event) => {
+            const { guildId } = (e as CustomEvent<{ guildId: string }>).detail ?? {};
+            if (!guildId) return;
+            setGuilds(prev => prev.filter(g => g.id !== guildId));
+            if (activeGuildId === guildId) navigate('/app');
+        };
+        const handleLeft = (e: Event) => {
+            const { guildId } = (e as CustomEvent<{ guildId: string }>).detail ?? {};
+            if (!guildId) return;
+            setGuilds(prev => prev.filter(g => g.id !== guildId));
+            if (activeGuildId === guildId) navigate('/app');
+        };
+        window.addEventListener('gratonite:guild-deleted', handleDeleted);
+        window.addEventListener('gratonite:guild-left', handleLeft);
+        return () => {
+            window.removeEventListener('gratonite:guild-deleted', handleDeleted);
+            window.removeEventListener('gratonite:guild-left', handleLeft);
+        };
+    }, [activeGuildId, navigate]);
+
     const [userProfile, setUserProfile] = useState<{
         id: string;
         name: string;
