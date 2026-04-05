@@ -801,6 +801,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         if (activeTab === 'overview' || activeTab === 'channels' || activeTab === 'webhooks') fetchChannels();
         if (activeTab === 'roles') fetchRoles();
         if (activeTab === 'members') { fetchMembers(); setSelectedMemberIds(new Set()); }
+        if (activeTab === 'overview' && roles.length === 0) fetchRoles();
+        if (activeTab === 'overview' && members.length === 0) fetchMembers();
         if (activeTab === 'invites') fetchInvites();
         if (activeTab === 'wordfilter' && guildId) {
             if (roles.length === 0) fetchRoles();
@@ -1447,12 +1449,46 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                         <div style={{ padding: '0 8px', marginBottom: '16px', fontWeight: 600, color: 'var(--text-primary)', fontSize: '15px' }}>
                             {serverName}
                         </div>
-                        {(['overview', 'channels', 'roles', 'members', 'invites', 'templates', 'import'] as const).map(tab => (
+                        {(['overview', 'channels', 'roles'] as const).map(tab => (
                             <div key={tab} onClick={() => setActiveTab(tab)}
                                 onMouseEnter={() => setHoveredBtn(`tab-${tab}`)} onMouseLeave={() => setHoveredBtn(null)}
                                 style={tabStyle(tab)}
                             >{tab.charAt(0).toUpperCase() + tab.slice(1)}</div>
                         ))}
+                    </div>
+                    <div>
+                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>MEMBERS</div>
+                        {(['members', 'bans', 'invites'] as const).map(tab => (
+                            <div key={tab} onClick={() => setActiveTab(tab)}
+                                onMouseEnter={() => setHoveredBtn(`tab-${tab}`)} onMouseLeave={() => setHoveredBtn(null)}
+                                style={tabStyle(tab)}
+                            >{tab.charAt(0).toUpperCase() + tab.slice(1)}</div>
+                        ))}
+                    </div>
+                    <div>
+                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>MODERATION</div>
+                        {(['automod', 'wordfilter', 'spam', 'modqueue', 'audit', 'security'] as const).map(tab => (
+                            <div key={tab} onClick={() => setActiveTab(tab)}
+                                onMouseEnter={() => setHoveredBtn(`tab-${tab}`)} onMouseLeave={() => setHoveredBtn(null)}
+                                style={tabStyle(tab)}
+                            >{tab === 'automod' ? 'AutoMod' : tab === 'wordfilter' ? 'Word Filter' : tab === 'spam' ? 'Spam Detection' : tab === 'modqueue' ? 'Mod Queue' : tab === 'security' ? 'Security' : 'Audit Log'}</div>
+                        ))}
+                    </div>
+                    <div>
+                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>COMMUNITY</div>
+                        {(['welcome', 'onboarding', 'rules', 'discovery', 'soundboard', 'highlights'] as const).map(tab => (
+                            <div key={tab} onClick={() => setActiveTab(tab)}
+                                onMouseEnter={() => setHoveredBtn(`tab-${tab}`)} onMouseLeave={() => setHoveredBtn(null)}
+                                style={tabStyle(tab)}
+                            >{tab === 'welcome' ? 'Welcome Screen' : tab === 'onboarding' ? 'Onboarding' : tab === 'rules' ? 'Server Rules' : tab === 'discovery' ? 'Discovery Tags' : tab === 'soundboard' ? 'Soundboard' : 'Highlights'}</div>
+                        ))}
+                    </div>
+                    <div>
+                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>ANALYTICS</div>
+                        <div onClick={() => setActiveTab('insights')}
+                            onMouseEnter={() => setHoveredBtn('tab-insights')} onMouseLeave={() => setHoveredBtn(null)}
+                            style={tabStyle('insights')}
+                        >Insights</div>
                     </div>
                     <div>
                         <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>CUSTOMIZATION</div>
@@ -1484,51 +1520,19 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                         >Server Currency</div>
                     </div>
                     <div>
-                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>MODERATION</div>
-                        {(['automod', 'wordfilter', 'spam', 'bans', 'audit', 'modqueue', 'security'] as const).map(tab => (
-                            <div key={tab} onClick={() => setActiveTab(tab)}
-                                onMouseEnter={() => setHoveredBtn(`tab-${tab}`)} onMouseLeave={() => setHoveredBtn(null)}
-                                style={tabStyle(tab)}
-                            >{tab === 'automod' ? 'AutoMod' : tab === 'wordfilter' ? 'Word Filter' : tab === 'spam' ? 'Spam Detection' : tab === 'bans' ? 'Bans' : tab === 'modqueue' ? 'Mod Queue' : tab === 'security' ? 'Security' : 'Audit Log'}</div>
-                        ))}
-                    </div>
-                    <div>
-                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>ANALYTICS</div>
-                        <div onClick={() => setActiveTab('insights')}
-                            onMouseEnter={() => setHoveredBtn('tab-insights')} onMouseLeave={() => setHoveredBtn(null)}
-                            style={tabStyle('insights')}
-                        >Insights</div>
-                        <div onClick={() => setActiveTab('onboarding')}
-                            onMouseEnter={() => setHoveredBtn('tab-onboarding')} onMouseLeave={() => setHoveredBtn(null)}
-                            style={tabStyle('onboarding')}
-                        >Onboarding</div>
-                        <div onClick={() => setActiveTab('rules')}
-                            onMouseEnter={() => setHoveredBtn('tab-rules')} onMouseLeave={() => setHoveredBtn(null)}
-                            style={tabStyle('rules')}
-                        >Server Rules</div>
-                        <div onClick={() => setActiveTab('discovery')}
-                            onMouseEnter={() => setHoveredBtn('tab-discovery')} onMouseLeave={() => setHoveredBtn(null)}
-                            style={tabStyle('discovery')}
-                        >Discovery Tags</div>
-                        <div onClick={() => setActiveTab('welcome')}
-                            onMouseEnter={() => setHoveredBtn('tab-welcome')} onMouseLeave={() => setHoveredBtn(null)}
-                            style={tabStyle('welcome')}
-                        >Welcome Screen</div>
-                        <div onClick={() => setActiveTab('highlights')}
-                            onMouseEnter={() => setHoveredBtn('tab-highlights')} onMouseLeave={() => setHoveredBtn(null)}
-                            style={tabStyle('highlights')}
-                        >Highlights</div>
-                        <div onClick={() => setActiveTab('soundboard')}
-                            onMouseEnter={() => setHoveredBtn('tab-soundboard')} onMouseLeave={() => setHoveredBtn(null)}
-                            style={tabStyle('soundboard')}
-                        >Soundboard</div>
+                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>ADVANCED</div>
                         <div onClick={() => setActiveTab('backups')}
                             onMouseEnter={() => setHoveredBtn('tab-backups')} onMouseLeave={() => setHoveredBtn(null)}
                             style={tabStyle('backups')}
                         >Backups</div>
-                    </div>
-                    <div>
-                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>FEDERATION</div>
+                        <div onClick={() => setActiveTab('templates')}
+                            onMouseEnter={() => setHoveredBtn('tab-templates')} onMouseLeave={() => setHoveredBtn(null)}
+                            style={tabStyle('templates')}
+                        >Templates</div>
+                        <div onClick={() => setActiveTab('import')}
+                            onMouseEnter={() => setHoveredBtn('tab-import')} onMouseLeave={() => setHoveredBtn(null)}
+                            style={tabStyle('import')}
+                        >Import</div>
                         <div onClick={() => setActiveTab('federation')}
                             onMouseEnter={() => setHoveredBtn('tab-federation')} onMouseLeave={() => setHoveredBtn(null)}
                             style={tabStyle('federation')}
@@ -1594,61 +1598,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                         <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>SERVER DESCRIPTION</label>
                                         <textarea value={serverDesc} onChange={e => setServerDesc(e.target.value)} rows={3} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>WELCOME MESSAGE</label>
-                                        <textarea
-                                            value={welcomeMessage}
-                                            onChange={e => setWelcomeMessage(e.target.value)}
-                                            rows={3}
-                                            placeholder="Welcome to our server!"
-                                            style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
-                                        />
-                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Shown to new members when they join. Leave empty to disable.</div>
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>RULES CHANNEL</label>
-                                        <select
-                                            value={rulesChannelId}
-                                            onChange={e => setRulesChannelId(e.target.value)}
-                                            style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}
-                                        >
-                                            <option value="">None</option>
-                                            {channelsList
-                                                .filter(ch => ch.type === 'GUILD_TEXT' || ch.type === 'text')
-                                                .map(ch => (
-                                                    <option key={ch.id} value={ch.id}>#{ch.name}</option>
-                                                ))
-                                            }
-                                        </select>
-                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>A "Go to #rules" button will appear in the welcome modal.</div>
-                                    </div>
+
                                 </div>
                             </div>
-
-                            <div style={{ height: '1px', background: 'var(--stroke)', marginBottom: '24px' }} />
-
-                            <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Server Banner</h3>
-                            <div style={{ width: '100%', height: '140px', borderRadius: '12px', background: !bannerUrl ? 'linear-gradient(135deg, rgba(82, 109, 245, 0.2), rgba(0,0,0,0.5))' : 'var(--bg-tertiary)', border: '2px dashed var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginBottom: '12px', overflow: 'hidden', position: 'relative' }} onClick={() => bannerInputRef.current?.click()}>
-                                {bannerUrl ? (
-                                    bannerIsVideo ? (
-                                        <video src={bannerUrl} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }} />
-                                    ) : (
-                                        <img src={bannerUrl} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-                                    )
-                                ) : null}
-                                <span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 500, position: 'relative', zIndex: 1, background: bannerUrl ? 'rgba(0,0,0,0.5)' : 'transparent', padding: bannerUrl ? '4px 12px' : '0', borderRadius: '6px' }}>{bannerUrl ? 'Click to change' : 'Click to upload banner (960×540 recommended)'}</span>
-                            </div>
-                            <input
-                                type="file"
-                                ref={bannerInputRef}
-                                hidden
-                                accept="image/*,video/mp4,.gif"
-                                onChange={e => {
-                                    const f = e.target.files?.[0];
-                                    if (f) handleGuildBannerUpload(f);
-                                    e.target.value = '';
-                                }}
-                            />
 
                             <div style={{ height: '1px', background: 'var(--stroke)', margin: '24px 0' }} />
 
@@ -1736,24 +1688,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>Up to 10 tags. Tags help users discover your server.</p>
                             </div>
 
-                            <div style={{ height: '1px', background: 'var(--stroke)', margin: '24px 0' }} />
-                            <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Server Rules</h3>
-                            <div style={{ marginBottom: '16px' }}>
-                                <textarea
-                                    value={rulesText}
-                                    onChange={e => setRulesText(e.target.value)}
-                                    rows={5}
-                                    placeholder="Enter your server rules here..."
-                                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' as const }}
-                                />
-                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Rules shown to new members when they join.</div>
-                            </div>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '24px' }}>
-                                <input type="checkbox" checked={requireRulesAgreement} onChange={e => setRequireRulesAgreement(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
-                                Require agreement to rules before chatting
-                            </label>
-
-                            <button onClick={saveOverview} onMouseEnter={() => setHoveredBtn('save-overview')} onMouseLeave={() => setHoveredBtn(null)}
+                            <button onClick={saveOverview}onMouseEnter={() => setHoveredBtn('save-overview')} onMouseLeave={() => setHoveredBtn(null)}
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 24px', borderRadius: '8px', background: savedIndicator ? '#10b981' : 'var(--accent-primary)', border: 'none', color: savedIndicator ? 'white' : '#000', fontWeight: 700, fontSize: '14px', cursor: 'pointer', transition: 'background 0.3s' }}
                             >
                                 {savedIndicator ? <><Check size={16} /> Saved!</> : <><Save size={16} /> Save Changes</>}
@@ -5017,6 +4952,9 @@ function SoundboardPanel({ guildId, addToast }: { guildId: string; addToast: (t:
     const [loading, setLoading] = useState(true);
     const [newName, setNewName] = useState('');
     const [newEmoji, setNewEmoji] = useState('');
+    const [soundFile, setSoundFile] = useState<File | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const soundFileRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         api.soundboard.list(guildId).then(setClips).catch(() => {}).finally(() => setLoading(false));
@@ -5029,19 +4967,37 @@ function SoundboardPanel({ guildId, addToast }: { guildId: string; addToast: (t:
 
             <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
                 <div style={{ fontSize: '12px', textTransform: 'uppercase', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '12px' }}>Upload Sound Clip</div>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-                    <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="Sound name" style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px' }} />
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="Sound name" style={{ flex: 1, minWidth: '120px', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px' }} />
                     <input type="text" value={newEmoji} onChange={e => setNewEmoji(e.target.value.slice(0, 4))} placeholder="Emoji" style={{ width: '60px', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '16px', textAlign: 'center' }} />
+                    <button
+                        onClick={() => soundFileRef.current?.click()}
+                        style={{ padding: '8px 16px', borderRadius: '6px', background: soundFile ? 'rgba(82,109,245,0.15)' : 'var(--bg-primary)', border: `1px solid ${soundFile ? 'var(--accent-primary)' : 'var(--stroke)'}`, color: soundFile ? 'var(--accent-primary)' : 'var(--text-muted)', cursor: 'pointer', fontSize: '13px', whiteSpace: 'nowrap' }}
+                    >
+                        {soundFile ? soundFile.name.slice(0, 20) + (soundFile.name.length > 20 ? '…' : '') : '📎 Choose audio'}
+                    </button>
+                    <input
+                        ref={soundFileRef}
+                        type="file"
+                        accept="audio/mpeg,audio/wav,audio/ogg,audio/flac,audio/aac,audio/mp4,.mp3,.wav,.ogg,.flac,.aac,.m4a"
+                        hidden
+                        onChange={e => { setSoundFile(e.target.files?.[0] ?? null); e.target.value = ''; }}
+                    />
                     <button onClick={async () => {
-                        if (!newName.trim()) return;
+                        if (!newName.trim() || !soundFile) return;
+                        setUploading(true);
                         try {
-                            const clip = await api.soundboard.upload(guildId, { name: newName.trim(), fileHash: 'placeholder', emoji: newEmoji || undefined });
+                            const uploaded = await api.files.upload(soundFile, 'soundboard');
+                            const clip = await api.soundboard.upload(guildId, { name: newName.trim(), fileHash: uploaded.id, emoji: newEmoji || undefined });
                             setClips(prev => [...prev, clip]);
-                            setNewName(''); setNewEmoji('');
+                            setNewName(''); setNewEmoji(''); setSoundFile(null);
                             addToast({ title: 'Sound clip added', variant: 'success' });
-                        } catch { addToast({ title: 'Failed to add clip', variant: 'error' }); }
-                    }} style={{ padding: '8px 20px', borderRadius: '6px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>Add</button>
+                        } catch (err: any) {
+                            addToast({ title: 'Failed to add clip', description: err?.message || 'Upload failed', variant: 'error' });
+                        } finally { setUploading(false); }
+                    }} disabled={uploading || !newName.trim() || !soundFile} style={{ padding: '8px 20px', borderRadius: '6px', background: (!uploading && newName.trim() && soundFile) ? 'var(--accent-primary)' : 'var(--bg-tertiary)', border: 'none', color: (!uploading && newName.trim() && soundFile) ? '#000' : 'var(--text-muted)', fontWeight: 600, cursor: (!uploading && newName.trim() && soundFile) ? 'pointer' : 'not-allowed', fontSize: '13px' }}>{uploading ? 'Uploading…' : 'Add'}</button>
                 </div>
+                {!soundFile && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>Supported: MP3, WAV, OGG, FLAC, AAC (max 25 MB)</div>}
             </div>
 
             {loading ? (

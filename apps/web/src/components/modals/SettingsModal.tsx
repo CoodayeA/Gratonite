@@ -243,7 +243,7 @@ const SettingsModal = ({
     const settingsIndex = useMemo(() => [
         { tab: 'account', label: 'My Account', keywords: ['account', 'email', 'username', 'password', 'delete account', 'two-factor', 'mfa', '2fa'] },
         { tab: 'profile', label: 'Profile', keywords: ['profile', 'avatar', 'banner', 'display name', 'bio', 'about me', 'nameplate'] },
-        { tab: 'sessions', label: 'Sessions', keywords: ['sessions', 'devices', 'login', 'active sessions', 'mutes', 'muted users'] },
+        { tab: 'sessions', label: 'Sessions', keywords: ['sessions', 'devices', 'login', 'active sessions'] },
         { tab: 'privacy', label: 'Privacy & Safety', keywords: ['privacy', 'safety', 'block', 'data export', 'gdpr', 'dm', 'direct message', 'friend request'] },
         { tab: 'connections', label: 'Connections', keywords: ['connections', 'linked accounts', 'github', 'spotify', 'twitter'] },
         { tab: 'federation', label: 'Federation', keywords: ['federation', 'relay', 'federated', 'instances', 'self-host', 'export', 'import', 'portability'] },
