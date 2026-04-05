@@ -30,6 +30,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     tagline: 'Smarter notifications, voice you can actually control, and a whole lot of things that just work now.',
     spotlight: [
       {
+        emoji: '📋',
+        title: 'Forum Channels',
+        description: 'Create a forum channel and your community gets a visual card grid for sharing posts, artwork, stages — anything. Each post gets its own thread.',
+        hint: 'Channel Settings → Channel Type → Forum',
+      },
+      {
         emoji: '🔔',
         title: 'Notification Profiles',
         description: 'Switch between All Alerts, Mentions Only, or Silent in one click — no rebuilding your settings each time.',
@@ -84,6 +90,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       },
     ],
     entries: [
+      { type: 'feature', text: 'Forum channels — create a GUILD_FORUM channel and your community gets a visual card grid for sharing posts, art, game stages, or anything else. Each post opens its own threaded conversation' },
+      { type: 'improvement', text: 'Forum channel cards show unique gradient thumbnails per post, support grid and list view toggle, sort by latest/oldest/most replies, and inline search' },
       { type: 'feature', text: 'Upload progress bars — watch each file upload in real time with per-file XHR progress, pause/cancel controls, and a one-click retry if anything fails' },
       { type: 'feature', text: 'Notification snooze — need a break? Hit Snooze on any notification and pick how long. Snooze from 15 minutes to "until I say so"' },
       { type: 'feature', text: 'Bulk notification management — select all, mark all read, or dismiss an entire group in one click from the notifications panel' },
