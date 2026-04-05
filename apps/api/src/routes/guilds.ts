@@ -62,6 +62,9 @@ import { dispatchEvent } from '../lib/webhook-dispatch';
 import { incrementChallengeProgress } from './daily-challenges';
 import { getDiscoverBadge } from '../federation/trust';
 import { getInstanceDomain, getFederationHubUrl } from '../federation/index';
+import { federatedInstances } from '../db/schema/federation-instances';
+import { federationActivities } from '../db/schema/federation-activities';
+import { instanceBlocks } from '../db/schema/instance-blocks';
 
 export const guildsRouter = Router();
 
@@ -2561,6 +2564,200 @@ guildsRouter.delete('/:guildId/members/:userId/roles/:roleId', requireAuth, asyn
     res.json({ code: 'OK' });
   } catch (err) {
     logger.error({ msg: 'DELETE member role error', err });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Guild Federation Settings — GET/PATCH /:guildId/federation/settings
+// ---------------------------------------------------------------------------
+
+guildsRouter.get('/:guildId/federation/settings', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId } = req.params as Record<string, string>;
+  try {
+    const [member] = await db.select({ id: guildMembers.id })
+      .from(guildMembers)
+      .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, req.userId!)))
+      .limit(1);
+    if (!member) { res.status(403).json({ code: 'FORBIDDEN', message: 'Not a member' }); return; }
+
+    const [guild] = await db.select({ federationEnabled: guilds.federationEnabled, federationSettings: guilds.federationSettings })
+      .from(guilds).where(eq(guilds.id, guildId)).limit(1);
+    if (!guild) { res.status(404).json({ code: 'NOT_FOUND', message: 'Guild not found' }); return; }
+
+    const settings = (guild.federationSettings ?? {}) as Record<string, unknown>;
+    res.json({ enabled: guild.federationEnabled, allowedInstances: (settings.allowedInstances as string[]) ?? [] });
+  } catch (err) {
+    logger.error({ msg: 'GET federation settings error', err });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+guildsRouter.patch('/:guildId/federation/settings', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId } = req.params as Record<string, string>;
+  const { enabled } = req.body as { enabled?: boolean };
+  if (typeof enabled !== 'boolean') {
+    res.status(400).json({ code: 'VALIDATION_ERROR', message: '`enabled` must be a boolean' });
+    return;
+  }
+  try {
+    const [guild] = await db.select({ ownerId: guilds.ownerId })
+      .from(guilds).where(eq(guilds.id, guildId)).limit(1);
+    if (!guild) { res.status(404).json({ code: 'NOT_FOUND', message: 'Guild not found' }); return; }
+    if (guild.ownerId !== req.userId) { res.status(403).json({ code: 'FORBIDDEN', message: 'Only the owner can change federation settings' }); return; }
+
+    await db.update(guilds).set({ federationEnabled: enabled }).where(eq(guilds.id, guildId));
+    res.json({ enabled });
+  } catch (err) {
+    logger.error({ msg: 'PATCH federation settings error', err });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Guild Federation Instances — GET/POST /:guildId/federation/instances
+// ---------------------------------------------------------------------------
+
+guildsRouter.get('/:guildId/federation/instances', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId } = req.params as Record<string, string>;
+  try {
+    const [member] = await db.select({ id: guildMembers.id })
+      .from(guildMembers)
+      .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, req.userId!)))
+      .limit(1);
+    if (!member) { res.status(403).json({ code: 'FORBIDDEN', message: 'Not a member' }); return; }
+
+    // Aggregate remote members by instance domain
+    const rows = await db.execute<{
+      instance_id: string; base_url: string; trust_level: string; member_count: number; first_seen: string;
+    }>(sql`
+      SELECT fi.id AS instance_id, fi.base_url, fi.trust_level,
+             COUNT(gm.id)::int AS member_count,
+             MIN(gm.joined_at)::text AS first_seen
+      FROM guild_members gm
+      JOIN users u ON u.id = gm.user_id
+      JOIN federated_instances fi ON fi.base_url = (
+        'https://' || split_part(u.federation_address, '@', 2)
+      )
+      WHERE gm.guild_id = ${guildId}
+        AND u.federation_address IS NOT NULL
+      GROUP BY fi.id, fi.base_url, fi.trust_level
+      ORDER BY member_count DESC
+    `);
+
+    const instances = (Array.isArray(rows) ? rows : (rows as any).rows ?? []).map((r: any) => ({
+      instanceId: r.instance_id,
+      domain: (r.base_url as string)?.replace(/^https?:\/\//, '') ?? r.base_url,
+      trustLevel: r.trust_level,
+      memberCount: Number(r.member_count),
+      connectedAt: r.first_seen ?? new Date().toISOString(),
+    }));
+
+    res.json(instances);
+  } catch (err) {
+    logger.error({ msg: 'GET federation instances error', err });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+guildsRouter.post('/:guildId/federation/instances/block', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId } = req.params as Record<string, string>;
+  const { domain } = req.body as { domain?: string };
+  if (!domain) { res.status(400).json({ code: 'VALIDATION_ERROR', message: '`domain` is required' }); return; }
+  try {
+    const [guild] = await db.select({ ownerId: guilds.ownerId })
+      .from(guilds).where(eq(guilds.id, guildId)).limit(1);
+    if (!guild) { res.status(404).json({ code: 'NOT_FOUND', message: 'Guild not found' }); return; }
+    if (guild.ownerId !== req.userId) { res.status(403).json({ code: 'FORBIDDEN', message: 'Only the owner can block instances' }); return; }
+
+    const normalizedDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const baseUrl = `https://${normalizedDomain}`;
+
+    let [instance] = await db.select({ id: federatedInstances.id })
+      .from(federatedInstances).where(eq(federatedInstances.baseUrl, baseUrl)).limit(1);
+    if (!instance) {
+      const [created] = await db.insert(federatedInstances)
+        .values({ baseUrl, trustLevel: 'auto_discovered', status: 'active' })
+        .returning({ id: federatedInstances.id });
+      instance = created;
+    }
+
+    await db.insert(instanceBlocks).values({
+      instanceId: instance.id,
+      blockedDomain: normalizedDomain,
+      blockedBy: req.userId!,
+      reason: `Blocked by guild owner for guild ${guildId}`,
+    }).onConflictDoNothing();
+
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error({ msg: 'POST federation block error', err });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Guild Federation Activity — GET /:guildId/federation/activity
+// ---------------------------------------------------------------------------
+
+guildsRouter.get('/:guildId/federation/activity', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId } = req.params as Record<string, string>;
+  try {
+    const [member] = await db.select({ id: guildMembers.id })
+      .from(guildMembers)
+      .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, req.userId!)))
+      .limit(1);
+    if (!member) { res.status(403).json({ code: 'FORBIDDEN', message: 'Not a member' }); return; }
+
+    const rows = await db.select({
+      id: federationActivities.id,
+      activityType: federationActivities.activityType,
+      payload: federationActivities.payload,
+      createdAt: federationActivities.createdAt,
+      instanceId: federationActivities.instanceId,
+    })
+      .from(federationActivities)
+      .where(and(
+        eq(federationActivities.direction, 'inbound'),
+        sql`${federationActivities.payload}->>'guildId' = ${guildId}`,
+      ))
+      .orderBy(desc(federationActivities.createdAt))
+      .limit(50);
+
+    const typeMap: Record<string, string> = {
+      'guild:join': 'join',
+      'guild:leave': 'leave',
+      'message:create': 'message',
+      'user:sync': 'sync',
+    };
+
+    const instanceDomainCache = new Map<string, string>();
+    const activity = await Promise.all(rows.map(async (r) => {
+      const p = (r.payload ?? {}) as Record<string, unknown>;
+      let instanceDomain = 'unknown';
+      if (r.instanceId) {
+        if (instanceDomainCache.has(r.instanceId)) {
+          instanceDomain = instanceDomainCache.get(r.instanceId)!;
+        } else {
+          const [inst] = await db.select({ baseUrl: federatedInstances.baseUrl })
+            .from(federatedInstances).where(eq(federatedInstances.id, r.instanceId)).limit(1);
+          instanceDomain = inst?.baseUrl?.replace(/^https?:\/\//, '') ?? 'unknown';
+          instanceDomainCache.set(r.instanceId, instanceDomain);
+        }
+      }
+      return {
+        id: r.id,
+        type: typeMap[r.activityType] ?? 'sync',
+        instanceDomain,
+        username: (p.username as string) ?? (p.federationAddress as string)?.split('@')[0] ?? 'unknown',
+        federationAddress: (p.federationAddress as string) ?? '',
+        timestamp: r.createdAt.toISOString(),
+      };
+    }));
+
+    res.json(activity);
+  } catch (err) {
+    logger.error({ msg: 'GET federation activity error', err });
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
