@@ -95,7 +95,7 @@ export default function ForumView({
                 lastMessageAt: t.lastMessageAt || t.updatedAt || t.createdAt,
                 authorId: t.authorId || t.creatorId,
                 authorName: t.authorName || t.creatorName || t.author?.displayName || t.author?.username || 'Unknown',
-                authorAvatarHash: t.authorAvatarHash || t.creatorAvatarHash || t.author?.avatarHash ?? null,
+                authorAvatarHash: (t.authorAvatarHash || t.creatorAvatarHash || t.author?.avatarHash) ?? null,
                 tags: t.tags || [],
                 solved: t.solved || t.archived || false,
                 locked: t.locked || false,
