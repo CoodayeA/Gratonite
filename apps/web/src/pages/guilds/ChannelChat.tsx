@@ -3422,7 +3422,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             ) : null}
 
             {/* Forum View — renders instead of message list for GUILD_FORUM channels */}
-            {channelTypeStr === 'GUILD_FORUM' && channelForumTags.length > 0 ? (
+            {channelTypeStr === 'GUILD_FORUM' ? (
                 <ForumView
                     channelId={channelId!}
                     channelName={channelName}
@@ -3443,7 +3443,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             {/* Confession Board */}
             {channelTypeStr === 'GUILD_CONFESSION' && guildId && <ConfessionBoard channelId={channelId!} guildId={guildId} />}
 
-            <div ref={parentRef} className="message-area" role="log" aria-label={`Messages in #${channelName}`} aria-live="polite" style={{ overflowY: 'auto', zIndex: 2, position: 'relative', ...((channelTypeStr === 'GUILD_FORUM' && channelForumTags.length > 0) || channelTypeStr === 'GUILD_DOCUMENT' || channelTypeStr === 'GUILD_WIKI' || channelTypeStr === 'GUILD_QA' || channelTypeStr === 'GUILD_TASK' || channelTypeStr === 'GUILD_CONFESSION' ? { display: 'none' } : {}) }}>
+            <div ref={parentRef} className="message-area" role="log" aria-label={`Messages in #${channelName}`} aria-live="polite" style={{ overflowY: 'auto', zIndex: 2, position: 'relative', ...(channelTypeStr === 'GUILD_FORUM' || channelTypeStr === 'GUILD_DOCUMENT' || channelTypeStr === 'GUILD_WIKI' || channelTypeStr === 'GUILD_QA' || channelTypeStr === 'GUILD_TASK' || channelTypeStr === 'GUILD_CONFESSION' ? { display: 'none' } : {}) }}>
                 {/* Pull-to-refresh indicator (mobile) */}
                 {isMobile && pullDistance > 0 && (
                     <div className="pull-to-refresh-indicator" style={{ height: `${pullDistance}px` }}>
