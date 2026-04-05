@@ -217,19 +217,23 @@ const SettingsModal = ({
     userProfile,
     setUserProfile,
     userTheme,
-    setUserTheme
+    setUserTheme,
+    initialTab,
 }: {
     onClose: () => void;
     userProfile?: UserProfileLike;
     setUserProfile?: React.Dispatch<React.SetStateAction<UserProfileLike>>;
     userTheme?: UserThemeLike;
     setUserTheme?: (theme: UserThemeLike) => void;
+    initialTab?: string;
 }) => {
     const { theme, setTheme, colorMode, setColorMode, fontFamily, setFontFamily, fontSize, setFontSize, showChannelBackgrounds, setShowChannelBackgrounds, playMovingBackgrounds, setPlayMovingBackgrounds, glassMode, setGlassMode, reducedEffects, setReducedEffects, lowPower, setLowPower, accentColor, setAccentColor, highContrast, setHighContrast, compactMode, setCompactMode, buttonShape, setButtonShape, screenReaderMode, setScreenReaderMode, linkUnderlines, setLinkUnderlines, focusIndicatorSize, setFocusIndicatorSize, colorBlindMode, setColorBlindMode, lowDataMode, setLowDataMode, previewTheme } = useTheme();
     const { addToast } = useToast();
     const isMobile = useIsMobile();
 
-    const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections' | 'federation' | 'achievements' | 'stats' | 'wardrobe' | 'notifications' | 'muted-users' | 'referrals' | 'developer' | 'dnd-schedule' | 'snippets'>('account');
+    const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections' | 'federation' | 'achievements' | 'stats' | 'wardrobe' | 'notifications' | 'muted-users' | 'referrals' | 'developer' | 'dnd-schedule' | 'snippets'>(
+        (initialTab as any) ?? 'account'
+    );
     const [settingsSearch, setSettingsSearch] = useState('');
     const settingsSearchRef = useRef<HTMLInputElement>(null);
     const [birthdayMonth, setBirthdayMonth] = useState(() => localStorage.getItem('gratonite_birthday_month') ?? '');

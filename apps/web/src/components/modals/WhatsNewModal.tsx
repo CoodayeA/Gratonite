@@ -1,133 +1,154 @@
 ﻿import { useEffect, useState } from 'react';
-import { X, Sparkles, Zap, Shield, Bug, ChevronDown, ChevronUp } from 'lucide-react';
-import { CHANGELOG } from '../../data/changelog';
+import { X, Sparkles, Zap, Shield, Bug, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react';
+import { CHANGELOG, type SpotlightFeature } from '../../data/changelog';
 
-const TYPE_META: Record<string, { icon: React.ElementType; label: string; color: string; bg: string }> = {
-  feature: { icon: Sparkles, label: 'Feature', color: '#818cf8', bg: 'rgba(99,102,241,0.12)' },
-  improvement: { icon: Zap, label: 'Improvement', color: '#34d399', bg: 'rgba(34,197,94,0.12)' },
-  fix: { icon: Bug, label: 'Fix', color: '#fbbf24', bg: 'rgba(245,158,11,0.12)' },
-  security: { icon: Shield, label: 'Security', color: '#f87171', bg: 'rgba(239,68,68,0.12)' },
-};
+// ─── type meta (used only for the full entry list) ──────────────────────────
 
-function TypePill({ type, count }: { type: string; count: number }) {
-  const meta = TYPE_META[type];
-  if (!meta) return null;
-  const Icon = meta.icon;
+const TYPE_META = {
+  feature:     { icon: Sparkles, label: 'New Features',   color: 'var(--accent-primary)' },
+  improvement: { icon: Zap,      label: 'Improvements',   color: 'var(--text-secondary)' },
+  fix:         { icon: Bug,      label: 'Bug Fixes',      color: 'var(--text-muted)'     },
+  security:    { icon: Shield,   label: 'Security',       color: 'var(--text-muted)'     },
+} as const;
+
+const TYPE_ORDER = ['feature', 'improvement', 'fix', 'security'] as const;
+
+// ─── Spotlight tile ──────────────────────────────────────────────────────────
+
+function SpotlightTile({
+  feature,
+  onOpenSettings,
+}: {
+  feature: SpotlightFeature;
+  onOpenSettings: (tab: string) => void;
+}) {
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '2px 8px', borderRadius: 99,
-      background: meta.bg, color: meta.color,
-      fontSize: 11, fontWeight: 600, letterSpacing: '0.01em',
+    <div style={{
+      background: 'var(--bg-tertiary)',
+      border: '1px solid var(--stroke)',
+      borderRadius: 10,
+      padding: '14px 16px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 6,
     }}>
-      <Icon size={10} />
-      {meta.label}
-      <span style={{ opacity: 0.7 }}>{count}</span>
-    </span>
+      <span style={{ fontSize: 22, lineHeight: 1 }}>{feature.emoji}</span>
+      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>
+        {feature.title}
+      </span>
+      <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, flexGrow: 1 }}>
+        {feature.description}
+      </span>
+      {feature.settingsTab && feature.actionLabel ? (
+        <button
+          onClick={() => onOpenSettings(feature.settingsTab!)}
+          style={{
+            marginTop: 4, background: 'none', border: 'none', padding: 0,
+            color: 'var(--accent-primary)', fontSize: 12, fontWeight: 600,
+            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
+            textAlign: 'left',
+          }}
+        >
+          {feature.actionLabel}
+          <ArrowRight size={11} />
+        </button>
+      ) : feature.hint ? (
+        <span style={{ marginTop: 4, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+          {feature.hint}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
-function ReleaseCard({ release, isLatest, defaultOpen }: {
-  release: typeof CHANGELOG[0]; isLatest: boolean; defaultOpen: boolean;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
+// ─── Expandable full entry list ──────────────────────────────────────────────
 
-  const typeCounts = release.entries.reduce((acc, e) => {
-    acc[e.type] = (acc[e.type] ?? 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+function FullEntryList({ entries }: { entries: typeof CHANGELOG[0]['entries'] }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {TYPE_ORDER.map(type => {
+        const items = entries.filter(e => e.type === type);
+        if (!items.length) return null;
+        const { icon: Icon, label, color } = TYPE_META[type];
+        return (
+          <div key={type}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              marginBottom: 8, paddingBottom: 6,
+              borderBottom: '1px solid var(--stroke)',
+            }}>
+              <Icon size={13} style={{ color }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                {label}
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 2 }}>({items.length})</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {items.map((entry, i) => (
+                <p key={i} style={{ margin: 0, fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6, paddingLeft: 4 }}>
+                  {entry.text}
+                </p>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
-  const typeOrder: Array<keyof typeof TYPE_META> = ['feature', 'improvement', 'fix', 'security'];
+// ─── Older release row ───────────────────────────────────────────────────────
+
+function OlderRelease({ release }: { release: typeof CHANGELOG[0] }) {
+  const [open, setOpen] = useState(false);
+  const total = release.entries.length;
+  const featureCount = release.entries.filter(e => e.type === 'feature').length;
 
   return (
-    <div style={{
-      borderRadius: 12,
-      border: isLatest ? '1px solid rgba(99,102,241,0.35)' : '1px solid var(--stroke)',
-      background: isLatest ? 'rgba(99,102,241,0.05)' : 'var(--bg-tertiary)',
-      overflow: 'hidden',
-      transition: 'border-color 0.15s',
-    }}>
-      {/* Card header — always visible */}
+    <div style={{ borderBottom: '1px solid var(--stroke)' }}>
       <button
         onClick={() => setOpen(v => !v)}
-        style={{
-          width: '100%', textAlign: 'left', background: 'none', border: 'none',
-          padding: '14px 16px', cursor: 'pointer',
-          display: 'flex', alignItems: 'flex-start', gap: 12,
-        }}
         aria-expanded={open}
-        aria-label={`${release.title} — ${open ? 'collapse' : 'expand'}`}
+        style={{
+          width: '100%', background: 'none', border: 'none', padding: '12px 0',
+          display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', textAlign: 'left',
+        }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>
-              {release.title}
-            </span>
-            {isLatest && (
-              <span style={{
-                fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
-                background: 'rgba(99,102,241,0.9)', color: '#fff',
-                padding: '1px 6px', borderRadius: 99, textTransform: 'uppercase',
-              }}>NEW</span>
-            )}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+            {release.title}
+          </span>
+          <div style={{ marginTop: 2, display: 'flex', gap: 8 }}>
             <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{release.date}</span>
-            <span style={{ color: 'var(--stroke)', fontSize: 11 }}>·</span>
-            {typeOrder.filter(t => typeCounts[t]).map(t => (
-              <TypePill key={t} type={t} count={typeCounts[t]} />
-            ))}
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {featureCount > 0 ? `${featureCount} new feature${featureCount !== 1 ? 's' : ''}` : ''}{featureCount > 0 && total - featureCount > 0 ? ', ' : ''}{total - featureCount > 0 ? `${total - featureCount} improvement${total - featureCount !== 1 ? 's' : ''}` : ''}
+            </span>
           </div>
         </div>
-        <span style={{ color: 'var(--text-muted)', flexShrink: 0, paddingTop: 2 }}>
-          {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+          {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
         </span>
       </button>
-
-      {/* Entries — collapsible */}
       {open && (
-        <div style={{ padding: '0 16px 14px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {typeOrder.map(type => {
-            const items = release.entries.filter(e => e.type === type);
-            if (!items.length) return null;
-            const meta = TYPE_META[type];
-            const Icon = meta.icon;
-            return (
-              <div key={type} style={{ marginTop: 10 }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  marginBottom: 6, paddingBottom: 4,
-                  borderBottom: `1px solid ${meta.bg}`,
-                }}>
-                  <Icon size={12} style={{ color: meta.color }} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: meta.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                    {meta.label}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {items.map((entry, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '3px 0' }}>
-                      <span style={{
-                        width: 4, height: 4, borderRadius: '50%',
-                        background: meta.color, flexShrink: 0, marginTop: 7,
-                      }} />
-                      <span style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                        {entry.text}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+        <div style={{ paddingBottom: 16 }}>
+          <FullEntryList entries={release.entries} />
         </div>
       )}
     </div>
   );
 }
 
-export default function WhatsNewModal({ onClose }: { onClose: () => void }) {
+// ─── Main modal ──────────────────────────────────────────────────────────────
+
+export default function WhatsNewModal({
+  onClose,
+  onOpenSettings,
+}: {
+  onClose: () => void;
+  onOpenSettings: (tab: string) => void;
+}) {
   const latestId = CHANGELOG[0]?.id ?? '';
+  const [showAllEntries, setShowAllEntries] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('gratonite:last-seen-changelog', latestId);
@@ -138,6 +159,9 @@ export default function WhatsNewModal({ onClose }: { onClose: () => void }) {
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
+
+  const latest = CHANGELOG[0];
+  const older = CHANGELOG.slice(1);
 
   return (
     <div
@@ -151,60 +175,124 @@ export default function WhatsNewModal({ onClose }: { onClose: () => void }) {
         aria-label="What's new"
         onClick={e => e.stopPropagation()}
         style={{
-          width: 620, maxWidth: '96vw', maxHeight: '85vh',
+          width: 680, maxWidth: '96vw', maxHeight: '88vh',
           display: 'flex', flexDirection: 'column',
           background: 'var(--bg-elevated)',
           borderRadius: 16,
           border: '1px solid var(--stroke)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.55)',
           overflow: 'hidden',
         }}
       >
-        {/* Fixed header */}
+        {/* ── Fixed header ── */}
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '18px 20px 14px',
+          padding: '16px 22px',
           borderBottom: '1px solid var(--stroke)',
           flexShrink: 0,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 34, height: 34, borderRadius: 10,
-              background: 'rgba(99,102,241,0.15)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Sparkles size={18} style={{ color: '#818cf8' }} />
-            </div>
-            <div>
-              <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>
-                What's New
-              </h2>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                {CHANGELOG.length} release{CHANGELOG.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-          </div>
+          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+            What's New
+          </h2>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 6, borderRadius: 8 }}
+            style={{
+              background: 'none', border: 'none', color: 'var(--text-muted)',
+              cursor: 'pointer', padding: 6, borderRadius: 8, lineHeight: 0,
+            }}
             aria-label="Close What's New"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Scrollable release list */}
-        <div style={{ overflowY: 'auto', padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {CHANGELOG.map((release, i) => (
-            <ReleaseCard
-              key={release.id}
-              release={release}
-              isLatest={i === 0}
-              defaultOpen={i === 0}
-            />
-          ))}
+        {/* ── Scrollable body ── */}
+        <div style={{ overflowY: 'auto', padding: '28px 28px 32px' }}>
+
+          {/* Latest release hero */}
+          {latest && (
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, letterSpacing: '0.1em',
+                  textTransform: 'uppercase', color: 'var(--accent-primary)',
+                }}>
+                  Latest
+                </span>
+                <span style={{ color: 'var(--stroke)', fontSize: 10 }}>·</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{latest.date}</span>
+              </div>
+              <h3 style={{ margin: '0 0 8px', fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                {latest.title}
+              </h3>
+              {latest.tagline && (
+                <p style={{ margin: 0, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 540 }}>
+                  {latest.tagline}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Spotlight grid */}
+          {latest?.spotlight && latest.spotlight.length > 0 && (
+            <div style={{ marginBottom: 28 }}>
+              <p style={{
+                margin: '0 0 12px', fontSize: 11, fontWeight: 700,
+                color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em',
+              }}>
+                Highlights
+              </p>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: 10,
+              }}>
+                {latest.spotlight.map((feature, i) => (
+                  <SpotlightTile key={i} feature={feature} onOpenSettings={onOpenSettings} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* See all changes toggle */}
+          {latest && (
+            <div style={{ marginBottom: 28 }}>
+              <button
+                onClick={() => setShowAllEntries(v => !v)}
+                style={{
+                  background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500,
+                }}
+              >
+                {showAllEntries ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                {showAllEntries ? 'Hide' : `See all ${latest.entries.length} changes`}
+              </button>
+              {showAllEntries && (
+                <div style={{ marginTop: 16 }}>
+                  <FullEntryList entries={latest.entries} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Older releases */}
+          {older.length > 0 && (
+            <div>
+              <p style={{
+                margin: '0 0 4px', fontSize: 11, fontWeight: 700,
+                color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em',
+              }}>
+                Previous Releases
+              </p>
+              {older.map(release => (
+                <OlderRelease key={release.id} release={release} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+

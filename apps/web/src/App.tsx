@@ -3084,6 +3084,7 @@ export const AppLayout = () => {
     const [activeModal, setActiveModal] = useState<ModalType>(null);
     const [pendingExternalLink, setPendingExternalLink] = useState<string | null>(null);
     const [showWhatsNew, setShowWhatsNew] = useState(false);
+    const [settingsInitialTab, setSettingsInitialTab] = useState<string | undefined>(undefined);
     const [incomingCall, setIncomingCall] = useState<CallInvitePayload | null>(null);
     const [isGuildRailOpen, setIsGuildRailOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -4191,10 +4192,10 @@ export const AppLayout = () => {
             {/* Modals */}
             <Suspense fallback={null}>
             {isMobile ? (
-                activeModal === 'settings' && <SettingsModal onClose={() => setActiveModal(null)} userProfile={userProfile} setUserProfile={setUserProfile as any} userTheme={userTheme} setUserTheme={setUserTheme as any} />
+                activeModal === 'settings' && <SettingsModal onClose={() => { setActiveModal(null); setSettingsInitialTab(undefined); }} userProfile={userProfile} setUserProfile={setUserProfile as any} userTheme={userTheme} setUserTheme={setUserTheme as any} initialTab={settingsInitialTab} />
             ) : (
                 <ModalWrapper isOpen={activeModal === 'settings'}>
-                    <SettingsModal onClose={() => setActiveModal(null)} userProfile={userProfile} setUserProfile={setUserProfile as any} userTheme={userTheme} setUserTheme={setUserTheme as any} />
+                    <SettingsModal onClose={() => { setActiveModal(null); setSettingsInitialTab(undefined); }} userProfile={userProfile} setUserProfile={setUserProfile as any} userTheme={userTheme} setUserTheme={setUserTheme as any} initialTab={settingsInitialTab} />
                 </ModalWrapper>
             )}
             <ModalWrapper isOpen={activeModal === 'userProfile'}>
@@ -4285,7 +4286,7 @@ export const AppLayout = () => {
             <ModalWrapper isOpen={activeModal === 'onboarding'}>
                 <OnboardingModal onClose={() => setActiveModal(null)} />
             </ModalWrapper>
-            {showWhatsNew && <WhatsNewModal onClose={() => { localStorage.setItem('gratonite:last-seen-changelog', CHANGELOG[0]?.id ?? ''); setShowWhatsNew(false); }} />}
+            {showWhatsNew && <WhatsNewModal onClose={() => { localStorage.setItem('gratonite:last-seen-changelog', CHANGELOG[0]?.id ?? ''); setShowWhatsNew(false); }} onOpenSettings={(tab) => { setShowWhatsNew(false); setSettingsInitialTab(tab); setActiveModal('settings'); }} />}
             {pendingExternalLink && (
                 <ExternalLinkModal url={pendingExternalLink} onClose={() => setPendingExternalLink(null)} />
             )}

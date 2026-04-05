@@ -1,7 +1,21 @@
+export interface SpotlightFeature {
+  emoji: string;
+  title: string;
+  description: string;
+  /** Text shown on the action link. If omitted, no link rendered. */
+  actionLabel?: string;
+  /** Settings tab to open, e.g. 'notifications'. If omitted, action is text-only hint. */
+  settingsTab?: string;
+  /** Plain-text hint shown instead of an interactive link, e.g. "Server Settings → Roles" */
+  hint?: string;
+}
+
 export interface ChangelogEntry {
   id: string;
   date: string;
   title: string;
+  tagline?: string;
+  spotlight?: SpotlightFeature[];
   entries: Array<{
     type: 'feature' | 'improvement' | 'fix' | 'security';
     text: string;
@@ -13,6 +27,62 @@ export const CHANGELOG: ChangelogEntry[] = [
     id: '2026-04-05a',
     date: 'April 5, 2026',
     title: 'The Excellence Update — 54 things, shipped',
+    tagline: 'Smarter notifications, voice you can actually control, and a whole lot of things that just work now.',
+    spotlight: [
+      {
+        emoji: '🔔',
+        title: 'Notification Profiles',
+        description: 'Switch between All Alerts, Mentions Only, or Silent in one click — no rebuilding your settings each time.',
+        actionLabel: 'Set up profiles',
+        settingsTab: 'notifications',
+      },
+      {
+        emoji: '🌙',
+        title: 'Quiet Hours',
+        description: 'Pick a time window and days of the week. All pings pause. Your sanity thanks you.',
+        actionLabel: 'Configure quiet hours',
+        settingsTab: 'notifications',
+      },
+      {
+        emoji: '🎚️',
+        title: 'Message Density',
+        description: 'Compact, Comfortable, or Cozy — choose how spacious your chat feels in Appearance settings.',
+        actionLabel: 'Adjust density',
+        settingsTab: 'theme',
+      },
+      {
+        emoji: '🎙️',
+        title: 'Voice & Noise Controls',
+        description: 'Noise gate, AI suppression, and mic sensitivity — all tunable, right in Voice settings.',
+        actionLabel: 'Tune voice settings',
+        settingsTab: 'sound',
+      },
+      {
+        emoji: '🔒',
+        title: 'Profile Visibility',
+        description: 'Control who can see your profile and whether you show up in server searches.',
+        actionLabel: 'Review privacy',
+        settingsTab: 'privacy',
+      },
+      {
+        emoji: '🎵',
+        title: 'Soundboard',
+        description: 'Drop audio clips into voice channels so the whole room can hear them. Add clips in Server Settings.',
+        hint: 'Server Settings → Soundboard',
+      },
+      {
+        emoji: '🤖',
+        title: 'Automod Simulator',
+        description: 'Test your automod rules against sample messages before they go live. No more guessing.',
+        hint: 'Server Settings → AutoMod',
+      },
+      {
+        emoji: '🧩',
+        title: 'Role Simulation',
+        description: 'Preview exactly what any role configuration looks like from a member\'s point of view.',
+        hint: 'Server Settings → Roles',
+      },
+    ],
     entries: [
       { type: 'feature', text: 'Upload progress bars — watch each file upload in real time with per-file XHR progress, pause/cancel controls, and a one-click retry if anything fails' },
       { type: 'feature', text: 'Notification snooze — need a break? Hit Snooze on any notification and pick how long. Snooze from 15 minutes to "until I say so"' },
