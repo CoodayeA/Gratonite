@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, X, Compass, Users, BookOpen, Music, Briefcase, Gamepad2, Coffee, Server, ChevronDown, ChevronUp, Shield, Database, Globe, Plus, FileCode } from 'lucide-react';
+import { Camera, X, Users, Music, Briefcase, Gamepad2, Server, ChevronDown, ChevronUp, Shield, Database, Globe, Plus, FileCode, Palette, GraduationCap, Video, Code2, Dices, Building2 } from 'lucide-react';
 import { useToast } from '../ui/ToastManager';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
@@ -17,39 +17,84 @@ type Template = {
 
 const templates: Template[] = [
     {
-        id: 'gaming', name: 'Gaming', icon: <Gamepad2 size={20} />,
-        defaultName: 'Gaming Portal', defaultDesc: 'A place for gamers to hang out, organize events, and share clips.',
-        channels: ['general', 'lfg', 'clips', 'events'],
+        id: 'gaming',
+        name: 'Gaming',
+        icon: <Gamepad2 size={20} />,
+        defaultName: 'Gaming Crew',
+        defaultDesc: 'The home base for your gaming group — organize events, find teammates, and share the best clips.',
+        channels: ['rules', 'announcements', 'general', 'looking-for-group', 'clips-and-highlights', 'events'],
     },
     {
-        id: 'friends', name: 'Friends & Family', icon: <Users size={20} />,
-        defaultName: 'My Crew', defaultDesc: 'A private space for friends and family to stay connected.',
-        channels: ['general', 'photos', 'plans'],
+        id: 'friends',
+        name: 'Friends & Family',
+        icon: <Users size={20} />,
+        defaultName: 'The Gang',
+        defaultDesc: 'A private space for the people who matter most. Share moments, make plans, stay connected.',
+        channels: ['general', 'photos', 'plans', 'recommendations', 'memories'],
     },
     {
-        id: 'study', name: 'Study Group', icon: <BookOpen size={20} />,
-        defaultName: 'Study Portal', defaultDesc: 'Focus together, share resources, and ace your goals.',
-        channels: ['general', 'resources', 'homework-help', 'accountability'],
+        id: 'creative',
+        name: 'Creative Hub',
+        icon: <Palette size={20} />,
+        defaultName: 'Creative Studio',
+        defaultDesc: 'A space for artists, designers, and makers to share work, get feedback, and find collaborators.',
+        channels: ['general', 'share-your-work', 'feedback', 'inspiration', 'resources', 'collabs'],
     },
     {
-        id: 'creative', name: 'Creative', icon: <Compass size={20} />,
-        defaultName: 'Creative Hub', defaultDesc: 'Share art, music, writing, and collaborate on creative projects.',
-        channels: ['gallery', 'feedback', 'wips', 'inspiration'],
+        id: 'study',
+        name: 'Study Group',
+        icon: <GraduationCap size={20} />,
+        defaultName: 'Study Crew',
+        defaultDesc: 'Stay accountable, share resources, and study together. You\'ll get more done as a group.',
+        channels: ['general', 'resources', 'homework-help', 'study-sessions', 'wins-and-goals'],
     },
     {
-        id: 'music', name: 'Music', icon: <Music size={20} />,
-        defaultName: 'Music Portal', defaultDesc: 'Share tracks, discuss music theory, and find collaborators.',
-        channels: ['general', 'share-your-music', 'production', 'gear'],
+        id: 'music',
+        name: 'Music',
+        icon: <Music size={20} />,
+        defaultName: 'Music Community',
+        defaultDesc: 'Share tracks, talk production, geek out on gear, and find collaborators who actually get it.',
+        channels: ['general', 'share-your-music', 'production-talk', 'gear', 'collabs', 'playlists'],
     },
     {
-        id: 'business', name: 'Business', icon: <Briefcase size={20} />,
-        defaultName: 'Network Portal', defaultDesc: 'Connect with professionals, share opportunities, and grow together.',
-        channels: ['general', 'opportunities', 'showcase', 'feedback'],
+        id: 'content-creator',
+        name: 'Content Creator',
+        icon: <Video size={20} />,
+        defaultName: 'Creator Community',
+        defaultDesc: 'Your community hub — share clips and updates, get feedback, and keep fans in the loop.',
+        channels: ['announcements', 'general', 'clips-and-vods', 'fan-art', 'suggestions', 'behind-the-scenes'],
     },
     {
-        id: 'chill', name: 'Hangout', icon: <Coffee size={20} />,
-        defaultName: 'Hang Zone', defaultDesc: 'A laid-back space to just vibe, chat, and relax.',
-        channels: ['general', 'memes', 'music', 'venting'],
+        id: 'dev',
+        name: 'Dev & Tech',
+        icon: <Code2 size={20} />,
+        defaultName: 'Dev Community',
+        defaultDesc: 'Talk code, share projects, ask for help, and build cool things together.',
+        channels: ['general', 'projects', 'help-and-support', 'code-review', 'resources', 'showcase'],
+    },
+    {
+        id: 'roleplay',
+        name: 'Roleplay & Story',
+        icon: <Dices size={20} />,
+        defaultName: 'Storytellers Guild',
+        defaultDesc: 'Build worlds, tell stories, and bring your characters to life with your community.',
+        channels: ['rules', 'out-of-character', 'lore', 'characters', 'main-story', 'side-stories'],
+    },
+    {
+        id: 'professional',
+        name: 'Professional',
+        icon: <Briefcase size={20} />,
+        defaultName: 'Professional Network',
+        defaultDesc: 'Grow your career, share opportunities, and build meaningful professional relationships.',
+        channels: ['general', 'introductions', 'opportunities', 'showcase', 'resources', 'feedback'],
+    },
+    {
+        id: 'community',
+        name: 'Community & Club',
+        icon: <Building2 size={20} />,
+        defaultName: 'My Community',
+        defaultDesc: 'A home for your club, organization, or local group to connect, organize, and stay in touch.',
+        channels: ['announcements', 'general', 'introductions', 'events', 'resources', 'off-topic'],
     },
 ];
 
@@ -368,7 +413,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                     <>
                         <h2 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>Create a Server</h2>
                         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', textAlign: 'center' }}>
-                            Pick a template or start blank. Your server lives on gratonite.chat — anyone can find and join it.
+                            Pick a template or start blank. You can always customize everything after.
                         </p>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '12px' }}>
