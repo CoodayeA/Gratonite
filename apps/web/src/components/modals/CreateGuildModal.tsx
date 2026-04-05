@@ -11,6 +11,7 @@ type Template = {
     defaultName: string;
     defaultDesc: string;
     channels: string[];
+    voiceChannels?: string[];
     isImport?: boolean;
     importSource?: string;
 };
@@ -23,6 +24,7 @@ const templates: Template[] = [
         defaultName: 'Gaming Crew',
         defaultDesc: 'The home base for your gaming group — organize events, find teammates, and share the best clips.',
         channels: ['rules', 'announcements', 'general', 'looking-for-group', 'clips-and-highlights', 'events'],
+        voiceChannels: ['gaming', 'hangout'],
     },
     {
         id: 'friends',
@@ -31,6 +33,7 @@ const templates: Template[] = [
         defaultName: 'The Gang',
         defaultDesc: 'A private space for the people who matter most. Share moments, make plans, stay connected.',
         channels: ['general', 'photos', 'plans', 'recommendations', 'memories'],
+        voiceChannels: ['hangout'],
     },
     {
         id: 'creative',
@@ -39,6 +42,7 @@ const templates: Template[] = [
         defaultName: 'Creative Studio',
         defaultDesc: 'A space for artists, designers, and makers to share work, get feedback, and find collaborators.',
         channels: ['general', 'share-your-work', 'feedback', 'inspiration', 'resources', 'collabs'],
+        voiceChannels: ['creative-sessions'],
     },
     {
         id: 'study',
@@ -47,6 +51,7 @@ const templates: Template[] = [
         defaultName: 'Study Crew',
         defaultDesc: 'Stay accountable, share resources, and study together. You\'ll get more done as a group.',
         channels: ['general', 'resources', 'homework-help', 'study-sessions', 'wins-and-goals'],
+        voiceChannels: ['study-hall'],
     },
     {
         id: 'music',
@@ -55,6 +60,7 @@ const templates: Template[] = [
         defaultName: 'Music Community',
         defaultDesc: 'Share tracks, talk production, geek out on gear, and find collaborators who actually get it.',
         channels: ['general', 'share-your-music', 'production-talk', 'gear', 'collabs', 'playlists'],
+        voiceChannels: ['listening-room', 'jam-session'],
     },
     {
         id: 'content-creator',
@@ -63,6 +69,7 @@ const templates: Template[] = [
         defaultName: 'Creator Community',
         defaultDesc: 'Your community hub — share clips and updates, get feedback, and keep fans in the loop.',
         channels: ['announcements', 'general', 'clips-and-vods', 'fan-art', 'suggestions', 'behind-the-scenes'],
+        voiceChannels: ['live-session'],
     },
     {
         id: 'dev',
@@ -71,6 +78,7 @@ const templates: Template[] = [
         defaultName: 'Dev Community',
         defaultDesc: 'Talk code, share projects, ask for help, and build cool things together.',
         channels: ['general', 'projects', 'help-and-support', 'code-review', 'resources', 'showcase'],
+        voiceChannels: ['dev-chat', 'pair-programming'],
     },
     {
         id: 'roleplay',
@@ -79,6 +87,7 @@ const templates: Template[] = [
         defaultName: 'Storytellers Guild',
         defaultDesc: 'Build worlds, tell stories, and bring your characters to life with your community.',
         channels: ['rules', 'out-of-character', 'lore', 'characters', 'main-story', 'side-stories'],
+        voiceChannels: ['adventure-room'],
     },
     {
         id: 'professional',
@@ -87,6 +96,7 @@ const templates: Template[] = [
         defaultName: 'Professional Network',
         defaultDesc: 'Grow your career, share opportunities, and build meaningful professional relationships.',
         channels: ['general', 'introductions', 'opportunities', 'showcase', 'resources', 'feedback'],
+        voiceChannels: ['meeting-room'],
     },
     {
         id: 'community',
@@ -95,6 +105,7 @@ const templates: Template[] = [
         defaultName: 'My Community',
         defaultDesc: 'A home for your club, organization, or local group to connect, organize, and stay in touch.',
         channels: ['announcements', 'general', 'introductions', 'events', 'resources', 'off-topic'],
+        voiceChannels: ['general', 'events-voice'],
     },
 ];
 
@@ -306,77 +317,37 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                 } catch { /* icon upload is non-critical */ }
             }
 
-            // 3. Create default channels based on template (idempotent + deduped)
+            // 3. Create channels from template (no categories — the sidebar provides static "Text Channels"
+            //    and "Voice Channels" section headers, so creating GUILD_CATEGORY objects causes duplication)
             const channelNames = selectedTemplate?.channels || ['general'];
-            const uniqueChannelNames = Array.from(
-                new Set(channelNames.map(toChannelSlug).filter(Boolean))
-            );
+            const voiceChannelNames = selectedTemplate?.voiceChannels || ['general'];
+            const uniqueTextChannels = Array.from(new Set(channelNames.map(toChannelSlug).filter(Boolean)));
+            const uniqueVoiceChannels = Array.from(new Set(voiceChannelNames.map(toChannelSlug).filter(Boolean)));
+
             const existingChannels = await api.channels.getGuildChannels(guild.id).catch(() => [] as any[]);
             const existingKeys = new Set(
                 existingChannels.map((ch: any) => `${ch.type}:${normalizeName(ch.name || '')}`)
             );
-            const findCategory = (name: string) => {
-                const normalized = normalizeName(name);
-                return existingChannels.find((ch: any) => ch.type === 'GUILD_CATEGORY' && normalizeName(ch.name || '') === normalized);
-            };
 
-            // Create a "Text Channels" category if missing
-            let textCategoryId: string | undefined;
-            const existingTextCategory = findCategory('text-channels');
-            if (existingTextCategory?.id) {
-                textCategoryId = existingTextCategory.id;
-            } else {
+            // Create text channels (flat, no parentId)
+            for (const channelName of uniqueTextChannels) {
                 try {
-                    const textCat = await api.channels.create(guild.id, { name: 'text-channels', type: 'GUILD_CATEGORY' });
-                    textCategoryId = textCat.id;
-                    existingChannels.push(textCat as any);
-                    existingKeys.add(`GUILD_CATEGORY:${normalizeName(textCat.name || 'text-channels')}`);
-                } catch { /* category creation might not be supported */ }
-            }
-
-            // Create text channels
-            for (let i = 0; i < uniqueChannelNames.length; i++) {
-                try {
-                    const channelName = uniqueChannelNames[i];
-                    if (!channelName) continue;
                     const textKey = `GUILD_TEXT:${normalizeName(channelName)}`;
                     if (existingKeys.has(textKey)) continue;
-                    const createdChannel = await api.channels.create(guild.id, {
-                        name: channelName,
-                        type: 'GUILD_TEXT',
-                        parentId: textCategoryId,
-                    });
-                    existingChannels.push(createdChannel as any);
+                    await api.channels.create(guild.id, { name: channelName, type: 'GUILD_TEXT' });
                     existingKeys.add(textKey);
-                } catch { /* continue creating other channels */ }
+                } catch { /* continue */ }
             }
 
-            // Create a "Voice Channels" category and a default voice channel
-            let voiceCategoryId: string | undefined;
-            const existingVoiceCategory = findCategory('voice-channels');
-            if (existingVoiceCategory?.id) {
-                voiceCategoryId = existingVoiceCategory.id;
-            } else {
+            // Create voice channels (flat, no parentId)
+            for (const channelName of uniqueVoiceChannels) {
                 try {
-                    const voiceCat = await api.channels.create(guild.id, { name: 'voice-channels', type: 'GUILD_CATEGORY' });
-                    voiceCategoryId = voiceCat.id;
-                    existingChannels.push(voiceCat as any);
-                    existingKeys.add(`GUILD_CATEGORY:${normalizeName(voiceCat.name || 'voice-channels')}`);
-                } catch { /* category creation might not be supported */ }
-            }
-
-            try {
-                const voiceKey = `GUILD_VOICE:${normalizeName('general')}`;
-                if (!existingKeys.has(voiceKey)) {
-                    const createdVoice = await api.channels.create(guild.id, {
-                        name: 'general',
-                        type: 'GUILD_VOICE',
-                        parentId: voiceCategoryId,
-                    });
-                    existingChannels.push(createdVoice as any);
+                    const voiceKey = `GUILD_VOICE:${normalizeName(channelName)}`;
+                    if (existingKeys.has(voiceKey)) continue;
+                    await api.channels.create(guild.id, { name: channelName, type: 'GUILD_VOICE' });
                     existingKeys.add(voiceKey);
-                }
-            } catch { /* voice channel creation might fail */ }
+                } catch { /* continue */ }
+            }
 
             addToast({
                 title: 'Portal Created!',
@@ -604,11 +575,18 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                         {selectedTemplate && (
                             <div style={{ background: 'var(--bg-tertiary)', borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', border: '1px solid var(--stroke)' }}>
                                 <div style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Pre-built Channels</div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: selectedTemplate.voiceChannels?.length ? '8px' : 0 }}>
                                     {selectedTemplate.channels.map(ch => (
                                         <span key={ch} style={{ fontSize: '12px', padding: '3px 10px', background: 'var(--bg-elevated)', borderRadius: '6px', color: 'var(--text-secondary)' }}>#{ch}</span>
                                     ))}
                                 </div>
+                                {selectedTemplate.voiceChannels && selectedTemplate.voiceChannels.length > 0 && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                        {selectedTemplate.voiceChannels.map(ch => (
+                                            <span key={ch} style={{ fontSize: '12px', padding: '3px 10px', background: 'var(--bg-elevated)', borderRadius: '6px', color: 'var(--text-muted)' }}>🔊 {ch}</span>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
 
