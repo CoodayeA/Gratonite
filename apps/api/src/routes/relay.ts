@@ -17,9 +17,9 @@ import { handleAppError, normalizeError } from '../lib/errors';
 export const relayRouter = Router();
 
 /**
- * GET /api/v1/relays — List relays with reputation scores (public).
+ * GET /api/v1/relays — List relays with reputation scores.
  */
-relayRouter.get('/', async (_req: Request, res: Response) => {
+relayRouter.get('/', requireAuth, async (_req: Request, res: Response) => {
   try {
     const nodes = await db.select({
       domain: relayNodes.domain,

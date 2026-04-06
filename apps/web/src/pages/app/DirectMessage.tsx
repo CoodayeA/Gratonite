@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
-import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield, ArrowLeft, MessageSquare } from 'lucide-react';
+import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield, ArrowLeft, MessageSquare, Pin } from 'lucide-react';
 import { getOrCreateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported, generateGroupKey, encryptGroupKey, decryptGroupKey, computeSafetyNumber, encryptFile, decryptFile } from '../../lib/e2e';
 import { onGroupKeyRotationNeeded, onUserKeyChanged, onE2EStateChanged } from '../../lib/socket';
 import type { GroupKeyRotationNeededPayload, UserKeyChangedPayload, E2EStateChangedPayload } from '../../lib/socket';
@@ -81,6 +81,7 @@ type Message = {
     encryptedContent?: string | null;
     threadReplyCount?: number;
     embeds?: any[];
+    isPinned?: boolean;
 };
 
 // Video element component for rendering participant video
@@ -234,6 +235,8 @@ const DirectMessage = () => {
     const [isLoadingMessages, setIsLoadingMessages] = useState(true);
     const [messagesError, setMessagesError] = useState(false);
     const [messagesErrorDetail, setMessagesErrorDetail] = useState<string | null>(null);
+    const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
+    const [showPinnedPanel, setShowPinnedPanel] = useState(false);
 
     const resolveDmChannelId = useCallback(async (routeId: string) => {
         let channel: any = null;
@@ -259,6 +262,34 @@ const DirectMessage = () => {
         }
         return dm.id as string;
     }, [normalizeChannelType]);
+
+    const loadPinnedMessages = useCallback(async () => {
+        if (!dmChannelId) return;
+        try {
+            const pinned = await api.messages.getPins(dmChannelId);
+            const formatted: Message[] = (pinned ?? []).map((m: any, i: number) => ({
+                id: -(i + 1),
+                apiId: m.id,
+                author: m.author?.displayName ?? m.author?.username ?? 'Unknown',
+                authorId: m.authorId,
+                authorAvatarHash: m.author?.avatarHash,
+                content: m.content ?? '',
+                time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                attachments: m.attachments ?? [],
+                reactions: m.reactions ?? [],
+                system: false,
+                avatar: null,
+                isPinned: true,
+            }));
+            setPinnedMessages(formatted);
+        } catch {
+            addToast({ title: 'Could not load pinned messages', variant: 'error' });
+        }
+    }, [dmChannelId, addToast]);
+
+    useEffect(() => {
+        if (showPinnedPanel) loadPinnedMessages();
+    }, [showPinnedPanel, loadPinnedMessages]);
 
     useEffect(() => {
         let cancelled = false;
@@ -2091,6 +2122,14 @@ const DirectMessage = () => {
                             <Users size={20} className="hover-text-primary-inactive" data-active={memberPanelOpen ? "true" : undefined} style={{ cursor: 'pointer', transition: 'color 0.2s', color: memberPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }} onClick={() => setMemberPanelOpen(!memberPanelOpen)} />
                         )}
 
+                        <Pin
+                            size={20}
+                            aria-label="Pinned Messages"
+                            className="hover-text-primary-inactive"
+                            style={{ cursor: 'pointer', transition: 'color 0.2s', color: showPinnedPanel ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
+                            onClick={() => setShowPinnedPanel(v => !v)}
+                        />
+
                         {/* Disappear Timer (A2) */}
                         <div style={{ position: 'relative' }} ref={disappearMenuRef}>
                             <Clock
@@ -2633,6 +2672,17 @@ const DirectMessage = () => {
                                             { id: 'thread', label: 'Create Thread', icon: MessageSquare, onClick: () => setActiveThreadMessage(msg) },
                                             ...(isOwnMessage && msg.apiId ? [{ id: 'edit', label: 'Edit Message', icon: Pencil, onClick: () => setEditingMessage({ id: msg.id, apiId: msg.apiId!, content: msg.content || '' }) }] : []),
                                             { id: 'forward', label: 'Forward Message', icon: Share2, onClick: () => setForwardingMessage(msg) },
+                                            ...(msg.apiId ? [{
+                                                id: 'pin', label: msg.isPinned ? 'Unpin Message' : 'Pin Message', icon: Pin, onClick: () => {
+                                                    if (!dmChannelId || !msg.apiId) return;
+                                                    const action = msg.isPinned ? api.messages.unpin : api.messages.pin;
+                                                    action(dmChannelId, msg.apiId).then(() => {
+                                                        setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isPinned: !m.isPinned } : m));
+                                                        addToast({ title: msg.isPinned ? 'Message unpinned' : 'Message pinned', variant: 'success' });
+                                                        if (showPinnedPanel) loadPinnedMessages();
+                                                    }).catch(() => addToast({ title: 'Failed to pin message', variant: 'error' }));
+                                                }
+                                            }] : []),
                                             {
                                                 id: 'copy', label: 'Copy Text', icon: Copy, onClick: () => {
                                                     if (msg.content) copyToClipboard(msg.content);
@@ -3190,6 +3240,56 @@ const DirectMessage = () => {
                     </div>
                 </aside>
             )}
+
+            {/* Pinned Messages Panel */}
+            <aside aria-label="Pinned messages" style={{
+                width: showPinnedPanel ? '300px' : '0px',
+                background: 'var(--bg-elevated)',
+                borderLeft: showPinnedPanel ? '1px solid var(--stroke)' : 'none',
+                transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                zIndex: 2,
+            }}>
+                <div style={{ width: '300px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ padding: '16px', borderBottom: '1px solid var(--stroke)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Pin size={16} style={{ color: 'var(--accent-primary)' }} />
+                            <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>Pinned Messages</h3>
+                        </div>
+                        <button onClick={() => setShowPinnedPanel(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }} aria-label="Close pinned panel"><X size={16} /></button>
+                    </div>
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
+                        {pinnedMessages.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)' }}>
+                                <Pin size={32} style={{ marginBottom: '8px', opacity: 0.3 }} />
+                                <p style={{ fontSize: '13px', margin: 0 }}>No pinned messages yet</p>
+                                <p style={{ fontSize: '12px', margin: '4px 0 0', color: 'var(--text-muted)' }}>Right-click a message to pin it</p>
+                            </div>
+                        ) : pinnedMessages.map(msg => (
+                            <div key={msg.apiId ?? msg.id} style={{ padding: '10px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', marginBottom: '8px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>{msg.author}</span>
+                                    <button
+                                        onClick={() => {
+                                            if (!dmChannelId || !msg.apiId) return;
+                                            api.messages.unpin(dmChannelId, msg.apiId).then(() => {
+                                                setPinnedMessages(prev => prev.filter(m => m.apiId !== msg.apiId));
+                                                addToast({ title: 'Message unpinned', variant: 'success' });
+                                            }).catch(() => addToast({ title: 'Failed to unpin', variant: 'error' }));
+                                        }}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px' }}
+                                        aria-label="Unpin message"
+                                    ><X size={12} /></button>
+                                </div>
+                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{msg.content}</p>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>{msg.time}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </aside>
 
             {/* Sliding Info Panel */}
             <aside aria-label="User info" style={{

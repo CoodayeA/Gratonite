@@ -880,6 +880,7 @@ const Inventory = () => {
             {/* Cosmetic Preview in Chat Modal */}
             {previewItem && (() => {
                 const cfg = (previewItem.assetConfig ?? {}) as Record<string, unknown>;
+                const r = rarityOf(previewItem.rarity);
                 const frameStyle = cfg.frameStyle as string | undefined;
                 const glowColor = (cfg.glowColor as string | undefined) ?? 'var(--accent-primary)';
                 const effectType = cfg.effectType as string | undefined;
@@ -949,23 +950,65 @@ const Inventory = () => {
 
                 return (
                     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setPreviewItem(null)}>
-                        <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-elevated)', borderRadius: '16px', border: '1px solid var(--stroke)', padding: '32px', width: '520px', maxWidth: '95vw' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Preview: {previewItem.name}</h3>
+                        <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-elevated)', borderRadius: '16px', border: '1px solid var(--stroke)', width: '560px', maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto' }}>
+                            {/* Header */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px 0' }}>
+                                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>{previewItem.name}</h3>
                                 <button onClick={() => setPreviewItem(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}><X size={18} /></button>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-                                {renderMessageBubble('Current', false)}
-                                {renderMessageBubble(`With ${previewItem.name}`, true)}
+
+                            {/* Item Meta */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', padding: '16px 24px', borderBottom: '1px solid var(--stroke)' }}>
+                                {/* Art / Image */}
+                                <div style={{ width: '80px', height: '80px', borderRadius: '12px', flexShrink: 0, border: `2px solid ${r.border}`, boxShadow: `0 0 16px ${r.glow}`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: previewItem.imageUrl ? undefined : `linear-gradient(135deg, ${r.glow}80, transparent)` }}>
+                                    {previewItem.imageUrl
+                                        ? <img src={previewItem.imageUrl} alt={previewItem.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        : <span style={{ fontSize: '32px' }}>{'🎨'}</span>
+                                    }
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                                        <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: r.color, background: `${r.glow}`, padding: '2px 8px', borderRadius: '20px', border: `1px solid ${r.border}`, letterSpacing: '0.6px' }}>{r.label}</span>
+                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'capitalize', background: 'var(--bg-tertiary)', padding: '2px 8px', borderRadius: '20px' }}>{previewItem.type.replace(/_/g, ' ')}</span>
+                                        {previewItem.equipped && <span style={{ fontSize: '11px', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.12)', padding: '2px 8px', borderRadius: '20px' }}>Equipped</span>}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                                        <div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '2px' }}>Source</div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{previewItem.source}</div>
+                                        </div>
+                                        {previewItem.quantity > 1 && (
+                                            <div>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '2px' }}>Quantity</div>
+                                                <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>×{previewItem.quantity}</div>
+                                            </div>
+                                        )}
+                                        <div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '2px' }}>Acquired</div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{new Date(previewItem.acquiredAt).toLocaleDateString()}</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '12px' }}>
+
+                            {/* Preview */}
+                            <div style={{ padding: '16px 24px 0' }}>
+                                <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '12px', letterSpacing: '0.6px' }}>Chat Preview</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                                    {renderMessageBubble('Without', false)}
+                                    {renderMessageBubble('With This', true)}
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div style={{ display: 'flex', gap: '12px', padding: '0 24px 24px' }}>
                                 <button onClick={() => setPreviewItem(null)} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}>Close</button>
                                 <button
                                     onClick={() => { handleEquip(previewItem); setPreviewItem(null); }}
                                     disabled={!!equippingId}
-                                    style={{ flex: 1, padding: '10px', borderRadius: '8px', background: previewItem.equipped ? 'rgba(239,68,68,0.15)' : 'var(--accent-primary)', border: 'none', color: previewItem.equipped ? '#ef4444' : '#000', fontWeight: 700, cursor: 'pointer' }}
+                                    style={{ flex: 2, padding: '10px', borderRadius: '8px', background: previewItem.equipped ? 'rgba(239,68,68,0.15)' : 'var(--accent-primary)', border: 'none', color: previewItem.equipped ? '#ef4444' : '#000', fontWeight: 700, cursor: 'pointer' }}
                                 >
-                                    {previewItem.equipped ? 'Unequip' : 'Equip'}
+                                    {previewItem.equipped ? 'Unequip' : 'Equip This Item'}
                                 </button>
                             </div>
                         </div>

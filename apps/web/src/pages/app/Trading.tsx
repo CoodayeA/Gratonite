@@ -117,9 +117,52 @@ const Trading = () => {
     );
 
     const rarityColor: Record<string, string> = { common: '#71717a', uncommon: '#22c55e', rare: '#3b82f6', epic: '#a855f7', legendary: '#f59e0b' };
+    const [showConfirm, setShowConfirm] = useState(false);
 
     return (
         <div style={{ flex: 1, padding: '32px 48px', overflowY: 'auto', background: 'var(--bg-primary)' }}>
+            {/* Trade Review Confirmation Modal */}
+            {showConfirm && selectedFriend && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '16px', width: 'min(460px, 95vw)', padding: '28px', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
+                        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '4px' }}>Review Trade</h3>
+                        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
+                            This will be sent to <strong style={{ color: 'var(--text-primary)' }}>{selectedFriend.displayName}</strong>. Please review before sending.
+                        </p>
+                        <div style={{ background: 'var(--bg-tertiary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px' }}>You're Offering</div>
+                            {myOffer.length === 0 && myGratonites === 0 && (
+                                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Nothing</p>
+                            )}
+                            {myOffer.map(item => (
+                                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: rarityColor[item.rarity] ?? '#71717a', flexShrink: 0 }} />
+                                    <span style={{ fontSize: '13px', fontWeight: 600 }}>{item.name}</span>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{item.rarity}</span>
+                                </div>
+                            ))}
+                            {myGratonites > 0 && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: myOffer.length > 0 ? '6px' : 0 }}>
+                                    <Gem size={12} color="#10b981" />
+                                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#10b981' }}>{myGratonites.toLocaleString()} Gratonite</span>
+                                </div>
+                            )}
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button onClick={() => setShowConfirm(false)} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}>
+                                Edit
+                            </button>
+                            <button
+                                onClick={() => { setShowConfirm(false); handlePropose(); }}
+                                disabled={submitting}
+                                style={{ flex: 2, padding: '10px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                            >
+                                <Check size={16} /> {submitting ? 'Sending...' : 'Send Trade Proposal'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div style={{ maxWidth: '800px', margin: '0 auto' }}>
                 <button onClick={() => view === 'create' ? setView('list') : navigate(-1)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', marginBottom: '16px' }}>
                     <ArrowLeft size={16} /> {view === 'create' ? 'Back to Trades' : 'Back'}
@@ -270,11 +313,11 @@ const Trading = () => {
                                 </div>
 
                                 <button
-                                    onClick={handlePropose}
+                                    onClick={() => setShowConfirm(true)}
                                     disabled={submitting || (myOffer.length === 0 && myGratonites === 0)}
                                     style={{ width: '100%', padding: '12px', borderRadius: '8px', background: (myOffer.length === 0 && myGratonites === 0) ? 'var(--bg-tertiary)' : 'var(--accent-primary)', border: 'none', color: (myOffer.length === 0 && myGratonites === 0) ? 'var(--text-muted)' : '#000', fontWeight: 700, cursor: (myOffer.length === 0 && myGratonites === 0) ? 'not-allowed' : 'pointer', fontSize: '14px' }}
                                 >
-                                    {submitting ? 'Sending...' : 'Propose Trade'}
+                                    Review &amp; Propose Trade
                                 </button>
                             </div>
                         )}

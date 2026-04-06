@@ -5,6 +5,8 @@ import { db } from '../db/index';
 import { interestTags, userInterests } from '../db/schema/interest-tags';
 import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
+import { z } from 'zod';
+import { validate } from '../middleware/validate';
 
 export const interestTagsRouter = Router({ mergeParams: true });
 
@@ -36,16 +38,15 @@ interestTagsRouter.get('/users/@me/interests', requireAuth, async (req: Request,
   }
 });
 
+const setInterestsSchema = z.object({
+  tags: z.array(z.string()).max(50),
+});
+
 /** PUT /users/@me/interests — set interests (body: { tags: string[] }) */
-interestTagsRouter.put('/users/@me/interests', requireAuth, async (req: Request, res: Response): Promise<void> => {
+interestTagsRouter.put('/users/@me/interests', requireAuth, validate(setInterestsSchema), async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.userId!;
     const { tags } = req.body as { tags: string[] };
-
-    if (!Array.isArray(tags) || tags.length > 50) {
-      res.status(400).json({ error: 'tags must be an array of up to 50 strings' });
-      return;
-    }
 
     // Delete existing and insert new
     await db.delete(userInterests).where(eq(userInterests.userId, userId));

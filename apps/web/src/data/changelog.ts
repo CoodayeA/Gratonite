@@ -24,6 +24,44 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-04-07a',
+    date: 'April 7, 2026',
+    title: 'Pins in DMs, Thread Reactions, Trade Review, Inventory Detail',
+    tagline: 'Pin messages in Direct Messages, react in thread panels, review your trade before sending, and see item rarity details in the inventory.',
+    spotlight: [
+      {
+        emoji: '📌',
+        title: 'DM Pin Messages',
+        description: 'You can now pin messages in Direct Messages and Group DMs. Right-click any message → Pin Message. Open the pinned panel with the pin icon in the header.',
+        hint: 'Open any DM → right-click a message → Pin Message',
+      },
+      {
+        emoji: '🎮',
+        title: 'Thread Reactions',
+        description: 'Messages inside thread panels now support emoji reactions — hover a reply and click a quick-react emoji, or add your own.',
+        hint: 'Open any thread → hover a reply → pick an emoji',
+      },
+      {
+        emoji: '🤝',
+        title: 'Trade Review Step',
+        description: 'Before sending a trade proposal, you now see a review modal showing exactly what you\'re offering and who you\'re sending to. No more accidental proposals.',
+        hint: 'Trading → compose an offer → click Review & Propose Trade',
+      },
+      {
+        emoji: '🎴',
+        title: 'Inventory Item Detail',
+        description: 'Clicking an inventory item now opens a rich detail modal showing the item art, rarity badge, source, acquired date, quantity, and an equip/unequip action — alongside the existing chat preview.',
+        hint: 'Inventory → click any item',
+      },
+    ],
+    entries: [
+      { type: 'feature', text: 'DMs now support pinned messages. Right-click any message to pin/unpin it. The pin icon in the header opens a side panel showing all pinned messages with unpin actions.' },
+      { type: 'feature', text: 'Thread panel replies now support emoji reactions — hover a reply for a quick-react bar (👍❤️😂🔥😮). Reaction counts update immediately and toggle on/off like in main chat.' },
+      { type: 'improvement', text: 'Trade proposals now include a review modal showing recipient name, all offered items with rarity colors, and gratonite amount before committing. Click "Edit" to go back and adjust.' },
+      { type: 'improvement', text: 'Inventory item detail modal now shows: item art or gradient placeholder, rarity badge with matching color, type chip, equipped state, source, quantity (if >1), acquired date, and a larger equip/unequip button.' },
+    ],
+  },
+  {
     id: '2026-04-06a',
     date: 'April 6, 2026',
     title: 'UX Polish & Accessibility — Editor state, mobile fixes, Q&A edit',

@@ -21,6 +21,8 @@ import { requireAuth } from '../middleware/auth';
 import { userWallets, economyLedger } from '../db/schema/economy';
 import { profileViews as profileViewsTable, trades as tradesTable } from '../db/schema/profile-views';
 import { logger } from '../lib/logger';
+import { z } from 'zod';
+import { validate } from '../middleware/validate';
 
 export const profilesSocialRouter = Router();
 
@@ -172,17 +174,18 @@ profilesSocialRouter.post(
 // ---------------------------------------------------------------------------
 // Gift System
 // ---------------------------------------------------------------------------
+const giftSchema = z.object({
+  itemId: z.string().min(1),
+  recipientId: z.string().min(1),
+});
+
 profilesSocialRouter.post(
   '/shop/gift',
   requireAuth,
+  validate(giftSchema),
   async (req: Request, res: Response): Promise<void> => {
     const senderId = req.userId!;
     const { itemId, recipientId } = req.body as { itemId: string; recipientId: string };
-
-    if (!itemId || !recipientId) {
-      res.status(400).json({ code: 'INVALID_INPUT', message: 'itemId and recipientId required' });
-      return;
-    }
 
     if (senderId === recipientId) {
       res.status(400).json({ code: 'SELF_GIFT', message: 'Cannot gift to yourself' });
@@ -241,17 +244,17 @@ profilesSocialRouter.post(
 // ---------------------------------------------------------------------------
 // Bundle Purchase
 // ---------------------------------------------------------------------------
+const bundleSchema = z.object({
+  itemIds: z.array(z.string()).min(2).max(5),
+});
+
 profilesSocialRouter.post(
   '/shop/bundle-purchase',
   requireAuth,
+  validate(bundleSchema),
   async (req: Request, res: Response): Promise<void> => {
     const userId = req.userId!;
     const { itemIds } = req.body as { itemIds: string[] };
-
-    if (!itemIds || !Array.isArray(itemIds) || itemIds.length < 2 || itemIds.length > 5) {
-      res.status(400).json({ code: 'INVALID_BUNDLE', message: 'Bundle must contain 2-5 items' });
-      return;
-    }
 
     // Calculate discount
     const discountMap: Record<number, number> = { 2: 0.1, 3: 0.15, 4: 0.2, 5: 0.25 };
@@ -321,17 +324,21 @@ profilesSocialRouter.post(
 // Trades (DB-backed)
 // ---------------------------------------------------------------------------
 
+const proposeTradeSchema = z.object({
+  recipientId: z.string().min(1),
+  proposerItems: z.array(z.unknown()).optional().default([]),
+  recipientItems: z.array(z.unknown()).optional().default([]),
+  proposerGratonites: z.number().optional().default(0),
+  recipientGratonites: z.number().optional().default(0),
+});
+
 profilesSocialRouter.post(
   '/trades/propose',
   requireAuth,
+  validate(proposeTradeSchema),
   async (req: Request, res: Response): Promise<void> => {
     const proposerId = req.userId!;
     const { recipientId, proposerItems, recipientItems, proposerGratonites, recipientGratonites } = req.body;
-
-    if (!recipientId) {
-      res.status(400).json({ code: 'INVALID', message: 'recipientId is required' });
-      return;
-    }
 
     const [trade] = await db.insert(tradesTable).values({
       proposerId,

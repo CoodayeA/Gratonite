@@ -18,6 +18,7 @@ type Message = {
     createdAt?: number | string | null;
     authorId?: string;
     authorAvatarHash?: string | null;
+    reactions?: { emoji: string; count: number; me: boolean }[];
 };
 
 interface ThreadPanelProps {
@@ -63,11 +64,39 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
     const [threadFilterTab, setThreadFilterTab] = useState<ThreadFilterTab>('active');
     const [threadSort, setThreadSort] = useState<ThreadSortOption>('recent');
     const [threadSearchQuery, setThreadSearchQuery] = useState('');
+    const [reactionHoverId, setReactionHoverId] = useState<number | string | null>(null);
 
     const EMOJI_LIST = ['😄','😂','❤️','🔥','👍','👎','😮','🎉','💀','🚀','✨','💯','👀','😢','🤔','😡'];
 
     const { user: ctxUser } = useUser();
     const currentUserName = ctxUser.name || ctxUser.handle || 'You';
+
+    const handleReaction = async (reply: Message, emoji: string) => {
+        if (!reply.apiId || !threadId) return;
+        const existing = reply.reactions?.find(r => r.emoji === emoji);
+        try {
+            if (existing?.me) {
+                await api.messages.removeReaction(threadId, reply.apiId, emoji);
+                setReplies(prev => prev.map(r => r.id === reply.id ? {
+                    ...r,
+                    reactions: (r.reactions ?? []).map(rx => rx.emoji === emoji
+                        ? { ...rx, count: rx.count - 1, me: false }
+                        : rx
+                    ).filter(rx => rx.count > 0),
+                } : r));
+            } else {
+                await api.messages.addReaction(threadId, reply.apiId, emoji);
+                setReplies(prev => prev.map(r => r.id === reply.id ? {
+                    ...r,
+                    reactions: existing
+                        ? (r.reactions ?? []).map(rx => rx.emoji === emoji ? { ...rx, count: rx.count + 1, me: true } : rx)
+                        : [...(r.reactions ?? []), { emoji, count: 1, me: true }],
+                } : r));
+            }
+        } catch {
+            addToast({ title: 'Failed to react', variant: 'error' });
+        }
+    };
 
     const handleEmojiClick = (emoji: string) => {
         setInputValue(prev => prev + emoji);
@@ -386,7 +415,10 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
                         {/* Replies */}
                         <div style={{ flex: 1, overflowY: 'auto' }}>
                             {replies.map(reply => (
-                                <div key={reply.apiId || reply.id} className="message" style={{ padding: '8px 16px' }}>
+                                <div key={reply.apiId || reply.id} className="message" style={{ padding: '8px 16px' }}
+                                    onMouseEnter={() => setReactionHoverId(reply.apiId ?? reply.id)}
+                                    onMouseLeave={() => setReactionHoverId(null)}
+                                >
                                     <Avatar
                                         userId={reply.authorId || String(reply.id)}
                                         displayName={reply.author}
@@ -399,10 +431,34 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
                                             <span className="msg-timestamp" title={reply.createdAt ? new Date(typeof reply.createdAt === 'string' ? reply.createdAt : reply.createdAt).toLocaleString() : reply.time}>
                                                 {reply.createdAt ? formatRelative(typeof reply.createdAt === "string" ? new Date(reply.createdAt).getTime() : reply.createdAt) : reply.time}
                                             </span>
+                                            {reactionHoverId === (reply.apiId ?? reply.id) && (
+                                                <div style={{ display: 'flex', gap: '2px', marginLeft: 'auto' }}>
+                                                    {['👍','❤️','😂','🔥','😮'].map(emoji => (
+                                                        <button key={emoji}
+                                                            onClick={() => handleReaction(reply, emoji)}
+                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '2px 4px', borderRadius: '4px', lineHeight: 1 }}
+                                                            title={`React with ${emoji}`}
+                                                        >{emoji}</button>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="msg-body" style={{ fontSize: '13px' }}>
                                             {reply.content}
                                         </div>
+                                        {(reply.reactions ?? []).filter(r => r.count > 0).length > 0 && (
+                                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
+                                                {(reply.reactions ?? []).filter(r => r.count > 0).map(r => (
+                                                    <button key={r.emoji}
+                                                        onClick={() => handleReaction(reply, r.emoji)}
+                                                        style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 6px', borderRadius: '10px', border: `1px solid ${r.me ? 'var(--accent-primary)' : 'var(--stroke)'}`, background: r.me ? 'rgba(var(--accent-primary-rgb, 99,102,241),0.12)' : 'var(--bg-tertiary)', cursor: 'pointer', fontSize: '12px' }}
+                                                    >
+                                                        <span>{r.emoji}</span>
+                                                        <span style={{ color: r.me ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: 600 }}>{r.count}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
