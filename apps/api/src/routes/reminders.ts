@@ -19,13 +19,13 @@ remindersRouter.post('/', requireAuth, async (req: Request, res: Response): Prom
   };
 
   if (!messageId || !channelId || !remindAt) {
-    res.status(400).json({ error: 'messageId, channelId, and remindAt are required' });
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'messageId, channelId, and remindAt are required'  });
     return;
   }
 
   const remindDate = new Date(remindAt);
   if (isNaN(remindDate.getTime()) || remindDate <= new Date()) {
-    res.status(400).json({ error: 'remindAt must be a valid future date' });
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'remindAt must be a valid future date'  });
     return;
   }
 

@@ -174,7 +174,7 @@ router.get('/metrics', async (req, res) => {
   const allowedIPs = ['127.0.0.1', '::1', '::ffff:127.0.0.1'];
   const clientIP = req.ip || req.socket.remoteAddress || '';
   if (!allowedIPs.includes(clientIP)) {
-    res.status(403).json({ error: 'Forbidden' }); return;
+    res.status(403).json({ code: 'FORBIDDEN', message: 'Forbidden'  }); return;
   }
   res.set('Content-Type', registry.contentType);
   res.send(await registry.metrics());

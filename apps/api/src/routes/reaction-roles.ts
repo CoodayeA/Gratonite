@@ -43,7 +43,7 @@ reactionRolesRouter.post('/', requireAuth, async (req: Request, res: Response): 
   };
 
   if (!messageId || !channelId || !mappings?.length) {
-    res.status(400).json({ error: 'messageId, channelId, and mappings are required' });
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'messageId, channelId, and mappings are required'  });
     return;
   }
 
@@ -96,7 +96,7 @@ reactionRolesRouter.post('/:id/apply', requireAuth, async (req: Request, res: Re
   const userId = req.userId!;
 
   if (!emoji) {
-    res.status(400).json({ error: 'emoji is required' });
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'emoji is required'  });
     return;
   }
 

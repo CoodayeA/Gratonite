@@ -30,7 +30,7 @@ friendshipStreaksRouter.get('/:friendId/streak', requireAuth, async (req: Reques
     res.json(streak);
   } catch (err) {
     logger.error('[friendship-streaks] GET streak error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -56,7 +56,7 @@ friendshipStreaksRouter.get('/streaks', requireAuth, async (req: Request, res: R
     res.json(rows.map(r => ({ ...r.streak, friend: r.friend })));
   } catch (err) {
     logger.error('[friendship-streaks] GET streaks error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -76,7 +76,7 @@ friendshipStreaksRouter.get('/:friendId/milestones', requireAuth, async (req: Re
     res.json(rows);
   } catch (err) {
     logger.error('[friendship-streaks] GET milestones error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -87,7 +87,7 @@ friendshipStreaksRouter.post('/:friendId/interact', requireAuth, async (req: Req
     const { friendId } = req.params as Record<string, string>;
 
     if (userId === friendId) {
-      res.status(400).json({ error: 'Cannot interact with yourself' });
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'Cannot interact with yourself'  });
       return;
     }
 
@@ -123,6 +123,6 @@ friendshipStreaksRouter.post('/:friendId/interact', requireAuth, async (req: Req
     res.json(streak);
   } catch (err) {
     logger.error('[friendship-streaks] POST interact error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });

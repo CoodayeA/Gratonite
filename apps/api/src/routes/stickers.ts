@@ -34,7 +34,7 @@ stickersRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
 // POST / — create sticker
 stickersRouter.post('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { guildId } = req.params as Record<string, string>;
-  if (!guildId) { res.status(400).json({ error: 'guildId required' }); return; }
+  if (!guildId) { res.status(400).json({ code: 'BAD_REQUEST', message: 'guildId required'  }); return; }
 
   if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_EMOJIS))) {
     res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_EMOJIS permission' }); return;
@@ -44,7 +44,7 @@ stickersRouter.post('/', requireAuth, async (req: Request, res: Response): Promi
     name?: string; assetUrl?: string; description?: string; tags?: string[];
   };
   if (!name || !assetUrl) {
-    res.status(400).json({ error: 'name and assetUrl are required' }); return;
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'name and assetUrl are required'  }); return;
   }
 
   const [sticker] = await db.insert(stickers).values({
@@ -62,7 +62,7 @@ stickersRouter.post('/', requireAuth, async (req: Request, res: Response): Promi
 // DELETE /:stickerId — delete sticker
 stickersRouter.delete('/:stickerId', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { guildId, stickerId } = req.params as Record<string, string>;
-  if (!guildId) { res.status(400).json({ error: 'guildId required' }); return; }
+  if (!guildId) { res.status(400).json({ code: 'BAD_REQUEST', message: 'guildId required'  }); return; }
 
   if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_EMOJIS))) {
     res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_EMOJIS permission' }); return;
@@ -80,7 +80,7 @@ stickersRouter.delete('/:stickerId', requireAuth, async (req: Request, res: Resp
 // PATCH /:stickerId — update sticker name or description
 stickersRouter.patch('/:stickerId', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { guildId, stickerId } = req.params as Record<string, string>;
-  if (!guildId) { res.status(400).json({ error: 'guildId required' }); return; }
+  if (!guildId) { res.status(400).json({ code: 'BAD_REQUEST', message: 'guildId required'  }); return; }
 
   if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_EMOJIS))) {
     res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_EMOJIS permission' }); return;

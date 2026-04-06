@@ -47,7 +47,7 @@ reportsRouter.post(
       .limit(1);
 
     if (existing) {
-      res.status(409).json({ error: 'You have already reported this content.' });
+      res.status(409).json({ code: 'CONFLICT', message: 'You have already reported this content.'  });
       return;
     }
 
@@ -64,7 +64,7 @@ reportsRouter.post(
       );
 
     if (recentCount >= 5) {
-      res.status(429).json({ error: 'Too many reports. Please wait a minute before reporting again.' });
+      res.status(429).json({ code: 'RATE_LIMITED', message: 'Too many reports. Please wait a minute before reporting again.'  });
       return;
     }
 
@@ -89,7 +89,7 @@ reportsRouter.get(
   requireAuth,
   async (req: Request, res: Response): Promise<void> => {
     if (!(await hasAdminScope(req.userId!, ADMIN_SCOPES.REPORTS_MANAGE))) {
-      res.status(403).json({ error: 'Admin scope required: admin.reports.manage' });
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Admin scope required: admin.reports.manage'  });
       return;
     }
 
@@ -124,7 +124,7 @@ reportsRouter.patch(
   validate(updateReportSchema),
   async (req: Request, res: Response): Promise<void> => {
     if (!(await hasAdminScope(req.userId!, ADMIN_SCOPES.REPORTS_MANAGE))) {
-      res.status(403).json({ error: 'Admin scope required: admin.reports.manage' });
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Admin scope required: admin.reports.manage'  });
       return;
     }
 
@@ -137,7 +137,7 @@ reportsRouter.patch(
       .returning();
 
     if (!updated) {
-      res.status(404).json({ error: 'Report not found' });
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Report not found'  });
       return;
     }
 

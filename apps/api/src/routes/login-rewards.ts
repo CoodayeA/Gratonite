@@ -55,7 +55,7 @@ loginRewardsRouter.get('/login-reward', requireAuth, async (req: Request, res: R
     });
   } catch (err) {
     logger.error('[login-rewards] GET error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -102,6 +102,6 @@ loginRewardsRouter.post('/login-reward/claim', requireAuth, async (req: Request,
     });
   } catch (err) {
     logger.error('[login-rewards] POST claim error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });

@@ -16,7 +16,7 @@ seasonalEventsRouter.get('/events/active', requireAuth, async (req: Request, res
     res.json(active);
   } catch (err) {
     logger.error('[seasonal-events] GET active error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -30,7 +30,7 @@ seasonalEventsRouter.get('/events/:eventId/progress', requireAuth, async (req: R
     res.json(progress ?? { userId, eventId, points: 0, claimedRewards: [] });
   } catch (err) {
     logger.error('[seasonal-events] GET progress error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -42,18 +42,18 @@ seasonalEventsRouter.post('/events/:eventId/claim', requireAuth, async (req: Req
   try {
     const [event] = await db.select().from(seasonalEvents).where(eq(seasonalEvents.id, eventId)).limit(1);
     if (!event) {
-      res.status(404).json({ error: 'Event not found' });
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Event not found'  });
       return;
     }
 
     const now = new Date();
     if (now < event.startAt || now > event.endAt) {
-      res.status(400).json({ error: 'Event is not active' });
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'Event is not active'  });
       return;
     }
 
     if (!milestoneId) {
-      res.status(400).json({ error: 'milestoneId is required' });
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'milestoneId is required'  });
       return;
     }
 
@@ -63,7 +63,7 @@ seasonalEventsRouter.post('/events/:eventId/claim', requireAuth, async (req: Req
     const currentRewards = (progress?.claimedRewards ?? []) as string[];
 
     if (currentRewards.includes(milestoneId)) {
-      res.status(400).json({ error: 'Milestone already claimed' });
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'Milestone already claimed'  });
       return;
     }
 
@@ -85,6 +85,6 @@ seasonalEventsRouter.post('/events/:eventId/claim', requireAuth, async (req: Req
     res.json({ userId, eventId, points: progress?.points ?? 0, claimedRewards: updatedRewards });
   } catch (err) {
     logger.error('[seasonal-events] POST claim error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });

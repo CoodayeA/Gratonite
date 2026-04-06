@@ -290,13 +290,13 @@ messagesRouter.get('/jump-to-date', requireAuth, async (req: Request, res: Respo
 
     const dateStr = typeof req.query.date === 'string' ? req.query.date : undefined;
     if (!dateStr) {
-      res.status(400).json({ error: 'Missing required query parameter: date' });
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'Missing required query parameter: date'  });
       return;
     }
 
     const targetDate = new Date(dateStr);
     if (isNaN(targetDate.getTime())) {
-      res.status(400).json({ error: 'Invalid date format' });
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'Invalid date format'  });
       return;
     }
 
@@ -316,7 +316,7 @@ messagesRouter.get('/jump-to-date', requireAuth, async (req: Request, res: Respo
       .limit(1);
 
     if (!targetMsg) {
-      res.status(404).json({ error: 'No messages found on or after this date' });
+      res.status(404).json({ code: 'NOT_FOUND', message: 'No messages found on or after this date'  });
       return;
     }
 
@@ -480,7 +480,7 @@ messagesRouter.get('/jump-to-message', requireAuth, async (req: Request, res: Re
 
     const messageId = typeof req.query.messageId === 'string' ? req.query.messageId : undefined;
     if (!messageId) {
-      res.status(400).json({ error: 'Missing required query parameter: messageId' });
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'Missing required query parameter: messageId'  });
       return;
     }
 
@@ -498,7 +498,7 @@ messagesRouter.get('/jump-to-message', requireAuth, async (req: Request, res: Re
       .limit(1);
 
     if (!targetMsg) {
-      res.status(404).json({ error: 'Message not found in this channel' });
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Message not found in this channel'  });
       return;
     }
 

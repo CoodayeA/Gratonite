@@ -20,7 +20,7 @@ greetingCardsRouter.get('/templates', async (_req: Request, res: Response): Prom
     res.json(grouped);
   } catch (err) {
     logger.error('[greeting-cards] GET templates error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -36,12 +36,12 @@ greetingCardsRouter.post('/', requireAuth, async (req: Request, res: Response): 
     };
 
     if (!templateId || !recipientId || !message) {
-      res.status(400).json({ error: 'templateId, recipientId, and message are required' });
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'templateId, recipientId, and message are required'  });
       return;
     }
 
     if (senderId === recipientId) {
-      res.status(400).json({ error: 'Cannot send a card to yourself' });
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'Cannot send a card to yourself'  });
       return;
     }
 
@@ -49,7 +49,7 @@ greetingCardsRouter.post('/', requireAuth, async (req: Request, res: Response): 
     const [template] = await db.select().from(greetingCardTemplates)
       .where(eq(greetingCardTemplates.id, templateId)).limit(1);
     if (!template) {
-      res.status(404).json({ error: 'Template not found' });
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Template not found'  });
       return;
     }
 
@@ -64,7 +64,7 @@ greetingCardsRouter.post('/', requireAuth, async (req: Request, res: Response): 
     res.status(201).json(card);
   } catch (err) {
     logger.error('[greeting-cards] POST error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -92,7 +92,7 @@ greetingCardsRouter.get('/inbox', requireAuth, async (req: Request, res: Respons
     res.json(rows.map(r => ({ ...r.card, template: r.template, sender: r.sender })));
   } catch (err) {
     logger.error('[greeting-cards] GET inbox error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -112,13 +112,13 @@ greetingCardsRouter.patch('/:id/view', requireAuth, async (req: Request, res: Re
       .returning();
 
     if (!updated) {
-      res.status(404).json({ error: 'Card not found or already viewed' });
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Card not found or already viewed'  });
       return;
     }
 
     res.json(updated);
   } catch (err) {
     logger.error('[greeting-cards] PATCH view error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });

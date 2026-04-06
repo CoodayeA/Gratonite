@@ -90,7 +90,7 @@ starboardRouter.post('/check', requireAuth, async (req: Request, res: Response):
   const { messageId, reactionCount } = req.body as { messageId: string; reactionCount: number };
 
   if (!messageId || reactionCount === undefined) {
-    res.status(400).json({ error: 'messageId and reactionCount are required' });
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'messageId and reactionCount are required'  });
     return;
   }
 

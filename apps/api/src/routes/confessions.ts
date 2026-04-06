@@ -16,11 +16,11 @@ confessionsRouter.post('/guilds/:guildId/confession-channels', requireAuth, asyn
   try {
     const { guildId } = req.params as Record<string, string>;
     if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_CHANNELS))) {
-      res.status(403).json({ error: 'Missing MANAGE_CHANNELS permission' }); return;
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_CHANNELS permission'  }); return;
     }
 
     const { channelId } = req.body;
-    if (!channelId) { res.status(400).json({ error: 'channelId is required' }); return; }
+    if (!channelId) { res.status(400).json({ code: 'BAD_REQUEST', message: 'channelId is required'  }); return; }
 
     const [row] = await db.insert(confessionChannels).values({
       channelId,
@@ -32,7 +32,7 @@ confessionsRouter.post('/guilds/:guildId/confession-channels', requireAuth, asyn
     res.status(201).json(row);
   } catch (err) {
     logger.error('[confessions] POST channel error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -41,15 +41,15 @@ confessionsRouter.delete('/guilds/:guildId/confession-channels/:channelId', requ
   try {
     const { guildId, channelId } = req.params as Record<string, string>;
     if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_CHANNELS))) {
-      res.status(403).json({ error: 'Missing MANAGE_CHANNELS permission' }); return;
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_CHANNELS permission'  }); return;
     }
 
     const [deleted] = await db.delete(confessionChannels).where(and(eq(confessionChannels.channelId, channelId), eq(confessionChannels.guildId, guildId))).returning();
-    if (!deleted) { res.status(404).json({ error: 'Confession channel not found' }); return; }
+    if (!deleted) { res.status(404).json({ code: 'NOT_FOUND', message: 'Confession channel not found'  }); return; }
     res.json({ success: true });
   } catch (err) {
     logger.error('[confessions] DELETE channel error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -79,7 +79,7 @@ confessionsRouter.get('/channels/:channelId/confessions', requireAuth, async (re
     res.json(rows);
   } catch (err) {
     logger.error('[confessions] GET list error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -89,11 +89,11 @@ confessionsRouter.post('/channels/:channelId/confessions', requireAuth, async (r
     const { channelId } = req.params as Record<string, string>;
     const userId = req.userId!;
     const { content } = req.body;
-    if (!content || !content.trim()) { res.status(400).json({ error: 'content is required' }); return; }
+    if (!content || !content.trim()) { res.status(400).json({ code: 'BAD_REQUEST', message: 'content is required'  }); return; }
 
     // Verify this is a confession channel
     const [cc] = await db.select().from(confessionChannels).where(and(eq(confessionChannels.channelId, channelId), eq(confessionChannels.enabled, true))).limit(1);
-    if (!cc) { res.status(400).json({ error: 'This channel is not a confession board' }); return; }
+    if (!cc) { res.status(400).json({ code: 'BAD_REQUEST', message: 'This channel is not a confession board'  }); return; }
 
     const anonLabel = `Anonymous #${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -116,7 +116,7 @@ confessionsRouter.post('/channels/:channelId/confessions', requireAuth, async (r
     });
   } catch (err) {
     logger.error('[confessions] POST error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -128,16 +128,16 @@ confessionsRouter.post('/guilds/:guildId/confessions/:id/reveal', requireAuth, a
 
     // Check guild owner or ADMINISTRATOR
     const [guild] = await db.select().from(guilds).where(eq(guilds.id, guildId)).limit(1);
-    if (!guild) { res.status(404).json({ error: 'Guild not found' }); return; }
+    if (!guild) { res.status(404).json({ code: 'NOT_FOUND', message: 'Guild not found'  }); return; }
 
     const isOwner = guild.ownerId === userId;
     const isAdmin = await hasPermission(userId, guildId, Permissions.ADMINISTRATOR);
     if (!isOwner && !isAdmin) {
-      res.status(403).json({ error: 'Only guild owner or administrators can reveal authors' }); return;
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Only guild owner or administrators can reveal authors'  }); return;
     }
 
     const [confession] = await db.select().from(confessions).where(and(eq(confessions.id, id), eq(confessions.guildId, guildId))).limit(1);
-    if (!confession) { res.status(404).json({ error: 'Confession not found' }); return; }
+    if (!confession) { res.status(404).json({ code: 'NOT_FOUND', message: 'Confession not found'  }); return; }
 
     // Log in audit
     await db.insert(auditLog).values({
@@ -152,6 +152,6 @@ confessionsRouter.post('/guilds/:guildId/confessions/:id/reveal', requireAuth, a
     res.json({ authorId: confession.authorId });
   } catch (err) {
     logger.error('[confessions] POST reveal error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });

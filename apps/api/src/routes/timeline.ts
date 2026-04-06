@@ -30,7 +30,7 @@ timelineRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
     res.json(events);
   } catch (err) {
     logger.error('[timeline] GET error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -52,7 +52,7 @@ timelineRouter.post('/', requireAuth, async (req: Request, res: Response): Promi
     };
 
     if (!title || typeof title !== 'string') {
-      res.status(400).json({ error: 'title is required' });
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'title is required'  });
       return;
     }
 
@@ -68,7 +68,7 @@ timelineRouter.post('/', requireAuth, async (req: Request, res: Response): Promi
     res.status(201).json(event);
   } catch (err) {
     logger.error('[timeline] POST error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -91,13 +91,13 @@ timelineRouter.delete('/:id', requireAuth, async (req: Request, res: Response): 
       .returning();
 
     if (!deleted) {
-      res.status(404).json({ error: 'Timeline event not found' });
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Timeline event not found'  });
       return;
     }
 
     res.json({ success: true });
   } catch (err) {
     logger.error('[timeline] DELETE error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });

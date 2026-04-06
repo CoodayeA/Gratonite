@@ -19,7 +19,7 @@ studyRoomsRouter.get('/channels/:channelId/study', requireAuth, async (req: Requ
     res.json(settings || { channelId, pomodoroWork: 25, pomodoroBreak: 5, ambientSound: null });
   } catch (err) {
     logger.error('[study-rooms] GET settings error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -28,10 +28,10 @@ studyRoomsRouter.put('/channels/:channelId/study/settings', requireAuth, async (
   try {
     const { channelId } = req.params as Record<string, string>;
     const [channel] = await db.select().from(channels).where(eq(channels.id, channelId)).limit(1);
-    if (!channel || !channel.guildId) { res.status(404).json({ error: 'Channel not found' }); return; }
+    if (!channel || !channel.guildId) { res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found'  }); return; }
 
     if (!(await hasPermission(req.userId!, channel.guildId, Permissions.MANAGE_CHANNELS))) {
-      res.status(403).json({ error: 'Missing MANAGE_CHANNELS permission' }); return;
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_CHANNELS permission'  }); return;
     }
 
     const { pomodoroWork, pomodoroBreak, ambientSound } = req.body;
@@ -51,7 +51,7 @@ studyRoomsRouter.put('/channels/:channelId/study/settings', requireAuth, async (
     res.json(row);
   } catch (err) {
     logger.error('[study-rooms] PUT settings error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -62,7 +62,7 @@ studyRoomsRouter.post('/channels/:channelId/study/start', requireAuth, async (re
     const userId = req.userId!;
     const { sessionType } = req.body;
     const [channel] = await db.select().from(channels).where(eq(channels.id, channelId)).limit(1);
-    if (!channel || !channel.guildId) { res.status(404).json({ error: 'Channel not found' }); return; }
+    if (!channel || !channel.guildId) { res.status(404).json({ code: 'NOT_FOUND', message: 'Channel not found'  }); return; }
 
     // End any existing active session for this user in this channel
     await db.update(studySessions)
@@ -78,7 +78,7 @@ studyRoomsRouter.post('/channels/:channelId/study/start', requireAuth, async (re
     res.json(session);
   } catch (err) {
     logger.error('[study-rooms] POST start error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -91,11 +91,11 @@ studyRoomsRouter.post('/channels/:channelId/study/end', requireAuth, async (req:
       .set({ endedAt: new Date(), duration: sql`EXTRACT(EPOCH FROM now() - ${studySessions.startedAt})::integer` })
       .where(and(eq(studySessions.userId, userId), eq(studySessions.channelId, channelId), isNull(studySessions.endedAt)))
       .returning();
-    if (!session) { res.status(404).json({ error: 'No active session found' }); return; }
+    if (!session) { res.status(404).json({ code: 'NOT_FOUND', message: 'No active session found'  }); return; }
     res.json(session);
   } catch (err) {
     logger.error('[study-rooms] POST end error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -130,7 +130,7 @@ studyRoomsRouter.get('/guilds/:guildId/study/stats', requireAuth, async (req: Re
     res.json({ totalHours: Number(totals?.totalHours ?? 0), sessionCount: Number(totals?.sessionCount ?? 0), leaderboard });
   } catch (err) {
     logger.error('[study-rooms] GET stats error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -157,6 +157,6 @@ studyRoomsRouter.get('/guilds/:guildId/study/leaderboard', requireAuth, async (r
     res.json(leaderboard);
   } catch (err) {
     logger.error('[study-rooms] GET leaderboard error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });

@@ -34,7 +34,7 @@ autoRolesRouter.post('/', requireAuth, async (req: Request, res: Response): Prom
   };
 
   if (!roleId || !triggerType || triggerValue === undefined) {
-    res.status(400).json({ error: 'roleId, triggerType, and triggerValue are required' });
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'roleId, triggerType, and triggerValue are required'  });
     return;
   }
 

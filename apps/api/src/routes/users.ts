@@ -982,7 +982,7 @@ usersRouter.get('/@me/unified-inbox', requireAuth, async (req: Request, res: Res
     res.json(items);
   } catch (err) {
     logger.debug({ msg: 'unified-inbox error', err });
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -997,7 +997,7 @@ usersRouter.post('/@me/unified-inbox/read-all', requireAuth, async (req: Request
     res.json({ success: true });
   } catch (err) {
     logger.debug({ msg: 'unified-inbox read-all error', err });
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -1013,7 +1013,7 @@ usersRouter.post('/@me/unified-inbox/:id/read', requireAuth, async (req: Request
     res.json({ success: true });
   } catch (err) {
     logger.debug({ msg: 'unified-inbox mark-read error', err });
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -1026,7 +1026,7 @@ usersRouter.get('/@me/stats', requireAuth, async (req: Request, res: Response): 
   const userId = req.userId!;
   try {
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    if (!user) { res.status(404).json({ error: 'User not found' }); return; }
+    if (!user) { res.status(404).json({ code: 'NOT_FOUND', message: 'User not found'  }); return; }
 
     const [earnedCount] = await db.select({ count: sql<number>`count(*)::int` }).from(userAchievements).where(eq(userAchievements.userId, userId));
     const [bookmarkCount] = await db.select({ count: sql<number>`count(*)::int` }).from(messageBookmarks).where(eq(messageBookmarks.userId, userId));
@@ -1047,7 +1047,7 @@ usersRouter.get('/@me/stats', requireAuth, async (req: Request, res: Response): 
     });
   } catch (err) {
     logger.debug({ msg: 'failed to fetch user stats', err });
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -1059,7 +1059,7 @@ usersRouter.get('/@me/quick-reactions', requireAuth, async (req: Request, res: R
     res.json(row ?? { userId, emojis: ['👍', '❤️', '😂', '🎉', '🔥', '😮', '😢', '👀'] });
   } catch (err) {
     logger.debug({ msg: 'failed to fetch quick reactions', err });
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -1068,7 +1068,7 @@ usersRouter.put('/@me/quick-reactions', requireAuth, async (req: Request, res: R
   const userId = req.userId!;
   const { emojis } = req.body;
   if (!Array.isArray(emojis) || emojis.length > 8 || emojis.some((e: unknown) => typeof e !== 'string')) {
-    res.status(400).json({ error: 'emojis must be an array of up to 8 strings' });
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'emojis must be an array of up to 8 strings'  });
     return;
   }
   try {
@@ -1077,7 +1077,7 @@ usersRouter.put('/@me/quick-reactions', requireAuth, async (req: Request, res: R
     res.json({ emojis });
   } catch (err) {
     logger.debug({ msg: 'failed to update quick reactions', err });
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -1089,7 +1089,7 @@ usersRouter.get('/@me/status-presets', requireAuth, async (req: Request, res: Re
     res.json(presets);
   } catch (err) {
     logger.debug({ msg: 'failed to fetch status presets', err });
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -1097,15 +1097,15 @@ usersRouter.get('/@me/status-presets', requireAuth, async (req: Request, res: Re
 usersRouter.post('/@me/status-presets', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const userId = req.userId!;
   const { status, customText, emoji } = req.body;
-  if (!status) { res.status(400).json({ error: 'status is required' }); return; }
+  if (!status) { res.status(400).json({ code: 'BAD_REQUEST', message: 'status is required'  }); return; }
   try {
     const existing = await db.select().from(statusPresets).where(eq(statusPresets.userId, userId));
-    if (existing.length >= 5) { res.status(400).json({ error: 'Maximum 5 status presets allowed' }); return; }
+    if (existing.length >= 5) { res.status(400).json({ code: 'BAD_REQUEST', message: 'Maximum 5 status presets allowed'  }); return; }
     const [preset] = await db.insert(statusPresets).values({ userId, status, customText, emoji }).returning();
     res.status(201).json(preset);
   } catch (err) {
     logger.debug({ msg: 'failed to create status preset', err });
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -1118,7 +1118,7 @@ usersRouter.delete('/@me/status-presets/:id', requireAuth, async (req: Request, 
     res.status(204).send();
   } catch (err) {
     logger.debug({ msg: 'failed to delete status preset', err });
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -1129,7 +1129,7 @@ usersRouter.post('/@me/status-presets/:id/apply', requireAuth, async (req: Reque
   try {
     const [preset] = await db.select().from(statusPresets)
       .where(and(eq(statusPresets.id, id), eq(statusPresets.userId, userId))).limit(1);
-    if (!preset) { res.status(404).json({ error: 'Preset not found' }); return; }
+    if (!preset) { res.status(404).json({ code: 'NOT_FOUND', message: 'Preset not found'  }); return; }
     await db.update(users).set({
       status: preset.status as any,
       customStatus: preset.customText ?? null,
@@ -1138,7 +1138,7 @@ usersRouter.post('/@me/status-presets/:id/apply', requireAuth, async (req: Reque
     res.json({ applied: true });
   } catch (err) {
     logger.debug({ msg: 'failed to apply status preset', err });
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -1147,13 +1147,13 @@ usersRouter.post('/@me/gift', requireAuth, async (req: Request, res: Response): 
   const userId = req.userId!;
   const { toUserId, amount, message } = req.body;
   if (!toUserId || !amount || typeof amount !== 'number' || amount < 10) {
-    res.status(400).json({ error: 'toUserId and amount (min 10) are required' });
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'toUserId and amount (min 10) are required'  });
     return;
   }
   try {
     const [sender] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    if (!sender) { res.status(404).json({ error: 'Sender not found' }); return; }
-    if ((sender.coins ?? 0) < amount) { res.status(400).json({ error: 'Insufficient coins' }); return; }
+    if (!sender) { res.status(404).json({ code: 'NOT_FOUND', message: 'Sender not found'  }); return; }
+    if ((sender.coins ?? 0) < amount) { res.status(400).json({ code: 'BAD_REQUEST', message: 'Insufficient coins'  }); return; }
 
     // Check mutual friendship in either direction (must be FRIEND, not BLOCKED or PENDING)
     const [friendship] = await db.select().from(relationships)
@@ -1173,7 +1173,7 @@ usersRouter.post('/@me/gift', requireAuth, async (req: Request, res: Response): 
         )
       ).limit(1);
     if (!friendship && !friendship2) {
-      res.status(403).json({ error: 'You can only gift coins to friends' });
+      res.status(403).json({ code: 'FORBIDDEN', message: 'You can only gift coins to friends'  });
       return;
     }
 
@@ -1193,7 +1193,7 @@ usersRouter.post('/@me/gift', requireAuth, async (req: Request, res: Response): 
     res.json({ success: true, amount });
   } catch (err) {
     logger.debug({ msg: 'failed to gift coins', err });
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -1202,7 +1202,7 @@ usersRouter.post('/@me/onboarding-complete', requireAuth, async (req: Request, r
   const userId = req.userId!;
   try {
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    if (!user) { res.status(404).json({ error: 'Not found' }); return; }
+    if (!user) { res.status(404).json({ code: 'NOT_FOUND', message: 'Not found'  }); return; }
 
     if (!user.onboardingCompleted) {
       await db.update(users).set({ onboardingCompleted: true, coins: sql`coins + 100` }).where(eq(users.id, userId));
@@ -1212,7 +1212,7 @@ usersRouter.post('/@me/onboarding-complete', requireAuth, async (req: Request, r
     res.json({ success: true });
   } catch (err) {
     logger.debug({ msg: 'failed to complete onboarding', err });
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -1326,7 +1326,7 @@ usersRouter.get('/@me/data-exports', requireAuth, async (req: Request, res: Resp
     res.json(exports);
   } catch (err) {
     logger.debug({ msg: 'failed to fetch data exports', err });
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -1341,6 +1341,6 @@ usersRouter.post('/@me/data-exports', requireAuth, async (req: Request, res: Res
     res.status(201).json(exported);
   } catch (err) {
     logger.debug({ msg: 'failed to create data export', err });
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });

@@ -24,7 +24,7 @@ showcaseRouter.put('/users/@me/showcase', requireAuth, async (req: Request, res:
   };
 
   if (!items || !Array.isArray(items)) {
-    res.status(400).json({ error: 'items array is required' });
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'items array is required'  });
     return;
   }
 
@@ -57,7 +57,7 @@ showcaseRouter.delete('/users/@me/showcase/:slot', requireAuth, async (req: Requ
   const slot = parseInt(req.params.slot as string, 10);
 
   if (isNaN(slot)) {
-    res.status(400).json({ error: 'Invalid slot number' });
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'Invalid slot number'  });
     return;
   }
 

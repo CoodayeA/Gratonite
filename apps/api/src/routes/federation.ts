@@ -59,7 +59,7 @@ function getFederationInstanceId(req: Request): string {
  */
 export function wellKnownHandler(_req: Request, res: Response): void {
   if (!isFederationEnabled()) {
-    res.status(404).json({ error: 'Federation not enabled' });
+    res.status(404).json({ code: 'NOT_FOUND', message: 'Federation not enabled'  });
     return;
   }
 

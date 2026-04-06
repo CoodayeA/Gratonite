@@ -804,7 +804,7 @@ guildsRouter.get('/trending', requireAuth, async (req: Request, res: Response): 
     res.json(result);
   } catch (err) {
     logger.debug({ msg: 'failed to fetch trending guilds', err });
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -1632,18 +1632,18 @@ guildsRouter.post(
       // Validate durationSeconds
       const durationSeconds = Number(req.body.durationSeconds);
       if (!Number.isFinite(durationSeconds) || durationSeconds < 0 || durationSeconds > 2419200) {
-        res.status(400).json({ error: 'durationSeconds must be a number between 0 and 2419200 (28 days)' });
+        res.status(400).json({ code: 'BAD_REQUEST', message: 'durationSeconds must be a number between 0 and 2419200 (28 days)'  });
         return;
       }
 
       // Cannot timeout the guild owner
       const [guild] = await db.select({ ownerId: guilds.ownerId }).from(guilds).where(eq(guilds.id, guildId)).limit(1);
       if (!guild) {
-        res.status(404).json({ error: 'Guild not found' });
+        res.status(404).json({ code: 'NOT_FOUND', message: 'Guild not found'  });
         return;
       }
       if (targetUserId === guild.ownerId) {
-        res.status(400).json({ error: 'Cannot timeout the guild owner' });
+        res.status(400).json({ code: 'BAD_REQUEST', message: 'Cannot timeout the guild owner'  });
         return;
       }
 
@@ -2312,7 +2312,7 @@ guildsRouter.patch('/:guildId/tags', requireAuth, async (req: Request, res: Resp
     }
     const { tags } = req.body as { tags?: unknown };
     if (!Array.isArray(tags) || tags.length > 5) {
-      res.status(400).json({ error: 'tags must be an array of max 5' }); return;
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'tags must be an array of max 5'  }); return;
     }
     const validatedTags = (tags as unknown[]).map(t => String(t).trim()).filter(t => t.length > 0 && t.length <= 32);
     await db.delete(guildTags).where(eq(guildTags.guildId, guildId));

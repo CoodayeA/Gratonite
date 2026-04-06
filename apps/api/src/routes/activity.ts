@@ -68,6 +68,6 @@ activityRouter.get('/users/@me/feed', requireAuth, async (req: Request, res: Res
     res.json(events);
   } catch (err) {
     logger.error('[activity] GET feed error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });

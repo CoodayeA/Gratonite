@@ -387,7 +387,7 @@ filesRouter.get('/:fileId', publicFileRateLimit, (req: Request, res: Response, n
 
     // Path traversal defense: ensure resolved path stays within UPLOADS_DIR
     if (!path.resolve(filePath).startsWith(path.resolve(UPLOADS_DIR))) {
-      res.status(403).json({ error: 'Invalid path' });
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Invalid path'  });
       return;
     }
 

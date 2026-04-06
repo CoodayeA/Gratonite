@@ -26,7 +26,7 @@ achievementsRouter.get('/achievements', requireAuth, async (req: Request, res: R
     res.json(result);
   } catch (err) {
     logger.error('[achievements] GET /achievements error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -47,7 +47,7 @@ achievementsRouter.get('/users/@me/achievements', requireAuth, async (req: Reque
     res.json(result);
   } catch (err) {
     logger.error('[achievements] GET error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 

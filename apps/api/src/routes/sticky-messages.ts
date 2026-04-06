@@ -49,7 +49,7 @@ stickyMessagesRouter.post('/', requireAuth, async (req: Request, res: Response):
 
   const { content } = req.body as { content: string };
   if (!content) {
-    res.status(400).json({ error: 'content is required' });
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'content is required'  });
     return;
   }
 

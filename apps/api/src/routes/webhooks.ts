@@ -53,7 +53,7 @@ webhooksRouter.post(
       const userId = req.userId!;
 
       if (!name || typeof name !== 'string') {
-        res.status(400).json({ error: 'name is required' });
+        res.status(400).json({ code: 'BAD_REQUEST', message: 'name is required'  });
         return;
       }
 
@@ -64,7 +64,7 @@ webhooksRouter.post(
         .limit(1);
 
       if (!channel || !channel.guildId) {
-        res.status(404).json({ error: 'Guild channel not found' });
+        res.status(404).json({ code: 'NOT_FOUND', message: 'Guild channel not found'  });
         return;
       }
 
@@ -73,13 +73,13 @@ webhooksRouter.post(
         .where(and(eq(guildMembers.guildId, channel.guildId!), eq(guildMembers.userId, userId)))
         .limit(1);
       if (!member.length) {
-        res.status(403).json({ error: 'Not a member of this guild' });
+        res.status(403).json({ code: 'FORBIDDEN', message: 'Not a member of this guild'  });
         return;
       }
 
       // Require MANAGE_WEBHOOKS permission to create webhooks
       if (!(await hasPermission(userId, channel.guildId!, Permissions.MANAGE_WEBHOOKS))) {
-        res.status(403).json({ error: 'Missing MANAGE_WEBHOOKS permission' });
+        res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_WEBHOOKS permission'  });
         return;
       }
 
@@ -108,7 +108,7 @@ webhooksRouter.post(
       res.status(201).json(webhook);
     } catch (err) {
       logger.error('[webhooks] create error:', err);
-      res.status(500).json({ error: 'Failed to create webhook' });
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to create webhook'  });
     }
   },
 );
@@ -127,13 +127,13 @@ webhooksRouter.get(
         .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, userId)))
         .limit(1);
       if (!member.length) {
-        res.status(403).json({ error: 'Not a member of this guild' });
+        res.status(403).json({ code: 'FORBIDDEN', message: 'Not a member of this guild'  });
         return;
       }
 
       // Require MANAGE_WEBHOOKS permission to list webhooks
       if (!(await hasPermission(userId, guildId, Permissions.MANAGE_WEBHOOKS))) {
-        res.status(403).json({ error: 'Missing MANAGE_WEBHOOKS permission' });
+        res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_WEBHOOKS permission'  });
         return;
       }
 
@@ -144,7 +144,7 @@ webhooksRouter.get(
       res.json(allWebhooks);
     } catch (err) {
       logger.error('[webhooks] list error:', err);
-      res.status(500).json({ error: 'Failed to fetch webhooks' });
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to fetch webhooks'  });
     }
   },
 );
@@ -160,7 +160,7 @@ webhooksRouter.delete(
 
       const [webhook] = await db.select().from(webhooks).where(eq(webhooks.id, webhookId)).limit(1);
       if (!webhook) {
-        res.status(404).json({ error: 'Webhook not found' });
+        res.status(404).json({ code: 'NOT_FOUND', message: 'Webhook not found'  });
         return;
       }
 
@@ -169,7 +169,7 @@ webhooksRouter.delete(
       if (webhook.creatorId !== userId) {
         const canManageWebhooks = await hasPermission(userId, webhook.guildId, Permissions.MANAGE_WEBHOOKS);
         if (!canManageWebhooks) {
-          res.status(403).json({ error: 'Unauthorized — must be webhook creator or have MANAGE_WEBHOOKS permission' });
+          res.status(403).json({ code: 'FORBIDDEN', message: 'Unauthorized — must be webhook creator or have MANAGE_WEBHOOKS permission'  });
           return;
         }
       }
@@ -178,7 +178,7 @@ webhooksRouter.delete(
       res.json({ success: true });
     } catch (err) {
       logger.error('[webhooks] delete error:', err);
-      res.status(500).json({ error: 'Failed to delete webhook' });
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to delete webhook'  });
     }
   },
 );
@@ -197,7 +197,7 @@ webhooksRouter.post(
       const rl = webhookRateLimits.get(webhookId);
       if (rl && now < rl.resetAt) {
         if (rl.count >= 5) {
-          res.status(429).json({ error: 'Rate limit exceeded. Max 5 requests per 10 seconds.' });
+          res.status(429).json({ code: 'RATE_LIMITED', message: 'Rate limit exceeded. Max 5 requests per 10 seconds.'  });
           return;
         }
         rl.count++;
@@ -206,7 +206,7 @@ webhooksRouter.post(
       }
 
       if (!content || typeof content !== 'string') {
-        res.status(400).json({ error: 'content is required' });
+        res.status(400).json({ code: 'BAD_REQUEST', message: 'content is required'  });
         return;
       }
 
@@ -255,7 +255,7 @@ webhooksRouter.post(
       res.status(201).json(msg);
     } catch (err) {
       logger.error('[webhooks] execute error:', err);
-      res.status(500).json({ error: 'Webhook execution failed' });
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Webhook execution failed'  });
     }
   },
 );

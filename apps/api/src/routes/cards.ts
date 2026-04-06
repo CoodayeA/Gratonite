@@ -40,7 +40,7 @@ cardsRouter.get('/collection', requireAuth, async (req: Request, res: Response):
 
     res.json(collection);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to load collection' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to load collection'  });
   }
 });
 
@@ -56,7 +56,7 @@ cardsRouter.get('/packs', requireAuth, async (_req: Request, res: Response): Pro
     res.json(packs);
   } catch (err) {
     logger.debug({ msg: 'failed to load card packs', err });
-    res.status(500).json({ error: 'Failed to load packs' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to load packs'  });
   }
 });
 
@@ -67,18 +67,18 @@ cardsRouter.post('/open-pack', requireAuth, async (req: Request, res: Response):
   try {
     const userId = req.userId!;
     const { packId } = req.body;
-    if (!packId) { res.status(400).json({ error: 'packId required' }); return; }
+    if (!packId) { res.status(400).json({ code: 'BAD_REQUEST', message: 'packId required'  }); return; }
 
     // Get the pack
     const [pack] = await db.select().from(cardPacks).where(eq(cardPacks.id, packId)).limit(1);
-    if (!pack || !pack.available) { res.status(404).json({ error: 'Pack not found' }); return; }
+    if (!pack || !pack.available) { res.status(404).json({ code: 'NOT_FOUND', message: 'Pack not found'  }); return; }
 
     // Atomic check + deduct coins (prevents race condition / negative balance)
     const [deducted] = await db.update(users)
       .set({ coins: sql`coins - ${pack.price}` })
       .where(and(eq(users.id, userId), gte(users.coins, pack.price)))
       .returning({ coins: users.coins });
-    if (!deducted) { res.status(400).json({ error: 'Insufficient coins' }); return; }
+    if (!deducted) { res.status(400).json({ code: 'BAD_REQUEST', message: 'Insufficient coins'  }); return; }
 
     // Get eligible cards (by series if pack has one)
     const cardsQuery = pack.series
@@ -89,7 +89,7 @@ cardsRouter.post('/open-pack', requireAuth, async (req: Request, res: Response):
     if (eligibleCards.length === 0) {
       // Refund if no cards exist
       await db.update(users).set({ coins: sql`coins + ${pack.price}` }).where(eq(users.id, userId));
-      res.status(500).json({ error: 'No cards available in this pack' }); return;
+      res.status(500).json({ code: 'INTERNAL_ERROR', message: 'No cards available in this pack'  }); return;
     }
 
     // Weighted random selection
@@ -140,7 +140,7 @@ cardsRouter.post('/open-pack', requireAuth, async (req: Request, res: Response):
       coinsSpent: pack.price,
     });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to open pack' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to open pack'  });
   }
 });
 
@@ -153,17 +153,17 @@ cardsRouter.post('/trade', requireAuth, async (req: Request, res: Response): Pro
     const { toUserId, offerCardIds, requestCardIds } = req.body;
 
     if (!toUserId || !Array.isArray(offerCardIds) || offerCardIds.length === 0) {
-      res.status(400).json({ error: 'toUserId and offerCardIds required' }); return;
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'toUserId and offerCardIds required'  }); return;
     }
     if (fromUserId === toUserId) {
-      res.status(400).json({ error: 'Cannot trade with yourself' }); return;
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'Cannot trade with yourself'  }); return;
     }
 
     // Verify ownership of offered cards
     const offeredCards = await db.select().from(userCards)
       .where(and(eq(userCards.userId, fromUserId), inArray(userCards.id, offerCardIds)));
     if (offeredCards.length !== offerCardIds.length) {
-      res.status(400).json({ error: 'You do not own all offered cards' }); return;
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'You do not own all offered cards'  }); return;
     }
 
     // Verify target user owns requested cards (if any)
@@ -171,7 +171,7 @@ cardsRouter.post('/trade', requireAuth, async (req: Request, res: Response): Pro
       const requestedCards = await db.select().from(userCards)
         .where(and(eq(userCards.userId, toUserId), inArray(userCards.id, requestCardIds)));
       if (requestedCards.length !== requestCardIds.length) {
-        res.status(400).json({ error: 'Target user does not own all requested cards' }); return;
+        res.status(400).json({ code: 'BAD_REQUEST', message: 'Target user does not own all requested cards'  }); return;
       }
     }
 
@@ -193,7 +193,7 @@ cardsRouter.post('/trade', requireAuth, async (req: Request, res: Response): Pro
     res.status(201).json({ tradeId: trade.id, status: 'pending' });
   } catch (err) {
     logger.debug({ msg: 'failed to create trade', err });
-    res.status(500).json({ error: 'Failed to create trade' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to create trade'  });
   }
 });
 
@@ -207,10 +207,10 @@ cardsRouter.post('/trade/:tradeId/accept', requireAuth, async (req: Request, res
 
     const [trade] = await db.select().from(cardTrades).where(eq(cardTrades.id, tradeId)).limit(1);
     if (!trade || trade.status !== 'pending') {
-      res.status(404).json({ error: 'Trade not found or not pending' }); return;
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Trade not found or not pending'  }); return;
     }
     if (trade.toUserId !== userId) {
-      res.status(403).json({ error: 'Not authorized to accept this trade' }); return;
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Not authorized to accept this trade'  }); return;
     }
 
     // Get trade items
@@ -238,7 +238,7 @@ cardsRouter.post('/trade/:tradeId/accept', requireAuth, async (req: Request, res
     res.json({ status: 'accepted' });
   } catch (err) {
     logger.debug({ msg: 'failed to accept trade', err });
-    res.status(500).json({ error: 'Failed to accept trade' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to accept trade'  });
   }
 });
 
@@ -252,10 +252,10 @@ cardsRouter.post('/trade/:tradeId/decline', requireAuth, async (req: Request, re
 
     const [trade] = await db.select().from(cardTrades).where(eq(cardTrades.id, tradeId)).limit(1);
     if (!trade || trade.status !== 'pending') {
-      res.status(404).json({ error: 'Trade not found or not pending' }); return;
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Trade not found or not pending'  }); return;
     }
     if (trade.toUserId !== userId && trade.fromUserId !== userId) {
-      res.status(403).json({ error: 'Not authorized' }); return;
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Not authorized'  }); return;
     }
 
     await db.update(cardTrades)
@@ -265,7 +265,7 @@ cardsRouter.post('/trade/:tradeId/decline', requireAuth, async (req: Request, re
     res.json({ status: 'declined' });
   } catch (err) {
     logger.debug({ msg: 'failed to decline trade', err });
-    res.status(500).json({ error: 'Failed to decline trade' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to decline trade'  });
   }
 });
 
@@ -289,6 +289,6 @@ cardsRouter.get('/trades', requireAuth, async (req: Request, res: Response): Pro
     res.json(trades);
   } catch (err) {
     logger.debug({ msg: 'failed to load trades', err });
-    res.status(500).json({ error: 'Failed to load trades' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to load trades'  });
   }
 });

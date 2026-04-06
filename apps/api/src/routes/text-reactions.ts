@@ -19,13 +19,13 @@ textReactionsRouter.post('/', requireAuth, async (req: Request, res: Response): 
     const { text } = req.body as { text: string };
 
     if (!text || text.length > 20) {
-      res.status(400).json({ error: 'text is required and must be 20 characters or fewer' });
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'text is required and must be 20 characters or fewer'  });
       return;
     }
 
     const trimmed = text.trim();
     if (!trimmed) {
-      res.status(400).json({ error: 'text cannot be empty' });
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'text cannot be empty'  });
       return;
     }
 
@@ -36,7 +36,7 @@ textReactionsRouter.post('/', requireAuth, async (req: Request, res: Response): 
       .limit(1);
 
     if (!msg) {
-      res.status(404).json({ error: 'Message not found' });
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Message not found'  });
       return;
     }
 
@@ -48,7 +48,7 @@ textReactionsRouter.post('/', requireAuth, async (req: Request, res: Response): 
     }).onConflictDoNothing().returning();
 
     if (!reaction) {
-      res.status(409).json({ error: 'You already added this text reaction' });
+      res.status(409).json({ code: 'CONFLICT', message: 'You already added this text reaction'  });
       return;
     }
 
@@ -72,7 +72,7 @@ textReactionsRouter.post('/', requireAuth, async (req: Request, res: Response): 
     res.status(201).json(reaction);
   } catch (err) {
     logger.error('[text-reactions] POST error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -93,14 +93,14 @@ textReactionsRouter.delete('/:text', requireAuth, async (req: Request, res: Resp
       .returning();
 
     if (!deleted) {
-      res.status(404).json({ error: 'Text reaction not found' });
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Text reaction not found'  });
       return;
     }
 
     res.json({ success: true });
   } catch (err) {
     logger.error('[text-reactions] DELETE error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -132,7 +132,7 @@ textReactionsRouter.get('/', requireAuth, async (req: Request, res: Response): P
     res.json(Object.values(grouped));
   } catch (err) {
     logger.error('[text-reactions] GET error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -150,6 +150,6 @@ textReactionPopularRouter.get('/popular', requireAuth, async (req: Request, res:
     res.json(rows);
   } catch (err) {
     logger.error('[text-reactions] GET popular error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });

@@ -19,7 +19,7 @@ guildFormsRouter.get('/', requireAuth, async (req: Request, res: Response): Prom
     res.json(forms);
   } catch (err) {
     logger.error('[guild-forms] GET list error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -28,11 +28,11 @@ guildFormsRouter.post('/', requireAuth, async (req: Request, res: Response): Pro
   try {
     const { guildId } = req.params as Record<string, string>;
     if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
-      res.status(403).json({ error: 'Missing MANAGE_GUILD permission' }); return;
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_GUILD permission'  }); return;
     }
 
     const { title, description, fields, responseChannelId, roleOnApproval } = req.body;
-    if (!title) { res.status(400).json({ error: 'title is required' }); return; }
+    if (!title) { res.status(400).json({ code: 'BAD_REQUEST', message: 'title is required'  }); return; }
 
     const [form] = await db.insert(guildForms).values({
       guildId,
@@ -46,7 +46,7 @@ guildFormsRouter.post('/', requireAuth, async (req: Request, res: Response): Pro
     res.status(201).json(form);
   } catch (err) {
     logger.error('[guild-forms] POST error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -55,11 +55,11 @@ guildFormsRouter.get('/:id', requireAuth, async (req: Request, res: Response): P
   try {
     const { guildId, id } = req.params as Record<string, string>;
     const [form] = await db.select().from(guildForms).where(and(eq(guildForms.id, id), eq(guildForms.guildId, guildId))).limit(1);
-    if (!form) { res.status(404).json({ error: 'Form not found' }); return; }
+    if (!form) { res.status(404).json({ code: 'NOT_FOUND', message: 'Form not found'  }); return; }
     res.json(form);
   } catch (err) {
     logger.error('[guild-forms] GET single error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -68,7 +68,7 @@ guildFormsRouter.patch('/:id', requireAuth, async (req: Request, res: Response):
   try {
     const { guildId, id } = req.params as Record<string, string>;
     if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
-      res.status(403).json({ error: 'Missing MANAGE_GUILD permission' }); return;
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_GUILD permission'  }); return;
     }
 
     const updates: Record<string, unknown> = {};
@@ -81,11 +81,11 @@ guildFormsRouter.patch('/:id', requireAuth, async (req: Request, res: Response):
     if (status !== undefined) updates.status = status;
 
     const [form] = await db.update(guildForms).set(updates).where(and(eq(guildForms.id, id), eq(guildForms.guildId, guildId))).returning();
-    if (!form) { res.status(404).json({ error: 'Form not found' }); return; }
+    if (!form) { res.status(404).json({ code: 'NOT_FOUND', message: 'Form not found'  }); return; }
     res.json(form);
   } catch (err) {
     logger.error('[guild-forms] PATCH error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -94,15 +94,15 @@ guildFormsRouter.delete('/:id', requireAuth, async (req: Request, res: Response)
   try {
     const { guildId, id } = req.params as Record<string, string>;
     if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
-      res.status(403).json({ error: 'Missing MANAGE_GUILD permission' }); return;
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_GUILD permission'  }); return;
     }
 
     const [deleted] = await db.delete(guildForms).where(and(eq(guildForms.id, id), eq(guildForms.guildId, guildId))).returning();
-    if (!deleted) { res.status(404).json({ error: 'Form not found' }); return; }
+    if (!deleted) { res.status(404).json({ code: 'NOT_FOUND', message: 'Form not found'  }); return; }
     res.json({ success: true });
   } catch (err) {
     logger.error('[guild-forms] DELETE error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -111,11 +111,11 @@ guildFormsRouter.post('/:id/responses', requireAuth, async (req: Request, res: R
   try {
     const { guildId, id } = req.params as Record<string, string>;
     const [form] = await db.select().from(guildForms).where(and(eq(guildForms.id, id), eq(guildForms.guildId, guildId))).limit(1);
-    if (!form) { res.status(404).json({ error: 'Form not found' }); return; }
-    if (form.status !== 'open') { res.status(400).json({ error: 'Form is closed' }); return; }
+    if (!form) { res.status(404).json({ code: 'NOT_FOUND', message: 'Form not found'  }); return; }
+    if (form.status !== 'open') { res.status(400).json({ code: 'BAD_REQUEST', message: 'Form is closed'  }); return; }
 
     const { answers } = req.body;
-    if (!answers) { res.status(400).json({ error: 'answers is required' }); return; }
+    if (!answers) { res.status(400).json({ code: 'BAD_REQUEST', message: 'answers is required'  }); return; }
 
     const [response] = await db.insert(guildFormResponses).values({
       formId: id,
@@ -125,7 +125,7 @@ guildFormsRouter.post('/:id/responses', requireAuth, async (req: Request, res: R
     res.status(201).json(response);
   } catch (err) {
     logger.error('[guild-forms] POST response error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -134,7 +134,7 @@ guildFormsRouter.get('/:id/responses', requireAuth, async (req: Request, res: Re
   try {
     const { guildId, id } = req.params as Record<string, string>;
     if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
-      res.status(403).json({ error: 'Missing MANAGE_GUILD permission' }); return;
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_GUILD permission'  }); return;
     }
 
     const limit = Math.min(Number(req.query.limit) || 50, 100);
@@ -162,7 +162,7 @@ guildFormsRouter.get('/:id/responses', requireAuth, async (req: Request, res: Re
     res.json({ responses, total: countRow?.count ?? 0 });
   } catch (err) {
     logger.error('[guild-forms] GET responses error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -171,12 +171,12 @@ guildFormsRouter.patch('/:id/responses/:responseId', requireAuth, async (req: Re
   try {
     const { guildId, id, responseId } = req.params as Record<string, string>;
     if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
-      res.status(403).json({ error: 'Missing MANAGE_GUILD permission' }); return;
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_GUILD permission'  }); return;
     }
 
     const { status } = req.body;
     if (!status || !['approved', 'rejected'].includes(status)) {
-      res.status(400).json({ error: 'status must be approved or rejected' }); return;
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'status must be approved or rejected'  }); return;
     }
 
     const [response] = await db.update(guildFormResponses).set({
@@ -185,7 +185,7 @@ guildFormsRouter.patch('/:id/responses/:responseId', requireAuth, async (req: Re
       reviewedAt: new Date(),
     }).where(and(eq(guildFormResponses.id, responseId), eq(guildFormResponses.formId, id))).returning();
 
-    if (!response) { res.status(404).json({ error: 'Response not found' }); return; }
+    if (!response) { res.status(404).json({ code: 'NOT_FOUND', message: 'Response not found'  }); return; }
 
     // If approved and form has roleOnApproval, assign the role
     if (status === 'approved') {
@@ -202,6 +202,6 @@ guildFormsRouter.patch('/:id/responses/:responseId', requireAuth, async (req: Re
     res.json(response);
   } catch (err) {
     logger.error('[guild-forms] PATCH response error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });

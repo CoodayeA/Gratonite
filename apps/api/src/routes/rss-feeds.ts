@@ -67,7 +67,7 @@ rssFeedsRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
     res.json(feeds);
   } catch (err) {
     logger.error('[rss-feeds] list error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -120,7 +120,7 @@ rssFeedsRouter.post('/', requireAuth, async (req: Request, res: Response): Promi
     res.status(201).json(feed);
   } catch (err) {
     logger.error('[rss-feeds] create error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -187,7 +187,7 @@ rssFeedsRouter.patch('/:feedId', requireAuth, async (req: Request, res: Response
     res.json(updated);
   } catch (err) {
     logger.error('[rss-feeds] update error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -218,6 +218,6 @@ rssFeedsRouter.delete('/:feedId', requireAuth, async (req: Request, res: Respons
     res.json({ success: true });
   } catch (err) {
     logger.error('[rss-feeds] delete error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });

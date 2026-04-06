@@ -69,7 +69,7 @@ feedbackRouter.get(
   requireAuth,
   async (req: Request, res: Response): Promise<void> => {
     if (!(await hasAdminScope(req.userId!, ADMIN_SCOPES.FEEDBACK_MANAGE))) {
-      res.status(403).json({ error: 'Admin scope required: admin.feedback.manage' });
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Admin scope required: admin.feedback.manage'  });
       return;
     }
 
@@ -104,7 +104,7 @@ feedbackRouter.patch(
   validate(updateFeedbackSchema),
   async (req: Request, res: Response): Promise<void> => {
     if (!(await hasAdminScope(req.userId!, ADMIN_SCOPES.FEEDBACK_MANAGE))) {
-      res.status(403).json({ error: 'Admin scope required: admin.feedback.manage' });
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Admin scope required: admin.feedback.manage'  });
       return;
     }
 
@@ -121,7 +121,7 @@ feedbackRouter.patch(
       .returning();
 
     if (!updated) {
-      res.status(404).json({ error: 'Feedback not found' });
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Feedback not found'  });
       return;
     }
 

@@ -42,7 +42,7 @@ statsRouter.get('/public', async (_req: Request, res: Response) => {
     res.json(data);
   } catch (err) {
     logger.error('[stats] failed to fetch public stats:', err);
-    res.status(500).json({ error: 'Failed to fetch stats' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to fetch stats'  });
   }
 });
 
@@ -202,7 +202,7 @@ statsRouter.get('/guilds/:guildId', async (req: Request, res: Response): Promise
     res.json(data);
   } catch (err) {
     logger.error('[stats] failed to fetch guild stats:', err);
-    res.status(500).json({ error: 'Failed to fetch guild stats' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to fetch guild stats'  });
   }
 });
 
@@ -286,7 +286,7 @@ statsRouter.get('/guilds/:guildId/growth', requireAuth, async (req: Request, res
     res.json({ labels, data, cumulative });
   } catch (err) {
     logger.error('[stats] growth query failed:', err);
-    res.status(500).json({ error: 'Failed to fetch growth stats' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to fetch growth stats'  });
   }
 });
 
@@ -340,7 +340,7 @@ statsRouter.get('/guilds/:guildId/activity-heatmap', requireAuth, async (req: Re
     });
   } catch (err) {
     logger.error('[stats] activity-heatmap query failed:', err);
-    res.status(500).json({ error: 'Failed to fetch activity heatmap' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to fetch activity heatmap'  });
   }
 });
 
@@ -368,7 +368,7 @@ statsRouter.get('/guilds/:guildId/channel-comparison', requireAuth, async (req: 
     res.json({ channels });
   } catch (err) {
     logger.error('[stats] channel-comparison query failed:', err);
-    res.status(500).json({ error: 'Failed to fetch channel comparison' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to fetch channel comparison'  });
   }
 });
 
@@ -443,7 +443,7 @@ statsRouter.get('/guilds/:guildId/engagement', requireAuth, async (req: Request,
     });
   } catch (err) {
     logger.error('[stats] engagement query failed:', err);
-    res.status(500).json({ error: 'Failed to fetch engagement stats' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to fetch engagement stats'  });
   }
 });
 
@@ -502,7 +502,7 @@ statsRouter.get('/guilds/:guildId/export', requireAuth, async (req: Request, res
     res.send(lines.join('\n'));
   } catch (err) {
     logger.error('[stats] export failed:', err);
-    res.status(500).json({ error: 'Failed to export stats' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to export stats'  });
   }
 });
 
@@ -638,6 +638,6 @@ statsRouter.get('/guilds/:guildId/moderation', requireAuth, async (req: Request,
     });
   } catch (err) {
     logger.error('[stats] moderation query failed:', err);
-    res.status(500).json({ error: 'Failed to fetch moderation stats' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to fetch moderation stats'  });
   }
 });

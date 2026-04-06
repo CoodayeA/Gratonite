@@ -46,7 +46,7 @@ setupRouter.get('/status', async (_req: Request, res: Response) => {
       relayEnabled: process.env.RELAY_ENABLED === 'true',
     });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to check setup status' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to check setup status'  });
   }
 });
 

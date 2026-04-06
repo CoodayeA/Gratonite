@@ -53,14 +53,14 @@ searchRouter.get('/messages', requireAuth, searchRateLimit, async (req: Request,
   if (before) {
     const beforeDate = new Date(before);
     if (isNaN(beforeDate.getTime())) {
-      res.status(400).json({ error: 'Invalid before date' }); return;
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'Invalid before date'  }); return;
     }
     conditions.push(lt(messages.createdAt, beforeDate));
   }
   if (after) {
     const afterDate = new Date(after);
     if (isNaN(afterDate.getTime())) {
-      res.status(400).json({ error: 'Invalid after date' }); return;
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'Invalid after date'  }); return;
     }
     conditions.push(gt(messages.createdAt, afterDate));
   }

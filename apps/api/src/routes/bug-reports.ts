@@ -90,7 +90,7 @@ bugReportsRouter.patch(
   validate(updateBugReportSchema),
   async (req: Request, res: Response): Promise<void> => {
     if (!(await hasAdminScope(req.userId!, ADMIN_SCOPES.BUG_REPORTS_MANAGE))) {
-      res.status(403).json({ error: 'Admin scope required: admin.bug-reports.manage' });
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Admin scope required: admin.bug-reports.manage'  });
       return;
     }
 
@@ -103,7 +103,7 @@ bugReportsRouter.patch(
       .returning();
 
     if (!updated) {
-      res.status(404).json({ error: 'Bug report not found' });
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Bug report not found'  });
       return;
     }
 

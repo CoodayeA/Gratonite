@@ -29,7 +29,7 @@ guildQuestsRouter.get('/', requireAuth, async (req: Request, res: Response): Pro
     res.json(quests);
   } catch (err) {
     logger.error('[guild-quests] GET error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -38,12 +38,12 @@ guildQuestsRouter.post('/', requireAuth, async (req: Request, res: Response): Pr
   try {
     const { guildId } = req.params as Record<string, string>;
     if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
-      res.status(403).json({ error: 'Missing MANAGE_GUILD permission' }); return;
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_GUILD permission'  }); return;
     }
 
     const { title, description, questType, targetValue, reward, endDate, recurring } = req.body;
     if (!title || !targetValue || !endDate) {
-      res.status(400).json({ error: 'title, targetValue, and endDate are required' }); return;
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'title, targetValue, and endDate are required'  }); return;
     }
 
     const [quest] = await db.insert(guildQuests).values({
@@ -59,7 +59,7 @@ guildQuestsRouter.post('/', requireAuth, async (req: Request, res: Response): Pr
     res.status(201).json(quest);
   } catch (err) {
     logger.error('[guild-quests] POST error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -68,7 +68,7 @@ guildQuestsRouter.patch('/:id', requireAuth, async (req: Request, res: Response)
   try {
     const { guildId, id } = req.params as Record<string, string>;
     if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
-      res.status(403).json({ error: 'Missing MANAGE_GUILD permission' }); return;
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_GUILD permission'  }); return;
     }
 
     const updates: Record<string, unknown> = {};
@@ -82,11 +82,11 @@ guildQuestsRouter.patch('/:id', requireAuth, async (req: Request, res: Response)
     if (recurring !== undefined) updates.recurring = recurring;
 
     const [quest] = await db.update(guildQuests).set(updates).where(and(eq(guildQuests.id, id), eq(guildQuests.guildId, guildId))).returning();
-    if (!quest) { res.status(404).json({ error: 'Quest not found' }); return; }
+    if (!quest) { res.status(404).json({ code: 'NOT_FOUND', message: 'Quest not found'  }); return; }
     res.json(quest);
   } catch (err) {
     logger.error('[guild-quests] PATCH error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -95,15 +95,15 @@ guildQuestsRouter.delete('/:id', requireAuth, async (req: Request, res: Response
   try {
     const { guildId, id } = req.params as Record<string, string>;
     if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_GUILD))) {
-      res.status(403).json({ error: 'Missing MANAGE_GUILD permission' }); return;
+      res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_GUILD permission'  }); return;
     }
 
     const [deleted] = await db.delete(guildQuests).where(and(eq(guildQuests.id, id), eq(guildQuests.guildId, guildId))).returning();
-    if (!deleted) { res.status(404).json({ error: 'Quest not found' }); return; }
+    if (!deleted) { res.status(404).json({ code: 'NOT_FOUND', message: 'Quest not found'  }); return; }
     res.json({ success: true });
   } catch (err) {
     logger.error('[guild-quests] DELETE error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -115,8 +115,8 @@ guildQuestsRouter.post('/:id/contribute', requireAuth, async (req: Request, res:
     const value = Number(req.body.value) || 1;
 
     const [quest] = await db.select().from(guildQuests).where(and(eq(guildQuests.id, id), eq(guildQuests.guildId, guildId))).limit(1);
-    if (!quest) { res.status(404).json({ error: 'Quest not found' }); return; }
-    if (quest.completedAt) { res.status(400).json({ error: 'Quest already completed' }); return; }
+    if (!quest) { res.status(404).json({ code: 'NOT_FOUND', message: 'Quest not found'  }); return; }
+    if (quest.completedAt) { res.status(400).json({ code: 'BAD_REQUEST', message: 'Quest already completed'  }); return; }
 
     await db.insert(guildQuestContributions).values({ questId: id, userId, contributionValue: value });
 
@@ -131,7 +131,7 @@ guildQuestsRouter.post('/:id/contribute', requireAuth, async (req: Request, res:
     res.json(updated);
   } catch (err) {
     logger.error('[guild-quests] POST contribute error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -154,6 +154,6 @@ guildQuestsRouter.get('/:id/contributions', requireAuth, async (req: Request, re
     res.json(contributions);
   } catch (err) {
     logger.error('[guild-quests] GET contributions error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });

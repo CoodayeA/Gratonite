@@ -27,7 +27,7 @@ pushRouter.post('/subscribe', requireAuth, validate(subscribeSchema), async (req
 
 pushRouter.delete('/subscribe', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { endpoint } = req.body as { endpoint?: string };
-  if (!endpoint) { res.status(400).json({ error: 'endpoint required' }); return; }
+  if (!endpoint) { res.status(400).json({ code: 'BAD_REQUEST', message: 'endpoint required'  }); return; }
   await db.delete(pushSubscriptions).where(and(eq(pushSubscriptions.userId, req.userId!), eq(pushSubscriptions.endpoint, endpoint)));
   res.json({ ok: true });
 });

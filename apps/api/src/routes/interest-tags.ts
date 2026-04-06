@@ -22,7 +22,7 @@ interestTagsRouter.get('/interest-tags', async (_req: Request, res: Response): P
     res.json(grouped);
   } catch (err) {
     logger.error('[interest-tags] GET tags error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -34,7 +34,7 @@ interestTagsRouter.get('/users/@me/interests', requireAuth, async (req: Request,
     res.json(rows.map(r => r.tag));
   } catch (err) {
     logger.error('[interest-tags] GET my interests error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -60,7 +60,7 @@ interestTagsRouter.put('/users/@me/interests', requireAuth, validate(setInterest
     res.json(tags);
   } catch (err) {
     logger.error('[interest-tags] PUT interests error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
 
@@ -110,6 +110,6 @@ interestTagsRouter.get('/guilds/:guildId/interest-matches', requireAuth, async (
     res.json(matches);
   } catch (err) {
     logger.error('[interest-tags] GET interest-matches error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error'  });
   }
 });
