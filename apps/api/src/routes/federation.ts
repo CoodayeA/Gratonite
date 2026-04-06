@@ -1334,7 +1334,32 @@ federationRouter.post('/admin/reports/:reportId/escalate', requireAuth, async (r
     .set({ status: 'escalated' })
     .where(eq(instanceReports.id, reportId));
 
-  // TODO: enqueue an ActivityPub Announce/Flag activity to the remote instance admin inbox
+  // Send ActivityPub Flag activity to remote instance admin inbox
+  if (isFederationEnabled()) {
+    try {
+      const [instanceInfo] = await db
+        .select({ baseUrl: federatedInstances.baseUrl, status: federatedInstances.status })
+        .from(federatedInstances)
+        .where(eq(federatedInstances.id, report.instanceId))
+        .limit(1);
+
+      if (instanceInfo?.status === 'active') {
+        const domain = getInstanceDomain();
+        const flagActivity = {
+          '@context': 'https://www.w3.org/ns/activitystreams',
+          type: 'Flag',
+          actor: `https://${domain}/users/${req.userId}`,
+          object: instanceInfo.baseUrl,
+          content: 'Instance abuse report escalated by moderator',
+        };
+        await queueOutboundActivity(report.instanceId, 'Flag' as any, flagActivity);
+        logger.info(`[federation] Queued Flag activity to instance ${report.instanceId}`);
+      }
+    } catch (err) {
+      logger.error('[federation] Failed to queue Flag activity:', err);
+    }
+  }
+
   res.json({ status: 'escalated', instanceId: report.instanceId });
 });
 // ---------------------------------------------------------------------------
