@@ -44,6 +44,7 @@ import { messageReactions } from '../db/schema/reactions';
 import { channelPins } from '../db/schema/pins';
 import { threads } from '../db/schema/threads';
 import { messageEditHistory } from '../db/schema/messageEditHistory';
+import { channelFollowers } from '../db/schema/channel-followers';
 import { inArray } from 'drizzle-orm';
 import { Permissions } from '../db/schema/roles';
 import { requireAuth } from '../middleware/auth';
@@ -680,6 +681,44 @@ messagesRouter.post(
         res.status(202).json(result.data);
       } else {
         res.status(201).json(result.data);
+
+        // Notify channel followers
+        setImmediate(async () => {
+          try {
+            const followers = await db
+              .select({ targetChannelId: channelFollowers.targetChannelId })
+              .from(channelFollowers)
+              .where(eq(channelFollowers.sourceChannelId, channelId));
+
+            if (followers.length === 0) return;
+
+            const targetChannelIds = followers.map(f => f.targetChannelId);
+            const targetChans = await db
+              .select({ guildId: channels.guildId })
+              .from(channels)
+              .where(inArray(channels.id, targetChannelIds));
+
+            const guildIds = [...new Set(targetChans.map(c => c.guildId).filter((id): id is string => id !== null))];
+            if (guildIds.length === 0) return;
+
+            const members = await db
+              .select({ userId: guildMembers.userId })
+              .from(guildMembers)
+              .where(inArray(guildMembers.guildId, guildIds));
+
+            for (const member of members) {
+              await createNotification({
+                userId: member.userId,
+                type: 'channel_new_post',
+                title: 'New post in followed channel',
+                body: (result.data as any)?.content?.slice(0, 100) ?? 'New message',
+                data: { channelId, messageId: (result.data as any)?.id },
+              });
+            }
+          } catch (err) {
+            logger.error('[messages] channel follower notification error:', err);
+          }
+        });
       }
     } catch (err) {
       if (err instanceof ServiceError) {
