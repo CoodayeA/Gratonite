@@ -298,3 +298,28 @@ documentsRouter.put('/channels/:channelId/document/blocks', requireAuth, async (
 
 // Individual block CRUD endpoints removed — BlockNote manages full document state.
 // Use PUT /channels/:channelId/document/blocks for full-document saves.
+
+// DELETE /channels/:channelId/document — permanently delete a channel document
+documentsRouter.delete('/channels/:channelId/document', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const channelId = req.params.channelId as string;
+
+  if (!await verifyChannelAccess(channelId, req.userId!)) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'No access to this channel' });
+    return;
+  }
+  if (!await verifyDocumentEditPermission(channelId, req.userId!)) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'No edit permission for this document' });
+    return;
+  }
+
+  const deleted = await db.delete(collaborativeDocuments)
+    .where(eq(collaborativeDocuments.channelId, channelId))
+    .returning({ id: collaborativeDocuments.id });
+
+  if (deleted.length === 0) {
+    res.status(404).json({ code: 'NOT_FOUND', message: 'Document not found' });
+    return;
+  }
+
+  res.json({ code: 'OK', message: 'Document deleted' });
+});

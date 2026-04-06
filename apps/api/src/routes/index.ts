@@ -510,3 +510,7 @@ router.use('/messages', translateRouter);
 // Per-server member profiles
 import { guildMemberProfilesRouter } from './guild-member-profiles';
 router.use('/guilds/:guildId/members', guildMemberProfilesRouter);
+
+// Member groups (custom grouping of guild members)
+import { memberGroupsRouter } from './member-groups';
+router.use('/guilds/:guildId/member-groups', memberGroupsRouter);

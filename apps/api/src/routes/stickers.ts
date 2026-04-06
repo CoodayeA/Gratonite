@@ -76,3 +76,31 @@ stickersRouter.delete('/:stickerId', requireAuth, async (req: Request, res: Resp
   await db.delete(stickers).where(eq(stickers.id, stickerId));
   res.json({ code: 'OK', message: 'Sticker deleted' });
 });
+
+// PATCH /:stickerId — update sticker name or description
+stickersRouter.patch('/:stickerId', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId, stickerId } = req.params as Record<string, string>;
+  if (!guildId) { res.status(400).json({ error: 'guildId required' }); return; }
+
+  if (!(await hasPermission(req.userId!, guildId, Permissions.MANAGE_EMOJIS))) {
+    res.status(403).json({ code: 'FORBIDDEN', message: 'Missing MANAGE_EMOJIS permission' }); return;
+  }
+
+  const { name, description, tags } = req.body as { name?: string; description?: string; tags?: string[] };
+  if (!name && description === undefined && !tags) {
+    res.status(400).json({ code: 'BAD_REQUEST', message: 'Provide at least one field to update' }); return;
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (name) updates.name = name;
+  if (description !== undefined) updates.description = description;
+  if (tags) updates.tags = tags;
+
+  const [updated] = await db.update(stickers)
+    .set(updates)
+    .where(and(eq(stickers.id, stickerId), eq(stickers.guildId, guildId)))
+    .returning();
+
+  if (!updated) { res.status(404).json({ code: 'NOT_FOUND', message: 'Sticker not found' }); return; }
+  res.json(updated);
+});

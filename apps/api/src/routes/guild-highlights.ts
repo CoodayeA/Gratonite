@@ -100,3 +100,23 @@ guildHighlightsRouter.post('/generate', requireAuth, async (req: Request, res: R
     handleAppError(res, err, 'guild-highlights');
   }
 });
+
+/** DELETE /:highlightId — Remove a highlight */
+guildHighlightsRouter.delete('/:highlightId', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { guildId, highlightId } = req.params as Record<string, string>;
+
+  try {
+    const deleted = await db.delete(guildHighlights)
+      .where(and(eq(guildHighlights.id, highlightId), eq(guildHighlights.guildId, guildId)))
+      .returning({ id: guildHighlights.id });
+
+    if (deleted.length === 0) {
+      res.status(404).json({ code: 'NOT_FOUND', message: 'Highlight not found' });
+      return;
+    }
+
+    res.json({ code: 'OK', message: 'Highlight deleted' });
+  } catch (err) {
+    handleAppError(res, err, 'guild-highlights');
+  }
+});
