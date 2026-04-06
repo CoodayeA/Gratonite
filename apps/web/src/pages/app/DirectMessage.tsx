@@ -168,6 +168,7 @@ const DirectMessage = () => {
     const attachmentInputRef = useRef<HTMLInputElement>(null);
     const [inputValue, setInputValue] = useState('');
     const [dmAttachedFiles, setDmAttachedFiles] = useState<{file: File, name: string, size: string, previewUrl?: string}[]>([]);
+    const [dmUploadProgress, setDmUploadProgress] = useState<Record<string, number>>({});
     const recentDmAttachmentFingerprintsRef = useRef<Map<string, number>>(new Map());
     const [isDragOver, setIsDragOver] = useState(false);
     const [infoPanelOpen, setInfoPanelOpen] = useState(false);
@@ -1790,6 +1791,27 @@ const DirectMessage = () => {
         setInputValue('');
     };
 
+    const dmUploadWithProgress = useCallback(
+        (file: File, onProgress: (pct: number) => void) =>
+            new Promise<{ id: string; url: string; filename: string; size: number; mimeType: string }>((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                const fd = new FormData();
+                fd.append('file', file);
+                fd.append('purpose', 'attachment');
+                xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round(e.loaded / e.total * 100)); };
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
+                    else reject(new Error(xhr.statusText || `Upload failed (${xhr.status})`));
+                };
+                xhr.onerror = () => reject(new Error('Network error during upload'));
+                xhr.open('POST', `${API_BASE}/files/upload`);
+                const token = getAccessToken();
+                if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                xhr.send(fd);
+            }),
+        [],
+    );
+
     const handleSendMessage = async () => {
         if (isSendingMessageRef.current || isSendingMessage) return;
         if (inputValue.trim() === '' && dmAttachedFiles.length === 0) return;
@@ -1812,20 +1834,24 @@ const DirectMessage = () => {
             // Upload files — encrypt file content if E2E key is available
             const uploadedFiles: { id: string; url: string; filename: string; mimeType: string; size: number }[] = [];
             const encryptedFileMeta: Array<{ id: string; iv: string; ef: string; mt: string }> = [];
+            if (dmAttachedFiles.length > 0) {
+                setDmUploadProgress(Object.fromEntries(dmAttachedFiles.map(f => [f.name, 0])));
+            }
             for (const f of dmAttachedFiles) {
                 try {
                     if (e2eEnabled && e2eKey) {
                         // Encrypt file content and filename before upload
                         const { encryptedBlob, encryptedFilename, iv } = await encryptFile(e2eKey, f.file);
                         const encFile = new File([encryptedBlob], 'encrypted.bin', { type: 'application/octet-stream' });
-                        const result = await api.files.upload(encFile);
+                        const result = await dmUploadWithProgress(encFile, (pct) => setDmUploadProgress(prev => ({ ...prev, [f.name]: pct })));
                         uploadedFiles.push(result);
                         encryptedFileMeta.push({ id: result.id, iv, ef: encryptedFilename, mt: f.file.type || 'application/octet-stream' });
                     } else {
-                        const result = await api.files.upload(f.file);
+                        const result = await dmUploadWithProgress(f.file, (pct) => setDmUploadProgress(prev => ({ ...prev, [f.name]: pct })));
                         uploadedFiles.push(result);
                     }
                 } catch {
+                    setDmUploadProgress(prev => ({ ...prev, [f.name]: -1 }));
                     addToast({ title: `Failed to upload ${f.name}`, variant: 'error' });
                 }
             }
@@ -1914,6 +1940,7 @@ const DirectMessage = () => {
             setInputValue('');
             dmMentionsMapRef.current.clear();
             setDmAttachedFiles([]);
+            setDmUploadProgress({});
             setReplyingTo(null);
         } finally {
             isSendingMessageRef.current = false;
@@ -2955,16 +2982,28 @@ const DirectMessage = () => {
                             {/* Attached file chips */}
                             {dmAttachedFiles.length > 0 && (
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '0 16px 8px' }}>
-                                    {dmAttachedFiles.map((f, i) => (
-                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                            {f.previewUrl && <img src={f.previewUrl} alt="" style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover' }} />}
-                                            <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
-                                            <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{f.size}</span>
-                                            <button onClick={() => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl); setDmAttachedFiles(prev => prev.filter((_, idx) => idx !== i)); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex' }}>
-                                                <X size={12} />
-                                            </button>
+                                    {dmAttachedFiles.map((f, i) => {
+                                        const pct = dmUploadProgress[f.name];
+                                        const isUploading = pct !== undefined && pct >= 0 && pct < 100;
+                                        const isError = pct === -1;
+                                        return (
+                                        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '3px', padding: '4px 10px', background: isError ? 'rgba(239,68,68,0.08)' : 'var(--bg-tertiary)', border: `1px solid ${isError ? 'rgba(239,68,68,0.3)' : 'var(--stroke)'}`, borderRadius: '10px', fontSize: '12px', color: 'var(--text-secondary)', minWidth: 0 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                {f.previewUrl && <img src={f.previewUrl} alt="" style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover' }} />}
+                                                <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                                                <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{isError ? '✗ failed' : isUploading ? `${pct}%` : f.size}</span>
+                                                <button onClick={() => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl); setDmAttachedFiles(prev => prev.filter((_, idx) => idx !== i)); setDmUploadProgress(prev => { const n = {...prev}; delete n[f.name]; return n; }); }} aria-label={`Remove ${f.name}`} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex' }}>
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                            {isUploading && (
+                                                <div style={{ height: '3px', borderRadius: '2px', background: 'var(--bg-primary)', overflow: 'hidden' }}>
+                                                    <div style={{ height: '100%', borderRadius: '2px', background: 'var(--accent-primary)', width: `${pct}%`, transition: 'width 0.2s ease' }} />
+                                                </div>
+                                            )}
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                             <div className="chat-input-wrapper" style={{ position: 'relative' }}>

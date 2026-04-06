@@ -1915,7 +1915,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         </div>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             <Users size={14} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} aria-label="New Group DM" onClick={(e) => { e.stopPropagation(); onOpenCreateGroupDm(); }} />
-                            <Plus size={14} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onOpenDMSearch(); }} />
+                            <Plus size={14} style={{ color: 'var(--text-muted)', cursor: 'pointer' }} aria-label="New Direct Message" onClick={(e) => { e.stopPropagation(); onOpenDMSearch(); }} />
                         </div>
                     </div>
 
@@ -2380,7 +2380,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                                 <span>{label}</span>
                                             </div>
                                             {canManageChannels && addType && (
-                                                <Plus size={14} style={{ cursor: 'pointer', opacity: 0.7 }}
+                                                <Plus size={14} style={{ cursor: 'pointer', opacity: 0.7 }} aria-label="Add channel"
                                                     onClick={(e) => { e.stopPropagation(); setShowCreateChannel({ type: addType }); setNewChannelName(''); }}
                                                 />
                                             )}
@@ -2407,7 +2407,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                                 {cat.name.toUpperCase()}
                                             </div>
                                             {canManageChannels && (
-                                                <Plus size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)', opacity: 0.7 }}
+                                                <Plus size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)', opacity: 0.7 }} aria-label={`Add channel to ${cat.name}`}
                                                     onClick={(e) => { e.stopPropagation(); setShowCreateChannel({ type: defaultType, parentId: cat.id }); setNewChannelName(''); }}
                                                 />
                                             )}
