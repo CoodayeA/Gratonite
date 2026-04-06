@@ -3,10 +3,10 @@
  * Posts display as cards with colorful gradient thumbnails, tags, reply counts.
  * Supports grid (default) and list view modes.
  */
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
     MessageSquare, CheckCircle, Clock, Plus, ChevronDown, Search,
-    Loader2, X, LayoutGrid, List, Lock, ThumbsUp, Tag,
+    Loader2, X, LayoutGrid, List, Lock, ThumbsUp, Tag, ArrowLeft, Send,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import Avatar from '../ui/Avatar';
@@ -82,6 +82,7 @@ export default function ForumView({
     const [newContent, setNewContent] = useState('');
     const [newTags, setNewTags] = useState<string[]>([]);
     const [creating, setCreating] = useState(false);
+    const [activePost, setActivePost] = useState<ForumThread | null>(null);
 
     const fetchThreads = useCallback(async () => {
         setLoading(true);
@@ -133,7 +134,10 @@ export default function ForumView({
             setNewContent('');
             setNewTags([]);
             fetchThreads();
-            if (thread?.id) onOpenThread(thread.id);
+            if (thread?.id) {
+                const newPost: ForumThread = { id: thread.id, name: newTitle.trim(), createdAt: thread.createdAt ?? new Date().toISOString(), messageCount: 0 };
+                setActivePost(newPost);
+            }
         } catch { /* errors surface via toast in parent */ }
         setCreating(false);
     };
@@ -146,8 +150,8 @@ export default function ForumView({
 
     return (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', overflow: 'hidden' }}>
-            {/* ── Top bar ── */}
-            <div style={{
+            {/* ── Top bar — hidden when a post is open ── */}
+            {!activePost && <div style={{
                 padding: '12px 20px', borderBottom: '1px solid var(--stroke)',
                 display: 'flex', flexDirection: 'column', gap: '10px',
                 background: 'var(--bg-primary)',
@@ -288,10 +292,10 @@ export default function ForumView({
                         </div>
                     )}
                 </div>
-            </div>
+            </div>}
 
             {/* ── New Post form ── */}
-            {showCreate && (
+            {!activePost && showCreate && (
                 <div style={{
                     margin: '12px 20px', borderRadius: '12px',
                     background: 'var(--bg-elevated)', border: '1px solid var(--accent-primary)',
@@ -368,8 +372,15 @@ export default function ForumView({
             )}
 
             {/* ── Content area ── */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }} onClick={() => setSortOpen(false)}>
-                {loading ? (
+            <div style={{ flex: 1, overflowY: 'auto', padding: activePost ? 0 : '16px 20px' }} onClick={() => setSortOpen(false)}>
+                {activePost ? (
+                    <ForumPostView
+                        thread={activePost}
+                        forumTags={forumTags}
+                        channelName={channelName}
+                        onBack={() => { setActivePost(null); fetchThreads(); }}
+                    />
+                ) : loading ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', color: 'var(--text-muted)', gap: '12px' }}>
                         <Loader2 size={28} className="spin" style={{ color: 'var(--accent-primary)' }} />
                         <span style={{ fontSize: '14px' }}>Loading posts…</span>
@@ -391,9 +402,9 @@ export default function ForumView({
                         )}
                     </div>
                 ) : viewMode === 'grid' ? (
-                    <GridView threads={filtered} forumTags={forumTags} onOpenThread={onOpenThread} />
+                    <GridView threads={filtered} forumTags={forumTags} onSelectPost={setActivePost} />
                 ) : (
-                    <ListView threads={filtered} forumTags={forumTags} onOpenThread={onOpenThread} />
+                    <ListView threads={filtered} forumTags={forumTags} onSelectPost={setActivePost} />
                 )}
             </div>
         </div>
@@ -402,10 +413,10 @@ export default function ForumView({
 
 // ── Grid view ────────────────────────────────────────────────────────────────
 
-function GridView({ threads, forumTags, onOpenThread }: {
+function GridView({ threads, forumTags, onSelectPost }: {
     threads: ForumThread[];
     forumTags: ForumTag[];
-    onOpenThread: (id: string) => void;
+    onSelectPost: (t: ForumThread) => void;
 }) {
     return (
         <div style={{
@@ -414,16 +425,16 @@ function GridView({ threads, forumTags, onOpenThread }: {
             gap: '14px',
         }}>
             {threads.map(thread => (
-                <GridCard key={thread.id} thread={thread} forumTags={forumTags} onOpenThread={onOpenThread} />
+                <GridCard key={thread.id} thread={thread} forumTags={forumTags} onSelectPost={onSelectPost} />
             ))}
         </div>
     );
 }
 
-function GridCard({ thread, forumTags, onOpenThread }: {
+function GridCard({ thread, forumTags, onSelectPost }: {
     thread: ForumThread;
     forumTags: ForumTag[];
-    onOpenThread: (id: string) => void;
+    onSelectPost: (t: ForumThread) => void;
 }) {
     const [hovered, setHovered] = useState(false);
     const gradient = threadGradient(thread.id + thread.name);
@@ -431,7 +442,7 @@ function GridCard({ thread, forumTags, onOpenThread }: {
 
     return (
         <div
-            onClick={() => onOpenThread(thread.id)}
+            onClick={() => onSelectPost(thread)}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
             style={{
@@ -513,31 +524,31 @@ function GridCard({ thread, forumTags, onOpenThread }: {
 
 // ── List view ─────────────────────────────────────────────────────────────────
 
-function ListView({ threads, forumTags, onOpenThread }: {
+function ListView({ threads, forumTags, onSelectPost }: {
     threads: ForumThread[];
     forumTags: ForumTag[];
-    onOpenThread: (id: string) => void;
+    onSelectPost: (t: ForumThread) => void;
 }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {threads.map(thread => (
-                <ListRow key={thread.id} thread={thread} forumTags={forumTags} onOpenThread={onOpenThread} />
+                <ListRow key={thread.id} thread={thread} forumTags={forumTags} onSelectPost={onSelectPost} />
             ))}
         </div>
     );
 }
 
-function ListRow({ thread, forumTags, onOpenThread }: {
+function ListRow({ thread, forumTags, onSelectPost }: {
     thread: ForumThread;
     forumTags: ForumTag[];
-    onOpenThread: (id: string) => void;
+    onSelectPost: (t: ForumThread) => void;
 }) {
     const [hovered, setHovered] = useState(false);
     const gradient = threadGradient(thread.id + thread.name);
 
     return (
         <div
-            onClick={() => onOpenThread(thread.id)}
+            onClick={() => onSelectPost(thread)}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
             style={{
@@ -579,3 +590,227 @@ function ListRow({ thread, forumTags, onOpenThread }: {
     );
 }
 
+// ── Forum Post View ──────────────────────────────────────────────────────────
+
+type PostMessage = {
+    id: string;
+    content: string;
+    authorId?: string;
+    authorName?: string;
+    authorAvatarHash?: string | null;
+    createdAt: string;
+};
+
+function ForumPostView({ thread, forumTags, channelName, onBack }: {
+    thread: ForumThread;
+    forumTags: ForumTag[];
+    channelName: string;
+    onBack: () => void;
+}) {
+    const [messages, setMessages] = useState<PostMessage[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [reply, setReply] = useState('');
+    const [sending, setSending] = useState(false);
+    const bottomRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const fetchMessages = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await api.messages.list(thread.id);
+            const mapped: PostMessage[] = (Array.isArray(data) ? data : []).map((m: any) => ({
+                id: m.id ?? m.apiId ?? String(Math.random()),
+                content: m.content ?? '',
+                authorId: m.authorId ?? m.author?.id,
+                authorName: m.authorName ?? m.author?.displayName ?? m.author?.username ?? 'Unknown',
+                authorAvatarHash: m.authorAvatarHash ?? m.author?.avatarHash ?? null,
+                createdAt: m.createdAt ?? new Date().toISOString(),
+            }));
+            setMessages(mapped);
+        } catch {
+            setMessages([]);
+        }
+        setLoading(false);
+    }, [thread.id]);
+
+    useEffect(() => { fetchMessages(); }, [fetchMessages]);
+
+    const handleSend = async () => {
+        if (!reply.trim() || sending) return;
+        setSending(true);
+        try {
+            await api.messages.send(thread.id, { content: reply.trim() });
+            setReply('');
+            await fetchMessages();
+            setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+        } catch { /* silent */ }
+        setSending(false);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+    };
+
+    const op = messages[0];
+    const replies = messages.slice(1);
+    const gradient = threadGradient(thread.id + thread.name);
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+            {/* ── Post header ── */}
+            <div style={{
+                padding: '12px 20px', borderBottom: '1px solid var(--stroke)',
+                background: 'var(--bg-primary)', flexShrink: 0,
+            }}>
+                <button
+                    onClick={onBack}
+                    aria-label="Back to forum"
+                    style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        padding: '5px 10px 5px 8px', borderRadius: '8px', border: 'none',
+                        background: 'transparent', color: 'var(--text-muted)',
+                        fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                        marginBottom: '8px',
+                        transition: 'color 0.15s, background 0.15s',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-tertiary)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+                >
+                    <ArrowLeft size={15} /> #{channelName}
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {/* Thumbnail dot */}
+                    <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: gradient, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: 'rgba(255,255,255,0.35)', userSelect: 'none' }}>{threadInitials(thread.name)}</span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {thread.name}
+                        </h2>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                            {thread.solved && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '1px 7px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', fontSize: '10px', fontWeight: 700, color: '#10b981' }}><CheckCircle size={9} /> Solved</span>}
+                            {thread.locked && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '1px 7px', borderRadius: '8px', fontSize: '10px', fontWeight: 700, color: 'var(--error)' }}><Lock size={9} /> Locked</span>}
+                            {(thread.tags || []).slice(0, 3).map(tagId => {
+                                const tag = forumTags.find(t => t.id === tagId);
+                                return tag ? <span key={tagId} style={{ padding: '1px 7px', borderRadius: '20px', fontSize: '10px', fontWeight: 700, background: `${tag.color || '#5865f2'}20`, color: tag.color || 'var(--accent-primary)', border: `1px solid ${tag.color || 'var(--accent-primary)'}40` }}>{tag.name}</span> : null;
+                            })}
+                        </div>
+                    </div>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0 }}>
+                        {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
+                    </span>
+                </div>
+            </div>
+
+            {/* ── Messages ── */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+                {loading ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px', color: 'var(--text-muted)', gap: '10px' }}>
+                        <Loader2 size={24} className="spin" style={{ color: 'var(--accent-primary)' }} />
+                        <span style={{ fontSize: '13px' }}>Loading post…</span>
+                    </div>
+                ) : (
+                    <>
+                        {/* ── Original post ── */}
+                        {op ? (
+                            <div style={{
+                                padding: '16px 18px', borderRadius: '12px', marginBottom: '20px',
+                                background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                                    <Avatar userId={op.authorId || ''} displayName={op.authorName || ''} avatarHash={op.authorAvatarHash} size={32} />
+                                    <div>
+                                        <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>{op.authorName || 'Unknown'}</div>
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{timeAgo(op.createdAt)}</div>
+                                    </div>
+                                    <span style={{ marginLeft: 'auto', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 700, background: 'rgba(82,109,245,0.12)', color: 'var(--accent-primary)', border: '1px solid rgba(82,109,245,0.25)' }}>OP</span>
+                                </div>
+                                <div style={{ fontSize: '14px', lineHeight: 1.6, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                    {op.content || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No content.</span>}
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ padding: '16px 18px', borderRadius: '12px', marginBottom: '20px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
+                                No post content yet.
+                            </div>
+                        )}
+
+                        {/* ── Replies separator ── */}
+                        {replies.length > 0 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                                <div style={{ flex: 1, height: '1px', background: 'var(--stroke)' }} />
+                                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{replies.length} {replies.length === 1 ? 'Reply' : 'Replies'}</span>
+                                <div style={{ flex: 1, height: '1px', background: 'var(--stroke)' }} />
+                            </div>
+                        )}
+
+                        {/* ── Reply cards ── */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {replies.map(msg => (
+                                <div key={msg.id} style={{ padding: '12px 16px', borderRadius: '10px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                        <Avatar userId={msg.authorId || ''} displayName={msg.authorName || ''} avatarHash={msg.authorAvatarHash} size={24} />
+                                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{msg.authorName || 'Unknown'}</span>
+                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{timeAgo(msg.createdAt)}</span>
+                                    </div>
+                                    <div style={{ fontSize: '13px', lineHeight: 1.55, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                        {msg.content}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <div ref={bottomRef} />
+                    </>
+                )}
+            </div>
+
+            {/* ── Reply composer ── */}
+            {!thread.locked && (
+                <div style={{
+                    padding: '12px 16px', borderTop: '1px solid var(--stroke)',
+                    background: 'var(--bg-primary)', flexShrink: 0,
+                }}>
+                    <div style={{
+                        display: 'flex', gap: '10px', alignItems: 'flex-end',
+                        background: 'var(--bg-elevated)', borderRadius: '10px',
+                        border: '1px solid var(--stroke)', padding: '10px 12px',
+                    }}>
+                        <textarea
+                            ref={textareaRef}
+                            value={reply}
+                            onChange={e => setReply(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder="Write a reply… (Enter to send, Shift+Enter for new line)"
+                            rows={1}
+                            style={{
+                                flex: 1, border: 'none', background: 'transparent', resize: 'none',
+                                color: 'var(--text-primary)', fontSize: '14px', fontFamily: 'inherit',
+                                outline: 'none', lineHeight: 1.5, maxHeight: '120px', overflowY: 'auto',
+                            }}
+                        />
+                        <button
+                            onClick={handleSend}
+                            disabled={!reply.trim() || sending}
+                            aria-label="Send reply"
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: '34px', height: '34px', borderRadius: '8px', border: 'none',
+                                background: reply.trim() ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                color: reply.trim() ? '#fff' : 'var(--text-muted)',
+                                cursor: reply.trim() && !sending ? 'pointer' : 'not-allowed',
+                                flexShrink: 0, transition: 'background 0.15s',
+                            }}
+                        >
+                            {sending ? <Loader2 size={15} className="spin" /> : <Send size={15} />}
+                        </button>
+                    </div>
+                </div>
+            )}
+            {thread.locked && (
+                <div style={{ padding: '12px 20px', borderTop: '1px solid var(--stroke)', background: 'var(--bg-primary)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                    <Lock size={14} /> This post is locked. New replies are disabled.
+                </div>
+            )}
+        </div>
+    );
+}
