@@ -24,6 +24,33 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-04-06a',
+    date: 'April 6, 2026',
+    title: 'Forum Post View, DM upload progress & accessibility polish',
+    tagline: 'Forum channels now feel like forums. Plus upload progress in DMs and cleaner keyboard navigation everywhere.',
+    spotlight: [
+      {
+        emoji: '📖',
+        title: 'Forum Post View',
+        description: 'Clicking a forum post now opens it inline — full OP block, reply thread, and a reply composer. No more landing in a flat chat thread when you just want to read a post.',
+        hint: 'Any forum channel → click a post card',
+      },
+      {
+        emoji: '📤',
+        title: 'DM Upload Progress',
+        description: 'Watch your files upload in real time with per-file progress bars in Direct Messages — same reliability as guild channels.',
+        hint: 'Attach a file in any DM',
+      },
+    ],
+    entries: [
+      { type: 'feature', text: 'Forum Post View — clicking a forum post card now opens an inline reading view with the original post, all replies, and a reply composer at the bottom. The top bar and new-post form hide while a post is open for a clean focused layout.' },
+      { type: 'improvement', text: 'Forum channels no longer drop you into a flat chat thread when you click a post — navigation is now entirely within ForumView, keeping context intact.' },
+      { type: 'feature', text: 'DM file upload now shows per-file XHR progress bars — each attachment shows its upload percentage and turns red on failure. Matches the behavior already in guild channels.' },
+      { type: 'improvement', text: 'Accessibility: icon-only interactive elements in the channel sidebar (New DM, Add Channel, Add Category Channel) now have descriptive aria-labels for screen readers.' },
+      { type: 'fix', text: 'Forum post OP block renders with author avatar, name, timestamp, and full post body — no more "no content yet" placeholders for posts that have content.' },
+    ],
+  },
+  {
     id: '2026-04-05a',
     date: 'April 5, 2026',
     title: 'The Excellence Update — 54 things, shipped',
