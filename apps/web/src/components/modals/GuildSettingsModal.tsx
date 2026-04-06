@@ -897,6 +897,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [requireRulesAgreement, setRequireRulesAgreement] = useState(false);
     const [banAppeals, setBanAppeals] = useState<Array<{ userId: string; username: string; displayName: string; avatarHash: string | null; text: string; status: string; createdAt: string }>>([]);
     const [appealsLoading, setAppealsLoading] = useState(false);
+    const [selectedAppeals, setSelectedAppeals] = useState<Set<string>>(new Set());
+    const [bulkAppealsLoading, setBulkAppealsLoading] = useState(false);
     const [tagInput, setTagInput] = useState('');
     const [assignRoleFor, setAssignRoleFor] = useState<string | null>(null);
     const [editingRule, setEditingRule] = useState<string | null>(null);
@@ -3147,9 +3149,82 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13px' }}>No pending ban appeals.</div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {/* Bulk action header */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedAppeals.size === banAppeals.filter(a => a.status === 'pending').length && banAppeals.filter(a => a.status === 'pending').length > 0}
+                                            onChange={e => {
+                                                if (e.target.checked) {
+                                                    setSelectedAppeals(new Set(banAppeals.filter(a => a.status === 'pending').map(a => a.userId)));
+                                                } else {
+                                                    setSelectedAppeals(new Set());
+                                                }
+                                            }}
+                                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                                        />
+                                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)', flex: 1 }}>
+                                            {selectedAppeals.size > 0 ? `${selectedAppeals.size} selected` : 'Select all'}
+                                        </span>
+                                        {selectedAppeals.size > 0 && (
+                                            <>
+                                                <button
+                                                    disabled={bulkAppealsLoading}
+                                                    onClick={async () => {
+                                                        setBulkAppealsLoading(true);
+                                                        const ids = Array.from(selectedAppeals);
+                                                        for (const userId of ids) {
+                                                            try {
+                                                                await api.patch(`/guilds/${guildId}/bans/${userId}/appeal`, { status: 'approved' });
+                                                                setBanAppeals(prev => prev.map(a => a.userId === userId ? { ...a, status: 'approved' } : a));
+                                                            } catch { /* continue */ }
+                                                        }
+                                                        setSelectedAppeals(new Set());
+                                                        setBulkAppealsLoading(false);
+                                                        addToast({ title: `Approved ${ids.length} appeal(s)`, variant: 'success' });
+                                                    }}
+                                                    style={{ padding: '5px 12px', borderRadius: '6px', background: '#10b981', border: 'none', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                                                >
+                                                    Approve Selected
+                                                </button>
+                                                <button
+                                                    disabled={bulkAppealsLoading}
+                                                    onClick={async () => {
+                                                        setBulkAppealsLoading(true);
+                                                        const ids = Array.from(selectedAppeals);
+                                                        for (const userId of ids) {
+                                                            try {
+                                                                await api.patch(`/guilds/${guildId}/bans/${userId}/appeal`, { status: 'denied' });
+                                                                setBanAppeals(prev => prev.map(a => a.userId === userId ? { ...a, status: 'denied' } : a));
+                                                            } catch { /* continue */ }
+                                                        }
+                                                        setSelectedAppeals(new Set());
+                                                        setBulkAppealsLoading(false);
+                                                        addToast({ title: `Rejected ${ids.length} appeal(s)`, variant: 'info' });
+                                                    }}
+                                                    style={{ padding: '5px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                                                >
+                                                    Reject Selected
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                     {banAppeals.filter(a => a.status === 'pending').map(appeal => (
-                                        <div key={appeal.userId} style={{ padding: '14px 16px', borderRadius: '10px', border: '1px solid var(--stroke)', background: 'var(--bg-elevated)' }}>
+                                        <div key={appeal.userId} style={{ padding: '14px 16px', borderRadius: '10px', border: `1px solid ${selectedAppeals.has(appeal.userId) ? 'var(--accent)' : 'var(--stroke)'}`, background: 'var(--bg-elevated)' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedAppeals.has(appeal.userId)}
+                                                    onChange={e => {
+                                                        setSelectedAppeals(prev => {
+                                                            const next = new Set(prev);
+                                                            if (e.target.checked) next.add(appeal.userId);
+                                                            else next.delete(appeal.userId);
+                                                            return next;
+                                                        });
+                                                    }}
+                                                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                                                />
                                                 <Avatar userId={appeal.userId} avatarHash={appeal.avatarHash} displayName={appeal.displayName} size={32} />
                                                 <div>
                                                     <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{appeal.displayName}</span>
@@ -3165,6 +3240,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                         try {
                                                             await api.patch(`/guilds/${guildId}/bans/${appeal.userId}/appeal`, { status: 'approved' });
                                                             setBanAppeals(prev => prev.map(a => a.userId === appeal.userId ? { ...a, status: 'approved' } : a));
+                                                            setSelectedAppeals(prev => { const next = new Set(prev); next.delete(appeal.userId); return next; });
                                                             addToast({ title: 'Appeal approved', variant: 'success' });
                                                         } catch { addToast({ title: 'Failed to approve appeal', variant: 'error' }); }
                                                     }}
@@ -3177,6 +3253,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                         try {
                                                             await api.patch(`/guilds/${guildId}/bans/${appeal.userId}/appeal`, { status: 'denied' });
                                                             setBanAppeals(prev => prev.map(a => a.userId === appeal.userId ? { ...a, status: 'denied' } : a));
+                                                            setSelectedAppeals(prev => { const next = new Set(prev); next.delete(appeal.userId); return next; });
                                                             addToast({ title: 'Appeal denied', variant: 'info' });
                                                         } catch { addToast({ title: 'Failed to deny appeal', variant: 'error' }); }
                                                     }}
