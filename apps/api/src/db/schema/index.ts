@@ -190,3 +190,5 @@ export * from './referrals';
 export * from './server-status';
 export * from './spatial-rooms';
 export * from './stickers';
+export * from './stories';
+export * from './profile-views';

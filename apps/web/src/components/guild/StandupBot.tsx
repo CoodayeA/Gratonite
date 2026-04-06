@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ClipboardList, Send, Settings, Users, Calendar } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useToast } from '../ui/ToastManager';
 
 export default function StandupBot({ guildId }: { guildId: string }) {
   const [config, setConfig] = useState<any>(null);
@@ -11,6 +12,7 @@ export default function StandupBot({ guildId }: { guildId: string }) {
   const [answers, setAnswers] = useState<string[]>([]);
   const [showConfig, setShowConfig] = useState(false);
   const [configForm, setConfigForm] = useState({ channelId: '', schedule: '09:00', timezone: 'UTC' });
+  const { addToast } = useToast();
 
   const fetch_ = useCallback(async () => {
     try {
@@ -21,7 +23,7 @@ export default function StandupBot({ guildId }: { guildId: string }) {
         setSummary(s);
         setAnswers(Array((s?.questions as string[] || []).length).fill(''));
       }
-    } catch {}
+    } catch { addToast({ title: 'Failed to load standup', variant: 'error' }); }
   }, [guildId]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
@@ -31,18 +33,14 @@ export default function StandupBot({ guildId }: { guildId: string }) {
     try {
       await api.standup.respond(guildId, answers);
       fetch_();
-    } catch {}
-  };
-
-  const saveConfig = async () => {
+    } catch { addToast({ title: 'Failed to submit standup', variant: 'error' }); }
+  };= async () => {
     try {
       await api.standup.setConfig(guildId, configForm);
       setShowConfig(false);
       fetch_();
-    } catch {}
-  };
-
-  const questions = (summary?.questions || config?.questions || []) as string[];
+    } catch { addToast({ title: 'Failed to save standup config', variant: 'error' }); }
+  };= (summary?.questions || config?.questions || []) as string[];
 
   return (
     <div className="p-4 bg-gray-900 rounded-lg space-y-4">

@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Package, Repeat, Star, Sparkles } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useToast } from '../ui/ToastManager';
 
 interface Card {
   id: string;
@@ -36,13 +37,14 @@ export default function CollectibleCards() {
   const [packs, setPacks] = useState<any[]>([]);
   const [trades, setTrades] = useState<any[]>([]);
   const [openedCards, setOpenedCards] = useState<Card[] | null>(null);
+  const { addToast } = useToast();
 
   const fetchData = useCallback(async () => {
     try {
       if (tab === 'collection') setCollection(await api.collectibleCards.getCollection());
       else if (tab === 'packs') setPacks(await api.collectibleCards.getPacks());
       else setTrades(await api.collectibleCards.getTrades());
-    } catch {}
+    } catch { addToast({ title: 'Failed to load cards', variant: 'error' }); }
   }, [tab]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -52,15 +54,15 @@ export default function CollectibleCards() {
       const result = await api.collectibleCards.openPack(packId);
       setOpenedCards(result.cards as unknown as Card[]);
       fetchData();
-    } catch {}
+    } catch { addToast({ title: 'Failed to open pack', variant: 'error' }); }
   };
 
   const acceptTrade = async (tradeId: string) => {
-    try { await api.collectibleCards.acceptTrade(tradeId); fetchData(); } catch {}
+    try { await api.collectibleCards.acceptTrade(tradeId); fetchData(); } catch { addToast({ title: 'Failed to accept trade', variant: 'error' }); }
   };
 
   const declineTrade = async (tradeId: string) => {
-    try { await api.collectibleCards.declineTrade(tradeId); fetchData(); } catch {}
+    try { await api.collectibleCards.declineTrade(tradeId); fetchData(); } catch { addToast({ title: 'Failed to decline trade', variant: 'error' }); }
   };
 
   return (

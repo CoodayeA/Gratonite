@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, Settings, ToggleLeft, ToggleRight, Github, Rss, Clipboard, Globe } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useToast } from '../ui/ToastManager';
 
 const ICONS: Record<string, React.ReactNode> = {
   github: <Github className="w-5 h-5" />,
@@ -20,13 +21,14 @@ export default function IntegrationMarketplace({ guildId, channels }: { guildId:
   const [installed, setInstalled] = useState<Integration[]>([]);
   const [showInstall, setShowInstall] = useState<string | null>(null);
   const [channelId, setChannelId] = useState('');
+  const { addToast } = useToast();
 
   const fetch_ = useCallback(async () => {
     try {
       const [c, i] = await Promise.all([api.integrations.catalog(guildId), api.integrations.list(guildId)]);
       setCatalog(c);
       setInstalled(i);
-    } catch {}
+    } catch { addToast({ title: 'Failed to load integrations', variant: 'error' }); }
   }, [guildId]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
@@ -37,18 +39,16 @@ export default function IntegrationMarketplace({ guildId, channels }: { guildId:
       await api.integrations.install(guildId, { type, channelId });
       setShowInstall(null);
       fetch_();
-    } catch {}
-  };
-
-  const toggleEnabled = async (integ: Integration) => {
+    } catch { addToast({ title: 'Failed to install integration', variant: 'error' }); }
+  };= async (integ: Integration) => {
     try {
       await api.integrations.update(guildId, integ.id, { enabled: !integ.enabled });
       fetch_();
-    } catch {}
+    } catch { addToast({ title: 'Failed to update integration', variant: 'error' }); }
   };
 
   const remove = async (id: string) => {
-    try { await api.integrations.delete(guildId, id); fetch_(); } catch {}
+    try { await api.integrations.delete(guildId, id); fetch_(); } catch { addToast({ title: 'Failed to remove integration', variant: 'error' }); }
   };
 
   return (

@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { Palette, Save, RotateCw } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useToast } from '../ui/ToastManager';
 
 interface ProfileTheme {
   primaryColor: string;
@@ -32,6 +33,7 @@ interface Props {
 export const ProfileThemeEditor = ({ username, displayName, avatarUrl, onSave }: Props) => {
   const [theme, setTheme] = useState<ProfileTheme>(PRESETS[0].theme);
   const [saving, setSaving] = useState(false);
+  const { addToast } = useToast();
 
   useEffect(() => {
     api.get<any>('/users/@me/settings').then((s: any) => {
@@ -46,7 +48,7 @@ export const ProfileThemeEditor = ({ username, displayName, avatarUrl, onSave }:
     try {
       await api.patch('/users/@me/settings', { profileTheme: theme });
       onSave?.();
-    } catch {} finally { setSaving(false); }
+    } catch { addToast({ title: 'Failed to save theme', variant: 'error' }); } finally { setSaving(false); }
   };
 
   const cardBackground = theme.cardStyle === 'gradient'

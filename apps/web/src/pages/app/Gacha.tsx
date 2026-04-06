@@ -428,6 +428,7 @@ const Gacha = () => {
     const [packState, setPackState] = useState<'idle' | 'opening' | 'results'>('idle');
     const [showCollection, setShowCollection] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
+    const [showPullConfirm, setShowPullConfirm] = useState(false);
 
     // Manifest + data state
     const [manifestItems, setManifestItems] = useState<ManifestItem[]>([]);
@@ -746,7 +747,7 @@ const Gacha = () => {
                                     </p>
                                 ) : null}
 
-                                <MagneticButton onClick={openPack} disabled={gratoniteBalance < 500 || !manifestLoaded} className="auth-button" style={{ width: '100%', fontSize: '18px', padding: '16px', display: 'flex', justifyContent: 'center', gap: '8px', alignItems: 'center', opacity: gratoniteBalance < 500 || !manifestLoaded ? 0.5 : 1, cursor: gratoniteBalance < 500 || !manifestLoaded ? 'not-allowed' : 'pointer', zIndex: 10 }}>
+                                <MagneticButton onClick={() => setShowPullConfirm(true)} disabled={gratoniteBalance < 500 || !manifestLoaded} className="auth-button" style={{ width: '100%', fontSize: '18px', padding: '16px', display: 'flex', justifyContent: 'center', gap: '8px', alignItems: 'center', opacity: gratoniteBalance < 500 || !manifestLoaded ? 0.5 : 1, cursor: gratoniteBalance < 500 || !manifestLoaded ? 'not-allowed' : 'pointer', zIndex: 10 }}>
                                     {!manifestLoaded ? 'Loading...' : gratoniteBalance < 500 ? 'Not enough Gratonite' : <>Open for 500 <Gem size={18} /></>}
                                 </MagneticButton>
                             </div>
@@ -835,6 +836,24 @@ const Gacha = () => {
 
             {showCollection && <CollectionModal items={allCollectibles} totalCount={totalCount} onClose={() => setShowCollection(false)} />}
             {showHistory && <PullHistoryModal history={pullHistory} onClose={() => setShowHistory(false)} />}
+
+            {showPullConfirm && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000 }}>
+                    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '16px', padding: '32px', width: '360px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '40px', marginBottom: '12px' }}>🎴</div>
+                        <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>Open Premium Pack?</h3>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px' }}>
+                            This will spend <strong style={{ color: 'var(--accent-primary)' }}>500 Gratonite</strong> from your balance of <strong>{gratoniteBalance.toLocaleString()} ₲</strong>.
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button onClick={() => setShowPullConfirm(false)} style={{ flex: 1, padding: '12px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer', fontSize: '15px' }}>Cancel</button>
+                            <button onClick={() => { setShowPullConfirm(false); openPack(); }} style={{ flex: 1, padding: '12px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                Open <Gem size={16} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Tear particle burst — fixed overlay */}
             {particles.map(p => (

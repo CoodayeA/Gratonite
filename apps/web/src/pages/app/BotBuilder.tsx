@@ -151,6 +151,7 @@ const BotBuilder = () => {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [rotatingId, setRotatingId] = useState<string | null>(null);
     const [selectedApplicationId, setSelectedApplicationId] = useState('');
+    const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
 
     const avatarOptions = ['🤖', '🧠', '⚡', '🎮', '🎵', '🛡️', '📊', '🔧', '🌟', '🐾', '🎯', '🔮'];
 
@@ -189,6 +190,10 @@ const BotBuilder = () => {
 
     const addCommand = () => {
         if (!newCmd.name.trim()) return;
+        if (commands.some(c => c.name.toLowerCase() === newCmd.name.trim().toLowerCase())) {
+            addToast({ title: `Command "/${newCmd.name.trim()}" already exists`, variant: 'error' });
+            return;
+        }
         setCommands(prev => [...prev, { ...newCmd }]);
         setNewCmd({ name: '', description: '', response: '' });
         addToast({ title: 'Command Added', variant: 'success' });
@@ -291,21 +296,26 @@ const BotBuilder = () => {
     };
 
     const handleDeleteBot = async (bot: WebhookBot) => {
-        if (!window.confirm(`Delete "${bot.name}"? This action cannot be undone.`)) return;
-        setDeletingId(bot.id);
-        try {
-            await api.botApplications.delete(bot.id);
-            setWebhookBots(prev => prev.filter(b => b.id !== bot.id));
-            if (selectedApplicationId === bot.id) {
-                setSelectedApplicationId('');
-            }
-            addToast({ title: 'Bot deleted', variant: 'success' });
+        setConfirmDialog({
+            title: `Delete "${bot.name}"?`,
+            description: 'This action cannot be undone. Any integrations using this bot will stop working.',
+            onConfirm: async () => {
+                setDeletingId(bot.id);
+                try {
+                    await api.botApplications.delete(bot.id);
+                    setWebhookBots(prev => prev.filter(b => b.id !== bot.id));
+                    if (selectedApplicationId === bot.id) {
+                        setSelectedApplicationId('');
+                    }
+                    addToast({ title: 'Bot deleted', variant: 'success' });
         } catch (err: any) {
-            addToast({ title: 'Delete failed', description: err?.message ?? 'Could not delete bot.', variant: 'error' });
-        } finally {
-            setDeletingId(null);
-        }
-    };
+                addToast({ title: 'Delete failed', description: err?.message ?? 'Could not delete bot.', variant: 'error' });
+            } finally {
+                setDeletingId(null);
+            }
+        },
+    });
+};
 
     const handleRotateToken = async (bot: WebhookBot) => {
         setRotatingId(bot.id);
@@ -344,9 +354,8 @@ const BotBuilder = () => {
                         </div>
                     </div>
                 </div>
-                <div style={{ padding: '12px 20px', borderTop: '1px solid var(--stroke)', background: 'rgba(0,0,0,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ padding: '12px 20px', borderTop: '1px solid var(--stroke)', background: 'rgba(0,0,0,0.15)' }}>
                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Preview only · Submit to publish in Bot Store</span>
-                    <button disabled style={{ padding: '6px 16px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', color: 'var(--text-muted)', fontWeight: 600, fontSize: '12px', cursor: 'not-allowed' }}>Preview Mode</button>
                 </div>
             </div>
 
@@ -827,6 +836,24 @@ const BotBuilder = () => {
                 )}
             </div>
         </div>
+
+        {confirmDialog && (
+            <div
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}
+                onClick={() => setConfirmDialog(null)}
+            >
+                <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', padding: '24px', width: '400px', maxWidth: '90vw', border: '1px solid var(--stroke)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
+                    onClick={e => e.stopPropagation()}
+                >
+                    <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>{confirmDialog.title}</h3>
+                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.5 }}>{confirmDialog.description}</p>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                        <button onClick={() => setConfirmDialog(null)} style={{ padding: '8px 16px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+                        <button onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }} style={{ padding: '8px 16px', borderRadius: '6px', background: 'var(--error)', border: 'none', color: 'white', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>Delete</button>
+                    </div>
+                </div>
+            </div>
+        )}
     );
 };
 

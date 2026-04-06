@@ -1,0 +1,170 @@
+[
+    {
+        "flow":  "channel-chat-send.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  1.46,
+        "reason":  "yaml-schema-timeout-unsupported"
+    },
+    {
+        "flow":  "dm-flow.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  41.15,
+        "reason":  "assert-visible-failed: Servers"
+    },
+    {
+        "flow":  "dm-list-ordering.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  37.49,
+        "reason":  "assert-visible-failed: Portals"
+    },
+    {
+        "flow":  "dm-search.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  41.45,
+        "reason":  "assert-visible-failed: Portals"
+    },
+    {
+        "flow":  "forgot-password.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  104.16,
+        "reason":  "assert-visible-failed: Reset"
+    },
+    {
+        "flow":  "friend-list.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  40.19,
+        "reason":  "other"
+    },
+    {
+        "flow":  "full-regression.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  1.73,
+        "reason":  "yaml-schema-timeout-unsupported"
+    },
+    {
+        "flow":  "guild-browse.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  38.01,
+        "reason":  "assert-visible-failed: Servers"
+    },
+    {
+        "flow":  "guild-channel-list.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  1.73,
+        "reason":  "yaml-schema-timeout-unsupported"
+    },
+    {
+        "flow":  "guild-settings.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  1.68,
+        "reason":  "yaml-schema-timeout-unsupported"
+    },
+    {
+        "flow":  "join-guild.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  1.49,
+        "reason":  "yaml-schema-timeout-unsupported"
+    },
+    {
+        "flow":  "login.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  47.11,
+        "reason":  "assert-visible-failed: Login"
+    },
+    {
+        "flow":  "navigation-tabs.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  37.48,
+        "reason":  "assert-visible-failed: Servers"
+    },
+    {
+        "flow":  "notification-inbox.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  35.48,
+        "reason":  "assert-visible-failed: Portals"
+    },
+    {
+        "flow":  "profile-view.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  37.25,
+        "reason":  "assert-visible-failed: Servers"
+    },
+    {
+        "flow":  "register.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  41.49,
+        "reason":  "other"
+    },
+    {
+        "flow":  "role-management.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  1.85,
+        "reason":  "yaml-schema-timeout-unsupported"
+    },
+    {
+        "flow":  "send-message.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  44.47,
+        "reason":  "assert-visible-failed: Servers"
+    },
+    {
+        "flow":  "session-restore.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  1.91,
+        "reason":  "yaml-schema-timeout-unsupported"
+    },
+    {
+        "flow":  "settings.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  38.19,
+        "reason":  "assert-visible-failed: Servers"
+    },
+    {
+        "flow":  "settings-subscreens.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  44.86,
+        "reason":  "assert-visible-failed: Portals"
+    },
+    {
+        "flow":  "smoke.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  42.3,
+        "reason":  "assert-visible-failed: Login"
+    },
+    {
+        "flow":  "thread-open.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  2,
+        "reason":  "yaml-schema-timeout-unsupported"
+    },
+    {
+        "flow":  "thread-reply.yaml",
+        "status":  "FAIL",
+        "exitCode":  1,
+        "seconds":  1.79,
+        "reason":  "yaml-schema-timeout-unsupported"
+    }
+]

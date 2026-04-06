@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Gift, Flame, Check, Coins } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useToast } from '../ui/ToastManager';
 
 export default function LoginRewards() {
   const [data, setData] = useState<{
@@ -13,6 +14,7 @@ export default function LoginRewards() {
     todayReward: number;
     weekRewards: Array<{ day: number; reward: number; claimed: boolean }>;
   } | null>(null);
+  const { addToast } = useToast();
 
   useEffect(() => {
     api.loginRewards.get().then(setData).catch(() => {});
@@ -30,7 +32,7 @@ export default function LoginRewards() {
           i === (prev.streak % 7) ? { ...w, claimed: true } : w
         ),
       } : prev);
-    } catch {}
+    } catch { addToast({ title: 'Failed to claim reward', variant: 'error' }); }
   };
 
   if (!data) return null;

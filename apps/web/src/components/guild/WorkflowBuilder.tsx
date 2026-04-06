@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, ToggleLeft, ToggleRight, Zap, ArrowRight } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useToast } from '../ui/ToastManager';
 
 const TRIGGER_TYPES = [
   { type: 'member_join', label: 'When a member joins' },
@@ -29,6 +30,7 @@ export default function WorkflowBuilder({ guildId }: { guildId: string }) {
   const [name, setName] = useState('');
   const [triggerType, setTriggerType] = useState(TRIGGER_TYPES[0].type);
   const [actionType, setActionType] = useState(ACTION_TYPES[0].type);
+  const { addToast } = useToast();
 
   const fetch_ = useCallback(async () => {
     try { setWorkflows(await api.workflows.list(guildId)); } catch {}
@@ -47,15 +49,15 @@ export default function WorkflowBuilder({ guildId }: { guildId: string }) {
       setShowCreate(false);
       setName('');
       fetch_();
-    } catch {}
+    } catch { addToast({ title: 'Failed to create workflow', variant: 'error' }); }
   };
 
   const toggle = async (wf: Workflow) => {
-    try { await api.workflows.update(guildId, wf.id, { enabled: !wf.enabled }); fetch_(); } catch {}
+    try { await api.workflows.update(guildId, wf.id, { enabled: !wf.enabled }); fetch_(); } catch { addToast({ title: 'Failed to update workflow', variant: 'error' }); }
   };
 
   const remove = async (id: string) => {
-    try { await api.workflows.delete(guildId, id); fetch_(); } catch {}
+    try { await api.workflows.delete(guildId, id); fetch_(); } catch { addToast({ title: 'Failed to delete workflow', variant: 'error' }); }
   };
 
   return (

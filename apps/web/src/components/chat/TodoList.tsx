@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Check, Square, CheckSquare, Trash2, User } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useToast } from '../ui/ToastManager';
 
 interface TodoItem { id: string; text: string; completed: boolean; assigneeId: string | null; position: number; }
 interface TodoListData { id: string; title: string; createdAt: string; }
@@ -14,6 +15,7 @@ export default function TodoList({ channelId }: { channelId: string }) {
   const [items, setItems] = useState<TodoItem[]>([]);
   const [newTitle, setNewTitle] = useState('');
   const [newItem, setNewItem] = useState('');
+  const { addToast } = useToast();
 
   const fetchLists = useCallback(async () => {
     try { setLists(await api.todoLists.list(channelId)); } catch {}
@@ -34,7 +36,7 @@ export default function TodoList({ channelId }: { channelId: string }) {
       setLists(prev => [list, ...prev]);
       setActiveList(list.id);
       setNewTitle('');
-    } catch {}
+    } catch { addToast({ title: 'Failed to create list', variant: 'error' }); }
   };
 
   const addItem = async () => {
@@ -43,7 +45,7 @@ export default function TodoList({ channelId }: { channelId: string }) {
       const item = await api.todoLists.addItem(channelId, activeList, { text: newItem });
       setItems(prev => [...prev, item]);
       setNewItem('');
-    } catch {}
+    } catch { addToast({ title: 'Failed to add item', variant: 'error' }); }
   };
 
   const toggleItem = async (item: TodoItem) => {
@@ -51,18 +53,18 @@ export default function TodoList({ channelId }: { channelId: string }) {
     try {
       const updated = await api.todoLists.updateItem(channelId, activeList, item.id, { completed: !item.completed });
       setItems(prev => prev.map(i => i.id === item.id ? updated : i));
-    } catch {}
+    } catch { addToast({ title: 'Failed to update item', variant: 'error' }); }
   };
 
-  const deleteItem = async (itemId: string) => {
+  const deleteItem= async (itemId: string) => {
     if (!activeList) return;
     try {
       await api.todoLists.deleteItem(channelId, activeList, itemId);
       setItems(prev => prev.filter(i => i.id !== itemId));
-    } catch {}
+    } catch { addToast({ title: 'Failed to delete item', variant: 'error' }); }
   };
 
-  const completed = items.filter(i => i.completed).length;
+  const completed= items.filter(i => i.completed).length;
   const total = items.length;
 
   return (

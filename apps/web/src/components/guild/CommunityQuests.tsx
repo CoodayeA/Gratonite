@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Target, Users, Trophy, Plus, ChevronRight } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useToast } from '../ui/ToastManager';
 
 interface Quest {
   id: string;
@@ -23,6 +24,7 @@ export default function CommunityQuests({ guildId }: { guildId: string }) {
   const [tab, setTab] = useState<'active' | 'completed'>('active');
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', targetValue: '100', reward: '50', endDate: '' });
+  const { addToast } = useToast();
 
   const fetch_ = useCallback(async () => {
     try { setQuests(await api.guildQuests.list(guildId, tab)); } catch {}
@@ -43,19 +45,17 @@ export default function CommunityQuests({ guildId }: { guildId: string }) {
       setShowCreate(false);
       setForm({ title: '', description: '', targetValue: '100', reward: '50', endDate: '' });
       fetch_();
-    } catch {}
+    } catch { addToast({ title: 'Failed to create quest', variant: 'error' }); }
   };
 
   const contribute = async (questId: string) => {
     try {
       await api.guildQuests.contribute(guildId, questId);
       fetch_();
-    } catch {}
+    } catch { addToast({ title: 'Failed to contribute to quest', variant: 'error' }); }
   };
 
-  const daysUntil = (date: string) => Math.max(0, Math.ceil((new Date(date).getTime() - Date.now()) / 86400000));
-
-  return (
+  const daysUntil
     <div className="p-4 bg-gray-900 rounded-lg">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-white font-medium flex items-center gap-2">

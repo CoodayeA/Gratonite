@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { ThumbsUp, ThumbsDown, TrendingUp, Star } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useToast } from '../ui/ToastManager';
 
 /** Inline upvote/downvote buttons for a message */
 export function MessageReputation({
@@ -20,6 +21,7 @@ export function MessageReputation({
   const [upvotes, setUpvotes] = useState(initialUpvotes);
   const [downvotes, setDownvotes] = useState(initialDownvotes);
   const [voted, setVoted] = useState<'up' | 'down' | null>(null);
+  const { addToast } = useToast();
 
   const vote = async (direction: 'up' | 'down') => {
     if (voted === direction) return; // Already voted this way
@@ -29,7 +31,7 @@ export function MessageReputation({
       setUpvotes(result.upvotes);
       setDownvotes(result.downvotes);
       setVoted(direction);
-    } catch {}
+    } catch { addToast({ title: 'Failed to vote', variant: 'error' }); }
   };
 
   const score = upvotes - downvotes;

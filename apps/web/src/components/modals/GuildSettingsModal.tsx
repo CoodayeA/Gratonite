@@ -2522,7 +2522,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                 <div style={{ display: 'flex', gap: '8px' }}>
                                                     <button onClick={() => saveRuleEdit(rule.id)} style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 20px', borderRadius: '6px', color: '#000', fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}>Save Rule</button>
                                                     <button onClick={() => setEditingRule(null)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '8px 20px', borderRadius: '6px', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
-                                                    <button onClick={async () => { if (guildId) { try { await api.workflows.delete(guildId, rule.id); } catch {} } setAutomodRules(prev => prev.filter(r => r.id !== rule.id)); setEditingRule(null); }} style={{ background: 'transparent', border: '1px solid var(--error)', padding: '8px 16px', borderRadius: '6px', color: 'var(--error)', fontWeight: 600, cursor: 'pointer', fontSize: '13px', marginLeft: 'auto' }}>Delete</button>
+                                                    <button onClick={async () => { if (guildId) { try { await api.workflows.delete(guildId, rule.id); } catch { addToast({ title: 'Failed to delete rule', variant: 'error' }); } } setAutomodRules(prev => prev.filter(r => r.id !== rule.id)); setEditingRule(null); }} style={{ background: 'transparent', border: '1px solid var(--error)', padding: '8px 16px', borderRadius: '6px', color: 'var(--error)', fontWeight: 600, cursor: 'pointer', fontSize: '13px', marginLeft: 'auto' }}>Delete</button>
                                                 </div>
                                             </div>
                                         ) : (
@@ -3493,7 +3493,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                 style={{ padding: '8px', borderRadius: '6px', background: viewDeliveriesId === wh.id ? 'color-mix(in srgb, var(--accent-primary) 15%, transparent)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: viewDeliveriesId === wh.id ? 'var(--accent-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
                                                 <Activity size={16} />
                                             </button>
-                                            <button onClick={() => setConfirmDialog({ title: 'Delete Webhook', description: `Are you sure you want to delete the webhook "${wh.name}"? Any integrations using this webhook will stop working.`, onConfirm: async () => { try { await api.webhooks.delete(wh.id); } catch {} setWebhooksList(prev => prev.filter(w => w.id !== wh.id)); addAuditEntry('Webhook Deleted', actorName, wh.name, 'settings'); } })}
+                                            <button onClick={() => setConfirmDialog({ title: 'Delete Webhook', description: `Are you sure you want to delete the webhook "${wh.name}"? Any integrations using this webhook will stop working.`, onConfirm: async () => { try { await api.webhooks.delete(wh.id); } catch { addToast({ title: 'Failed to delete webhook', variant: 'error' }); } setWebhooksList(prev => prev.filter(w => w.id !== wh.id)); addAuditEntry('Webhook Deleted', actorName, wh.name, 'settings'); } })}
                                                 title="Delete Webhook"
                                                 aria-label="Delete webhook"
                                                 style={{ padding: '8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: 'var(--error)', display: 'flex', alignItems: 'center' }}>
@@ -4888,7 +4888,7 @@ function ModQueuePanel({ guildId, addToast }: { guildId: string; addToast: (t: a
             const data = await api.modQueue.list(guildId, statusFilter);
             setItems(data.items || []);
             setCounts(data.counts || {});
-        } catch {} finally { setLoading(false); }
+        } catch { addToast({ title: 'Failed to load mod queue', variant: 'error' }); } finally { setLoading(false); }
     };
 
     useEffect(() => { load(); }, [guildId, statusFilter]);
@@ -5008,13 +5008,13 @@ function SoundboardPanel({ guildId, addToast }: { guildId: string; addToast: (t:
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
                     {clips.map(clip => (
                         <div key={clip.id} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '10px', padding: '16px', textAlign: 'center', cursor: 'pointer' }}
-                            onClick={async () => { try { await api.soundboard.play(guildId, clip.id); } catch {} }}>
+                            onClick={async () => { try { await api.soundboard.play(guildId, clip.id); } catch { addToast({ title: 'Failed to play sound', variant: 'error' }); } }}>
                             <div style={{ fontSize: '28px', marginBottom: '8px' }}>{clip.emoji || '\uD83D\uDD0A'}</div>
                             <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>{clip.name}</div>
                             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{clip.uses} plays</div>
                             <button onClick={async (e) => {
                                 e.stopPropagation();
-                                try { await api.soundboard.delete(guildId, clip.id); setClips(prev => prev.filter(c => c.id !== clip.id)); addToast({ title: 'Deleted', variant: 'info' }); } catch {}
+                                try { await api.soundboard.delete(guildId, clip.id); setClips(prev => prev.filter(c => c.id !== clip.id)); addToast({ title: 'Deleted', variant: 'info' }); } catch { addToast({ title: 'Failed to delete sound clip', variant: 'error' }); }
                             }} style={{ marginTop: '8px', background: 'none', border: '1px solid var(--stroke)', borderRadius: '4px', padding: '2px 8px', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px' }}>Delete</button>
                         </div>
                     ))}
@@ -5140,7 +5140,7 @@ function BackupsPanel({ guildId, addToast }: { guildId: string; addToast: (t: an
                                         </button>
                                         <button onClick={() => downloadBackup(b.id)} style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>Download</button>
                                         <button onClick={async () => {
-                                            try { await api.guildBackup.delete(guildId, b.id); setBackups(prev => prev.filter(x => x.id !== b.id)); addToast({ title: 'Backup deleted', variant: 'info' }); } catch {}
+                                            try { await api.guildBackup.delete(guildId, b.id); setBackups(prev => prev.filter(x => x.id !== b.id)); addToast({ title: 'Backup deleted', variant: 'info' }); } catch { addToast({ title: 'Failed to delete backup', variant: 'error' }); }
                                         }} style={{ padding: '6px 12px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--error)', color: 'var(--error)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>Delete</button>
                                     </div>
                                 </div>

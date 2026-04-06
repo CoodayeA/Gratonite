@@ -19,20 +19,14 @@ import { eq, and, desc, sql, gte } from 'drizzle-orm';
 import { db } from '../db/index';
 import { requireAuth } from '../middleware/auth';
 import { userWallets, economyLedger } from '../db/schema/economy';
+import { profileViews as profileViewsTable, trades as tradesTable } from '../db/schema/profile-views';
 import { logger } from '../lib/logger';
 
 export const profilesSocialRouter = Router();
 
 // ---------------------------------------------------------------------------
-// Profile Visitors (stored in-memory for simplicity; production would use DB)
+// Profile Visitors (DB-backed)
 // ---------------------------------------------------------------------------
-const profileViews: Array<{
-  viewerId: string;
-  profileId: string;
-  viewerName: string;
-  viewerAvatar: string | null;
-  timestamp: string;
-}> = [];
 
 profilesSocialRouter.post(
   '/users/:id/profile-view',
@@ -45,17 +39,16 @@ profilesSocialRouter.post(
       return;
     }
 
-    // Check privacy setting (stored in localStorage on client, checked via opt-in header)
-    profileViews.push({
-      viewerId,
-      profileId,
-      viewerName: (req as any).username ?? 'User',
-      viewerAvatar: null,
-      timestamp: new Date().toISOString(),
-    });
-
-    // Keep only last 1000 entries globally
-    if (profileViews.length > 1000) profileViews.splice(0, profileViews.length - 1000);
+    try {
+      await db.insert(profileViewsTable).values({
+        viewerId,
+        profileId,
+        viewerName: (req as any).username ?? 'User',
+        viewerAvatarHash: null,
+      });
+    } catch (err) {
+      logger.error({ err }, 'Failed to record profile view');
+    }
 
     res.json({ recorded: true });
   },
@@ -66,25 +59,28 @@ profilesSocialRouter.get(
   requireAuth,
   async (req: Request, res: Response): Promise<void> => {
     const userId = req.userId!;
-    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    const visitors = profileViews
-      .filter(v => v.profileId === userId && new Date(v.timestamp).getTime() > weekAgo)
-      .reverse()
-      .slice(0, 20);
+    const visitors = await db
+      .select()
+      .from(profileViewsTable)
+      .where(and(eq(profileViewsTable.profileId, userId), gte(profileViewsTable.createdAt, weekAgo)))
+      .orderBy(desc(profileViewsTable.createdAt))
+      .limit(100);
 
     const uniqueVisitors = new Map<string, typeof visitors[0]>();
     for (const v of visitors) {
       if (!uniqueVisitors.has(v.viewerId)) uniqueVisitors.set(v.viewerId, v);
     }
 
+    const recent = Array.from(uniqueVisitors.values()).slice(0, 20);
     res.json({
       totalThisWeek: visitors.length,
-      visitors: Array.from(uniqueVisitors.values()).map(v => ({
+      visitors: recent.map(v => ({
         userId: v.viewerId,
         username: v.viewerName,
-        avatarHash: v.viewerAvatar,
-        viewedAt: v.timestamp,
+        avatarHash: v.viewerAvatarHash,
+        viewedAt: v.createdAt,
       })),
     });
   },
@@ -321,20 +317,9 @@ profilesSocialRouter.post(
 // ---------------------------------------------------------------------------
 // Trading System (in-memory for simplicity)
 // ---------------------------------------------------------------------------
-interface TradeRecord {
-  id: string;
-  proposerId: string;
-  recipientId: string;
-  status: 'pending' | 'accepted' | 'rejected';
-  proposerItems: any[];
-  recipientItems: any[];
-  proposerGratonites: number;
-  recipientGratonites: number;
-  createdAt: string;
-}
-
-const trades: TradeRecord[] = [];
-let tradeCounter = 0;
+// ---------------------------------------------------------------------------
+// Trades (DB-backed)
+// ---------------------------------------------------------------------------
 
 profilesSocialRouter.post(
   '/trades/propose',
@@ -348,20 +333,17 @@ profilesSocialRouter.post(
       return;
     }
 
-    const trade: TradeRecord = {
-      id: `trade_${++tradeCounter}`,
+    const [trade] = await db.insert(tradesTable).values({
       proposerId,
       recipientId,
       status: 'pending',
       proposerItems: proposerItems ?? [],
       recipientItems: recipientItems ?? [],
-      proposerGratonites: proposerGratonites ?? 0,
-      recipientGratonites: recipientGratonites ?? 0,
-      createdAt: new Date().toISOString(),
-    };
-    trades.push(trade);
+      proposerGratonites: String(proposerGratonites ?? 0),
+      recipientGratonites: String(recipientGratonites ?? 0),
+    }).returning();
 
-    res.json(trade);
+    res.json({ ...trade, proposerGratonites: Number(trade.proposerGratonites), recipientGratonites: Number(trade.recipientGratonites) });
   },
 );
 
@@ -370,10 +352,17 @@ profilesSocialRouter.get(
   requireAuth,
   async (req: Request, res: Response): Promise<void> => {
     const userId = req.userId!;
-    const pending = trades.filter(
-      t => t.status === 'pending' && (t.proposerId === userId || t.recipientId === userId),
+    const pending = await db
+      .select()
+      .from(tradesTable)
+      .where(and(eq(tradesTable.status, 'pending')))
+      .orderBy(desc(tradesTable.createdAt));
+
+    res.json(
+      pending
+        .filter(t => t.proposerId === userId || t.recipientId === userId)
+        .map(t => ({ ...t, proposerGratonites: Number(t.proposerGratonites), recipientGratonites: Number(t.recipientGratonites) })),
     );
-    res.json(pending);
   },
 );
 
@@ -382,13 +371,16 @@ profilesSocialRouter.post(
   requireAuth,
   async (req: Request, res: Response): Promise<void> => {
     const tradeId = req.params.id as string;
-    const trade = trades.find(t => t.id === tradeId);
+    const [trade] = await db
+      .update(tradesTable)
+      .set({ status: 'accepted', updatedAt: new Date() })
+      .where(eq(tradesTable.id, tradeId))
+      .returning();
     if (!trade) {
       res.status(404).json({ code: 'NOT_FOUND', message: 'Trade not found' });
       return;
     }
-    trade.status = 'accepted';
-    res.json(trade);
+    res.json({ ...trade, proposerGratonites: Number(trade.proposerGratonites), recipientGratonites: Number(trade.recipientGratonites) });
   },
 );
 
@@ -397,12 +389,15 @@ profilesSocialRouter.post(
   requireAuth,
   async (req: Request, res: Response): Promise<void> => {
     const tradeId = req.params.id as string;
-    const trade = trades.find(t => t.id === tradeId);
+    const [trade] = await db
+      .update(tradesTable)
+      .set({ status: 'rejected', updatedAt: new Date() })
+      .where(eq(tradesTable.id, tradeId))
+      .returning();
     if (!trade) {
       res.status(404).json({ code: 'NOT_FOUND', message: 'Trade not found' });
       return;
     }
-    trade.status = 'rejected';
-    res.json(trade);
+    res.json({ ...trade, proposerGratonites: Number(trade.proposerGratonites), recipientGratonites: Number(trade.recipientGratonites) });
   },
 );

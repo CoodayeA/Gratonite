@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { HelpCircle, Plus, Play, Trophy, Trash2, Check, X, Clock } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useToast } from '../ui/ToastManager';
 
 interface Question {
   question: string;
@@ -27,6 +28,7 @@ export default function QuizCreator({ guildId }: { guildId: string }) {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const { addToast } = useToast();
 
   // Create form
   const [title, setTitle] = useState('');
@@ -52,7 +54,7 @@ export default function QuizCreator({ guildId }: { guildId: string }) {
       setTitle(''); setDescription(''); setQuestions([{ question: '', options: ['', '', '', ''], correctIndex: 0 }]);
       setTab('browse');
       fetchQuizzes();
-    } catch {}
+    } catch { addToast({ title: 'Failed to create quiz', variant: 'error' }); }
   };
 
   const startQuiz = async (quiz: Quiz) => {
@@ -88,11 +90,11 @@ export default function QuizCreator({ guildId }: { guildId: string }) {
       setLeaderboard(lb);
       setActiveQuiz(quizzes.find(q => q.id === quizId) || null);
       setTab('results');
-    } catch {}
+    } catch { addToast({ title: 'Failed to load leaderboard', variant: 'error' }); }
   };
 
   const deleteQuiz = async (quizId: string) => {
-    try { await api.quizzes.delete(guildId, quizId); fetchQuizzes(); } catch {}
+    try { await api.quizzes.delete(guildId, quizId); fetchQuizzes(); } catch { addToast({ title: 'Failed to delete quiz', variant: 'error' }); }
   };
 
   const addQuestion = () => {

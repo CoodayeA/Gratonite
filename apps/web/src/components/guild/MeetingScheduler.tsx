@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Clock, Users, Check, Trash2 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useToast } from '../ui/ToastManager';
 
 interface TimeSlot { date: string; startTime: string; endTime: string; }
 interface MeetingPoll { id: string; title: string; description: string | null; timeSlots: TimeSlot[]; createdBy: string; createdAt: string; }
@@ -15,6 +16,7 @@ export default function MeetingScheduler({ guildId }: { guildId: string }) {
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState('');
   const [slots, setSlots] = useState<TimeSlot[]>([{ date: '', startTime: '09:00', endTime: '10:00' }]);
+  const { addToast } = useToast();
 
   const fetchPolls = useCallback(async () => {
     try { setPolls(await api.meetingScheduler.list(guildId)); } catch {}
@@ -34,7 +36,7 @@ export default function MeetingScheduler({ guildId }: { guildId: string }) {
       setTitle('');
       setSlots([{ date: '', startTime: '09:00', endTime: '10:00' }]);
       fetchPolls();
-    } catch {}
+    } catch { addToast({ title: 'Failed to create meeting poll', variant: 'error' }); }
   };
 
   const vote = async (selectedSlots: number[]) => {
@@ -43,7 +45,7 @@ export default function MeetingScheduler({ guildId }: { guildId: string }) {
     try {
       await api.meetingScheduler.vote(guildId, activePoll.id, selectedSlots, tz);
       loadPoll(activePoll.id);
-    } catch {}
+    } catch { addToast({ title: 'Failed to vote on meeting slot', variant: 'error' }); }
   };
 
   if (activePoll) {

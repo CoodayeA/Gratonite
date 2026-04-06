@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Music, ThumbsUp, ThumbsDown, SkipForward, Trash2, Play, ListMusic } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useToast } from '../ui/ToastManager';
 
 interface Track { id: string; url: string; title: string; artist: string | null; duration: number; addedByUsername: string; played: boolean; skipped: boolean; votes: { skip: number; keep: number }; }
 
@@ -15,6 +16,7 @@ export default function PlaylistPanel({ channelId }: { channelId: string }) {
   const [newName, setNewName] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState({ url: '', title: '', artist: '' });
+  const { addToast } = useToast();
 
   const fetchPlaylists = useCallback(async () => {
     try { setPlaylists(await api.playlists.list(channelId)); } catch {}
@@ -27,7 +29,7 @@ export default function PlaylistPanel({ channelId }: { channelId: string }) {
       const data = await api.playlists.getTracks(channelId, playlistId);
       setTracks(data.tracks || []);
       setCurrentTrackId(data.currentTrackId);
-    } catch {}
+    } catch { addToast({ title: 'Failed to load tracks', variant: 'error' }); }
   }, [channelId]);
 
   useEffect(() => { if (activePlaylist) fetchTracks(activePlaylist); }, [activePlaylist, fetchTracks]);
@@ -39,7 +41,7 @@ export default function PlaylistPanel({ channelId }: { channelId: string }) {
       setPlaylists(prev => [...prev, p]);
       setActivePlaylist(p.id);
       setNewName('');
-    } catch {}
+    } catch { addToast({ title: 'Failed to create playlist', variant: 'error' }); }
   };
 
   const addTrack = async () => {
@@ -49,17 +51,17 @@ export default function PlaylistPanel({ channelId }: { channelId: string }) {
       setShowAdd(false);
       setAddForm({ url: '', title: '', artist: '' });
       fetchTracks(activePlaylist);
-    } catch {}
+    } catch { addToast({ title: 'Failed to add track', variant: 'error' }); }
   };
 
   const vote = async (trackId: string, v: 'skip' | 'keep') => {
     if (!activePlaylist) return;
-    try { await api.playlists.vote(channelId, activePlaylist, trackId, v); fetchTracks(activePlaylist); } catch {}
+    try { await api.playlists.vote(channelId, activePlaylist, trackId, v); fetchTracks(activePlaylist); } catch { addToast({ title: 'Failed to vote on track', variant: 'error' }); }
   };
 
   const nextTrack = async () => {
     if (!activePlaylist) return;
-    try { await api.playlists.next(channelId, activePlaylist); fetchTracks(activePlaylist); } catch {}
+    try { await api.playlists.next(channelId, activePlaylist); fetchTracks(activePlaylist); } catch { addToast({ title: 'Failed to skip track', variant: 'error' }); }
   };
 
   return (

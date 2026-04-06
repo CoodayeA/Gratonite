@@ -1,0 +1,122 @@
+[
+  {
+    "flow": "channel-chat-send.yaml",
+    "exitCode": 1,
+    "seconds": 1.62
+  },
+  {
+    "flow": "dm-flow.yaml",
+    "exitCode": 1,
+    "seconds": 1.62
+  },
+  {
+    "flow": "dm-list-ordering.yaml",
+    "exitCode": 1,
+    "seconds": 1.67
+  },
+  {
+    "flow": "dm-search.yaml",
+    "exitCode": 1,
+    "seconds": 1.65
+  },
+  {
+    "flow": "forgot-password.yaml",
+    "exitCode": 1,
+    "seconds": 1.67
+  },
+  {
+    "flow": "friend-list.yaml",
+    "exitCode": 1,
+    "seconds": 1.67
+  },
+  {
+    "flow": "full-regression.yaml",
+    "exitCode": 1,
+    "seconds": 1.54
+  },
+  {
+    "flow": "guild-browse.yaml",
+    "exitCode": 1,
+    "seconds": 1.66
+  },
+  {
+    "flow": "guild-channel-list.yaml",
+    "exitCode": 1,
+    "seconds": 1.54
+  },
+  {
+    "flow": "guild-settings.yaml",
+    "exitCode": 1,
+    "seconds": 1.46
+  },
+  {
+    "flow": "join-guild.yaml",
+    "exitCode": 1,
+    "seconds": 1.52
+  },
+  {
+    "flow": "login.yaml",
+    "exitCode": 1,
+    "seconds": 1.68
+  },
+  {
+    "flow": "navigation-tabs.yaml",
+    "exitCode": 1,
+    "seconds": 1.63
+  },
+  {
+    "flow": "notification-inbox.yaml",
+    "exitCode": 1,
+    "seconds": 1.65
+  },
+  {
+    "flow": "profile-view.yaml",
+    "exitCode": 1,
+    "seconds": 1.67
+  },
+  {
+    "flow": "register.yaml",
+    "exitCode": 1,
+    "seconds": 1.64
+  },
+  {
+    "flow": "role-management.yaml",
+    "exitCode": 1,
+    "seconds": 1.56
+  },
+  {
+    "flow": "send-message.yaml",
+    "exitCode": 1,
+    "seconds": 1.71
+  },
+  {
+    "flow": "session-restore.yaml",
+    "exitCode": 1,
+    "seconds": 1.46
+  },
+  {
+    "flow": "settings-subscreens.yaml",
+    "exitCode": 1,
+    "seconds": 1.66
+  },
+  {
+    "flow": "settings.yaml",
+    "exitCode": 1,
+    "seconds": 1.66
+  },
+  {
+    "flow": "smoke.yaml",
+    "exitCode": 1,
+    "seconds": 1.67
+  },
+  {
+    "flow": "thread-open.yaml",
+    "exitCode": 1,
+    "seconds": 1.49
+  },
+  {
+    "flow": "thread-reply.yaml",
+    "exitCode": 1,
+    "seconds": 1.5
+  }
+]

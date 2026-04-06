@@ -379,6 +379,7 @@ export default function ForumView({
                         forumTags={forumTags}
                         channelName={channelName}
                         onBack={() => { setActivePost(null); fetchThreads(); }}
+                        onResolve={(threadId) => setThreads(prev => prev.map(t => t.id === threadId ? { ...t, solved: true } : t))}
                     />
                 ) : loading ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px', color: 'var(--text-muted)', gap: '12px' }}>
@@ -601,15 +602,20 @@ type PostMessage = {
     createdAt: string;
 };
 
-function ForumPostView({ thread, forumTags, channelName, onBack }: {
+function ForumPostView({ thread, forumTags, channelName, onBack, onResolve }: {
     thread: ForumThread;
     forumTags: ForumTag[];
     channelName: string;
     onBack: () => void;
+    onResolve?: (threadId: string) => void;
 }) {
     const [messages, setMessages] = useState<PostMessage[]>([]);
     const [loading, setLoading] = useState(true);
-    const [reply, setReply] = useState('');
+    const [resolved, setResolved] = useState(thread.solved ?? false);
+    const draftKey = `forum-draft-${thread.id}`;
+    const [reply, setReply] = useState(() => {
+        try { return localStorage.getItem(draftKey) ?? ''; } catch { return ''; }
+    });
     const [sending, setSending] = useState(false);
     const bottomRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -641,10 +647,19 @@ function ForumPostView({ thread, forumTags, channelName, onBack }: {
         try {
             await api.messages.send(thread.id, { content: reply.trim() });
             setReply('');
+            try { localStorage.removeItem(draftKey); } catch { /* ok */ }
             await fetchMessages();
             setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
         } catch { /* silent */ }
         setSending(false);
+    };
+
+    const handleResolve = async () => {
+        try {
+            await api.channels.update(thread.id, { archived: true });
+        } catch { /* best effort */ }
+        setResolved(true);
+        onResolve?.(thread.id);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -688,7 +703,7 @@ function ForumPostView({ thread, forumTags, channelName, onBack }: {
                             {thread.name}
                         </h2>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                            {thread.solved && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '1px 7px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', fontSize: '10px', fontWeight: 700, color: '#10b981' }}><CheckCircle size={9} /> Solved</span>}
+                            {resolved && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '1px 7px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', fontSize: '10px', fontWeight: 700, color: '#10b981' }}><CheckCircle size={9} /> Solved</span>}
                             {thread.locked && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '1px 7px', borderRadius: '8px', fontSize: '10px', fontWeight: 700, color: 'var(--error)' }}><Lock size={9} /> Locked</span>}
                             {(thread.tags || []).slice(0, 3).map(tagId => {
                                 const tag = forumTags.find(t => t.id === tagId);
@@ -699,6 +714,16 @@ function ForumPostView({ thread, forumTags, channelName, onBack }: {
                     <span style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0 }}>
                         {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
                     </span>
+                    {!resolved && (
+                        <button onClick={handleResolve} title="Mark as Resolved" style={{ padding: '5px 12px', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.4)', background: 'rgba(16,185,129,0.08)', color: '#10b981', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+                            <CheckCircle size={13} /> Mark Resolved
+                        </button>
+                    )}
+                    {resolved && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '5px 12px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', fontSize: '12px', fontWeight: 700, color: '#10b981', flexShrink: 0 }}>
+                            <CheckCircle size={13} /> Resolved
+                        </span>
+                    )}
                 </div>
             </div>
 
@@ -778,7 +803,10 @@ function ForumPostView({ thread, forumTags, channelName, onBack }: {
                         <textarea
                             ref={textareaRef}
                             value={reply}
-                            onChange={e => setReply(e.target.value)}
+                            onChange={e => {
+                                setReply(e.target.value);
+                                try { if (e.target.value) { localStorage.setItem(draftKey, e.target.value); } else { localStorage.removeItem(draftKey); } } catch { /* ok */ }
+                            }}
                             onKeyDown={handleKeyDown}
                             placeholder="Write a reply… (Enter to send, Shift+Enter for new line)"
                             rows={1}

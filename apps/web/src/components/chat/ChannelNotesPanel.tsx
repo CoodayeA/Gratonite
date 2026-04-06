@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Plus, Trash2, Edit2, Save, ChevronLeft, FileText } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useToast } from '../ui/ToastManager';
 import { RichTextRenderer } from './RichTextRenderer';
 
 type DocItem = {
@@ -44,6 +45,7 @@ const ChannelNotesPanel = ({ channelId, onClose }: ChannelNotesPanelProps) => {
     const [saving, setSaving] = useState(false);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastSavedRef = useRef('');
+    const { addToast } = useToast();
 
     const fetchDocs = useCallback(() => {
         setLoading(true);
@@ -79,7 +81,7 @@ const ChannelNotesPanel = ({ channelId, onClose }: ChannelNotesPanelProps) => {
                 lastSavedRef.current = editContent;
                 setActiveDoc(updated);
                 setDocs(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d));
-            } catch {}
+            } catch { addToast({ title: 'Failed to save note', variant: 'error' }); }
             setSaving(false);
         }, 2000);
 
@@ -100,10 +102,8 @@ const ChannelNotesPanel = ({ channelId, onClose }: ChannelNotesPanelProps) => {
             setEditTitle(doc.title);
             setEditContent(doc.content);
             lastSavedRef.current = doc.content;
-        } catch {}
-    };
-
-    const handleDelete = async (docId: string) => {
+        } catch { addToast({ title: 'Failed to create note', variant: 'error' }); }
+    };= async (docId: string) => {
         try {
             await api.channelDocuments.remove(channelId, docId);
             setDocs(prev => prev.filter(d => d.id !== docId));
@@ -111,10 +111,8 @@ const ChannelNotesPanel = ({ channelId, onClose }: ChannelNotesPanelProps) => {
                 setActiveDoc(null);
                 setEditing(false);
             }
-        } catch {}
-    };
-
-    const openDoc = (doc: DocItem) => {
+        } catch { addToast({ title: 'Failed to delete note', variant: 'error' }); }
+    };= (doc: DocItem) => {
         setActiveDoc(doc);
         setEditing(false);
         setEditTitle(doc.title);
@@ -143,7 +141,7 @@ const ChannelNotesPanel = ({ channelId, onClose }: ChannelNotesPanelProps) => {
             setActiveDoc(updated);
             setDocs(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d));
             setEditing(false);
-        } catch {}
+        } catch { addToast({ title: 'Failed to save note', variant: 'error' }); }
         setSaving(false);
     };
 

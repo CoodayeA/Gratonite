@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Shield, Star, Gift, Lock, Check, Trophy } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useToast } from '../ui/ToastManager';
 
 interface EventTier {
   level: number;
@@ -16,6 +17,7 @@ export default function BattlePass() {
   const [events, setEvents] = useState<any[]>([]);
   const [activeEvent, setActiveEvent] = useState<any>(null);
   const [progress, setProgress] = useState<{ points: number; claimedRewards: number[] }>({ points: 0, claimedRewards: [] });
+  const { addToast } = useToast();
 
   useEffect(() => {
     api.seasonalEvents.getActive().then(e => {
@@ -34,7 +36,7 @@ export default function BattlePass() {
     try {
       await api.seasonalEvents.claim(activeEvent.id, rewardIndex);
       setProgress(prev => ({ ...prev, claimedRewards: [...prev.claimedRewards, rewardIndex] }));
-    } catch {}
+    } catch { addToast({ title: 'Failed to claim reward', variant: 'error' }); }
   };
 
   const tiers: EventTier[] = activeEvent?.rewards || [

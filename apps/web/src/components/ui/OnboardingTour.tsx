@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, ChevronRight, ChevronLeft, Hash, MessageSquare, Settings, Headphones, Users, Compass, CheckCircle } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useToast } from './ToastManager';
 
 type TourStep = {
     title: string;
@@ -77,6 +78,7 @@ export function OnboardingTour({ onClose }: { onClose: () => void }) {
     const [step, setStep] = useState(0);
     const [targetRect, setTargetRect] = useState<Rect | null>(null);
     const tooltipRef = useRef<HTMLDivElement>(null);
+    const { addToast } = useToast();
 
     const current = STEPS[step];
     const isFirst = step === 0;
@@ -133,7 +135,7 @@ export function OnboardingTour({ onClose }: { onClose: () => void }) {
             setStep(step + 1);
         } else {
             localStorage.setItem(STORAGE_KEY, '1');
-            try { await api.post('/users/@me/onboarding-complete', {}); } catch {}
+            try { await api.post('/users/@me/onboarding-complete', {}); } catch { addToast({ title: 'Failed to complete tour', variant: 'error' }); }
             onClose();
         }
     };

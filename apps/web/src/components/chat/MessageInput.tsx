@@ -594,7 +594,14 @@ const MessageInput: React.FC<MessageInputProps> = ({
                         <input id="channel-file-upload" type="file" multiple style={{ display: 'none' }} onChange={(e) => {
                             const files = e.target.files;
                             if (!files) return;
-                            const newFiles = Array.from(files).map(f => ({
+                            const MAX_FILE_SIZE = 50 * 1024 * 1024;
+                            const newFiles = Array.from(files).filter(f => {
+                                if (f.size > MAX_FILE_SIZE) {
+                                    addToast({ title: `${f.name} is too large (max 50MB)`, variant: 'error' });
+                                    return false;
+                                }
+                                return true;
+                            }).map(f => ({
                                 name: f.name,
                                 size: f.size < 1024 ? `${f.size} B` : f.size < 1048576 ? `${(f.size / 1024).toFixed(1)} KB` : `${(f.size / 1048576).toFixed(1)} MB`,
                                 file: f,
@@ -626,12 +633,16 @@ const MessageInput: React.FC<MessageInputProps> = ({
                                         e.preventDefault();
                                         const file = item.getAsFile();
                                         if (file && channelAttachmentsEnabled) {
-                                            setChatAttachedFiles(prev => [...prev, {
-                                                name: file.name || `pasted-image.${item.type.split('/')[1] || 'png'}`,
-                                                size: file.size < 1024 ? `${file.size} B` : file.size < 1048576 ? `${(file.size / 1024).toFixed(1)} KB` : `${(file.size / 1048576).toFixed(1)} MB`,
-                                                file,
-                                                previewUrl: URL.createObjectURL(file),
-                                            }]);
+                                            if (file.size > 50 * 1024 * 1024) {
+                                                addToast({ title: 'Pasted image is too large (max 50MB)', variant: 'error' });
+                                            } else {
+                                                setChatAttachedFiles(prev => [...prev, {
+                                                    name: file.name || `pasted-image.${item.type.split('/')[1] || 'png'}`,
+                                                    size: file.size < 1024 ? `${file.size} B` : file.size < 1048576 ? `${(file.size / 1024).toFixed(1)} KB` : `${(file.size / 1048576).toFixed(1)} MB`,
+                                                    file,
+                                                    previewUrl: URL.createObjectURL(file),
+                                                }]);
+                                            }
                                         }
                                         break;
                                     }

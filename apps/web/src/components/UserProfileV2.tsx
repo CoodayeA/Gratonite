@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Music, Award, Link2, Server, Users, MapPin, Calendar, Edit2, X } from 'lucide-react';
 import { api, API_BASE } from '../lib/api';
+import { useToast } from './ui/ToastManager';
 
 interface UserProfileV2Props {
   userId: string;
@@ -34,6 +35,7 @@ export function UserProfileV2({ userId, onClose, editable }: UserProfileV2Props)
   const [editBio, setEditBio] = useState('');
   const [editStatus, setEditStatus] = useState('');
   const [editNowPlaying, setEditNowPlaying] = useState('');
+  const { addToast } = useToast();
 
   useEffect(() => {
     // Load profile data
@@ -91,7 +93,7 @@ export function UserProfileV2({ userId, onClose, editable }: UserProfileV2Props)
           : null,
       } : prev);
       setIsEditing(false);
-    } catch {}
+    } catch { addToast({ title: 'Failed to save profile', variant: 'error' }); }
   };
 
   if (!profile) {
