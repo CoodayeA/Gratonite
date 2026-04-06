@@ -351,11 +351,17 @@ const EventScheduler = () => {
                                 <div style={{ display: 'flex', gap: '12px' }}>
                                     <div style={{ flex: 1 }}>
                                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>Date *</label>
-                                        <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} style={{ ...inputStyle, colorScheme: 'dark' }} />
+                                        <div style={{ position: 'relative' }}>
+                                            <Calendar size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none', zIndex: 1 }} />
+                                            <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} style={{ ...inputStyle, paddingLeft: '36px', colorScheme: 'dark' }} />
+                                        </div>
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>Time *</label>
-                                        <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)} style={{ ...inputStyle, colorScheme: 'dark' }} />
+                                        <div style={{ position: 'relative' }}>
+                                            <Clock size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none', zIndex: 1 }} />
+                                            <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)} style={{ ...inputStyle, paddingLeft: '36px', colorScheme: 'dark' }} />
+                                        </div>
                                     </div>
                                 </div>
 

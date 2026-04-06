@@ -24,6 +24,31 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-04-07b',
+    date: 'April 7, 2026',
+    title: 'Wiki Diff View, Form Live Preview, Styled Date Pickers',
+    tagline: 'Compare wiki page revisions side-by-side, preview forms as you build them, and a cleaner event date/time picker.',
+    spotlight: [
+      {
+        emoji: '🔀',
+        title: 'Wiki Revision Diff',
+        description: 'Open the History panel on any wiki page and click "View Diff" next to any past revision to see a side-by-side comparison against the current version — with green additions and red removals.',
+        hint: 'Wiki page → History (clock icon) → View Diff on any revision',
+      },
+      {
+        emoji: '👁',
+        title: 'Form Builder Live Preview',
+        description: 'Click the Preview toggle while building a form and the live preview panel opens side-by-side with the editor — all fields render in real time as you type labels and add options.',
+        hint: 'Forms & Applications → New Form → Preview button',
+      },
+    ],
+    entries: [
+      { type: 'feature', text: 'Wiki revision history now includes a "View Diff" button on each past revision. Opens a full-height side-by-side diff modal showing lines removed (red) and added (green) with counts in the footer.' },
+      { type: 'improvement', text: 'Form Builder preview mode is now side-by-side: the editor stays on the left while a live preview renders on the right, updating in real time as you type field labels or add options.' },
+      { type: 'improvement', text: 'Event creation date and time inputs now show Calendar and Clock icons inside the fields, matching the visual style of the rest of the form.' },
+    ],
+  },
+  {
     id: '2026-04-07a',
     date: 'April 7, 2026',
     title: 'Pins in DMs, Thread Reactions, Trade Review, Inventory Detail',

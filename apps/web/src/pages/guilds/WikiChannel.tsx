@@ -1,10 +1,56 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useOutletContext, useParams } from 'react-router-dom';
-import { FileText, Folder, History, Edit3, Settings, Save, Plus, X, Check, Clock, User, Lock, Archive, Eye, EyeOff, Loader2, Search } from 'lucide-react';
+import { FileText, Folder, History, Edit3, Settings, Save, Plus, X, Check, Clock, User, Lock, Archive, Eye, EyeOff, Loader2, Search, Columns } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
 
 const FOLDERS = ['General', 'Engineering', 'Design'];
+
+function computeLineDiff(oldText: string, newText: string): Array<{ type: 'same' | 'add' | 'remove'; line: string }> {
+    const a = oldText.split('\n');
+    const b = newText.split('\n');
+    const n = a.length, m = b.length;
+    const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+    for (let i = 1; i <= n; i++)
+        for (let j = 1; j <= m; j++)
+            dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
+    const result: Array<{ type: 'same' | 'add' | 'remove'; line: string }> = [];
+    let i = n, j = m;
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && a[i-1] === b[j-1]) {
+            result.unshift({ type: 'same', line: a[i-1] }); i--; j--;
+        } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+            result.unshift({ type: 'add', line: b[j-1] }); j--;
+        } else {
+            result.unshift({ type: 'remove', line: a[i-1] }); i--;
+        }
+    }
+    return result;
+}
+
+type SideLine = { left: string | null; right: string | null; rowType: 'same' | 'change' | 'add' | 'remove' };
+
+function toSideBySide(diff: Array<{ type: 'same' | 'add' | 'remove'; line: string }>): SideLine[] {
+    const rows: SideLine[] = [];
+    let i = 0;
+    while (i < diff.length) {
+        if (diff[i].type === 'same') {
+            rows.push({ left: diff[i].line, right: diff[i].line, rowType: 'same' }); i++;
+        } else {
+            const removes: string[] = [], adds: string[] = [];
+            while (i < diff.length && diff[i].type === 'remove') { removes.push(diff[i].line); i++; }
+            while (i < diff.length && diff[i].type === 'add') { adds.push(diff[i].line); i++; }
+            const len = Math.max(removes.length, adds.length);
+            for (let k = 0; k < len; k++) {
+                rows.push({
+                    left: removes[k] ?? null, right: adds[k] ?? null,
+                    rowType: removes[k] !== undefined && adds[k] !== undefined ? 'change' : removes[k] !== undefined ? 'remove' : 'add',
+                });
+            }
+        }
+    }
+    return rows;
+}
 
 const WikiChannel = () => {
     const { hasCustomBg } = useOutletContext<{ hasCustomBg: boolean }>();
@@ -30,6 +76,8 @@ const WikiChannel = () => {
     const [wikiSearchQuery, setWikiSearchQuery] = useState('');
     const [wikiSearchResults, setWikiSearchResults] = useState<Array<{ id: string; title: string; snippet: string; folder?: string }>>([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [selectedRevisionForDiff, setSelectedRevisionForDiff] = useState<any | null>(null);
+    const [showDiff, setShowDiff] = useState(false);
 
     // Fetch wiki pages on mount / channel change
     useEffect(() => {
@@ -65,6 +113,12 @@ const WikiChannel = () => {
 
     const activePage = pages.find(p => p.id === selectedPageId) ?? pages[0] ?? null;
     const currentSettings = activePage ? (pageSettings[activePage.id] ?? { readOnly: false, archived: false, visible: true }) : { readOnly: false, archived: false, visible: true };
+
+    const diffData = useMemo(() => {
+        if (!showDiff || !selectedRevisionForDiff || !activePage) return null;
+        const diff = computeLineDiff(selectedRevisionForDiff.content ?? '', activePage.content ?? '');
+        return { diff, rows: toSideBySide(diff) };
+    }, [showDiff, selectedRevisionForDiff, activePage]);
 
     const handleCreatePage = async () => {
         const trimmed = newPageTitle.trim();
@@ -489,9 +543,9 @@ const WikiChannel = () => {
                                             style={{
                                                 padding: '12px 14px',
                                                 borderRadius: '8px',
-                                                background: idx === 0 ? 'var(--bg-tertiary)' : 'transparent',
-                                                border: idx === 0 ? '1px solid var(--accent-primary)' : '1px solid transparent',
-                                                cursor: 'pointer',
+                                                background: selectedRevisionForDiff?.id === rev.id ? 'rgba(99,102,241,0.12)' : idx === 0 ? 'var(--bg-tertiary)' : 'transparent',
+                                                border: selectedRevisionForDiff?.id === rev.id ? '1px solid var(--accent-primary)' : idx === 0 ? '1px solid var(--accent-primary)' : '1px solid transparent',
+                                                cursor: idx === 0 ? 'default' : 'pointer',
                                             }}
                                         >
                                             <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
@@ -503,10 +557,17 @@ const WikiChannel = () => {
                                             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                                                 {rev.date ?? rev.createdAt ?? ''}
                                             </div>
-                                            {idx === 0 && (
+                                            {idx === 0 ? (
                                                 <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase', marginTop: '6px', display: 'inline-block' }}>
                                                     Current
                                                 </span>
+                                            ) : (
+                                                <button
+                                                    onClick={() => { setSelectedRevisionForDiff(rev); setShowDiff(true); }}
+                                                    style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600, color: 'var(--accent-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                                >
+                                                    <Columns size={11} /> View Diff
+                                                </button>
                                             )}
                                         </div>
                                     ))}
@@ -594,6 +655,68 @@ const WikiChannel = () => {
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexDirection: 'column', gap: '12px' }}>
                     <FileText size={48} style={{ opacity: 0.3 }} />
                     <p style={{ fontSize: '15px' }}>No pages yet. Create one to get started.</p>
+                </div>
+            )}
+            {/* Revision Diff Modal */}
+            {diffData && showDiff && selectedRevisionForDiff && (
+                <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+                    <div style={{ width: '100%', maxWidth: '1100px', height: '80vh', background: 'var(--bg-elevated)', borderRadius: '12px', border: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <Columns size={16} color="var(--accent-primary)" />
+                                <h3 style={{ fontSize: '15px', fontWeight: 600, margin: 0 }}>Diff — {activePage?.title}</h3>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                    {selectedRevisionForDiff.date ?? selectedRevisionForDiff.createdAt ?? ''} · {selectedRevisionForDiff.author ?? selectedRevisionForDiff.authorId ?? 'Unknown'}
+                                </span>
+                                <button onClick={() => setShowDiff(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}>
+                                    <X size={18} />
+                                </button>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', borderBottom: '1px solid var(--stroke)', flexShrink: 0 }}>
+                            <div style={{ flex: 1, padding: '6px 16px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#f87171', background: 'rgba(239,68,68,0.05)', letterSpacing: '0.05em' }}>← Older Revision</div>
+                            <div style={{ width: 1, background: 'var(--stroke)' }} />
+                            <div style={{ flex: 1, padding: '6px 16px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#4ade80', background: 'rgba(34,197,94,0.05)', letterSpacing: '0.05em' }}>Current Version →</div>
+                        </div>
+                        <div style={{ flex: 1, display: 'flex', overflowY: 'auto', fontFamily: 'var(--font-mono, monospace)', fontSize: '13px', lineHeight: '20px' }}>
+                            <div style={{ flex: 1, overflowX: 'hidden' }}>
+                                {diffData.rows.map((row, i) => (
+                                    <div key={i} style={{
+                                        padding: '1px 16px', minHeight: '22px',
+                                        background: row.left === null ? 'transparent' : (row.rowType === 'remove' || row.rowType === 'change') ? 'rgba(239,68,68,0.1)' : 'transparent',
+                                        color: (row.rowType === 'remove' || row.rowType === 'change') && row.left !== null ? '#f87171' : 'var(--text-secondary)',
+                                        whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+                                    }}>
+                                        {row.left !== null ? ((row.rowType === 'remove' || row.rowType === 'change') ? '- ' : '  ') + row.left : ''}
+                                    </div>
+                                ))}
+                            </div>
+                            <div style={{ width: 1, background: 'var(--stroke)', flexShrink: 0 }} />
+                            <div style={{ flex: 1, overflowX: 'hidden' }}>
+                                {diffData.rows.map((row, i) => (
+                                    <div key={i} style={{
+                                        padding: '1px 16px', minHeight: '22px',
+                                        background: row.right === null ? 'transparent' : (row.rowType === 'add' || row.rowType === 'change') ? 'rgba(34,197,94,0.1)' : 'transparent',
+                                        color: (row.rowType === 'add' || row.rowType === 'change') && row.right !== null ? '#4ade80' : 'var(--text-secondary)',
+                                        whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+                                    }}>
+                                        {row.right !== null ? ((row.rowType === 'add' || row.rowType === 'change') ? '+ ' : '  ') + row.right : ''}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--stroke)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, fontSize: '12px', color: 'var(--text-muted)' }}>
+                            <div>
+                                <span style={{ color: '#f87171', fontWeight: 600 }}>{diffData.diff.filter(d => d.type === 'remove').length}</span> removed &nbsp;
+                                <span style={{ color: '#4ade80', fontWeight: 600 }}>{diffData.diff.filter(d => d.type === 'add').length}</span> added
+                            </div>
+                            <button onClick={() => setShowDiff(false)} className="auth-button" style={{ margin: 0, width: 'auto', padding: '0 16px', height: '32px', fontSize: '13px' }}>
+                                Close
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </main>

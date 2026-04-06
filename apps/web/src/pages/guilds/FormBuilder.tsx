@@ -268,25 +268,9 @@ const FormBuilder = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean 
         </div>
       </div>
 
-      {preview ? (
-        /* Preview mode */
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 24, border: '1px solid var(--border)', maxWidth: 512, margin: '0 auto' }}>
-          <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4, marginTop: 0 }}>{formTitle || 'Untitled Form'}</h3>
-          {formDesc && <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16, marginTop: 0 }}>{formDesc}</p>}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {fields.map(field => (
-              <div key={field.id}>
-                <label style={{ display: 'block', fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                  {field.label || 'Untitled field'} {field.required && <span style={{ color: 'var(--danger)' }}>*</span>}
-                </label>
-                {renderFieldInput(field, null, () => {})}
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        /* Edit mode */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 512, margin: '0 auto' }}>
+      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+        {/* Editor — always visible */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, ...(preview ? { flex: '0 0 460px' } : { flex: 1, maxWidth: 512, margin: '0 auto' }) }}>
           <input placeholder="Form title" value={formTitle} onChange={e => setFormTitle(e.target.value)}
             style={{ width: '100%', background: 'var(--bg-secondary)', color: 'var(--text-primary)', borderRadius: 4, padding: '8px 12px', fontSize: 14, border: '1px solid var(--border)', outline: 'none', boxSizing: 'border-box' }} />
           <textarea placeholder="Description (optional)" value={formDesc} onChange={e => setFormDesc(e.target.value)} rows={2}
@@ -338,7 +322,30 @@ const FormBuilder = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean 
             Create Form
           </button>
         </div>
-      )}
+
+        {/* Live preview panel — shown alongside editor when preview=true */}
+        {preview && (
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.06em', marginBottom: 8 }}>Live Preview</div>
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 24, border: '1px solid var(--border)' }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4, marginTop: 0 }}>{formTitle || 'Untitled Form'}</h3>
+              {formDesc && <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16, marginTop: 0 }}>{formDesc}</p>}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {fields.length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: '16px 0' }}>Add fields to see preview</p>
+                ) : fields.map(field => (
+                  <div key={field.id}>
+                    <label style={{ display: 'block', fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                      {field.label || 'Untitled field'} {field.required && <span style={{ color: 'var(--danger)' }}>*</span>}
+                    </label>
+                    {renderFieldInput(field, null, () => {})}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 
