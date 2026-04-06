@@ -12,6 +12,8 @@ import {
   X,
   Loader2,
   AlertCircle,
+  Edit2,
+  Check,
 } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { useUser } from '../../contexts/UserContext';
@@ -102,6 +104,10 @@ const QAChannel = () => {
   const [isPostingAnswer, setIsPostingAnswer] = useState(false);
   const [loadingAnswers, setLoadingAnswers] = useState(false);
   const [answerVotes, setAnswerVotes] = useState<Record<number, { count: number; state: 'up' | 'down' | null }>>({});
+  const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
+  const [editTitleVal, setEditTitleVal] = useState('');
+  const [editBodyVal, setEditBodyVal] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // ── Fetch threads on mount ─────────────────────────────────────────────────
 
@@ -250,6 +256,25 @@ const QAChannel = () => {
     }
   };
 
+  // ── Edit question ──────────────────────────────────────────────────────────
+
+  const handleSaveEdit = async (q: Question) => {
+    if (!editTitleVal.trim()) return;
+    setIsSavingEdit(true);
+    try {
+      await api.channels.update(q.threadId, { name: editTitleVal.trim() });
+      setQuestions(prev => prev.map(item =>
+        item.id === q.id ? { ...item, title: editTitleVal.trim(), body: editBodyVal } : item
+      ));
+      setEditingQuestionId(null);
+      addToast({ title: 'Question updated', variant: 'success' });
+    } catch (err: any) {
+      addToast({ title: 'Failed to update question', description: err.message, variant: 'error' });
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
   // ── Loading / Error ────────────────────────────────────────────────────────
 
   if (loading) {
@@ -350,11 +375,50 @@ const QAChannel = () => {
                         </span>
                       )}
                       <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Posted {selectedQuestion.time}</span>
+                      {selectedQuestion.author === CURRENT_USER && editingQuestionId !== selectedQuestion.id && (
+                        <button
+                          aria-label="Edit question"
+                          onClick={() => { setEditingQuestionId(selectedQuestion.id); setEditTitleVal(selectedQuestion.title); setEditBodyVal(selectedQuestion.body); }}
+                          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px 4px', borderRadius: '4px' }}
+                        ><Edit2 size={13} /></button>
+                      )}
                     </div>
-                    <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '12px' }}>{selectedQuestion.title}</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '15px', lineHeight: 1.6, marginBottom: '16px' }}>
-                      {selectedQuestion.body}
-                    </p>
+                    {editingQuestionId === selectedQuestion.id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                        <input
+                          value={editTitleVal}
+                          onChange={e => setEditTitleVal(e.target.value)}
+                          style={{ padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--accent-primary)', color: 'var(--text-primary)', fontSize: '16px', fontWeight: 600, outline: 'none' }}
+                          placeholder="Question title"
+                          autoFocus
+                        />
+                        <textarea
+                          value={editBodyVal}
+                          onChange={e => setEditBodyVal(e.target.value)}
+                          rows={4}
+                          style={{ padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
+                          placeholder="Question details (optional)"
+                        />
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={() => handleSaveEdit(selectedQuestion)}
+                            disabled={isSavingEdit || !editTitleVal.trim()}
+                            style={{ background: 'var(--accent-primary)', border: 'none', padding: '6px 14px', borderRadius: '6px', color: '#000', fontWeight: 600, cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >{isSavingEdit ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={12} />} Save</button>
+                          <button
+                            onClick={() => setEditingQuestionId(null)}
+                            style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '6px 14px', borderRadius: '6px', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}
+                          ><X size={12} /> Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '12px' }}>{selectedQuestion.title}</h3>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '15px', lineHeight: 1.6, marginBottom: '16px' }}>
+                          {selectedQuestion.body}
+                        </p>
+                      </>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: selectedQuestion.authorColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600 }}>
                         {selectedQuestion.authorInitial}

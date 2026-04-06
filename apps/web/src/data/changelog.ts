@@ -26,6 +26,35 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     id: '2026-04-06a',
     date: 'April 6, 2026',
+    title: 'UX Polish & Accessibility — Editor state, mobile fixes, Q&A edit',
+    tagline: 'Unsaved changes in the document editor, edit your own Q&A questions, emoji picker on small screens, modal safe-area fix, and WCAG contrast warnings for role colors.',
+    spotlight: [
+      {
+        emoji: '✏️',
+        title: 'Q&A Question Editing',
+        description: 'Q&A channel authors can now edit their own questions after posting. Tap the pencil icon on any question you asked to update the title and body inline.',
+        hint: 'Any Q&A channel → open your question → pencil icon',
+      },
+      {
+        emoji: '💾',
+        title: 'Document Unsaved Indicator',
+        description: 'The Collaborative Document editor now shows an amber "Unsaved changes" warning whenever you have edits that haven\'t been auto-saved yet — no more wondering if your work is safe.',
+        hint: 'Any document channel → type something → watch the toolbar',
+      },
+    ],
+    entries: [
+      { type: 'feature', text: 'Q&A channels: question authors now see a pencil icon on their own questions. Clicking it opens an inline edit form — update the title and body, then save.' },
+      { type: 'improvement', text: 'Collaborative Document editor now shows "Unsaved changes" (amber, with an icon) in the toolbar whenever there are unsynced edits. Clears automatically on save.' },
+      { type: 'fix', text: 'Emoji picker now uses min(400px, 100vw - 16px) width — no longer overflows the screen on phones smaller than 420px.' },
+      { type: 'fix', text: 'Message formatting toolbar (Bold, Italic, Code, etc.) wraps to a second line on narrow screens instead of overflowing its container.' },
+      { type: 'fix', text: 'Modal bottom sheet on iPhone now adds env(safe-area-inset-bottom) padding so content isn\'t clipped by the home indicator.' },
+      { type: 'improvement', text: 'Sending a message now announces "Message sent" to screen readers via an aria-live region — DMs and guild chat are both covered.' },
+      { type: 'improvement', text: 'Role color picker in Server Settings → Roles now shows a low-contrast warning (WCAG < 3:1 against a dark background) when the chosen color would make the role name hard to read.' },
+    ],
+  },
+  {
+    id: '2026-04-06a-prev',
+    date: 'April 6, 2026',
     title: 'Forum Post View, DM upload progress & accessibility polish',
     tagline: 'Forum channels now feel like forums. Plus upload progress in DMs and cleaner keyboard navigation everywhere.',
     spotlight: [

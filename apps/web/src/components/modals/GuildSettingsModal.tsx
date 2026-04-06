@@ -10,6 +10,21 @@ import { NoCodeBotBuilder } from '../guild/NoCodeBotBuilder';
 import { copyToClipboard } from '../../utils/clipboard';
 import { GuildFederationPanel } from './GuildFederationPanel';
 
+function hexToRelativeLuminance(hex: string): number {
+    const c = hex.replace('#', '');
+    if (c.length !== 6) return 0;
+    const r = parseInt(c.slice(0, 2), 16) / 255;
+    const g = parseInt(c.slice(2, 4), 16) / 255;
+    const b = parseInt(c.slice(4, 6), 16) / 255;
+    const linearize = (v: number) => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b);
+}
+function contrastRatio(hex1: string, hex2: string): number {
+    const l1 = hexToRelativeLuminance(hex1);
+    const l2 = hexToRelativeLuminance(hex2);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+}
+
 interface Role {
     id: string;
     name: string;
@@ -2228,6 +2243,11 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
                                                     <input type="text" value={editRoleNameVal} onChange={e => setEditRoleNameVal(e.target.value)} style={{ padding: '6px 10px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--accent-primary)', color: 'var(--text-primary)', fontSize: '16px', fontWeight: 600, outline: 'none' }} autoFocus />
                                                     <input type="color" value={editRoleColorVal} onChange={e => setEditRoleColorVal(e.target.value)} style={{ width: '32px', height: '32px', border: 'none', cursor: 'pointer', borderRadius: '6px' }} />
+                                                    {contrastRatio(editRoleColorVal, '#111827') < 3 && (
+                                                        <span title="This color may be hard to read on dark backgrounds (WCAG contrast < 3:1)" style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', color: '#f59e0b', fontWeight: 600 }}>
+                                                            <AlertTriangle size={12} /> Low contrast
+                                                        </span>
+                                                    )}
                                                     <input type="text" value={editRoleEmojiVal} onChange={e => setEditRoleEmojiVal(e.target.value)} placeholder="Emoji" title="Role icon emoji" style={{ width: '48px', padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '16px', textAlign: 'center', outline: 'none' }} maxLength={4} />
                                                     <button onClick={saveRoleEdit} style={{ background: 'var(--accent-primary)', border: 'none', padding: '6px 12px', borderRadius: '6px', color: '#000', fontWeight: 600, cursor: 'pointer', fontSize: '12px' }}>Save</button>
                                                     <button onClick={() => setEditingRoleName(false)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '6px 12px', borderRadius: '6px', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: '12px' }}>Cancel</button>

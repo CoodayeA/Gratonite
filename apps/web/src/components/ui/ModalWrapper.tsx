@@ -279,7 +279,9 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
                             opacity: 0.3,
                         }} />
                     </div>
-                    {children}
+                    <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+                        {children}
+                    </div>
                 </div>
             </div>
         );

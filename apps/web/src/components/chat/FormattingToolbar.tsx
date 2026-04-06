@@ -42,7 +42,7 @@ export function FormattingToolbar({ textareaSelector, onInputChange, getValue }:
         <div style={{
             display: 'flex', gap: '2px', padding: '4px 8px',
             background: 'var(--bg-tertiary)', borderRadius: '8px 8px 0 0',
-            borderBottom: '1px solid var(--stroke)',
+            borderBottom: '1px solid var(--stroke)', flexWrap: 'wrap',
         }}>
             {buttons.map(btn => (
                 <Tooltip key={btn.label} content={btn.label} position="top">

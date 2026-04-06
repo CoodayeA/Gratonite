@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, lazy, Suspense } from 'react';
+import React, { useRef, useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import {
     Send, Smile, Image as ImageIcon, Reply, X, Plus, Mic, BarChart2, Clock,
     Edit2, Eye, Volume2, Square, Trash2, Hash, FileText, Scissors
@@ -240,9 +240,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
     const [editingFileIndex, setEditingFileIndex] = useState<number | null>(null);
     const [editingFileType, setEditingFileType] = useState<'image' | 'video' | null>(null);
+    const [sentAnnouncement, setSentAnnouncement] = useState('');
+    const handleSendWithAnnounce = useCallback(() => {
+        handleSendMessage();
+        setSentAnnouncement('Message sent');
+        setTimeout(() => setSentAnnouncement(''), 1500);
+    }, [handleSendMessage]);
 
     return (
         <>
+        <div
+            aria-live="polite"
+            aria-atomic="true"
+            style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}
+        >{sentAnnouncement}</div>
         {editingFileIndex !== null && editingFileType === 'image' && chatAttachedFiles[editingFileIndex] && (
             <Suspense fallback={null}>
                 <ImageEditor
@@ -717,7 +728,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                                     className="input-icon-btn primary"
                                     aria-label={isOffline ? 'Offline — message will be queued' : rateLimitRemaining > 0 ? `Rate limited, wait ${rateLimitRemaining}s` : 'Send message'}
                                     title={isOffline ? 'You are offline. The message will be queued and sent when you reconnect.' : undefined}
-                                    onClick={handleSendMessage}
+                                    onClick={handleSendWithAnnounce}
                                     disabled={rateLimitRemaining > 0 || inputValue.trim().length === 0 || isOffline}
                                     style={{ position: 'relative', opacity: rateLimitRemaining > 0 || isOffline ? 0.5 : 1, cursor: rateLimitRemaining > 0 || isOffline ? 'not-allowed' : undefined }}
                                 >

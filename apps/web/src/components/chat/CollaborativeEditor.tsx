@@ -13,7 +13,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, List, ListOrdered,
   Code, Quote, Heading1, Heading2, Heading3, Image as ImageIcon, Minus,
-  Table as TableIcon, Undo2, Redo2, Save, Users, Circle
+  Table as TableIcon, Undo2, Redo2, Save, Users, Circle, AlertCircle
 } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { apiFetch } from '../../lib/api/_core';
@@ -58,6 +58,7 @@ export default function CollaborativeEditor({ channelId, channelName }: Collabor
   const [docId, setDocId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [hasUnsaved, setHasUnsaved] = useState(false);
   const [activeEditors, setActiveEditors] = useState<EditorPresenceUser[]>([]);
   const [loaded, setLoaded] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -159,6 +160,7 @@ export default function CollaborativeEditor({ channelId, channelName }: Collabor
     if (!contentChangedRef.current || !editorRef.current) return;
     contentChangedRef.current = false;
     setSaving(true);
+    setHasUnsaved(false);
     try {
       await apiFetch(`/channels/${channelId}/document`, {
         method: 'PUT',
@@ -167,6 +169,7 @@ export default function CollaborativeEditor({ channelId, channelName }: Collabor
       setLastSaved(new Date());
     } catch (err) {
       // save failed — will retry on next autosave
+      setHasUnsaved(true);
     } finally {
       setSaving(false);
     }
@@ -187,6 +190,7 @@ export default function CollaborativeEditor({ channelId, channelName }: Collabor
   // Editor content change handler
   const handleInput = useCallback(() => {
     contentChangedRef.current = true;
+    setHasUnsaved(true);
     // Broadcast to peers
     if (editorRef.current) {
       emitOrQueue('DOCUMENT_UPDATE', {
@@ -201,6 +205,7 @@ export default function CollaborativeEditor({ channelId, channelName }: Collabor
     const newTitle = e.target.value.slice(0, 200);
     setTitle(newTitle);
     contentChangedRef.current = true;
+    setHasUnsaved(true);
     emitOrQueue('DOCUMENT_TITLE_UPDATE', { channelId, title: newTitle });
   }, [channelId]);
 
@@ -327,6 +332,10 @@ export default function CollaborativeEditor({ channelId, channelName }: Collabor
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-muted)' }}>
           {saving ? (
             <><Save size={14} /> Saving...</>
+          ) : hasUnsaved ? (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--warning, #f59e0b)' }}>
+              <AlertCircle size={13} /> Unsaved changes
+            </span>
           ) : lastSaved ? (
             <><Save size={14} /> Saved {lastSaved.toLocaleTimeString()}</>
           ) : null}
