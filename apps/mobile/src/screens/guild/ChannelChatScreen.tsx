@@ -180,6 +180,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
   // Typing indicator state
   const [typingUsers, setTypingUsers] = useState<Map<string, { username: string; timeout: ReturnType<typeof setTimeout> }>>(new Map());
   const typingThrottle = useRef<number>(0);
+  const transientTimeouts = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   // Reactions state
   const [messageReactions, setMessageReactions] = useState<Map<string, ReactionGroup[]>>(new Map());
@@ -721,6 +722,8 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
         clearTimeout(draftSaveTimer.current);
         draftSaveTimer.current = null;
       }
+      transientTimeouts.current.forEach((timeout) => clearTimeout(timeout));
+      transientTimeouts.current.clear();
       setTypingUsers((prev) => {
         prev.forEach((entry) => clearTimeout(entry.timeout));
         return new Map();
@@ -1047,7 +1050,11 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     const key = `${messageId}:${emoji}`;
     if (reactionCooldown.current.has(key)) return;
     reactionCooldown.current.add(key);
-    setTimeout(() => reactionCooldown.current.delete(key), 1000);
+    const timeout = setTimeout(() => {
+      transientTimeouts.current.delete(timeout);
+      reactionCooldown.current.delete(key);
+    }, 1000);
+    transientTimeouts.current.add(timeout);
     lightImpact();
     const existing = messageReactions.get(messageId) ?? [];
     const reaction = existing.find((r) => r.emoji === emoji);

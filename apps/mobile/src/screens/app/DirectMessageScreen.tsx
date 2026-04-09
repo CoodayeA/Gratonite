@@ -116,6 +116,7 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
   // Typing
   const [typingUsers, setTypingUsers] = useState<Map<string, { username: string; timeout: ReturnType<typeof setTimeout> }>>(new Map());
   const typingThrottle = useRef<number>(0);
+  const transientTimeouts = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   // Reactions
   const [messageReactions, setMessageReactions] = useState<Map<string, ReactionGroup[]>>(new Map());
@@ -469,6 +470,8 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
         clearTimeout(draftSaveTimer.current);
         draftSaveTimer.current = null;
       }
+      transientTimeouts.current.forEach((timeout) => clearTimeout(timeout));
+      transientTimeouts.current.clear();
       const text = inputTextRef.current;
       if (text?.trim()) {
         draftsApi.save(channelId, text).catch((err: any) => {
@@ -503,12 +506,14 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
           const reversed = around.reverse();
           setMessageList(reversed);
           setHasMoreHistory(around.length >= 50);
-          setTimeout(() => {
+          const timeout = setTimeout(() => {
+            transientTimeouts.current.delete(timeout);
             const idx = reversed.slice().reverse().findIndex((m) => m.id === messageId);
             if (idx >= 0) {
               flatListRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.5 });
             }
           }, 100);
+          transientTimeouts.current.add(timeout);
         }
       } catch {
         toast.info('Could not load that message');
@@ -732,7 +737,11 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
     const key = `${messageId}:${emoji}`;
     if (reactionCooldown.current.has(key)) return;
     reactionCooldown.current.add(key);
-    setTimeout(() => reactionCooldown.current.delete(key), 1000);
+    const timeout = setTimeout(() => {
+      transientTimeouts.current.delete(timeout);
+      reactionCooldown.current.delete(key);
+    }, 1000);
+    transientTimeouts.current.add(timeout);
     lightImpact();
     const existing = messageReactions.get(messageId) ?? [];
     const reaction = existing.find((r) => r.emoji === emoji);
