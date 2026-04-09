@@ -23,13 +23,18 @@ services:
     image: redis:7-alpine
     container_name: gratonite-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command:
+      - sh
+      - -ec
+      - exec redis-server --appendonly yes --requirepass "$REDIS_PASSWORD"
     volumes:
       - redis_data:/data
     networks:
       - gratonite-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "export REDISCLI_AUTH=\"$REDIS_PASSWORD\"; redis-cli ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -43,7 +48,7 @@ services:
     command: sh -c "npm install -g pnpm && pnpm install --prod && node dist/index.js"
     environment:
       DATABASE_URL: postgresql://gratonite:${DB_PASSWORD}@postgres:5432/gratonite
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       BULLBOARD_ADMIN_TOKEN: ${BULLBOARD_ADMIN_TOKEN}

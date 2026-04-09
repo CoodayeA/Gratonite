@@ -399,6 +399,7 @@ collect_config() {
 
   # Generate all secrets
   DB_PASSWORD="$(openssl rand -hex 16)"
+  REDIS_PASSWORD="$(openssl rand -hex 16)"
   JWT_SECRET="$(openssl rand -base64 48)"
   JWT_REFRESH_SECRET="$(openssl rand -base64 48)"
   MFA_ENCRYPTION_KEY="$(openssl rand -hex 32)"
@@ -452,6 +453,7 @@ ADMIN_PASSWORD=$ADMIN_PASSWORD
 
 DB_USER=gratonite
 DB_PASSWORD=$DB_PASSWORD
+REDIS_PASSWORD=$REDIS_PASSWORD
 DB_NAME=gratonite
 
 JWT_SECRET=$JWT_SECRET

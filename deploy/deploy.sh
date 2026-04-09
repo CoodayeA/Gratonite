@@ -114,8 +114,15 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
+redis_password="$(grep -E '^REDIS_PASSWORD=' .env | head -n1 | cut -d= -f2- || true)"
+if [[ -z "$redis_password" ]]; then
+  redis_password="$(openssl rand -hex 32)"
+  set_env REDIS_PASSWORD "$redis_password"
+  echo "ℹ️  Generated REDIS_PASSWORD in server .env"
+fi
+
 missing=""
-for k in DB_PASSWORD JWT_SECRET JWT_REFRESH_SECRET BULLBOARD_ADMIN_TOKEN MFA_ENCRYPTION_KEY APP_URL CORS_ORIGIN; do
+for k in DB_PASSWORD REDIS_PASSWORD JWT_SECRET JWT_REFRESH_SECRET BULLBOARD_ADMIN_TOKEN MFA_ENCRYPTION_KEY APP_URL CORS_ORIGIN; do
   v="$(grep -E "^${k}=" .env | head -n1 | cut -d= -f2- || true)"
   if [[ -z "$v" ]]; then
     missing="$missing $k"
