@@ -13,8 +13,8 @@ import { z } from 'zod';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { db } from '../db';
-import { channels, guildMembers } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { channels, guildMembers, kanbanTasks, type KanbanTask } from '../db/schema';
+import { eq, and, asc, sql } from 'drizzle-orm';
 
 export const tasksRouter = Router({ mergeParams: true });
 
@@ -36,22 +36,12 @@ const updateTaskSchema = z.object({
   dueDate: z.string().nullable().optional(),
 });
 
-// ── In-memory store ───────────────────────────────────────────────────────────
-
-interface Task {
-  id: string;
-  channelId: string;
-  title: string;
-  description: string;
-  status: string;
-  assigneeId: string | null;
-  dueDate: string | null;
-  createdBy: string;
-  createdAt: string;
-  position: number;
+function serializeTask(task: KanbanTask) {
+  return {
+    ...task,
+    createdAt: task.createdAt.toISOString(),
+  };
 }
-
-const taskBoards = new Map<string, Task[]>();
 
 // ── Channel access check ──────────────────────────────────────────────────────
 
@@ -90,8 +80,12 @@ tasksRouter.get(
       res.status(e.status || 500).json({ code: e.message });
       return;
     }
-    const tasks = taskBoards.get(channelId) || [];
-    res.json(tasks);
+    const tasks = await db
+      .select()
+      .from(kanbanTasks)
+      .where(eq(kanbanTasks.channelId, channelId))
+      .orderBy(asc(kanbanTasks.status), asc(kanbanTasks.position), asc(kanbanTasks.createdAt));
+    res.json(tasks.map(serializeTask));
   },
 );
 
@@ -108,23 +102,25 @@ tasksRouter.post(
       return;
     }
     const { title, description, status, assigneeId, dueDate } = req.body;
+    const nextStatus = status || 'todo';
 
-    const tasks = taskBoards.get(channelId) || [];
-    const task: Task = {
-      id: crypto.randomUUID(),
+    const [positionRow] = await db
+      .select({ maxPosition: sql<number>`coalesce(max(${kanbanTasks.position}), -1)` })
+      .from(kanbanTasks)
+      .where(and(eq(kanbanTasks.channelId, channelId), eq(kanbanTasks.status, nextStatus)));
+
+    const [task] = await db.insert(kanbanTasks).values({
       channelId,
       title,
       description: description || '',
-      status: status || 'todo',
+      status: nextStatus,
       assigneeId: assigneeId || null,
       dueDate: dueDate || null,
       createdBy: req.userId!,
-      createdAt: new Date().toISOString(),
-      position: tasks.filter(t => t.status === (status || 'todo')).length,
-    };
-    tasks.push(task);
-    taskBoards.set(channelId, tasks);
-    res.status(201).json(task);
+      position: Number(positionRow?.maxPosition ?? -1) + 1,
+    }).returning();
+
+    res.status(201).json(serializeTask(task));
   },
 );
 
@@ -140,21 +136,39 @@ tasksRouter.patch(
       res.status(e.status || 500).json({ code: e.message });
       return;
     }
-    const tasks = taskBoards.get(channelId) || [];
-    const task = tasks.find(t => t.id === taskId);
+    const [task] = await db
+      .select()
+      .from(kanbanTasks)
+      .where(and(eq(kanbanTasks.id, taskId), eq(kanbanTasks.channelId, channelId)))
+      .limit(1);
+
     if (!task) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
 
     const { title, description, status, assigneeId, dueDate } = req.body;
-    if (title !== undefined) task.title = title;
-    if (description !== undefined) task.description = description;
-    if (status !== undefined) task.status = status;
-    if (assigneeId !== undefined) task.assigneeId = assigneeId;
-    if (dueDate !== undefined) task.dueDate = dueDate;
+    let nextPosition = task.position;
 
-    res.json(task);
+    if (status !== undefined && status !== task.status) {
+      const [positionRow] = await db
+        .select({ maxPosition: sql<number>`coalesce(max(${kanbanTasks.position}), -1)` })
+        .from(kanbanTasks)
+        .where(and(eq(kanbanTasks.channelId, channelId), eq(kanbanTasks.status, status)));
+      nextPosition = Number(positionRow?.maxPosition ?? -1) + 1;
+    }
+
+    const [updatedTask] = await db.update(kanbanTasks).set({
+      title: title ?? task.title,
+      description: description ?? task.description,
+      status: status ?? task.status,
+      assigneeId: assigneeId !== undefined ? assigneeId : task.assigneeId,
+      dueDate: dueDate !== undefined ? dueDate : task.dueDate,
+      position: nextPosition,
+    }).where(and(eq(kanbanTasks.id, taskId), eq(kanbanTasks.channelId, channelId)))
+      .returning();
+
+    res.json(serializeTask(updatedTask));
   },
 );
 
@@ -169,14 +183,15 @@ tasksRouter.delete(
       res.status(e.status || 500).json({ code: e.message });
       return;
     }
-    const tasks = taskBoards.get(channelId) || [];
-    const idx = tasks.findIndex(t => t.id === taskId);
-    if (idx === -1) {
+    const [deletedTask] = await db.delete(kanbanTasks)
+      .where(and(eq(kanbanTasks.id, taskId), eq(kanbanTasks.channelId, channelId)))
+      .returning({ id: kanbanTasks.id });
+
+    if (!deletedTask) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
-    tasks.splice(idx, 1);
-    taskBoards.set(channelId, tasks);
+
     res.json({ code: 'OK' });
   },
 );

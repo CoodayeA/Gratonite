@@ -101,6 +101,7 @@ export * from './guild-quests';
 export * from './guild-forms';
 export * from './confessions';
 export * from './guild-ratings';
+export * from './kanban-tasks';
 
 // Federation schemas
 export * from './federation-instances';
