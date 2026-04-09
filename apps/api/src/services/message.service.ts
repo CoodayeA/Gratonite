@@ -636,6 +636,74 @@ export class MessageService {
       .where(eq(channels.id, channelId))
       .limit(1);
 
+    const mentionedUserIds = new Set<string>();
+    if (content) {
+      const structuredMentionRegex = /<@([a-f0-9-]{36})>/g;
+      const mentionedUsernames = new Set<string>();
+      const rawMentionedIds = new Set<string>();
+      let structuredMentionMatch: RegExpExecArray | null;
+      while ((structuredMentionMatch = structuredMentionRegex.exec(content)) !== null) {
+        if (structuredMentionMatch[1] !== authorId) rawMentionedIds.add(structuredMentionMatch[1]);
+      }
+
+      const usernameMentionRegex = /@([a-zA-Z0-9_]+)/g;
+      let usernameMentionMatch: RegExpExecArray | null;
+      while ((usernameMentionMatch = usernameMentionRegex.exec(content)) !== null) {
+        const username = usernameMentionMatch[1].toLowerCase();
+        if (!['everyone', 'here', 'channel', 'online'].includes(username)) {
+          mentionedUsernames.add(username);
+        }
+      }
+
+      if (rawMentionedIds.size > 0) {
+        if (chan?.guildId) {
+          const memberRows = await db.select({ userId: guildMembers.userId })
+            .from(guildMembers)
+            .where(and(eq(guildMembers.guildId, chan.guildId), inArray(guildMembers.userId, [...rawMentionedIds])));
+          for (const member of memberRows) {
+            if (member.userId !== authorId) mentionedUserIds.add(member.userId);
+          }
+        } else if (chan) {
+          const memberRows = await db.select({ userId: dmChannelMembers.userId })
+            .from(dmChannelMembers)
+            .where(and(eq(dmChannelMembers.channelId, channelId), inArray(dmChannelMembers.userId, [...rawMentionedIds])));
+          for (const member of memberRows) {
+            if (member.userId !== authorId) mentionedUserIds.add(member.userId);
+          }
+        }
+      }
+
+      if (mentionedUsernames.size > 0) {
+        for (const uname of mentionedUsernames) {
+          try {
+            let mentionedUser: { id: string } | undefined;
+
+            if (chan?.guildId) {
+              const rows = await db
+                .select({ id: users.id })
+                .from(users)
+                .innerJoin(guildMembers, and(eq(guildMembers.userId, users.id), eq(guildMembers.guildId, chan.guildId)))
+                .where(sql`lower(${users.username}) = ${uname}`)
+                .limit(1);
+              mentionedUser = rows[0];
+            } else if (chan) {
+              const rows = await db
+                .select({ id: users.id })
+                .from(users)
+                .innerJoin(dmChannelMembers, and(eq(dmChannelMembers.userId, users.id), eq(dmChannelMembers.channelId, channelId)))
+                .where(sql`lower(${users.username}) = ${uname}`)
+                .limit(1);
+              mentionedUser = rows[0];
+            }
+
+            if (mentionedUser && mentionedUser.id !== authorId) {
+              mentionedUserIds.add(mentionedUser.id);
+            }
+          } catch { /* skip failed lookups */ }
+        }
+      }
+    }
+
     // Webhook bot dispatch
     if (chan?.guildId && author) {
       dispatchMessageCreate({
@@ -653,24 +721,8 @@ export class MessageService {
     }
 
     // Channel read-state: increment mention counts
-    if (content && chan?.guildId) {
-      const mentionRegex = /<@([a-f0-9-]{36})>/g;
-      const rawMentionedIds = new Set<string>();
-      let mentionResult = mentionRegex.exec(content);
-      while (mentionResult !== null) {
-        if (mentionResult[1] !== authorId) rawMentionedIds.add(mentionResult[1]);
-        mentionResult = mentionRegex.exec(content);
-      }
-
-      let mentionedIds = new Set<string>();
-      if (rawMentionedIds.size > 0) {
-        const memberRows = await db.select({ userId: guildMembers.userId })
-          .from(guildMembers)
-          .where(and(eq(guildMembers.guildId, chan.guildId), inArray(guildMembers.userId, [...rawMentionedIds])));
-        mentionedIds = new Set(memberRows.map((m: any) => m.userId));
-      }
-
-      for (const mentionedUserId of mentionedIds) {
+    if (chan?.guildId && mentionedUserIds.size > 0) {
+      for (const mentionedUserId of mentionedUserIds) {
         try {
           const [row] = await db
             .insert(channelReadState)
@@ -761,35 +813,15 @@ export class MessageService {
     }
 
     // @mention notifications
-    if (content) {
-      const mentionPattern = /@([a-zA-Z0-9_]+)/g;
-      const mentionedUsernames = new Set<string>();
-      let mentionMatch: RegExpExecArray | null;
-      while ((mentionMatch = mentionPattern.exec(content)) !== null) {
-        mentionedUsernames.add(mentionMatch[1].toLowerCase());
-      }
-
-      if (mentionedUsernames.size > 0) {
-        for (const uname of mentionedUsernames) {
-          try {
-            const rows = await db
-              .select({ id: users.id, username: users.username })
-              .from(users)
-              .where(eq(users.username, uname))
-              .limit(1);
-
-            const mentionedUser = rows[0];
-            if (mentionedUser && mentionedUser.id !== authorId) {
-              createNotification({
-                userId: mentionedUser.id,
-                type: 'mention',
-                title: `${senderName} mentioned you`,
-                body: preview,
-                data: { senderId: authorId, senderName, channelId, guildId: chan?.guildId ?? null, messageId: newMessage.id },
-              }).catch(err => logger.error('[messages] mention notification failed:', err));
-            }
-          } catch { /* skip failed lookups */ }
-        }
+    if (mentionedUserIds.size > 0) {
+      for (const mentionedUserId of mentionedUserIds) {
+        createNotification({
+          userId: mentionedUserId,
+          type: 'mention',
+          title: `${senderName} mentioned you`,
+          body: preview,
+          data: { senderId: authorId, senderName, channelId, guildId: chan?.guildId ?? null, messageId: newMessage.id },
+        }).catch(err => logger.error('[messages] mention notification failed:', err));
       }
     }
 
@@ -807,16 +839,7 @@ export class MessageService {
               .from(guildMembers)
               .where(eq(guildMembers.guildId, chan.guildId!));
 
-            // Collect already-mentioned user IDs from individual mentions to deduplicate
-            const alreadyMentionedIds = new Set<string>();
-            if (content) {
-              const individualMentionRegex = /<@([a-f0-9-]{36})>/g;
-              let im: RegExpExecArray | null;
-              while ((im = individualMentionRegex.exec(content)) !== null) {
-                alreadyMentionedIds.add(im[1]);
-              }
-            }
-
+            const alreadyMentionedIds = mentionedUserIds;
             let targetUserIds: string[];
             if (mentionType === 'everyone') {
               targetUserIds = allMembers.map(m => m.userId).filter(uid => uid !== authorId && !alreadyMentionedIds.has(uid));
