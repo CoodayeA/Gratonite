@@ -32,11 +32,12 @@ import { useSystemThemeListener } from './src/lib/useSystemTheme';
 import type { ThemeName } from './src/lib/themes';
 
 export const OTA_BUILD_STAMP = '2026-04-03-v1';
+const mobileSentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
 
 Sentry.init({
-  dsn: 'https://ad17bb4f67fef179cb02bbf241babb25@o4511074273329152.ingest.us.sentry.io/4511074285649920',
+  dsn: mobileSentryDsn,
   tracesSampleRate: 0.2,
-  enabled: !__DEV__,
+  enabled: !__DEV__ && !!mobileSentryDsn,
   beforeSend(event) {
     const message = event.message || event.exception?.values?.[0]?.value || '';
     if (message.includes('Failed to construct \'Response\'') && message.includes('status provided (0)')) {
