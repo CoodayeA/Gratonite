@@ -1,11 +1,12 @@
 import express, { Router, type Request, type Response } from 'express';
 import { logger } from '../lib/logger';
 
-const DEFAULT_WEB_SENTRY_DSN =
-  'https://06e4ca4d04c520405630f744f70700b1@o4511074273329152.ingest.us.sentry.io/4511074372616192';
-
 function getTunnelTarget() {
-  const dsn = process.env.WEB_SENTRY_DSN || DEFAULT_WEB_SENTRY_DSN;
+  const dsn = process.env.WEB_SENTRY_DSN;
+  if (!dsn) {
+    return null;
+  }
+
   const parsed = new URL(dsn);
   const projectId = parsed.pathname.replace(/^\//, '');
   const publicKey = parsed.username;
@@ -32,8 +33,12 @@ sentryTunnelRouter.post(
     }
 
     try {
-      const { url } = getTunnelTarget();
-      const upstream = await fetch(url, {
+      const target = getTunnelTarget();
+      if (!target) {
+        res.status(503).json({ code: 'NOT_CONFIGURED', message: 'Sentry tunnel is not configured' });
+        return;
+      }
+      const upstream = await fetch(target.url, {
         method: 'POST',
         headers: {
           'content-type': req.get('content-type') || 'application/x-sentry-envelope',
