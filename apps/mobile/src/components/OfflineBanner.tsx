@@ -2,22 +2,38 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { SlideInUp, SlideOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getSocket } from '../lib/socket';
+import { subscribeToSocket } from '../lib/socket';
 import { useTheme } from '../lib/theme';
 
 export function useIsOnline(): boolean {
   const [isConnected, setIsConnected] = useState(true);
   useEffect(() => {
-    const socket = getSocket();
-    if (!socket) return;
-    setIsConnected(socket.connected);
-    const onConnect = () => setIsConnected(true);
-    const onDisconnect = () => setIsConnected(false);
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
+    let cleanupSocketListeners: (() => void) | undefined;
+    const unsubscribe = subscribeToSocket((socket) => {
+      cleanupSocketListeners?.();
+
+      if (!socket) {
+        setIsConnected(false);
+        cleanupSocketListeners = undefined;
+        return;
+      }
+
+      setIsConnected(socket.connected);
+
+      const onConnect = () => setIsConnected(true);
+      const onDisconnect = () => setIsConnected(false);
+      socket.on('connect', onConnect);
+      socket.on('disconnect', onDisconnect);
+
+      cleanupSocketListeners = () => {
+        socket.off('connect', onConnect);
+        socket.off('disconnect', onDisconnect);
+      };
+    });
+
     return () => {
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
+      cleanupSocketListeners?.();
+      unsubscribe();
     };
   }, []);
   return isConnected;
@@ -29,20 +45,33 @@ export default function OfflineBanner() {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
 
   useEffect(() => {
-    const socket = getSocket();
-    if (!socket) return;
+    let cleanupSocketListeners: (() => void) | undefined;
+    const unsubscribe = subscribeToSocket((socket) => {
+      cleanupSocketListeners?.();
 
-    setIsConnected(socket.connected);
+      if (!socket) {
+        setIsConnected(false);
+        cleanupSocketListeners = undefined;
+        return;
+      }
 
-    const onConnect = () => setIsConnected(true);
-    const onDisconnect = () => setIsConnected(false);
+      setIsConnected(socket.connected);
 
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
+      const onConnect = () => setIsConnected(true);
+      const onDisconnect = () => setIsConnected(false);
+
+      socket.on('connect', onConnect);
+      socket.on('disconnect', onDisconnect);
+
+      cleanupSocketListeners = () => {
+        socket.off('connect', onConnect);
+        socket.off('disconnect', onDisconnect);
+      };
+    });
 
     return () => {
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
+      cleanupSocketListeners?.();
+      unsubscribe();
     };
   }, []);
 

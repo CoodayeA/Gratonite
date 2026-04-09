@@ -8,6 +8,13 @@ import { getApiBase, getAccessToken } from './api';
 
 let socket: Socket | null = null;
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+const socketSubscribers = new Set<(nextSocket: Socket | null) => void>();
+
+function notifySocketSubscribers(): void {
+  for (const subscriber of socketSubscribers) {
+    subscriber(socket);
+  }
+}
 
 // Derive the socket URL from API_BASE (strip /api/v1)
 function getSocketUrl(): string {
@@ -38,6 +45,7 @@ export function connectSocket(): Socket {
     reconnectionAttempts: Infinity,
     auth: token ? { token } : undefined,
   });
+  notifySocketSubscribers();
 
   socket.on('connect', () => {
     const token = getAccessToken();
@@ -86,10 +94,21 @@ export function disconnectSocket(): void {
   }
   socket?.disconnect();
   socket = null;
+  notifySocketSubscribers();
 }
 
 export function getSocket(): Socket | null {
   return socket;
+}
+
+export function subscribeToSocket(
+  cb: (nextSocket: Socket | null) => void,
+): () => void {
+  socketSubscribers.add(cb);
+  cb(socket);
+  return () => {
+    socketSubscribers.delete(cb);
+  };
 }
 
 // Typed listener helpers
