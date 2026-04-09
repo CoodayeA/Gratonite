@@ -5,7 +5,13 @@ import { Card } from "@/components/ui/Card";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
 import { Button } from "@/components/ui/Button";
 import { AppleIcon, WindowsIcon, TuxIcon } from "./icons";
-import { VERSION, BASE_URL, detectOS, type Platform } from "./constants";
+import {
+  FALLBACK_DESKTOP_RELEASE,
+  detectOS,
+  fetchDesktopReleaseLinks,
+  type DesktopReleaseLinks,
+  type Platform,
+} from "./constants";
 
 interface DesktopPlatform {
   id: string;
@@ -19,54 +25,62 @@ interface DesktopPlatform {
   smartscreen?: boolean;
 }
 
-const platforms: DesktopPlatform[] = [
-  {
-    id: "macos",
-    matchOS: "macos",
-    name: "macOS",
-    detail: "Apple Silicon · macOS 12+",
-    downloadUrl: `${BASE_URL}/Gratonite-${VERSION}-arm64.dmg`,
-    Icon: AppleIcon,
-    accent: "purple",
-  },
-  {
-    id: "windows",
-    matchOS: "windows",
-    name: "Windows",
-    detail: "64-bit · Windows 10+",
-    downloadUrl: `${BASE_URL}/Gratonite%20Setup%20${VERSION}.exe`,
-    Icon: WindowsIcon,
-    accent: "blue",
-    smartscreen: true,
-  },
-  {
-    id: "linux-x64",
-    matchOS: "linux",
-    name: "Linux (x64)",
-    detail: "x64 · AppImage",
-    downloadUrl: `${BASE_URL}/Gratonite-${VERSION}.AppImage`,
-    debUrl: `${BASE_URL}/gratonite-desktop_${VERSION}_amd64.deb`,
-    Icon: TuxIcon,
-    accent: "gold",
-  },
-  {
-    id: "linux-arm64",
-    matchOS: "linux",
-    name: "Linux (ARM64)",
-    detail: "ARM64 · AppImage",
-    downloadUrl: `${BASE_URL}/Gratonite-${VERSION}-arm64.AppImage`,
-    debUrl: `${BASE_URL}/gratonite-desktop_${VERSION}_arm64.deb`,
-    Icon: TuxIcon,
-    accent: "gold",
-  },
-];
-
 export function DesktopSection() {
   const [detectedOS, setDetectedOS] = useState<Platform | null>(null);
+  const [release, setRelease] = useState<DesktopReleaseLinks>(FALLBACK_DESKTOP_RELEASE);
 
   useEffect(() => {
     setDetectedOS(detectOS());
+    let cancelled = false;
+    fetchDesktopReleaseLinks().then((data) => {
+      if (!cancelled) setRelease(data);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const platforms: DesktopPlatform[] = [
+    {
+      id: "macos",
+      matchOS: "macos",
+      name: "macOS",
+      detail: "Universal (Intel + Apple Silicon) · macOS 12+",
+      downloadUrl: release.macDmg,
+      Icon: AppleIcon,
+      accent: "purple",
+    },
+    {
+      id: "windows",
+      matchOS: "windows",
+      name: "Windows",
+      detail: "64-bit · Windows 10+",
+      downloadUrl: release.windowsExe,
+      Icon: WindowsIcon,
+      accent: "blue",
+      smartscreen: true,
+    },
+    {
+      id: "linux-x64",
+      matchOS: "linux",
+      name: "Linux (x64)",
+      detail: "x64 · AppImage",
+      downloadUrl: release.linuxAppImage,
+      debUrl: release.linuxDeb,
+      Icon: TuxIcon,
+      accent: "gold",
+    },
+    {
+      id: "linux-arm64",
+      matchOS: "linux",
+      name: "Linux (ARM64)",
+      detail: "ARM64 · AppImage",
+      downloadUrl: release.linuxArm64AppImage,
+      debUrl: release.linuxArm64Deb,
+      Icon: TuxIcon,
+      accent: "gold",
+    },
+  ];
 
   return (
     <section id="desktop" className="py-16">
@@ -75,7 +89,7 @@ export function DesktopSection() {
           Gratonite Desktop
         </p>
         <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight mb-2">
-          Desktop apps
+          Desktop apps · v{release.version}
         </h2>
         <p className="text-foreground/60 text-base mb-10 max-w-lg">
           Native apps for every major platform. Pick yours and start chatting in

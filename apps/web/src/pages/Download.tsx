@@ -1,11 +1,90 @@
+import { useEffect, useState } from 'react';
 import { Monitor, Apple, ArrowLeft, Terminal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const VERSION = '1.0.4';
 const BASE_URL = 'https://gratonite.chat/downloads';
+
+type DesktopRelease = {
+    version: string;
+    macDmg: string;
+    windowsExe: string;
+    linuxAppImage: string;
+    linuxDeb: string;
+    linuxArm64AppImage: string;
+    linuxArm64Deb: string;
+};
+
+const FALLBACK_RELEASE: DesktopRelease = {
+    version: '1.0.10',
+    macDmg: `${BASE_URL}/Gratonite-1.0.10-universal.dmg`,
+    windowsExe: `${BASE_URL}/Gratonite%20Setup%201.0.10.exe`,
+    linuxAppImage: `${BASE_URL}/Gratonite-1.0.10.AppImage`,
+    linuxDeb: `${BASE_URL}/gratonite-desktop_1.0.10_amd64.deb`,
+    linuxArm64AppImage: `${BASE_URL}/Gratonite-1.0.10-arm64.AppImage`,
+    linuxArm64Deb: `${BASE_URL}/gratonite-desktop_1.0.10_arm64.deb`,
+};
+
+const cleanYamlValue = (value: string) => value.trim().replace(/^['"]|['"]$/g, '');
+const parseVersion = (yaml: string) => {
+    const match = yaml.match(/^version:\s*(.+)$/m);
+    return match ? cleanYamlValue(match[1]) : FALLBACK_RELEASE.version;
+};
+const parseFileUrls = (yaml: string) =>
+    Array.from(yaml.matchAll(/^\s*-\s+url:\s*(.+)$/gm)).map((m) => cleanYamlValue(m[1]));
+const pickUrl = (urls: string[], predicate: (url: string) => boolean, fallback: string) => {
+    const match = urls.find(predicate);
+    return match ? `${BASE_URL}/${match}` : fallback;
+};
+
+const fetchRelease = async (): Promise<DesktopRelease> => {
+    try {
+        const [windowsRes, macRes, linuxRes, linuxArmRes] = await Promise.all([
+            fetch(`${BASE_URL}/latest.yml`, { cache: 'no-store' }),
+            fetch(`${BASE_URL}/latest-mac.yml`, { cache: 'no-store' }),
+            fetch(`${BASE_URL}/latest-linux.yml`, { cache: 'no-store' }),
+            fetch(`${BASE_URL}/latest-linux-arm64.yml`, { cache: 'no-store' }),
+        ]);
+        if (!windowsRes.ok || !macRes.ok || !linuxRes.ok || !linuxArmRes.ok) return FALLBACK_RELEASE;
+
+        const [windowsYaml, macYaml, linuxYaml, linuxArmYaml] = await Promise.all([
+            windowsRes.text(),
+            macRes.text(),
+            linuxRes.text(),
+            linuxArmRes.text(),
+        ]);
+
+        const windowsFiles = parseFileUrls(windowsYaml);
+        const macFiles = parseFileUrls(macYaml);
+        const linuxFiles = parseFileUrls(linuxYaml);
+        const linuxArmFiles = parseFileUrls(linuxArmYaml);
+
+        return {
+            version: parseVersion(windowsYaml),
+            macDmg: pickUrl(macFiles, (url) => url.endsWith('.dmg'), FALLBACK_RELEASE.macDmg),
+            windowsExe: pickUrl(windowsFiles, (url) => url.endsWith('.exe'), FALLBACK_RELEASE.windowsExe),
+            linuxAppImage: pickUrl(linuxFiles, (url) => url.endsWith('.AppImage'), FALLBACK_RELEASE.linuxAppImage),
+            linuxDeb: pickUrl(linuxFiles, (url) => url.endsWith('.deb'), FALLBACK_RELEASE.linuxDeb),
+            linuxArm64AppImage: pickUrl(linuxArmFiles, (url) => url.endsWith('.AppImage'), FALLBACK_RELEASE.linuxArm64AppImage),
+            linuxArm64Deb: pickUrl(linuxArmFiles, (url) => url.endsWith('.deb'), FALLBACK_RELEASE.linuxArm64Deb),
+        };
+    } catch {
+        return FALLBACK_RELEASE;
+    }
+};
 
 export default function Download() {
     const navigate = useNavigate();
+    const [release, setRelease] = useState<DesktopRelease>(FALLBACK_RELEASE);
+
+    useEffect(() => {
+        let cancelled = false;
+        fetchRelease().then((data) => {
+            if (!cancelled) setRelease(data);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     return (
         <div style={{
@@ -53,14 +132,14 @@ export default function Download() {
                             Download Gratonite
                         </h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
-                            Desktop app · Version {VERSION}
+                            Desktop app · Version {release.version}
                         </p>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         {/* macOS */}
                         <a
-                            href={`${BASE_URL}/Gratonite-${VERSION}-arm64.dmg`}
+                            href={release.macDmg}
                             download
                             style={{ textDecoration: 'none' }}
                         >
@@ -94,7 +173,7 @@ export default function Download() {
                                         macOS
                                     </div>
                                     <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                                        .dmg installer · Apple Silicon (M1+)
+                                        .dmg installer · Universal (Intel + Apple Silicon)
                                     </div>
                                 </div>
                                 <div style={{
@@ -111,7 +190,7 @@ export default function Download() {
 
                         {/* Windows */}
                         <a
-                            href={`${BASE_URL}/Gratonite%20Setup%20${VERSION}.exe`}
+                            href={release.windowsExe}
                             download
                             style={{ textDecoration: 'none' }}
                         >
@@ -162,7 +241,7 @@ export default function Download() {
 
                         {/* Linux x64 */}
                         <a
-                            href={`${BASE_URL}/Gratonite-${VERSION}.AppImage`}
+                            href={release.linuxAppImage}
                             download
                             style={{ textDecoration: 'none' }}
                         >
@@ -196,7 +275,7 @@ export default function Download() {
                                         Linux (x64)
                                     </div>
                                     <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                                        .AppImage · Also available as <a href={`${BASE_URL}/gratonite-desktop_${VERSION}_amd64.deb`} style={{ color: 'var(--accent-primary)' }} onClick={e => e.stopPropagation()}>.deb</a>
+                                        .AppImage · Also available as <a href={release.linuxDeb} style={{ color: 'var(--accent-primary)' }} onClick={e => e.stopPropagation()}>.deb</a>
                                     </div>
                                 </div>
                                 <div style={{
@@ -213,7 +292,7 @@ export default function Download() {
 
                         {/* Linux ARM64 */}
                         <a
-                            href={`${BASE_URL}/Gratonite-${VERSION}-arm64.AppImage`}
+                            href={release.linuxArm64AppImage}
                             download
                             style={{ textDecoration: 'none' }}
                         >
@@ -247,7 +326,7 @@ export default function Download() {
                                         Linux (ARM64)
                                     </div>
                                     <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                                        .AppImage · Also available as <a href={`${BASE_URL}/gratonite-desktop_${VERSION}_arm64.deb`} style={{ color: 'var(--accent-primary)' }} onClick={e => e.stopPropagation()}>.deb</a>
+                                        .AppImage · Also available as <a href={release.linuxArm64Deb} style={{ color: 'var(--accent-primary)' }} onClick={e => e.stopPropagation()}>.deb</a>
                                     </div>
                                 </div>
                                 <div style={{

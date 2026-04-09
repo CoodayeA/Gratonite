@@ -1,39 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { AppleIcon, WindowsIcon, TuxIcon } from "./icons";
-import { VERSION, BASE_URL, detectOS, type Platform } from "./constants";
-
-const platformConfig: Record<
-  Platform,
-  {
-    name: string;
-    detail: string;
-    file: string;
-    Icon: typeof AppleIcon;
-  }
-> = {
-  macos: {
-    name: "Mac",
-    detail: `v${VERSION} · macOS 12+ · Apple Silicon`,
-    file: `Gratonite-${VERSION}-arm64.dmg`,
-    Icon: AppleIcon,
-  },
-  windows: {
-    name: "Windows",
-    detail: `v${VERSION} · Windows 10+ · 64-bit`,
-    file: `Gratonite%20Setup%20${VERSION}.exe`,
-    Icon: WindowsIcon,
-  },
-  linux: {
-    name: "Linux",
-    detail: `v${VERSION} · x64 · AppImage`,
-    file: `Gratonite-${VERSION}.AppImage`,
-    Icon: TuxIcon,
-  },
-};
+import {
+  FALLBACK_DESKTOP_RELEASE,
+  detectOS,
+  fetchDesktopReleaseLinks,
+  type DesktopReleaseLinks,
+  type Platform,
+} from "./constants";
 
 const otherPlatforms: Record<Platform, Platform[]> = {
   macos: ["windows", "linux"],
@@ -46,6 +23,46 @@ export function PlatformHero() {
     if (typeof navigator === "undefined") return null;
     return detectOS();
   });
+  const [release, setRelease] = useState<DesktopReleaseLinks>(FALLBACK_DESKTOP_RELEASE);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchDesktopReleaseLinks().then((data) => {
+      if (!cancelled) setRelease(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const platformConfig: Record<
+    Platform,
+    {
+      name: string;
+      detail: string;
+      downloadUrl: string;
+      Icon: typeof AppleIcon;
+    }
+  > = {
+    macos: {
+      name: "Mac",
+      detail: `v${release.version} · macOS 12+ · Universal`,
+      downloadUrl: release.macDmg,
+      Icon: AppleIcon,
+    },
+    windows: {
+      name: "Windows",
+      detail: `v${release.version} · Windows 10+ · 64-bit`,
+      downloadUrl: release.windowsExe,
+      Icon: WindowsIcon,
+    },
+    linux: {
+      name: "Linux",
+      detail: `v${release.version} · x64 · AppImage`,
+      downloadUrl: release.linuxAppImage,
+      Icon: TuxIcon,
+    },
+  };
 
   // SSR / undetected fallback
   if (os === null) {
@@ -73,7 +90,7 @@ export function PlatformHero() {
     );
   }
 
-  const { name, detail, file, Icon } = platformConfig[os];
+  const { name, detail, downloadUrl, Icon } = platformConfig[os];
   const others = otherPlatforms[os];
 
   return (
@@ -88,7 +105,7 @@ export function PlatformHero() {
         </span>
       </h1>
       <p className="text-foreground/50 text-sm mb-8">{detail}</p>
-      <Button variant="primary" size="lg" href={`${BASE_URL}/${file}`} className="mb-6">
+      <Button variant="primary" size="lg" href={downloadUrl} className="mb-6">
         <Icon size={20} />
         Download for {name}
       </Button>
