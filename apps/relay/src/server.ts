@@ -35,6 +35,7 @@ const HEALTH_PORT = parseInt(process.env.RELAY_HEALTH_PORT || '4101', 10);
 const RELAY_DOMAIN = process.env.RELAY_DOMAIN || 'localhost';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const RATE_LIMIT = parseInt(process.env.RELAY_RATE_LIMIT || '100', 10); // envelopes/sec/instance
+const MAX_PAYLOAD_BYTES = parseInt(process.env.RELAY_MAX_PAYLOAD_BYTES || '1048576', 10);
 const KEEPALIVE_INTERVAL = 30_000; // 30s
 const MAX_MISSED_PONGS = 3;
 const TURN_SERVER = process.env.TURN_SERVER || '';
@@ -65,7 +66,7 @@ async function main(): Promise<void> {
   await redis.connect();
   console.log(`[relay] Connected to Redis at ${REDIS_URL}`);
 
-  const wss = new WebSocketServer({ port: PORT });
+  const wss = new WebSocketServer({ port: PORT, maxPayload: MAX_PAYLOAD_BYTES });
   console.log(`[relay] WebSocket server listening on port ${PORT}`);
   console.log(`[relay] Domain: ${RELAY_DOMAIN}`);
 
