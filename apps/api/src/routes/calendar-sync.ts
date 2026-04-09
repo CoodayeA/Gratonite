@@ -110,12 +110,15 @@ calendarSyncRouter.get('/users/@me/calendar-integrations/google/callback', async
     const tokens = await exchangeCodeForTokens(code, redirectUri);
 
     // Upsert the integration
+    const existingConditions = [
+      eq(calendarIntegrations.userId, state.userId),
+      eq(calendarIntegrations.provider, 'google'),
+      ...(state.guildId ? [eq(calendarIntegrations.guildId, state.guildId)] : []),
+    ];
+
     const existing = await db.select({ id: calendarIntegrations.id }).from(calendarIntegrations)
-      .where(and(
-        eq(calendarIntegrations.userId, state.userId),
-        state.guildId ? eq(calendarIntegrations.guildId, state.guildId) : undefined as any,
-        eq(calendarIntegrations.provider, 'google'),
-      )).limit(1);
+      .where(and(...existingConditions))
+      .limit(1);
 
     if (existing.length > 0) {
       await db.update(calendarIntegrations).set({
