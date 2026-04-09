@@ -12,6 +12,12 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
+if (!process.env.JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable is not set. Refusing to start bot auth with insecure defaults.');
+}
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
 declare global {
   namespace Express {
     interface Request {
@@ -46,7 +52,7 @@ export function requireBotAuth(req: Request, res: Response, next: NextFunction):
   }
 
   try {
-    const payload = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET!) as unknown;
+    const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as unknown;
     if (!isBotPayload(payload)) {
       res.status(401).json({ code: 'UNAUTHORIZED', message: 'Not a bot token' });
       return;
@@ -70,7 +76,7 @@ export function requireBotOrUserAuth(req: Request, res: Response, next: NextFunc
   }
 
   try {
-    const payload = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET!) as any;
+    const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as any;
     if (isBotPayload(payload)) {
       req.botId = payload.botId;
     } else if (typeof payload.userId === 'string') {
