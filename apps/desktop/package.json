@@ -1,6 +1,6 @@
 {
   "name": "gratonite-desktop",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Gratonite Desktop — Electron wrapper for the Gratonite web app",
   "author": {
     "name": "Gratonite",
@@ -12,6 +12,7 @@
     "start": "electron .",
     "dev": "electron . --dev",
     "build:mac": "electron-builder --mac",
+    "build:mac:universal": "electron-builder --mac --universal",
     "build:win": "electron-builder --win",
     "build:win:clean": "node ./scripts/clean-dist.mjs && electron-builder --win",
     "build:win:signed": "electron-builder --win -c.win.signAndEditExecutable=true",
@@ -44,7 +45,12 @@
       "gatekeeperAssess": false,
       "hardenedRuntime": true,
       "entitlements": "entitlements.mac.plist",
-      "entitlementsInherit": "entitlements.mac.plist"
+      "entitlementsInherit": "entitlements.mac.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Gratonite uses your microphone for voice calls and voice channels.",
+        "NSCameraUsageDescription": "Gratonite uses your camera for video calls.",
+        "NSScreenCaptureDescription": "Gratonite uses screen capture so you can share your screen."
+      }
     },
     "nsis": {
       "oneClick": false,
