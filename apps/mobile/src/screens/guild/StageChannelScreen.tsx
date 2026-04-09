@@ -178,6 +178,10 @@ export default function StageChannelScreen({ route, navigation }: Props) {
     );
   }
 
+  if (!session) {
+    return <LoadingScreen />;
+  }
+
   return (
     <PatternBackground>
       <View style={styles.topicBar}>

@@ -94,6 +94,7 @@ export interface Message {
       displayName: string | null;
     };
   } | null;
+  nonce?: string;
   isEncrypted?: boolean;
   encryptedContent?: string | null;
   expiresAt?: string | null;

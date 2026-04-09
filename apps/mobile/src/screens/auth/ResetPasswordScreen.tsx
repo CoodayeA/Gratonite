@@ -27,7 +27,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'ResetPassword'>
 
 export default function ResetPasswordScreen({ route, navigation }: Props) {
   // Determine if Login screen exists in this navigator (auth stack vs app stack)
-  const canNavigateToLogin = navigation.getState().routeNames.includes('Login');
+  const canNavigateToLogin = (navigation.getState().routeNames as string[]).includes('Login');
 
   const handleNavigateAway = () => {
     if (canNavigateToLogin) {

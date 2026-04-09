@@ -188,6 +188,10 @@ export default function GuildInsightsScreen({ route }: Props) {
     );
   }
 
+  if (!guild) {
+    return <LoadingScreen />;
+  }
+
   const textChannels = channelList.filter((c) => c.type === 'text' || c.type === 'GUILD_TEXT').length;
   const voiceChannels = channelList.filter((c) => c.type === 'voice' || c.type === 'GUILD_VOICE').length;
   const categories = channelList.filter((c) => c.type === 'category' || c.type === 'GUILD_CATEGORY').length;

@@ -20,7 +20,13 @@ import type { Channel } from '../types';
 import ChannelChatScreen from '../screens/guild/ChannelChatScreen';
 import VoiceChannelScreen from '../screens/guild/VoiceChannelScreen';
 
-const Drawer = createDrawerNavigator();
+type GuildDrawerParamList = {
+  SelectChannel: undefined;
+  ChannelChat: { channelId: string; channelName: string; guildId: string };
+  VoiceChannel: { channelId: string; channelName: string; guildId: string };
+};
+
+const Drawer = createDrawerNavigator<GuildDrawerParamList>();
 
 // ---------------------------------------------------------------------------
 // Flat list item model

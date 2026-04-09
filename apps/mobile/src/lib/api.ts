@@ -429,6 +429,7 @@ export async function apiFetch<T>(
 interface KeysetPaginationParams {
   before?: string;
   after?: string;
+  around?: string;
   limit?: number;
 }
 
@@ -437,6 +438,7 @@ function buildQuery(params?: KeysetPaginationParams): string {
   const parts: string[] = [];
   if (params.before) parts.push(`before=${params.before}`);
   if (params.after) parts.push(`after=${params.after}`);
+  if (params.around) parts.push(`around=${params.around}`);
   if (params.limit) parts.push(`limit=${params.limit}`);
   return parts.length ? `?${parts.join('&')}` : '';
 }
@@ -992,11 +994,12 @@ export const invites = {
 // ---------------------------------------------------------------------------
 
 export const search = {
-  messages(params: { q: string; channelId?: string; authorId?: string; limit?: number }) {
+  messages(params: { q: string; channelId?: string; authorId?: string; limit?: number; offset?: number }) {
     const parts: string[] = [`q=${encodeURIComponent(params.q)}`];
     if (params.channelId) parts.push(`channelId=${params.channelId}`);
     if (params.authorId) parts.push(`authorId=${params.authorId}`);
     if (params.limit) parts.push(`limit=${params.limit}`);
+    if (params.offset !== undefined) parts.push(`offset=${params.offset}`);
     return apiFetch<SearchResult[]>(`/search/messages?${parts.join('&')}`);
   },
 };

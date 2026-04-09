@@ -120,7 +120,7 @@ export function onPresenceUpdate(
 }
 
 export function onTypingStart(
-  cb: (data: { channelId: string; userId: string; username: string; timestamp: number }) => void,
+  cb: (data: { channelId: string; userId: string; username: string; displayName?: string | null; timestamp: number }) => void,
 ): () => void {
   socket?.on('TYPING_START', cb);
   return () => { socket?.off('TYPING_START', cb); };

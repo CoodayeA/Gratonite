@@ -30,6 +30,10 @@ function fromBase64Url(str: string): Uint8Array {
   return new Uint8Array(Buffer.from(b64, 'base64'));
 }
 
+function sliceArrayBuffer(view: Uint8Array): ArrayBuffer {
+  return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength) as ArrayBuffer;
+}
+
 // ---------------------------------------------------------------------------
 // Internal key wrapper (structurally compatible with CryptoKey interface)
 // ---------------------------------------------------------------------------
@@ -198,7 +202,7 @@ export const subtle = {
       const plaintext = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
       const aes = gcm((key as PolyKey)._raw, iv);
       const ct = aes.encrypt(plaintext);
-      return ct.buffer.slice(ct.byteOffset, ct.byteOffset + ct.byteLength);
+      return sliceArrayBuffer(ct);
     }
     throw new Error(`Unsupported encrypt: ${algorithm.name}`);
   },
@@ -213,7 +217,7 @@ export const subtle = {
       const ct = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
       const aes = gcm((key as PolyKey)._raw, iv);
       const pt = aes.decrypt(ct);
-      return pt.buffer.slice(pt.byteOffset, pt.byteOffset + pt.byteLength);
+      return sliceArrayBuffer(pt);
     }
     throw new Error(`Unsupported decrypt: ${algorithm.name}`);
   },
@@ -225,7 +229,7 @@ export const subtle = {
     if (algorithm === 'SHA-256') {
       const input = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
       const hash = sha256(input);
-      return hash.buffer.slice(hash.byteOffset, hash.byteOffset + hash.byteLength);
+      return sliceArrayBuffer(hash);
     }
     throw new Error(`Unsupported digest: ${algorithm}`);
   },
