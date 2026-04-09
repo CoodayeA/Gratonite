@@ -2154,7 +2154,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                             })}
                                         </div>
                                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '12px 0 0' }}>
-                                            This is a display-only simulation. Your actual permissions are not changed.
+                                            This is a display-only preview. Your actual permissions are not changed.
                                         </p>
                                     </div>
                                 );

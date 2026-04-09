@@ -216,7 +216,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       },
       {
         emoji: '🧩',
-        title: 'Role Simulation',
+        title: 'Role Preview',
         description: 'Preview exactly what any role configuration looks like from a member\'s point of view.',
         hint: 'Server Settings → Roles',
       },
@@ -245,7 +245,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       { type: 'feature', text: 'Soundboard panel — drop sound clips into voice channels during calls. Play audio for the whole room directly from the call toolbar' },
       { type: 'feature', text: 'Voice pop-out window — pop your call into a floating mini-window so you can keep chatting without losing your video' },
       { type: 'feature', text: 'Noise gate + suppression controls — fine-tune your mic sensitivity, noise gate threshold, and AI suppression strength right from voice settings' },
-      { type: 'feature', text: 'Role simulation — admins can preview what any role setup looks like from a member\'s perspective before shipping it' },
+      { type: 'feature', text: 'Role preview — admins can preview what any role setup looks like from a member\'s perspective before shipping it' },
       { type: 'feature', text: 'Backup integrity verify — run a dry-run verify on any backup archive from the admin dashboard without actually restoring anything' },
       { type: 'feature', text: 'Diagnostics bundle — download a complete server diagnostics snapshot (logs, health, config summary) from admin → Support as a single zip' },
       { type: 'feature', text: 'Thread breadcrumbs + jump-to-parent — a thread\'s origin message is now shown at the top as a link so you always know where the conversation started' },
