@@ -52,12 +52,13 @@ export function useE2E({
   const [e2eKey, setE2eKey] = useState<CryptoKey | null>(null);
   const [isE2EReady, setIsE2EReady] = useState(false);
   const initRef = useRef(false);
+  const participantKey = (groupParticipantIds ?? []).slice().sort().join(',');
 
   useEffect(() => {
     initRef.current = false;
     setE2eKey(null);
     setIsE2EReady(false);
-  }, [channelId, recipientId]);
+  }, [channelId, recipientId, isGroupDm, participantKey]);
 
   useEffect(() => {
     if (!userId || initRef.current) return;
@@ -89,7 +90,7 @@ export function useE2E({
     })();
 
     return () => { initRef.current = false; };
-  }, [userId, channelId, recipientId, isGroupDm]);
+  }, [userId, channelId, recipientId, isGroupDm, participantKey]);
 
   const initDME2E = async (
     keyPair: { publicKey: CryptoKey; privateKey: CryptoKey },
