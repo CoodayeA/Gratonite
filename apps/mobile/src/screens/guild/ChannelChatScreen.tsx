@@ -801,7 +801,15 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       const pending = await getPendingQueue();
       for (const item of pending) {
         try {
-          await messagesApi.send(item.channelId, item.content);
+          if (item.isEncrypted && item.encryptedContent) {
+            await messagesApi.send(item.channelId, {
+              content: '',
+              isEncrypted: true,
+              encryptedContent: item.encryptedContent,
+            });
+          } else {
+            await messagesApi.send(item.channelId, item.content);
+          }
           await removePending(item.id);
         } catch (err: any) {
           if (err?.status === 404) {
@@ -852,7 +860,12 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     }
 
     if (!isOnline) {
-      await queueSend(channelId, text);
+      if (channelIsEncrypted && channelE2EKey) {
+        const encryptedContent = await encrypt(channelE2EKey, text);
+        await queueSend(channelId, text, { isEncrypted: true, encryptedContent });
+      } else {
+        await queueSend(channelId, text);
+      }
       setInputText('');
       toast.info('Message queued - will send when online');
       return;
@@ -891,7 +904,21 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     } as any;
     setMessageList((prev) => [...prev, optimisticMessage]);
     try {
-      const msg = await messagesApi.send(channelId, text, { ...(replyingTo ? { replyToId: replyingTo.id } : {}), nonce });
+      const messagePayload = channelIsEncrypted && channelE2EKey
+        ? {
+            content: '',
+            nonce,
+            isEncrypted: true,
+            encryptedContent: await encrypt(channelE2EKey, text),
+            ...(replyingTo ? { replyToId: replyingTo.id } : {}),
+            ...(channelKeyVersion != null ? { keyVersion: channelKeyVersion } : {}),
+          }
+        : {
+            content: text,
+            nonce,
+            ...(replyingTo ? { replyToId: replyingTo.id } : {}),
+          };
+      const msg = await messagesApi.send(channelId, messagePayload);
       setMessageList((prev) => {
         if (prev.some((m) => m.id === msg.id)) {
           return prev.filter((m) => m.id !== optimisticId);
