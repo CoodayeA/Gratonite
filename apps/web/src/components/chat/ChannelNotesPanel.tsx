@@ -321,7 +321,7 @@ const ChannelNotesPanel = ({ channelId, onClose }: ChannelNotesPanelProps) => {
                     docs.map(doc => (
                         <div
                             key={doc.id}
-                            onClick={() => openDoc(doc)}
+                            onClick={() => handleSelect(doc)}
                             style={{
                                 padding: '12px 16px', cursor: 'pointer',
                                 borderBottom: '1px solid var(--stroke)',

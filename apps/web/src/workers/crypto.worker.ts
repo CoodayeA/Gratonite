@@ -78,22 +78,26 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
   try {
     switch (op) {
       case 'encrypt': {
-        const result = await encrypt(payload.key, payload.plaintext);
+        const request = e.data as Extract<WorkerRequest, { op: 'encrypt' }>;
+        const result = await encrypt(request.payload.key, request.payload.plaintext);
         self.postMessage({ id, result });
         break;
       }
       case 'decrypt': {
-        const result = await decrypt(payload.key, payload.ciphertextBase64);
+        const request = e.data as Extract<WorkerRequest, { op: 'decrypt' }>;
+        const result = await decrypt(request.payload.key, request.payload.ciphertextBase64);
         self.postMessage({ id, result });
         break;
       }
       case 'encryptFile': {
-        const result = await encryptFileOp(payload.key, payload.buffer, payload.filename);
+        const request = e.data as Extract<WorkerRequest, { op: 'encryptFile' }>;
+        const result = await encryptFileOp(request.payload.key, request.payload.buffer, request.payload.filename);
         self.postMessage({ id, result }, { transfer: [result.encryptedBuffer] as unknown as Transferable[] });
         break;
       }
       case 'decryptFile': {
-        const result = await decryptFileOp(payload.key, payload.buffer, payload.ivB64, payload.encryptedFilename);
+        const request = e.data as Extract<WorkerRequest, { op: 'decryptFile' }>;
+        const result = await decryptFileOp(request.payload.key, request.payload.buffer, request.payload.ivB64, request.payload.encryptedFilename);
         self.postMessage({ id, result }, { transfer: [result.decryptedBuffer] as unknown as Transferable[] });
         break;
       }

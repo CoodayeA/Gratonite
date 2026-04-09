@@ -15,6 +15,10 @@
     "noEmit": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      "@gratonite/types": ["../../packages/types/src/index.ts"]
+    },
     "jsx": "react-jsx",
     "types": ["react", "react-dom", "vite/client"],
     "typeRoots": ["./node_modules/@types"],
