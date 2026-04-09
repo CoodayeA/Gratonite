@@ -32,6 +32,12 @@ translateRouter.post('/:messageId/translate', requireAuth, async (req: Request, 
     }
 
     const lang = targetLang.toLowerCase();
+    const libreTranslateUrl = process.env.LIBRETRANSLATE_URL;
+
+    if (!libreTranslateUrl) {
+      res.status(503).json({ code: 'NOT_CONFIGURED', message: 'Translation is not configured' });
+      return;
+    }
 
     // Check DB cache first
     const [cached] = await db.select().from(messageTranslations)
@@ -73,7 +79,6 @@ translateRouter.post('/:messageId/translate', requireAuth, async (req: Request, 
     }
 
     // Call LibreTranslate API
-    const libreTranslateUrl = process.env.LIBRETRANSLATE_URL || 'https://libretranslate.com/translate';
     const libreTranslateKey = process.env.LIBRETRANSLATE_API_KEY;
 
     const body: Record<string, string> = {
