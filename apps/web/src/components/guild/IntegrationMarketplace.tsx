@@ -40,7 +40,9 @@ export default function IntegrationMarketplace({ guildId, channels }: { guildId:
       setShowInstall(null);
       fetch_();
     } catch { addToast({ title: 'Failed to install integration', variant: 'error' }); }
-  };= async (integ: Integration) => {
+  };
+
+  const toggleEnabled = async (integ: Integration) => {
     try {
       await api.integrations.update(guildId, integ.id, { enabled: !integ.enabled });
       fetch_();

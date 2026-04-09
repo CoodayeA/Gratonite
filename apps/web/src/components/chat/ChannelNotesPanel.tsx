@@ -103,7 +103,9 @@ const ChannelNotesPanel = ({ channelId, onClose }: ChannelNotesPanelProps) => {
             setEditContent(doc.content);
             lastSavedRef.current = doc.content;
         } catch { addToast({ title: 'Failed to create note', variant: 'error' }); }
-    };= async (docId: string) => {
+    };
+
+    const handleDelete = async (docId: string) => {
         try {
             await api.channelDocuments.remove(channelId, docId);
             setDocs(prev => prev.filter(d => d.id !== docId));
@@ -112,7 +114,9 @@ const ChannelNotesPanel = ({ channelId, onClose }: ChannelNotesPanelProps) => {
                 setEditing(false);
             }
         } catch { addToast({ title: 'Failed to delete note', variant: 'error' }); }
-    };= (doc: DocItem) => {
+    };
+
+    const handleSelect = (doc: DocItem) => {
         setActiveDoc(doc);
         setEditing(false);
         setEditTitle(doc.title);

@@ -34,13 +34,17 @@ export default function StandupBot({ guildId }: { guildId: string }) {
       await api.standup.respond(guildId, answers);
       fetch_();
     } catch { addToast({ title: 'Failed to submit standup', variant: 'error' }); }
-  };= async () => {
+  };
+
+  const saveConfig = async () => {
     try {
       await api.standup.setConfig(guildId, configForm);
       setShowConfig(false);
       fetch_();
     } catch { addToast({ title: 'Failed to save standup config', variant: 'error' }); }
-  };= (summary?.questions || config?.questions || []) as string[];
+  };
+
+  const questions = (summary?.questions || config?.questions || []) as string[];
 
   return (
     <div className="p-4 bg-gray-900 rounded-lg space-y-4">
