@@ -55,7 +55,12 @@ export default function CommunityQuests({ guildId }: { guildId: string }) {
     } catch { addToast({ title: 'Failed to contribute to quest', variant: 'error' }); }
   };
 
-  const daysUntil
+  const daysUntil = (endDate: string) => {
+    const diff = new Date(endDate).getTime() - Date.now();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  };
+
+  return (
     <div className="p-4 bg-gray-900 rounded-lg">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-white font-medium flex items-center gap-2">
