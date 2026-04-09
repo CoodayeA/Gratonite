@@ -93,16 +93,25 @@ services:
   # Voice/video — optional, enable with: docker compose --profile voice up -d
   livekit:
     image: livekit/livekit-server:latest
-    command:
-      - --config-body
-      - |
-        port: 7880
-        rtc:
-          tcp_port: 7881
-          udp_port: 7882
-          use_external_ip: true
-        keys:
-          ${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-secret}
+    environment:
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-}
+    entrypoint:
+      - /bin/sh
+      - -ec
+    command: |
+      test -n "$LIVEKIT_API_KEY" || { echo >&2 "LIVEKIT_API_KEY is required for the voice profile"; exit 1; }
+      test -n "$LIVEKIT_API_SECRET" || { echo >&2 "LIVEKIT_API_SECRET is required for the voice profile"; exit 1; }
+      exec /livekit-server --config-body "$(cat <<EOF
+      port: 7880
+      rtc:
+        tcp_port: 7881
+        udp_port: 7882
+        use_external_ip: true
+      keys:
+        $LIVEKIT_API_KEY: $LIVEKIT_API_SECRET
+      EOF
+      )"
     ports:
       - "7880:7880"
       - "7881:7881"
