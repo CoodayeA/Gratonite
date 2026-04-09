@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, BackHandler } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { appLockStore } from '../../lib/appLockStore';
 import { useTheme } from '../../lib/theme';
@@ -17,6 +17,11 @@ export default function AppLockScreen({ onUnlock }: AppLockScreenProps) {
 
   useEffect(() => {
     return () => { mountedRef.current = false; };
+  }, []);
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => sub.remove();
   }, []);
 
   const tryUnlock = useCallback(async (isAutoRetry = false) => {

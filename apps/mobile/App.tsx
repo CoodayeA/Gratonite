@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, AppState, View } from 'react-native';
+import { ActivityIndicator, AppState, BackHandler, View } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -155,6 +155,13 @@ function ThemedApp() {
 
   const isLockedRef = useRef(isLocked);
   React.useEffect(() => { isLockedRef.current = isLocked; }, [isLocked]);
+
+  React.useEffect(() => {
+    if (!isLocked) return;
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => sub.remove();
+  }, [isLocked]);
 
   const onUnlockRef = useRef<(() => void) | null>(null);
 
