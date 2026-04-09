@@ -258,18 +258,29 @@ leaderboardRouter.get(
 
       // For level/coins metrics — pull from users directly, filtered to guild members
       if (metric === 'level' || metric === 'coins') {
-        type GuildLeaderboardRow = { userId: string; username: string; displayName: string; avatarHash: string | null; score: number; joinedAt: string | null };
-        const orderCol = metric === 'level' ? 'COALESCE(u.xp, 0)' : 'COALESCE(u.coins, 0)';
-        const scoreCol = metric === 'level' ? 'COALESCE(u.level, 1)' : 'COALESCE(u.coins, 0)';
-        const rawResult = await db.execute(sql`
-          SELECT u.id as "userId", u.username, u.display_name as "displayName", u.avatar_hash as "avatarHash",
-                 ${sql.raw(scoreCol)} as score, gm.joined_at as "joinedAt"
-          FROM users u
-          INNER JOIN guild_members gm ON gm.guild_id = ${guildId}::uuid AND gm.user_id = u.id
-          ORDER BY ${sql.raw(orderCol)} DESC
-          LIMIT 10
-        `);
-        const data = toRows<GuildLeaderboardRow>(rawResult);
+        const scoreExpr = metric === 'level'
+          ? sql<number>`COALESCE(${users.level}, 1)`.as('score')
+          : sql<number>`COALESCE(${users.coins}, 0)`.as('score');
+        const orderExpr = metric === 'level'
+          ? desc(sql`COALESCE(${users.xp}, 0)`)
+          : desc(sql`COALESCE(${users.coins}, 0)`);
+
+        const data = await db
+          .select({
+            userId: users.id,
+            username: users.username,
+            displayName: users.displayName,
+            avatarHash: users.avatarHash,
+            score: scoreExpr,
+            joinedAt: guildMembers.joinedAt,
+          })
+          .from(users)
+          .innerJoin(
+            guildMembers,
+            and(eq(guildMembers.guildId, guildId), eq(guildMembers.userId, users.id)),
+          )
+          .orderBy(orderExpr)
+          .limit(10);
         res.status(200).json(data.map((row, i) => ({
           rank: i + 1,
           userId: row.userId,
