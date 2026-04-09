@@ -428,7 +428,6 @@ export class MessageService {
     }
 
     // Word filter check
-    let wordFilterDeleteAfterInsert = false;
     if (channel.guildId && content) {
       try {
         const [wordFilter] = await db.select().from(guildWordFilters)
@@ -444,7 +443,7 @@ export class MessageService {
               throw new ServiceError('WORD_FILTER_WARN', 'Your message was blocked for containing filtered words. This is a warning.');
             }
             if (wordFilter.action === 'delete') {
-              wordFilterDeleteAfterInsert = true;
+              throw new ServiceError('BLOCKED_CONTENT', 'Your message was removed for containing filtered words.');
             }
           }
         }
@@ -585,16 +584,6 @@ export class MessageService {
       messagesSentTotal.inc();
     } catch {
       // Socket.io not yet initialised (e.g. test environment); non-fatal.
-    }
-
-    // Word filter "delete" action
-    if (wordFilterDeleteAfterInsert) {
-      setTimeout(async () => {
-        try {
-          await db.delete(messages).where(eq(messages.id, newMessage.id));
-          getIO().to(`channel:${channelId}`).emit('MESSAGE_DELETE', { id: newMessage.id, channelId });
-        } catch { /* non-fatal */ }
-      }, 5000);
     }
 
     // Award XP (fire and forget)
