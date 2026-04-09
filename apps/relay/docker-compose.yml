@@ -10,7 +10,7 @@ services:
       RELAY_DOMAIN: ${RELAY_DOMAIN}
       RELAY_PORT: 4100
       RELAY_HEALTH_PORT: 4101
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       RELAY_RATE_LIMIT: ${RELAY_RATE_LIMIT:-100}
       TURN_SERVER: ${TURN_SERVER:-}
       TURN_SECRET: ${TURN_SECRET:-}
@@ -20,6 +20,12 @@ services:
 
   redis:
     image: redis:7-alpine
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command:
+      - sh
+      - -ec
+      - exec redis-server --requirepass "$REDIS_PASSWORD"
     volumes:
       - redis_data:/data
     restart: unless-stopped
