@@ -4,10 +4,24 @@ set -euo pipefail
 echo "🚀 Gratonite Deployment Script"
 echo "================================"
 
-# Configuration (override: SERVER, USER, SSH_KEY)
-SERVER="${SERVER:-178.156.253.237}"
-USER="${USER:-ferdinand}"
-SSH_KEY="${SSH_KEY:-$HOME/.ssh/hetzner_key_new}"
+# Configuration — set these env vars before running:
+#   SERVER=<host> USER=<ssh-user> SSH_KEY=<path> ./deploy/deploy.sh
+if [[ -z "${SERVER:-}" ]]; then
+  echo "❌ SERVER env var is required (for example: SERVER=203.0.113.10)"
+  exit 1
+fi
+
+if [[ -z "${USER:-}" ]]; then
+  echo "❌ USER env var is required (for example: USER=deploy)"
+  exit 1
+fi
+
+if [[ -z "${SSH_KEY:-}" ]]; then
+  echo "❌ SSH_KEY env var is required (path to SSH private key)"
+  exit 1
+fi
+
+SSH_KEY="${SSH_KEY}"
 REMOTE_DIR="${REMOTE_DIR:-/home/$USER/gratonite-app}"
 API_HEALTH_URL="${API_HEALTH_URL:-https://api.gratonite.chat/health}"
 
