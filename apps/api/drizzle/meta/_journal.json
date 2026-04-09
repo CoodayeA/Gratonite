@@ -50,6 +50,13 @@
       "when": 1775746415333,
       "tag": "0006_kanban_tasks",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1744213200000,
+      "tag": "0007_stories_and_e2e_key_history",
+      "breakpoints": true
     }
   ]
 }
