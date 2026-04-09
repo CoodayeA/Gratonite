@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import crypto from 'crypto';
-import { eq, and, or, desc } from 'drizzle-orm';
+import { eq, and, desc, sql, gte } from 'drizzle-orm';
 
 import { db } from '../db/index';
 import { giftTransactions } from '../db/schema/gift-transactions';
@@ -73,7 +73,6 @@ giftsRouter.post('/', requireAuth, asyncHandler(async (req: Request, res: Respon
   }
 
   // Atomic check + deduct coins (prevents race condition / negative balance)
-  const { sql, gte } = await import('drizzle-orm');
   const [deducted] = await db.update(users)
     .set({ coins: sql`coins - ${coinsCost}` } as any)
     .where(and(eq(users.id, req.userId!), gte(users.coins, coinsCost)))
@@ -139,32 +138,46 @@ giftsRouter.post('/redeem', requireAuth, asyncHandler(async (req: Request, res: 
     return;
   }
 
-  // Apply the gift
-  const { sql } = await import('drizzle-orm');
+  const redeemedAt = new Date();
+  const boostExpiresAt = new Date(redeemedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-  if (gift.giftType === 'coins') {
-    await db.update(users).set({ coins: sql`coins + ${gift.quantity}` } as any).where(eq(users.id, req.userId!));
-  } else if (gift.giftType === 'server_boost' && gift.guildId) {
-    for (let i = 0; i < gift.quantity; i++) {
-      await db.insert(serverBoosts).values({
-        guildId: gift.guildId,
-        userId: req.userId!,
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      });
+  const redeemed = await db.transaction(async (tx) => {
+    const [claimedGift] = await tx.update(giftTransactions)
+      .set({ status: 'redeemed', redeemedAt })
+      .where(and(eq(giftTransactions.id, gift.id), eq(giftTransactions.status, 'pending')))
+      .returning();
+
+    if (!claimedGift) {
+      return null;
     }
-  } else if (gift.giftType === 'premium_month' || gift.giftType === 'premium_year') {
-    // Premium is tracked via the user record — set premiumUntil
-    const months = gift.giftType === 'premium_year' ? 12 * gift.quantity : gift.quantity;
-    const premiumDuration = months * 30 * 24 * 60 * 60 * 1000;
-    await db.update(users).set({
-      premiumUntil: new Date(Date.now() + premiumDuration),
-    } as any).where(eq(users.id, req.userId!));
-  }
 
-  // Mark redeemed
-  await db.update(giftTransactions)
-    .set({ status: 'redeemed', redeemedAt: new Date() })
-    .where(eq(giftTransactions.id, gift.id));
+    if (gift.giftType === 'coins') {
+      await tx.update(users)
+        .set({ coins: sql`coins + ${gift.quantity}` } as any)
+        .where(eq(users.id, req.userId!));
+    } else if (gift.giftType === 'server_boost' && gift.guildId) {
+      for (let i = 0; i < gift.quantity; i++) {
+        await tx.insert(serverBoosts).values({
+          guildId: gift.guildId,
+          userId: req.userId!,
+          expiresAt: boostExpiresAt,
+        });
+      }
+    } else if (gift.giftType === 'premium_month' || gift.giftType === 'premium_year') {
+      const months = gift.giftType === 'premium_year' ? 12 * gift.quantity : gift.quantity;
+      const premiumDuration = months * 30 * 24 * 60 * 60 * 1000;
+      await tx.update(users).set({
+        premiumUntil: new Date(redeemedAt.getTime() + premiumDuration),
+      } as any).where(eq(users.id, req.userId!));
+    }
+
+    return claimedGift;
+  });
+
+  if (!redeemed) {
+    res.status(409).json({ code: 'INVALID_CODE', message: 'Invalid or already redeemed gift code' });
+    return;
+  }
 
   res.json({
     message: 'Gift redeemed successfully',
