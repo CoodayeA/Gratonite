@@ -503,6 +503,7 @@ const BotBuilder = () => {
     // ─── Render ──────────────────────────────────────────────────────────────
 
     return (
+        <>
         <div className="main-content-wrapper" style={{ flex: 1, overflowY: 'auto' }}>
             {showSubmitModal && <SubmitModal />}
             {revealModal && (
@@ -854,6 +855,7 @@ const BotBuilder = () => {
                 </div>
             </div>
         )}
+        </>
     );
 };
 
