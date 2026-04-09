@@ -3097,6 +3097,10 @@ body.electron-win .sidebar-header,
 body.electron-win .top-bar {
   padding-top: 24px;
 }
+body.electron-win .sidebar-header,
+body.electron-win .top-bar {
+  -webkit-app-region: drag;
+}
 
 body.electron-mac .top-bar {
   padding-top: 16px;
@@ -3111,7 +3115,8 @@ body.electron-mac .top-bar {
 
 /* Make interactive children non-draggable */
 body.electron-win .guild-rail *,
-body.electron-win .sidebar-header,
+body.electron-win .top-bar *,
+body.electron-win .sidebar-header *,
 body.electron-win button,
 body.electron-win a,
 body.electron-win input,
