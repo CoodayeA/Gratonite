@@ -237,6 +237,16 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
         setSelectedIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
     };
 
+    // These must be declared before allVisibleIds to avoid TDZ when the
+    // dependency array [daySections] is evaluated.
+    const filtered = useMemo(() => {
+        if (activeTab === 'all') return notifications;
+        return notifications.filter(n => getFilterCategory(n.type) === activeTab);
+    }, [notifications, activeTab]);
+
+    const grouped = useMemo(() => groupNotifications(filtered), [filtered]);
+    const daySections = useMemo(() => groupByDay(grouped), [grouped]);
+
     const allVisibleIds = useMemo(() => {
         const ids: string[] = [];
         for (const section of daySections) {
@@ -318,14 +328,6 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
             })
             .finally(() => setIsLoading(false));
     }, []);
-
-    const filtered = useMemo(() => {
-        if (activeTab === 'all') return notifications;
-        return notifications.filter(n => getFilterCategory(n.type) === activeTab);
-    }, [notifications, activeTab]);
-
-    const grouped = useMemo(() => groupNotifications(filtered), [filtered]);
-    const daySections = useMemo(() => groupByDay(grouped), [grouped]);
 
     const unreadByTab = useMemo(() => {
         const counts: Record<FilterTab, number> = { all: 0, mentions: 0, dms: 0, social: 0, system: 0 };
