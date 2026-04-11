@@ -1,120 +1,104 @@
 # Self-Hosting Gratonite
 
-Run your own Gratonite instance in 5 minutes. No programming required.
+Run your own Gratonite instance in a few minutes.
+
+This guide covers the checked-in Docker Compose self-host stack under `deploy/self-host/`.
+If you want the guided installer instead, use:
+
+```bash
+curl -fsSL https://gratonite.chat/install | bash
+```
 
 ## Prerequisites
 
-- A server (any Linux machine, VPS, or even a home PC)
-- Docker and Docker Compose installed
-- A domain name (or use Cloudflare Tunnel for zero-config)
+- A Linux machine, VPS, homelab box, or local machine with Docker
+- Docker and Docker Compose
+- A domain name for public hosting, or `localhost` for local-only use
 
 ## Quick Start
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/CoodayeA/Gratonite.git
 cd Gratonite/deploy/self-host
-
-# 2. Copy and edit the environment file
 cp .env.example .env
-nano .env  # Set your domain, passwords, and secrets
+```
 
-# 3. Start everything
+Edit `.env` and set at least:
+
+- `INSTANCE_DOMAIN`
+- `ADMIN_EMAIL`
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
+- `DB_PASSWORD`
+- `REDIS_PASSWORD`
+- `TLS_MODE`
+
+Then start the stack:
+
+```bash
 docker compose up -d
-
-# 4. Open your browser
-# Visit https://your-domain.com/setup to complete the wizard
 ```
 
-That's it. The setup wizard walks you through creating an admin account and configuring federation.
+Open your instance:
 
-## Configuration Reference
+- Server hosting: `https://your-domain.com/app/`
+- Local hosting: `https://localhost/app/` unless you overrode `HTTPS_PORT`
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `INSTANCE_DOMAIN` | Yes | Your server's domain (e.g., `chat.example.com`) |
-| `DB_PASSWORD` | Yes | PostgreSQL password |
-| `JWT_SECRET` | Yes | Random string, 32+ characters |
-| `JWT_REFRESH_SECRET` | Yes | Different random string, 32+ characters |
-| `MFA_ENCRYPTION_KEY` | Yes | Random string for MFA encryption |
-| `FEDERATION_ENABLED` | No | Set to `true` to enable federation |
-| `RELAY_ENABLED` | No | Set to `true` to connect via relay network |
-| `RELAY_DOMAIN` | No | Custom relay URL (default: official relay) |
-| `LIVEKIT_URL` | No | LiveKit server URL for voice/video |
-| `LIVEKIT_API_KEY` | No | LiveKit API key |
-| `LIVEKIT_API_SECRET` | No | LiveKit API secret |
-| `CLOUDFLARE_TUNNEL_TOKEN` | No | For zero-port-forwarding hosting |
+The root path redirects to `/app/` automatically.
 
-## Enabling Federation
+## First Login
 
-Federation lets users from other Gratonite servers join your communities and vice versa.
+The checked-in self-host compose flow seeds an admin account from `.env` on first run, so you can usually log in directly with:
 
-```bash
-# In your .env file:
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
+
+The repo also contains a `/setup` flow for first-run configuration scenarios, but the default compose path does not require you to complete it before signing in with the seeded admin account.
+
+If you used the installer instead of manual compose, it prints generated admin credentials for you.
+
+## What You Get By Default
+
+The checked-in self-host stack starts with:
+
+- chat, DMs, guilds, search, uploads, and the web app
+- federation enabled by default
+- relay connectivity enabled by default
+- Discover registration enabled by default
+- automatic TLS when `TLS_MODE` is set to an email address
+- internal/self-signed TLS when `TLS_MODE=internal`
+
+## Federation and Discovery
+
+Federation is enabled by default in `deploy/self-host/.env.example`:
+
+```env
 FEDERATION_ENABLED=true
-INSTANCE_DOMAIN=chat.example.com
-
-# Restart
-docker compose restart api
-```
-
-Once enabled, your instance will:
-- Generate Ed25519 signing keys automatically
-- Accept federation handshakes from other instances
-- Allow remote users to join your guilds (configurable)
-- Appear in the Gratonite Discover directory (opt-in)
-
-## Enabling Relay
-
-The relay network allows instances behind NAT (home servers) to communicate without port forwarding.
-
-```bash
-# In your .env file:
 RELAY_ENABLED=true
-
-# Restart
-docker compose restart api
+FEDERATION_DISCOVER_REGISTRATION=true
 ```
 
-Your instance will automatically connect to the best available relay.
+That means a default instance:
 
-## Enabling Voice/Video
+- connects to `wss://relay.gratonite.chat`
+- can communicate with other Gratonite instances
+- can register public guilds for Discover
+- can pull network guilds into the local Discover experience
 
-Voice requires a LiveKit server. You can run one alongside Gratonite:
+If you want a more isolated instance, disable one or more of these values in `.env` before starting:
+
+```env
+FEDERATION_ENABLED=false
+RELAY_ENABLED=false
+FEDERATION_DISCOVER_REGISTRATION=false
+```
+
+## Voice and Video
+
+Voice/video is optional and runs behind the `voice` profile:
 
 ```bash
-# Start with voice profile
 docker compose --profile voice up -d
-
-# Or use an external LiveKit server:
-LIVEKIT_URL=wss://api.example.com
-LIVEKIT_API_KEY=your-key
-LIVEKIT_API_SECRET=your-secret
-```
-
-## Hosting from Home (No Port Forwarding)
-
-### Option 1: Cloudflare Tunnel (Recommended)
-
-1. Create a free Cloudflare account
-2. Set up a tunnel at https://dash.cloudflare.com → Zero Trust → Tunnels
-3. Add the tunnel token to your `.env`:
-
-```bash
-CLOUDFLARE_TUNNEL_TOKEN=your-token-here
-```
-
-4. Start with tunnel profile:
-
-```bash
-docker compose --profile tunnel up -d
-```
-
-### Option 2: ngrok
-
-```bash
-ngrok http 443
-# Use the generated URL as your INSTANCE_DOMAIN
 ```
 
 ## Updating
@@ -124,25 +108,36 @@ docker compose pull
 docker compose up -d
 ```
 
-Migrations run automatically on startup.
-
 ## Troubleshooting
 
-**Can't reach the server?**
-- Check that your domain's DNS points to your server's IP
-- Verify ports 80 and 443 are open (or use Cloudflare Tunnel)
-- Check `docker compose logs caddy` for TLS errors
+### Collect a support bundle
 
-**Federation not working?**
-- Ensure `FEDERATION_ENABLED=true` and `INSTANCE_DOMAIN` is set
-- Check `docker compose logs api | grep federation`
-- Verify your /.well-known/gratonite endpoint is accessible
+From `deploy/self-host/`:
 
-**Voice not connecting?**
-- Ensure LiveKit is running: `docker compose --profile voice ps`
-- Check that LIVEKIT_URL, API_KEY, and API_SECRET are all set
-- WebRTC requires UDP ports — use TURN relay if behind strict NAT
+```bash
+bash ./collect-logs.sh
+```
 
-**Database issues?**
-- Run migrations: `docker compose exec api node dist/db/migrate.js`
-- Check DB health: `docker compose exec postgres pg_isready`
+On PowerShell:
+
+```powershell
+pwsh ./collect-logs.ps1
+```
+
+### Common checks
+
+- `docker compose ps`
+- `docker compose logs -f api`
+- `docker compose logs -f caddy`
+- `docker compose --profile voice ps`
+
+### Current scope note
+
+The checked-in self-host compose stack does not currently include bundled Cloudflare Tunnel or ngrok profiles. If you want to front Gratonite with a tunnel or external reverse proxy, treat that as your own hosting layer in front of the standard stack.
+
+## Related Docs
+
+- [`docs/self-hosting.md`](../self-hosting.md) — installer-first overview
+- [`deploy/self-host/README.md`](../../deploy/self-host/README.md) — quick operator notes for the compose directory
+- [`docs/self-hosting/federation.md`](federation.md) — federation behavior and trust model
+- [`docs/self-hosting/troubleshooting.md`](troubleshooting.md) — deeper troubleshooting guide

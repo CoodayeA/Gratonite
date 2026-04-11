@@ -59,7 +59,7 @@ export default function SelfHostingDocs() {
               Available for macOS (.dmg), Windows (.exe/.msi), and Linux (.deb/.rpm/.AppImage).
             </p>
             <a
-              href="https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.2"
+              href="https://gratonite.chat/download"
               className="inline-block px-4 py-2 rounded-lg bg-purple text-white font-semibold neo-border-2 neo-shadow-sm hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all"
             >
               Download Gratonite Server &rarr;
@@ -155,13 +155,12 @@ export default function SelfHostingDocs() {
           <div>
             <h2 className="font-display text-2xl font-bold mb-4">Home Hosting</h2>
             <p className="text-foreground/50 mb-4">
-              Running from your home computer? Use Cloudflare Tunnel for zero-port-forwarding hosting:
+              Running from your home computer? Use your own tunnel or reverse proxy in front of Gratonite if you cannot open ports.
             </p>
             <div className="bg-surface neo-border rounded-xl p-6 font-mono text-sm space-y-2 text-foreground/70">
-              <p className="text-foreground/40"># Add tunnel token to .env</p>
-              <p>CLOUDFLARE_TUNNEL_TOKEN=your-token</p>
-              <p className="text-foreground/40 mt-2"># Start with tunnel</p>
-              <p>docker compose --profile tunnel up -d</p>
+              <p className="text-foreground/40"># Standard self-host stack</p>
+              <p>docker compose -f deploy/self-host/docker-compose.yml up -d</p>
+              <p className="text-foreground/40 mt-2"># Then connect your own tunnel/proxy to 443</p>
             </div>
           </div>
 
@@ -169,7 +168,7 @@ export default function SelfHostingDocs() {
           <div>
             <h2 className="font-display text-2xl font-bold mb-4">Enable Federation</h2>
             <p className="text-foreground/50 mb-4">
-              Federation is included but disabled by default. To connect your instance to the network:
+              Federation is enabled by default in the self-host preset. To explicitly enable or confirm federation settings:
             </p>
             <div className="bg-surface neo-border rounded-xl p-6 font-mono text-sm space-y-2 text-foreground/70 mb-4">
               <p className="text-foreground/40"># In your .env file, set:</p>

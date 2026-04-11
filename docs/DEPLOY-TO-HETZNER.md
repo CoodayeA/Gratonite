@@ -1,160 +1,124 @@
-# Deploying Gratonite on a VPS
+# Deploying Gratonite on a VPS (Hetzner and Similar)
 
-This guide covers deploying Gratonite to a fresh VPS (Hetzner, DigitalOcean, Linode, Vultr, etc.). It uses the Docker Compose setup described in [DEPLOY-TO-OWN-SERVER.md](DEPLOY-TO-OWN-SERVER.md).
+This guide is a VPS-oriented companion to [`DEPLOY-TO-OWN-SERVER.md`](DEPLOY-TO-OWN-SERVER.md).
+
+For project production operations, the canonical deploy path is always `deploy/deploy.sh`.
 
 ## Server Requirements
 
-- **OS:** Ubuntu 22.04 LTS (or Debian 12)
-- **RAM:** 2 GB minimum (4 GB recommended)
-- **Disk:** 20 GB minimum
-- **Ports:** 22 (SSH), 80 (HTTP), 443 (HTTPS)
+- Ubuntu 22.04+ (or Debian 12)
+- 2 GB RAM minimum (4 GB recommended)
+- 20 GB disk minimum
+- Open ports: 22, 80, 443
 
-## Step 1: Provision a Server
-
-Create a VPS with your provider. Most offer Ubuntu 22.04 images. Note your server's public IP address.
-
-## Step 2: Initial Server Setup
+## 1) Provision and Harden the Server
 
 ```bash
 ssh root@<your-server-ip>
 
-# Create a non-root user
 adduser deploy
 usermod -aG sudo deploy
 
-# Set up SSH key auth for the new user
 mkdir -p /home/deploy/.ssh
 cp ~/.ssh/authorized_keys /home/deploy/.ssh/
 chown -R deploy:deploy /home/deploy/.ssh
 
-# Configure firewall
 ufw allow 22
 ufw allow 80
 ufw allow 443
 ufw enable
-
-# Log out and reconnect as the deploy user
-exit
 ```
+
+Reconnect as deploy user:
 
 ```bash
 ssh deploy@<your-server-ip>
 ```
 
-## Step 3: Install Docker
+## 2) Install Docker
 
 ```bash
-# Install Docker Engine
 curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER
+```
 
-# Log out and back in for group change to take effect
-exit
-ssh deploy@<your-server-ip>
+Re-login and verify:
 
-# Verify
+```bash
 docker --version
 docker compose version
 ```
 
-## Step 4: Install Node.js and pnpm
+## 3) Configure DNS
+
+Set DNS records first so Caddy can issue TLS certs.
+
+Use [`DNS-CONFIGURATION.md`](DNS-CONFIGURATION.md) as the source of truth.
+
+## 4) Prepare Deploy Access
+
+From your local machine (where this repo is checked out):
 
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-sudo npm install -g pnpm
-
-node --version   # should be v20.x
-pnpm --version
+ssh -i ~/.ssh/<your-deploy-key> deploy@<your-server-ip> "mkdir -p /home/deploy/gratonite-app"
 ```
 
-## Step 5: Clone and Build
+Create `/home/deploy/gratonite-app/.env` on the server with required values (`DB_PASSWORD`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `BULLBOARD_ADMIN_TOKEN`, `MFA_ENCRYPTION_KEY`, `APP_URL`, `CORS_ORIGIN`, and optional SMTP/LiveKit values).
+
+## 5) Run Canonical Deploy
+
+From repo root on your local machine:
 
 ```bash
-cd ~
-git clone https://github.com/CoodayeA/Gratonite.git
-cd Gratonite
-
-# Build API
-cd apps/api
-pnpm install && pnpm run build
-cd ../..
-
-# Build web client
-cd apps/web
-pnpm install && pnpm run build
-cd ../..
+SERVER=<your-server-ip> USER=deploy SSH_KEY=~/.ssh/<your-deploy-key> bash deploy/deploy.sh
 ```
 
-## Step 6: Configure
+What this does:
+
+- builds API and web locally
+- stages `deploy/api` and `deploy/web/dist`
+- rsyncs to server (without overwriting `.env`)
+- runs remote preflight checks
+- recreates `api`, `web`, `caddy`, `livekit`
+- runs migrations
+- checks health endpoint
+
+## 6) Verify Deployment
 
 ```bash
-cp deploy/.env.example .env
-nano .env
-# Fill in DB_PASSWORD, JWT_SECRET, JWT_REFRESH_SECRET, BULLBOARD_ADMIN_TOKEN, SMTP, domain, LiveKit
-# See docs/DEPLOY-TO-OWN-SERVER.md for details on each variable
-```
+ssh -i ~/.ssh/<your-deploy-key> deploy@<your-server-ip>
+cd ~/gratonite-app
 
-Edit the Caddyfile with your domain:
-
-```bash
-nano deploy/Caddyfile
-```
-
-## Step 7: Configure DNS
-
-Point your domain to the server IP. See [DNS-CONFIGURATION.md](DNS-CONFIGURATION.md).
-
-## Step 8: Start
-
-```bash
-cd ~/Gratonite/deploy
-docker compose -f docker-compose.production.yml up -d
-docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js"
-```
-
-## Step 9: Verify
-
-```bash
-# All containers healthy
 docker compose -f docker-compose.production.yml ps
-
-# API responds
-curl https://api.yourdomain.com/health
-
-# Visit https://yourdomain.com in a browser
+curl -I https://api.<your-domain>/health
 ```
+
+Primary user entry should be:
+
+- `https://<your-domain>/app/`
 
 ## Maintenance
 
 ```bash
-# View logs
+# Re-deploy latest
+git pull
+SERVER=<your-server-ip> USER=deploy SSH_KEY=~/.ssh/<your-deploy-key> bash deploy/deploy.sh
+
+# Logs
+ssh -i ~/.ssh/<your-deploy-key> deploy@<your-server-ip>
+cd ~/gratonite-app
 docker logs -f gratonite-api
 docker logs -f gratonite-caddy
 
-# Restart a service
-docker restart gratonite-api
-
-# Database backup
+# Backup
 docker exec gratonite-postgres pg_dump -U gratonite gratonite > ~/backup_$(date +%Y%m%d).sql
-
-# Update to latest version
-cd ~/Gratonite
-git pull
-cd apps/api && pnpm install && pnpm run build && cd ../..
-cd apps/web && pnpm install && pnpm run build && cd ../..
-cd deploy && docker compose -f docker-compose.production.yml up -d --force-recreate api web
-docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js"
 ```
 
 ## Security Checklist
 
-- [ ] Non-root user for SSH access
-- [ ] SSH key authentication (disable password auth)
-- [ ] Firewall enabled (UFW: 22, 80, 443 only)
-- [ ] Strong DB and JWT secrets
-- [ ] Dedicated BULLBOARD_ADMIN_TOKEN (do not reuse JWT secrets)
-- [ ] HTTPS enabled (handled automatically by Caddy)
-- [ ] Automatic security updates: `sudo apt install unattended-upgrades`
-- [ ] Regular database backups
-- [ ] Optional: fail2ban for SSH brute-force protection
+- Non-root SSH user
+- SSH key auth enabled
+- Firewall restricted to needed ports
+- Strong DB/JWT secrets
+- Dedicated `BULLBOARD_ADMIN_TOKEN`
+- Regular backups

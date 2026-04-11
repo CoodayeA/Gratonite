@@ -1,196 +1,82 @@
-# Self-Hosting Gratonite with Docker Compose
+# Gratonite Production Deployment with Docker Compose
 
-This is the canonical guide for running your own Gratonite instance. The production deployment uses **Docker Compose** with **Caddy** as a reverse proxy (automatic HTTPS).
+This document describes the current Gratonite project production deployment pattern.
 
-## Prerequisites
+It is **not** the recommended end-user self-hosting path. If you want to run your own Gratonite instance, start with [`docs/self-hosting.md`](self-hosting.md) or `deploy/self-host/` instead.
 
-- A Linux server (Ubuntu 22.04+ recommended) with at least 2 GB RAM
-- Docker Engine and Docker Compose installed ([docs.docker.com/engine/install](https://docs.docker.com/engine/install/))
-- A domain name with DNS pointing to your server (see [DNS-CONFIGURATION.md](DNS-CONFIGURATION.md))
+## Current Production Shape
 
-## Quick Start
+- server: `ferdinand@178.156.253.237`
+- remote app dir: `/home/ferdinand/gratonite-app`
+- relay dir: `/home/ferdinand/gratonite-relay` (managed separately)
+- canonical app URL: `https://gratonite.chat/app/`
+- API health URL: `https://api.gratonite.chat/health`
 
-### 1. Clone the repository
+The public stack is driven by:
 
-```bash
-git clone https://github.com/CoodayeA/Gratonite.git
-cd Gratonite
-```
+- `deploy/deploy.sh`
+- `deploy/docker-compose.production.yml`
+- `deploy/Caddyfile`
 
-### 2. Create your environment file
+## Required Local Prerequisites
 
-```bash
-cp deploy/.env.example .env
-```
+- `pnpm`
+- `rsync`
+- SSH access to the production server
+- a server-side `.env` already present in `/home/ferdinand/gratonite-app`
 
-Edit `.env` and fill in your values:
-
-```env
-# Database
-DB_PASSWORD=your-strong-db-password
-
-# JWT (generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
-JWT_SECRET=generate-a-random-64-char-hex-string
-JWT_REFRESH_SECRET=generate-a-different-random-64-char-hex-string
-BULLBOARD_ADMIN_TOKEN=generate-a-third-random-64-char-hex-string
-
-# SMTP — see docs/SMTP-CONFIGURATION.md
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=your-smtp-user
-SMTP_PASS=your-smtp-password
-SMTP_FROM=noreply@yourdomain.com
-
-# URLs — replace with your domain
-APP_URL=https://yourdomain.com
-CORS_ORIGIN=https://yourdomain.com
-
-# LiveKit (required for voice/video)
-# For the bundled self-hosted setup, you can leave these blank and the deploy
-# script will generate the key/secret and default LIVEKIT_URL to api.yourdomain.com.
-LIVEKIT_URL=wss://api.yourdomain.com
-LIVEKIT_API_KEY=
-LIVEKIT_API_SECRET=
-```
-
-### 3. Build the application
+## Canonical Deploy Command
 
 ```bash
-# Build the API
-cd apps/api
-pnpm install && pnpm run build
-cd ../..
-
-# Build the web client
-cd apps/web
-pnpm install && pnpm run build
-cd ../..
+SERVER=178.156.253.237 USER=ferdinand SSH_KEY=~/.ssh/hetzner_key_new bash deploy/deploy.sh
 ```
 
-### 4. Update the Caddyfile
+`deploy/deploy.sh` is the source of truth for deploy behavior.
 
-Edit `deploy/Caddyfile` and replace the domain names with your own:
+## What `deploy/deploy.sh` Does
 
-```caddyfile
-yourdomain.com {
-    reverse_proxy gratonite-web:80
-}
+1. Installs workspace dependencies needed for API and web builds.
+2. Builds the API with `pnpm`.
+3. Builds the web app with the production Vite build.
+4. Stages `deploy/api` and `deploy/web/dist`.
+5. Rsyncs `deploy/` to the remote server while protecting server `.env` files.
+6. Runs remote preflight checks for required secrets and legacy-proxy conflicts.
+7. Recreates `api`, `web`, `caddy`, and `livekit`.
+8. Runs database migrations.
+9. Polls the API health endpoint.
 
-api.yourdomain.com {
-    reverse_proxy gratonite-api:4000
-}
-```
+## Production Routing Reality
 
-### 5. Start everything
+- `https://gratonite.chat/` serves the landing/root surface.
+- `https://gratonite.chat/app/` is the canonical web app entry.
+- `https://api.gratonite.chat/health` is the health check endpoint.
+- `app.gratonite.chat` may still appear in config, but unresolved DNS there is known noise and not the canonical entry.
+
+## Verification After Deploy
 
 ```bash
-cd deploy
-docker compose -f docker-compose.production.yml up -d
-```
-
-This starts:
-- **PostgreSQL 16** — database
-- **Redis 7** — caching and real-time state
-- **API** — Node.js backend on port 4000
-- **Web** — Nginx serving the built React app
-- **Caddy** — the only public reverse proxy, bound to ports 80/443 with automatic HTTPS
-
-### 6. Run database migrations
-
-```bash
-docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js"
-```
-
-### 7. Verify
-
-```bash
-# Check all containers are running
+ssh -i ~/.ssh/hetzner_key_new ferdinand@178.156.253.237
+cd ~/gratonite-app
 docker compose -f docker-compose.production.yml ps
-
-# Test the API health endpoint
-curl https://api.yourdomain.com/health
+curl -I https://api.gratonite.chat/health
 ```
 
-Visit `https://yourdomain.com` — you should see the Gratonite app.
+## Rollback Reality
 
-### WebSocket auth requirement
+There are no versioned release slots in the current production setup.
 
-Socket clients must send the access token via the Socket.IO handshake auth payload (`auth: { token }`) or `Authorization: Bearer ...` header. Query-string tokens (`?token=...`) are not accepted.
+Real rollback means:
 
-## Updating
+1. check out a known-good commit
+2. rebuild
+3. redeploy
 
-To deploy a new version:
+For schema problems, prefer app rollback plus a forward-fix migration rather than destructive down-migrations.
 
-```bash
-git pull
-cd apps/api && pnpm install && pnpm run build && cd ../..
-cd apps/web && pnpm install && pnpm run build && cd ../..
-cd deploy
-docker compose -f docker-compose.production.yml up -d --force-recreate api web
-docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js"
-```
+See [`docs/launch/ROLLBACK_RUNBOOK.md`](launch/ROLLBACK_RUNBOOK.md).
 
-If you use `deploy/deploy.sh` from your laptop, the script now performs a remote preflight before any restart and fails fast when secrets are missing or unsafe:
-- requires non-empty `DB_PASSWORD`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `BULLBOARD_ADMIN_TOKEN`, `MFA_ENCRYPTION_KEY`, `APP_URL`, `CORS_ORIGIN`
-- validates JWT secret length and difference
-- verifies compose passes `BULLBOARD_ADMIN_TOKEN` into the API container
-- preserves remote `.env`/`.env.*` during rsync
-- refuses to deploy while a legacy public `gratonite-caddy-1` container is still bound to ports 80/443
+## Notes
 
-## Production Source Of Truth
-
-Production should have exactly one public proxy:
-
-- public proxy container: `gratonite-caddy`
-- public proxy config: `deploy/Caddyfile` in the repo, mounted to `/home/ferdinand/gratonite-app/Caddyfile`
-- public compose file: `deploy/docker-compose.production.yml`
-
-Legacy containers such as `gratonite-caddy-1`, ad hoc `/tmp/Caddyfile.final`, or other public 80/443 proxies should be removed during cleanup and not used for future deploys.
-
-## Data & Backups
-
-Database data is stored in the `postgres_data` Docker volume. To back up:
-
-```bash
-docker exec gratonite-postgres pg_dump -U gratonite gratonite > backup_$(date +%Y%m%d).sql
-```
-
-File uploads are stored in the `api_uploads` volume.
-
-## Architecture
-
-```
-Internet
-  │
-  ▼
-Caddy (ports 80/443, auto-HTTPS)
-  ├── yourdomain.com      → Nginx (static web build)
-  └── api.yourdomain.com  → Node.js API (:4000)
-                                ├── PostgreSQL (:5432)
-                                └── Redis (:6379)
-```
-
-## Troubleshooting
-
-**Containers won't start:**
-```bash
-docker compose -f docker-compose.production.yml logs api
-docker compose -f docker-compose.production.yml logs caddy
-```
-
-**Database connection errors:**
-- Verify `DB_PASSWORD` in `.env` matches what PostgreSQL was initialized with
-- If changing passwords, delete the `postgres_data` volume and restart (data loss)
-
-**CORS errors in the browser:**
-- Ensure `CORS_ORIGIN` exactly matches the URL you access the app from (including `https://`)
-
-**SSL certificate not provisioning:**
-- Ensure DNS A records point to your server
-- Check Caddy logs: `docker logs gratonite-caddy`
-
-## Related Docs
-
-- [DNS-CONFIGURATION.md](DNS-CONFIGURATION.md) — DNS setup
-- [SMTP-CONFIGURATION.md](SMTP-CONFIGURATION.md) — email configuration
-- [QUICK-DEPLOY-GUIDE.md](QUICK-DEPLOY-GUIDE.md) — quick reference
+- The relay is not part of the main production compose stack.
+- Server `.env` values are authoritative and should never be overwritten during deploy.
+- If you are documenting production behavior elsewhere, keep it aligned with `deploy/deploy.sh` rather than older ad hoc workflows.

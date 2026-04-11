@@ -14,9 +14,9 @@ Create **A records** pointing to your server's IP address for each subdomain:
 
 - `yourdomain.com` — landing page
 - `api.yourdomain.com` — API server
-- `app.yourdomain.com` — web client
+- `app.yourdomain.com` — optional web host alias
 
-If you serve the web client from a subpath (e.g. `yourdomain.com/app`), the `app` record is not needed.
+If you serve the web client from a subpath (e.g. `yourdomain.com/app`), the `app` record is optional and usually not needed.
 
 ## Optional: IPv6
 

@@ -19,8 +19,8 @@
 - `reports_v2`
 
 ## Rollback Commands
-- Web rollback: deployment platform previous-release rollback command.
-- API rollback: deployment platform previous-release rollback command.
+- Web/API rollback: check out a known-good commit, rebuild, and redeploy with `deploy/deploy.sh`.
+- Current production does not use versioned release slots or platform-managed previous-release rollbacks.
 - Verification after rollback:
   - `npm --prefix apps/web run smoke:e2e`
   - `pnpm --dir apps/api run test:guild-get-contract`

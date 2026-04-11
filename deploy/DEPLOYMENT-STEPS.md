@@ -110,8 +110,9 @@ Do not keep a second public proxy like `gratonite-caddy-1` or a config mounted f
 ### 8. Configure DNS
 
 Add these A records in your DNS provider:
-- `app.gratonite.chat` → your server IP
+- `gratonite.chat` → your server IP
 - `api.gratonite.chat` → your server IP
+- `app.gratonite.chat` → optional alias only
 
 ### 9. Test Deployment
 
@@ -124,9 +125,9 @@ curl https://api.gratonite.chat/health
 ```
 
 Visit:
-- https://gratonite.chat (landing page - should still work)
-- https://app.gratonite.chat (new app)
+- https://gratonite.chat/app/ (canonical app entry)
 - https://api.gratonite.chat/health (API health check)
+- https://app.gratonite.chat (optional alias if DNS is configured)
 
 ## Troubleshooting
 

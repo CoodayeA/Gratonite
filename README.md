@@ -28,7 +28,7 @@ Gratonite is a community platform built for people who don't want some corporati
 curl -fsSL https://gratonite.chat/install | bash
 ```
 
-Or download the [Gratonite Server](https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.2) desktop app — one click, no terminal needed. Available for macOS, Windows, and Linux.
+Or download the [Gratonite Server](https://gratonite.chat/download) desktop app — one click, no terminal needed. Available for macOS, Windows, and Linux.
 
 ## At a Glance
 
@@ -36,7 +36,7 @@ Or download the [Gratonite Server](https://github.com/CoodayeA/Gratonite/release
 |---|---|
 | **140** database schemas | **134** API route modules |
 | **70+** frontend pages | **50+** mobile screens |
-| **23** background jobs | **5 apps** in one monorepo |
+| **23** background jobs | **7 app surfaces** in one monorepo |
 
 ---
 
@@ -227,7 +227,7 @@ curl -fsSL https://gratonite.chat/install | bash
 ```
 Handles everything: Docker, secrets, TLS, federation. Works on Mac, Linux, and Windows (WSL).
 
-**Option B: Desktop app** — [Download Gratonite Server](https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.2)
+**Option B: Desktop app** — [Download Gratonite Server](https://gratonite.chat/download)
 Double-click to run. No terminal needed. macOS (.dmg), Windows (.exe/.msi), Linux (.deb/.rpm/.AppImage).
 
 **Option C: Manual setup**
@@ -376,7 +376,7 @@ Found a vulnerability? Email **security@gratonite.chat** — do not open a publi
 ## Links
 
 - Website: [gratonite.chat](https://gratonite.chat)
-- Self-Host: [gratonite.chat/deploy](https://gratonite.chat/deploy) | [Installer](https://gratonite.chat/install) | [Desktop App](https://github.com/CoodayeA/Gratonite/releases/tag/server-v0.1.2)
+- Self-Host: [gratonite.chat/deploy](https://gratonite.chat/deploy) | [Installer](https://gratonite.chat/install) | [Desktop App](https://gratonite.chat/download)
 - Federation: [gratonite.chat/federation](https://gratonite.chat/federation)
 - Self-Hosting Docs: [docs/self-hosting.md](docs/self-hosting.md)
 - Relay Operator Guide: [docs/relay](docs/relay/README.md)

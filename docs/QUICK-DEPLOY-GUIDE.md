@@ -5,10 +5,16 @@ A condensed reference for deploying Gratonite. See [DEPLOY-TO-OWN-SERVER.md](DEP
 ## Prerequisites
 
 - Docker and Docker Compose
-- Node.js 20+ and pnpm
+- Node.js 22+ and pnpm
 - A domain with DNS pointing to your server
 
-## Commands
+## Canonical Deploy Command
+
+```bash
+SERVER=178.156.253.237 USER=ferdinand SSH_KEY=~/.ssh/hetzner_key_new bash deploy/deploy.sh
+```
+
+## Manual Commands (Reference)
 
 ```bash
 # 1. Clone
@@ -21,7 +27,7 @@ cp deploy/.env.example .env
 
 # 3. Build
 cd apps/api && pnpm install && pnpm run build && cd ../..
-cd apps/web && pnpm install && pnpm run build && cd ../..
+cd apps/web && npm install && npm run build:vite && cd ../..
 
 # 4. Start
 cd deploy && docker compose -f docker-compose.production.yml up -d
@@ -58,12 +64,12 @@ LIVEKIT_API_SECRET=
 ```bash
 git pull
 cd apps/api && pnpm install && pnpm run build && cd ../..
-cd apps/web && pnpm install && pnpm run build && cd ../..
+cd apps/web && npm install && npm run build:vite && cd ../..
 cd deploy && docker compose -f docker-compose.production.yml up -d --force-recreate api web caddy livekit
 docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js"
 ```
 
-If you deploy with `deploy/deploy.sh`, the script now enforces guardrails:
+`deploy/deploy.sh` enforces guardrails:
 
 - protects remote `.env` files during rsync
 - aborts before restart if required env vars are missing/invalid
@@ -79,4 +85,3 @@ docker logs -f gratonite-caddy         # Reverse proxy logs
 docker restart gratonite-api           # Restart API
 docker exec gratonite-postgres pg_dump -U gratonite gratonite > backup.sql  # DB backup
 ```
-

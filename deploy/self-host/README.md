@@ -5,7 +5,7 @@
 1. Copy `.env.example` to `.env`
 2. Edit `.env`: set your domain, email, and passwords
 3. Run: `docker compose up -d`
-4. Browse to `https://your-domain.com/`
+4. Browse to `https://your-domain.com/app/`
 5. Log in with the admin credentials from `.env`
 
 ## Configuration

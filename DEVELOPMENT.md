@@ -12,11 +12,23 @@
 
 ## Production deployment
 
-Full runbook: `C:\Users\cooda\Documents\Gratonite-runbook.md` (read first for any deploy or incident work; also `C:\Users\cooda\Documents\Gratonite-ops-notes.md` for a quick reference).
+Repo-local source of truth, in order:
 
-- **Server**: `ferdinand@178.156.253.237` — key `C:\Users\cooda\.ssh\hetzner_key_new`; remote dir `/home/ferdinand/gratonite-app`
+1. `deploy/deploy.sh`
+2. `deploy/docker-compose.production.yml`
+3. `deploy/Caddyfile`
+4. `docs/deploy-review-checklist.md`
+5. `docs/launch/ROLLBACK_RUNBOOK.md`
+
+- **Server**: `ferdinand@178.156.253.237` — remote dir `/home/ferdinand/gratonite-app`
 - **Compose**: `deploy/docker-compose.production.yml` — live services: `gratonite-api`, `gratonite-web`, `gratonite-caddy`, `gratonite-livekit`, `gratonite-postgres`, `gratonite-redis`. The relay (`gratonite-relay`) is a **separately managed** process under `/home/ferdinand/gratonite-relay` — not in the main compose file.
-- **Deploy**: `deploy/deploy.sh` (build → stage `deploy/api` + `deploy/web/dist` → rsync → migrate → health check). **On this Windows machine use `C:\Users\cooda\Documents\Gratonite-deploy.ps1` instead** (flags: `-DryRun`, `-SkipBuild`, `-SkipHealthCheck`).
+- **Deploy**: `deploy/deploy.sh` (build → stage `deploy/api` + `deploy/web/dist` → rsync → migrate → health check). It requires explicit env vars:
+
+```bash
+SERVER=178.156.253.237 USER=ferdinand SSH_KEY=~/.ssh/hetzner_key_new bash deploy/deploy.sh
+```
+
+Local wrappers may exist on individual machines, but they are convenience scripts, not the canonical deploy flow.
 - **Public paths**: `https://gratonite.chat/app/` (canonical user entry); `https://api.gratonite.chat/health` (health check); `https://releases.gratonite.chat` (desktop artifacts from `/home/ferdinand/gratonite-releases`). The web SPA is intentionally rooted under `/app/` via nginx — Caddy routes `/api/*` and `/socket.io/*` to the API and everything else to the web container. `app.gratonite.chat` is present in Caddyfile but DNS does not resolve — expected noise.
 - **Rollback**: no versioned release slots. Realistic path = check out a previous known-good commit, rebuild, and redeploy. For schema issues prefer app rollback + forward-fix migration over destructive down-migrations.
 - **Known log noise**: Caddy ACME errors for `app.gratonite.chat` (DNS unresolved); relay logs showing repeated localhost connect/disconnect and missed pongs; `POST /sentry-tunnel` returning 404.
@@ -116,7 +128,7 @@ API (`apps/api/.env`):
 | `APP_URL` / `CORS_ORIGIN` | Required in production; or set `INSTANCE_DOMAIN` to auto-derive both |
 | `MFA_ENCRYPTION_KEY` | Required in production for TOTP MFA |
 | `BULLBOARD_ADMIN_TOKEN` | Gates `/admin/jobs` Bull Board dashboard |
-| `FEDERATION_ENABLED=true` | Opt-in; pair with `INSTANCE_DOMAIN` and optionally `FEDERATION_HUB_URL` |
+| `FEDERATION_ENABLED=true` | Enable federation for bespoke installs; the checked-in self-host preset turns this on by default |
 | `DB_PASSWORD` | Checked by deploy preflight (postgres service password, separate from `DATABASE_URL`) |
 | `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | Required for voice/video channels |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Email delivery |

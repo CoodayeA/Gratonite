@@ -2,9 +2,9 @@
 
 Planned direction for Gratonite. Priorities may shift based on community feedback.
 
-## Current Status — v1.0 (March 2026)
+## Current Status — v1.0.x (April 2026)
 
-Gratonite is production-ready with **140** database schemas, **134** API route modules, **70+** frontend pages, **50+** mobile screens, and **23** background jobs across 5 apps (web, mobile, desktop, API, relay).
+Gratonite has a live production deployment and self-hosting stack with **140** database schemas, **134** API route modules, **70+** frontend pages, **50+** mobile screens, and **23** background jobs across 7 app surfaces (web, mobile, desktop, API, server, landing, relay).
 
 ### How this roadmap is verified
 
@@ -41,7 +41,7 @@ Gratonite is production-ready with **140** database schemas, **134** API route m
 
 ## Shipped
 
-Everything below is live in production.
+Everything below is implemented in this repository and reflected in the live product or self-host stack, while launch hardening and operator sign-off continue in the dedicated launch docs.
 
 ### Core Platform
 
@@ -120,7 +120,7 @@ Everything below is live in production.
 
 - One-command Docker deployment with automatic HTTPS
 - Setup wizard (web UI for first-time configuration)
-- Cloudflare Tunnel support (zero port-forwarding)
+- Bring-your-own tunnel or reverse-proxy hosting in front of the self-host stack
 - Self-hosting documentation and landing page guides
 - Self-hosting CTAs throughout the app (Create Guild, Home, Discover, landing page)
 
