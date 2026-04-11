@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: deploy-production-main
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -17,104 +21,32 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 9
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build API
-        run: pnpm --filter gratonite-api run build
-
-      - name: Build Types Package
-        run: pnpm --filter @gratonite/types run build
-
-      - name: Build Web
+      - name: Configure SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
-          cd apps/web
-          sed -i 's/"@gratonite\/types": "workspace:\*"/"@gratonite\/types": "file:..\/..\/packages\/types"/' package.json
-          npm install
-          npm install gsap
-          npx vite build
+          mkdir -p "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
 
-      - name: Build Landing Page
+      - name: Add deploy target to known_hosts
+        env:
+          DEPLOY_SERVER: ${{ vars.DEPLOY_SERVER }}
         run: |
-          cd apps/landing
-          npm install
-          npm run build
+          target="${DEPLOY_SERVER:-178.156.253.237}"
+          ssh-keyscan -H "$target" >> "$HOME/.ssh/known_hosts"
+          ssh-keyscan -H gratonite.chat >> "$HOME/.ssh/known_hosts" || true
 
-      - name: Prepare deploy package
+      - name: Deploy with canonical script
+        env:
+          DEPLOY_SERVER: ${{ vars.DEPLOY_SERVER }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          API_HEALTH_URL: ${{ vars.API_HEALTH_URL }}
         run: |
-          mkdir -p deploy/api
-          mkdir -p deploy/web/dist
-          cp -r apps/api/dist deploy/api/
-          cp -r apps/api/drizzle deploy/api/
-          cp apps/api/package.json deploy/api/
-          cp pnpm-lock.yaml deploy/api/
-          cp apps/api/drizzle.config.ts deploy/api/
-          cp -r apps/web/dist/. deploy/web/dist/
-
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Add server to known hosts
-        run: ssh-keyscan gratonite.chat >> ~/.ssh/known_hosts
-
-      - name: Upload to server
-        run: |
-          ssh ferdinand@gratonite.chat 'mkdir -p /home/ferdinand/gratonite-app/apps/landing/out /home/ferdinand/gratonite-app/apps/web/dist /home/ferdinand/gratonite-app/docker'
-          rsync -avz deploy/ ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/
-          rsync -avz apps/landing/out/ ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/apps/landing/out/
-          rsync -avz apps/web/dist/ ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/apps/web/dist/
-          rsync -avz docker/ ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/docker/
-          scp deploy/install.sh ferdinand@gratonite.chat:/home/ferdinand/gratonite-app/install.sh
-
-      - name: Restart containers and run migrations
-        run: |
-          ssh ferdinand@gratonite.chat \
-            'cd /home/ferdinand/gratonite-app &&
-             set -euo pipefail &&
-             set_env() {
-               key="$1"
-               value="$2"
-               tmp_file="$(mktemp)"
-               awk -v key="$key" -v value="$value" '"'"'
-                 BEGIN { done = 0 }
-                 index($0, key "=") == 1 {
-                   print key "=" value
-                   done = 1
-                   next
-                 }
-                 { print }
-                 END {
-                   if (!done) {
-                     print key "=" value
-                   }
-                 }
-               '"'"' .env > "$tmp_file" &&
-               mv "$tmp_file" .env
-             } &&
-             if [ ! -f .env ]; then echo "Missing .env on server" >&2; exit 1; fi &&
-             LIVEKIT_API_KEY="$(grep -E "^LIVEKIT_API_KEY=" .env | head -n1 | cut -d= -f2- || true)" &&
-             LIVEKIT_API_SECRET="$(grep -E "^LIVEKIT_API_SECRET=" .env | head -n1 | cut -d= -f2- || true)" &&
-             LIVEKIT_URL="$(grep -E "^LIVEKIT_URL=" .env | head -n1 | cut -d= -f2- || true)" &&
-             APP_URL_VALUE="$(grep -E "^APP_URL=" .env | head -n1 | cut -d= -f2- || true)" &&
-             if [ -z "$LIVEKIT_API_KEY" ]; then LIVEKIT_API_KEY="gratonite_$(openssl rand -hex 6)"; set_env LIVEKIT_API_KEY "$LIVEKIT_API_KEY"; fi &&
-             if [ -z "$LIVEKIT_API_SECRET" ]; then LIVEKIT_API_SECRET="$(openssl rand -base64 32 | tr -d "\n")"; set_env LIVEKIT_API_SECRET "$LIVEKIT_API_SECRET"; fi &&
-             if [ -z "$LIVEKIT_URL" ]; then APP_HOST="${APP_URL_VALUE#*://}"; APP_HOST="${APP_HOST%%/*}"; BASE_HOST="$APP_HOST"; case "$BASE_HOST" in app.*) BASE_HOST="${BASE_HOST#app.}" ;; esac; LIVEKIT_URL="wss://api.${BASE_HOST}"; set_env LIVEKIT_URL "$LIVEKIT_URL"; fi &&
-             if docker ps --format "{{.Names}} {{.Ports}}" | grep -q "^gratonite-caddy-1 .*0.0.0.0:80->"; then echo "Legacy public proxy gratonite-caddy-1 is still bound to 80/443" >&2; exit 1; fi &&
-             ENV_FILE=".env.production"; [ -f "$ENV_FILE" ] || ENV_FILE=".env" &&
-             docker compose --env-file "$ENV_FILE" -f docker-compose.production.yml up -d --force-recreate api web caddy livekit &&
-             docker exec gratonite-api sh -c "cd /app && node dist/db/migrate.js" &&
-             docker compose -f docker-compose.production.yml ps'
-
-      - name: Build and deploy web Docker image
-        run: |
-          ssh ferdinand@gratonite.chat '
-            cd /home/ferdinand/gratonite-app &&
-            docker build -t gratonite-web:latest -f docker/hetzner/web.Dockerfile . &&
-            docker stop gratonite-web-1 || true &&
-            docker rm gratonite-web-1 || true &&
-            docker run -d --name gratonite-web-1 --network gratonite_default --network-alias web --restart unless-stopped -v /home/ferdinand/gratonite-releases:/usr/share/nginx/downloads:ro gratonite-web:latest
-          '
+          SERVER="${DEPLOY_SERVER:-178.156.253.237}" \
+          USER="${DEPLOY_USER:-ferdinand}" \
+          SSH_KEY="$HOME/.ssh/deploy_key" \
+          API_HEALTH_URL="${API_HEALTH_URL:-https://api.gratonite.chat/health}" \
+          bash deploy/deploy.sh

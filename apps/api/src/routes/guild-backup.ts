@@ -3,6 +3,7 @@
  * Mounted at /api/v1/guilds/:guildId/backups
  */
 import { Router, Request, Response } from 'express';
+import { createHash } from 'node:crypto';
 import { eq, and, desc } from 'drizzle-orm';
 import { db } from '../db/index';
 import { guildBackups } from '../db/schema/guild-backups';
@@ -124,7 +125,7 @@ guildBackupRouter.post('/:backupId/verify', requireAuth, async (req: Request, re
 
     const jsonStr = JSON.stringify(backup.data);
     const actualSize = Buffer.byteLength(jsonStr);
-    const checksum = require('crypto').createHash('sha256').update(jsonStr).digest('hex');
+    const checksum = createHash('sha256').update(jsonStr).digest('hex');
     const sizeMatch = actualSize === backup.sizeBytes || backup.sizeBytes === 0;
     const ok = sizeMatch && jsonStr.length > 10;
 
