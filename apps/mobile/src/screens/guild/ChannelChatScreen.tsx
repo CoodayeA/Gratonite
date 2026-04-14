@@ -68,7 +68,7 @@ import { useIsOnline } from '../../components/OfflineBanner';
 import { mediumImpact, lightImpact } from '../../lib/haptics';
 import { playSound } from '../../lib/soundEngine';
 import { securityStore } from '../../lib/securityStore';
-import { encrypt, encryptFile, decryptFile, decrypt, getOrCreateKeyPair, decryptGroupKey } from '../../lib/crypto';
+import { encrypt, encryptFile, decryptFile, decrypt, getOrCreateKeyPair, decryptGroupKey, exportPublicKey } from '../../lib/crypto';
 import { Buffer } from 'buffer';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
@@ -530,9 +530,27 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       setChannelIsEncrypted(enc);
       if (enc && guildId) {
         try {
-          const kp = await getOrCreateKeyPair(user.id, async (pub) => {
-            await encryptionApi.uploadPublicKey(pub);
-          });
+          let kp = await getOrCreateKeyPair(
+            user.id,
+            async (pub) => {
+              await encryptionApi.uploadPublicKey(pub);
+            },
+            { createIfMissing: false },
+          );
+          const remoteKey = await encryptionApi.getPublicKey(user.id);
+          if (kp) {
+            const localPublicKeyJwk = await exportPublicKey(kp.publicKey);
+            if (remoteKey?.publicKeyJwk && remoteKey.publicKeyJwk !== localPublicKeyJwk) {
+              setChannelE2EKey(null);
+              setChannelKeyVersion(null);
+              return;
+            }
+          }
+          if (!kp && !remoteKey?.publicKeyJwk) {
+            kp = await getOrCreateKeyPair(user.id, async (pub) => {
+              await encryptionApi.uploadPublicKey(pub);
+            });
+          }
           if (!kp) {
             setChannelE2EKey(null);
             setChannelKeyVersion(null);
@@ -859,6 +877,11 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       return;
     }
 
+    if (channelIsEncrypted && !channelE2EKey) {
+      toast.error('Restore your encryption key before sending in this channel');
+      return;
+    }
+
     if (!isOnline) {
       if (channelIsEncrypted && channelE2EKey) {
         const encryptedContent = await encrypt(channelE2EKey, text);
@@ -995,6 +1018,11 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
     setMessageList((prev) => [...prev, optimisticMessage]);
     setSending(true);
     try {
+      if (channelIsEncrypted && !channelE2EKey) {
+        toast.error('Restore your encryption key before uploading in this channel');
+        setMessageList((prev) => prev.filter((m) => m.id !== optimisticId));
+        return;
+      }
       const filename = asset.fileName ?? asset.uri.split('/').pop() ?? 'upload.jpg';
       const mimeType = asset.mimeType || 'image/jpeg';
       const fileResp = await fetch(asset.uri);

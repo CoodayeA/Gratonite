@@ -22,7 +22,6 @@ import {
   generateGroupKey,
   encryptGroupKey,
   exportPublicKey,
-  loadKeyPairFromSecureStore,
 } from '../lib/crypto';
 import { publicKeyCache } from '../lib/publicKeyCache';
 import { encryption as encryptionApi } from '../lib/api';
@@ -38,6 +37,7 @@ interface UseE2EOptions {
 interface UseE2EResult {
   e2eKey: CryptoKey | null;
   isE2EReady: boolean;
+  recoveryRequired: boolean;
   encryptMessage: (plaintext: string) => Promise<{ content?: string; encryptedContent?: string; isEncrypted?: boolean }>;
   decryptMessage: (encryptedContent: string) => Promise<string>;
 }
@@ -51,6 +51,7 @@ export function useE2E({
 }: UseE2EOptions): UseE2EResult {
   const [e2eKey, setE2eKey] = useState<CryptoKey | null>(null);
   const [isE2EReady, setIsE2EReady] = useState(false);
+  const [recoveryRequired, setRecoveryRequired] = useState(false);
   const initRef = useRef(false);
   const participantKey = (groupParticipantIds ?? []).slice().sort().join(',');
 
@@ -58,6 +59,7 @@ export function useE2E({
     initRef.current = false;
     setE2eKey(null);
     setIsE2EReady(false);
+    setRecoveryRequired(false);
   }, [channelId, recipientId, isGroupDm, participantKey]);
 
   useEffect(() => {
@@ -66,10 +68,35 @@ export function useE2E({
 
     (async () => {
       try {
-        // Ensure local keypair exists
-        const keyPair = await getOrCreateKeyPair(userId, async (pubJwk) => {
-          await encryptionApi.uploadPublicKey(pubJwk);
-        });
+        let keyPair = await getOrCreateKeyPair(
+          userId,
+          async (pubJwk) => {
+            await encryptionApi.uploadPublicKey(pubJwk);
+          },
+          { createIfMissing: false },
+        );
+        const remoteKey = await encryptionApi.getPublicKey(userId);
+
+        if (keyPair) {
+          const localPublicKeyJwk = await exportPublicKey(keyPair.publicKey);
+          if (remoteKey?.publicKeyJwk && remoteKey.publicKeyJwk !== localPublicKeyJwk) {
+            setRecoveryRequired(true);
+            setIsE2EReady(true);
+            return;
+          }
+        }
+
+        if (!keyPair) {
+          if (remoteKey?.publicKeyJwk) {
+            setRecoveryRequired(true);
+            setIsE2EReady(true);
+            return;
+          }
+          keyPair = await getOrCreateKeyPair(userId, async (pubJwk) => {
+            await encryptionApi.uploadPublicKey(pubJwk);
+          });
+        }
+
         if (!keyPair) {
           setIsE2EReady(true);
           return;
@@ -105,9 +132,9 @@ export function useE2E({
 
     try {
       const res = await encryptionApi.getPublicKey(recipientId);
-      if (!res?.publicKey) return; // Recipient has no key
+      if (!res?.publicKeyJwk) return; // Recipient has no key
 
-      const theirKey = await importPublicKey(res.publicKey);
+      const theirKey = await importPublicKey(res.publicKeyJwk);
       publicKeyCache.setPublicKey(recipientId, theirKey);
 
       const shared = await deriveSharedKey(keyPair.privateKey, theirKey);
@@ -132,9 +159,9 @@ export function useE2E({
 
     try {
       const res = await encryptionApi.getGroupKey(channelId);
-      if (res?.keyData) {
+      if (res?.encryptedKey) {
         // Decrypt the group key with our private key
-        const groupKey = await decryptGroupKey(res.keyData, keyPair.privateKey);
+        const groupKey = await decryptGroupKey(res.encryptedKey, keyPair.privateKey);
         if (groupKey) {
           publicKeyCache.setGroupKey(channelId, res.version ?? 1, groupKey);
           setE2eKey(groupKey);
@@ -145,26 +172,24 @@ export function useE2E({
       // No group key exists — generate one if we have participants
       if (participantIds.length > 0) {
         const groupKey = await generateGroupKey();
+        const encryptedKeys: Record<string, string> = {};
 
-        // Encrypt for each participant
         for (const pid of participantIds) {
           try {
             const pubRes = await Promise.race([
               encryptionApi.getPublicKey(pid),
               new Promise<null>((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000)),
             ]);
-            if (!pubRes?.publicKey) continue;
-            const memberKey = await importPublicKey(pubRes.publicKey);
-            const encryptedKey = await encryptGroupKey(groupKey, memberKey);
-            await encryptionApi.setGroupKey(channelId, 1, encryptedKey);
+            if (!pubRes?.publicKeyJwk) continue;
+            const memberKey = await importPublicKey(pubRes.publicKeyJwk);
+            encryptedKeys[pid] = await encryptGroupKey(groupKey, memberKey);
           } catch {
             // Skip members without keys or timed out
           }
         }
 
-        // Also encrypt for ourselves
-        const selfEncrypted = await encryptGroupKey(groupKey, keyPair.publicKey);
-        await encryptionApi.setGroupKey(channelId, 1, selfEncrypted);
+        encryptedKeys[userId!] = await encryptGroupKey(groupKey, keyPair.publicKey);
+        await encryptionApi.setGroupKey(channelId, 1, encryptedKeys);
 
         publicKeyCache.setGroupKey(channelId, 1, groupKey);
         setE2eKey(groupKey);
@@ -197,5 +222,5 @@ export function useE2E({
     }
   }, [e2eKey]);
 
-  return { e2eKey, isE2EReady, encryptMessage, decryptMessage };
+  return { e2eKey, isE2EReady, recoveryRequired, encryptMessage, decryptMessage };
 }

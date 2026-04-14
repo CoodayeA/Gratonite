@@ -259,7 +259,9 @@ export async function clearKeyPairFromSecureStore(): Promise<void> {
 export async function getOrCreateKeyPair(
   userId: string,
   uploadFn: (publicKeyJwk: string) => Promise<void>,
+  options?: { createIfMissing?: boolean },
 ): Promise<{ publicKey: CryptoKey; privateKey: CryptoKey } | null> {
+  const createIfMissing = options?.createIfMissing ?? true;
   try {
     const existing = await loadKeyPairFromSecureStore();
     if (existing) {
@@ -271,6 +273,10 @@ export async function getOrCreateKeyPair(
         await SecureStore.setItemAsync(KEY_UPLOADED_STORE, 'true');
       }
       return existing;
+    }
+
+    if (!createIfMissing) {
+      return null;
     }
 
     const keyPair = await generateKeyPair();

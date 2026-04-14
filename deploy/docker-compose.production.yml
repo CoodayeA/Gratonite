@@ -60,6 +60,7 @@ services:
       APP_URL: ${APP_URL:-https://gratonite.chat}
       # Comma-separated if the SPA is served on multiple hosts (main + app subdomain).
       CORS_ORIGIN: ${CORS_ORIGIN:-https://gratonite.chat,https://app.gratonite.chat}
+      WEB_SENTRY_DSN: ${WEB_SENTRY_DSN:-}
       PORT: 4000
       NODE_ENV: production
       MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-}

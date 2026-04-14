@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { AppState as RNAppState } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { auth, users, userSettings as settingsApi, loadTokens, setTokens, getAccessToken, encryption as encryptionApi, initServerConfig } from '../lib/api';
+import { auth, users, userSettings as settingsApi, loadTokens, setTokens, getAccessToken, initServerConfig } from '../lib/api';
 import { connectSocket, disconnectSocket } from '../lib/socket';
 import { presenceStore } from '../lib/presenceStore';
-import { getOrCreateKeyPair, clearKeyPairFromSecureStore } from '../lib/crypto';
+import { clearKeyPairFromSecureStore } from '../lib/crypto';
 import { publicKeyCache } from '../lib/publicKeyCache';
 import { clearCacheEncryptionKey, closeDb } from '../lib/offlineDb';
 import { themeStore } from '../lib/themeStore';
@@ -73,8 +73,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const me = await users.getMe();
     setUser(me);
     connectSocket();
-    // Initialize E2E keys (fire-and-forget)
-    getOrCreateKeyPair(me.id, (pubJwk) => encryptionApi.uploadPublicKey(pubJwk)).catch(() => {});
   };
 
   const register = async (username: string, email: string, password: string): Promise<string> => {

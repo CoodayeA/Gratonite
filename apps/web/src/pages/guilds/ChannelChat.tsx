@@ -40,7 +40,7 @@ import { userQueryKey } from '../../hooks/queries/useUserQuery';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { haptic } from '../../utils/haptics';
-import { encrypt, decrypt, getOrCreateKeyPair, decryptGroupKey, generateGroupKey, encryptGroupKey, importPublicKey, encryptFile, decryptFile } from '../../lib/e2e';
+import { encrypt, decrypt, getOrCreateKeyPair, decryptGroupKey, generateGroupKey, encryptGroupKey, importPublicKey, encryptFile, decryptFile, exportPublicKey } from '../../lib/e2e';
 import { Lock, Loader2 as Loader2Icon } from 'lucide-react';
 
 // Types (Message, Attachment, MediaType, OutletContextType, ChannelDetail) are imported from chatTypes.ts
@@ -248,6 +248,8 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     // E2E Encryption state for guild channels
     const [channelE2EKey, setChannelE2EKey] = useState<CryptoKey | null>(null);
     const [channelIsEncrypted, setChannelIsEncrypted] = useState(false);
+    const [channelKeyRecoveryRequired, setChannelKeyRecoveryRequired] = useState(false);
+    const [channelE2EBootstrapNonce, setChannelE2EBootstrapNonce] = useState(0);
     const [channelAttachmentsEnabled, setChannelAttachmentsEnabled] = useState(true);
     const [channelKeyVersion, setChannelKeyVersion] = useState<number | null>(null);
     const e2eKeyPairRef = useRef<{ publicKey: CryptoKey; privateKey: CryptoKey } | null>(null);
@@ -383,6 +385,52 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     const [channelForumTags, setChannelForumTags] = useState<Array<{ id: string; name: string; color?: string }>>([]);
     const [channelTypeStr, setChannelTypeStr] = useState('');
     const [channelDisappearTimer, setChannelDisappearTimer] = useState<number | null>(null);
+
+    const loadOrBootstrapChannelKeyPair = useCallback(async () => {
+        if (!currentUserId) return null;
+
+        const localResult = await getOrCreateKeyPair(currentUserId, { createIfMissing: false });
+        const remoteKeyState = await api.encryption.getPublicKey(currentUserId);
+
+        if (localResult) {
+            const localPublicKeyJwk = await exportPublicKey(localResult.keyPair.publicKey);
+            if (!remoteKeyState.publicKeyJwk) {
+                await api.encryption.uploadPublicKey(localPublicKeyJwk);
+                return localResult;
+            }
+            if (remoteKeyState.publicKeyJwk !== localPublicKeyJwk) {
+                return { missingLocalKey: true } as const;
+            }
+            return localResult;
+        }
+
+        if (remoteKeyState.publicKeyJwk) {
+            return { missingLocalKey: true } as const;
+        }
+
+        const created = await getOrCreateKeyPair(currentUserId);
+        if (!created) return null;
+        await api.encryption.uploadPublicKey(await exportPublicKey(created.keyPair.publicKey));
+        return created;
+    }, [currentUserId]);
+
+    useEffect(() => {
+        const handleKeyRestored = () => {
+            blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+            blobUrlsRef.current = [];
+            decryptInFlightRef.current.clear();
+            e2eKeyPairRef.current = null;
+            setChannelKeyRecoveryRequired(false);
+            setChannelE2EKey(null);
+            setChannelKeyVersion(null);
+            setDecryptedFileUrls(new Map());
+            setMessages(prev => prev.map(m => m.isEncrypted ? { ...m, content: '[Encrypted message]' } : m));
+            setChannelE2EBootstrapNonce(prev => prev + 1);
+        };
+
+        window.addEventListener('gratonite:e2e-key-restored', handleKeyRestored);
+        return () => window.removeEventListener('gratonite:e2e-key-restored', handleKeyRestored);
+    }, []);
 
     // Slowmode countdown timer
     useEffect(() => {
@@ -704,25 +752,39 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 // Load E2E encryption key if channel is encrypted
                 if (ch.isEncrypted && guildId && currentUserId) {
                     try {
-                        const result = await getOrCreateKeyPair(currentUserId);
-                        if (result) {
-                            e2eKeyPairRef.current = result.keyPair;
-                            const encKeyData = await api.channels.getEncryptionKeys(guildId, channelId);
-                            setChannelKeyVersion(encKeyData.version ?? null);
-                            const myWrappedKey = (encKeyData.keyData as Record<string, string>)[currentUserId];
-                            if (myWrappedKey) {
-                                const groupKey = await decryptGroupKey(myWrappedKey, result.keyPair.privateKey);
-                                setChannelE2EKey(groupKey);
-                            }
+                        const result = await loadOrBootstrapChannelKeyPair();
+                        if (!result) {
+                            setChannelKeyRecoveryRequired(false);
+                            setChannelE2EKey(null);
+                            setChannelKeyVersion(null);
+                            return;
+                        }
+                        if ('missingLocalKey' in result) {
+                            setChannelKeyRecoveryRequired(true);
+                            setChannelE2EKey(null);
+                            setChannelKeyVersion(null);
+                            return;
+                        }
+                        setChannelKeyRecoveryRequired(false);
+                        e2eKeyPairRef.current = result.keyPair;
+                        const encKeyData = await api.channels.getEncryptionKeys(guildId, channelId);
+                        setChannelKeyVersion(encKeyData.version ?? null);
+                        const myWrappedKey = (encKeyData.keyData as Record<string, string>)[currentUserId];
+                        if (myWrappedKey) {
+                            const groupKey = await decryptGroupKey(myWrappedKey, result.keyPair.privateKey);
+                            setChannelE2EKey(groupKey);
+                        } else {
+                            setChannelE2EKey(null);
                         }
                     } catch { /* No key available yet — show placeholder */ }
                 } else {
+                    setChannelKeyRecoveryRequired(false);
                     setChannelE2EKey(null);
                     setChannelKeyVersion(null);
                 }
             }).catch(() => { addToast({ title: 'Failed to load channel info', variant: 'error' }); });
         }
-    }, [channelId, setBgMedia]);
+    }, [channelId, setBgMedia, loadOrBootstrapChannelKeyPair, channelE2EBootstrapNonce]);
 
     // Group key rotation listener — when a member is added/removed, re-generate the group key
     useEffect(() => {
@@ -2223,6 +2285,16 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             return;
         }
 
+        if (channelIsEncrypted && !channelE2EKey) {
+            addToast({
+                title: channelKeyRecoveryRequired
+                    ? 'Restore your encryption key in Privacy settings before sending in this channel'
+                    : 'Encryption key unavailable for this channel',
+                variant: 'error',
+            });
+            return;
+        }
+
         playSound('messageSend');
         haptic.messageSent();
 
@@ -2293,7 +2365,10 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 sendPayload.content = '[Encrypted message]';
                 sendPayload.isEncrypted = true;
                 sendPayload.encryptedContent = encrypted;
-            } catch { /* fall back to plaintext */ }
+            } catch {
+                addToast({ title: 'Failed to encrypt message on this device', variant: 'error' });
+                return;
+            }
         }
 
         // Optimistic local message with "sending" status
@@ -3258,6 +3333,13 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     )}
                 </div>
             </header>
+
+            {channelIsEncrypted && !channelE2EKey && channelKeyRecoveryRequired && (
+                <div style={{ padding: '8px 16px', background: 'var(--warning-bg, rgba(234,179,8,0.15))', borderBottom: '1px solid var(--warning, #eab308)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--warning, #eab308)' }}>
+                    <Lock size={14} />
+                    <span>Encrypted history is unavailable on this device. Restore your encryption key in Privacy settings to read and send in this channel.</span>
+                </div>
+            )}
 
             {guildId && <EventCountdownBanner guildId={guildId} />}
 

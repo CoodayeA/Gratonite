@@ -50,9 +50,9 @@ export default function KeyVerificationScreen({ route, navigation }: Props) {
       }
 
       const res = await encryptionApi.getPublicKey(userId);
-      if (res?.publicKey) {
-        setTheirFingerprint(await getFingerprint(res.publicKey));
-        setTheirEmoji(await getFingerprintEmoji(res.publicKey));
+      if (res?.publicKeyJwk) {
+        setTheirFingerprint(await getFingerprint(res.publicKeyJwk));
+        setTheirEmoji(await getFingerprintEmoji(res.publicKeyJwk));
       }
 
       setVerified(await checkIsTrusted(userId));

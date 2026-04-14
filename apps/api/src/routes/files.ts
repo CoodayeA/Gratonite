@@ -41,6 +41,11 @@ import { publicFileRateLimit } from '../middleware/rateLimit';
 
 export const filesRouter = Router();
 
+function setFileErrorNoStore(res: Response): void {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+}
+
 // ---------------------------------------------------------------------------
 // MIME type allowlist — only these prefixes/types are accepted for upload
 // ---------------------------------------------------------------------------
@@ -379,6 +384,7 @@ filesRouter.get('/:fileId', publicFileRateLimit, (req: Request, res: Response, n
       .limit(1);
 
     if (!fileRecord) {
+      setFileErrorNoStore(res);
       res.status(404).json({ code: 'NOT_FOUND', message: 'File not found' });
       return;
     }
@@ -387,12 +393,14 @@ filesRouter.get('/:fileId', publicFileRateLimit, (req: Request, res: Response, n
 
     // Path traversal defense: ensure resolved path stays within UPLOADS_DIR
     if (!path.resolve(filePath).startsWith(path.resolve(UPLOADS_DIR))) {
+      setFileErrorNoStore(res);
       res.status(403).json({ code: 'FORBIDDEN', message: 'Invalid path'  });
       return;
     }
 
     // Verify the file actually exists on disk before attempting to send it.
     if (!fs.existsSync(filePath)) {
+      setFileErrorNoStore(res);
       res.status(404).json({ code: 'NOT_FOUND', message: 'File not found on disk' });
       return;
     }
@@ -423,6 +431,7 @@ filesRouter.get('/:fileId', publicFileRateLimit, (req: Request, res: Response, n
     res.sendFile(filePath);
   } catch (err) {
     logger.error('[files] serve error:', err);
+    setFileErrorNoStore(res);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to serve file' });
   }
 });

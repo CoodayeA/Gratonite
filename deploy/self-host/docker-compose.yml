@@ -53,6 +53,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://${DB_USER:-gratonite}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-gratonite}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+      - WEB_SENTRY_DSN=${WEB_SENTRY_DSN:-}
       - PORT=4000
       - NODE_ENV=production
     volumes:

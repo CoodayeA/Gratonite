@@ -6,7 +6,7 @@ import type { SettingsTabProps, UserProfileLike } from './types';
 // PrivacyToggle — self-contained toggle with localStorage + API sync
 import { useState, useRef } from 'react';
 import { api } from '../../../lib/api';
-import { exportKeyBundle, importKeyBundle, getOrCreateKeyPair } from '../../../lib/e2e';
+import { exportKeyBundle, importKeyBundle } from '../../../lib/e2e';
 
 const ProfileVisibilitySelect = () => {
   const [visibility, setVisibility] = useState<'public' | 'friends' | 'hidden'>(() => {
@@ -142,13 +142,25 @@ const E2EKeyBackupSection = ({ userId }: { userId: string }) => {
     setImportError('');
     try {
       const text = await importFile.text();
-      await importKeyBundle(userId, text, importPassword);
+      const { publicKeyJwk } = await importKeyBundle(userId, text, importPassword);
+      try {
+        await api.encryption.uploadPublicKey(publicKeyJwk);
+      } catch {
+        throw new Error('sync_failed');
+      }
+      window.dispatchEvent(new CustomEvent('gratonite:e2e-key-restored', { detail: { userId } }));
       setImportStatus('ok');
       setImportPassword('');
       setImportFile(null);
     } catch (e: any) {
       setImportStatus('err');
-      setImportError(e?.message?.includes('version') ? 'Unsupported bundle format' : 'Wrong password or corrupted file');
+      setImportError(
+        e?.message?.includes('version')
+          ? 'Unsupported bundle format'
+          : e?.message?.includes('sync_failed')
+            ? 'Key restored locally, but syncing it to your account failed. Retry restore to finish recovery.'
+            : 'Wrong password or corrupted file',
+      );
     }
   };
 
@@ -224,7 +236,7 @@ const E2EKeyBackupSection = ({ userId }: { userId: string }) => {
           >
             {importStatus === 'loading' ? 'Restoring…' : 'Restore key'}
           </button>
-          {importStatus === 'ok' && <div style={{ fontSize: '12px', color: 'var(--color-success, #22c55e)' }}>✓ Key restored! Reload the page to see your messages.</div>}
+          {importStatus === 'ok' && <div style={{ fontSize: '12px', color: 'var(--color-success, #22c55e)' }}>✓ Key restored and synced. Encrypted chats on this device can decrypt again.</div>}
           {importStatus === 'err' && <div style={{ fontSize: '12px', color: 'var(--color-error, #ef4444)' }}>{importError || 'Import failed. Check your password and file.'}</div>}
         </div>
       </div>

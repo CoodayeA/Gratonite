@@ -442,6 +442,8 @@ const DirectMessage = () => {
     const [e2eKey, setE2eKey] = useState<CryptoKey | null>(null);
     const [e2eSupported, setE2eSupported] = useState(false);
     const [e2eError, setE2eError] = useState<string | null>(null);
+    const [e2eRecoveryRequired, setE2eRecoveryRequired] = useState(false);
+    const [e2eBootstrapNonce, setE2eBootstrapNonce] = useState(0);
     const [partnerKeyChanged, setPartnerKeyChanged] = useState(false);
     // E2E opt-in: synced via server — when one user enables, both get notified.
     const [e2eEnabled, setE2eEnabled] = useState(false);
@@ -484,6 +486,64 @@ const DirectMessage = () => {
             result = result.split(display).join(wire);
         });
         return result;
+    }, []);
+
+    const promptKeyRestore = useCallback(() => {
+        setE2eRecoveryRequired(true);
+        setE2eKey(null);
+        setE2eError('restore your encryption key in Privacy settings to read and send encrypted messages on this device');
+    }, []);
+
+    const loadOrBootstrapMyKeyPair = useCallback(async () => {
+        if (!currentUserId) return null;
+
+        const localResult = await getOrCreateKeyPair(currentUserId, { createIfMissing: false });
+        const remoteKeyState = await api.encryption.getPublicKey(currentUserId);
+
+        if (localResult) {
+            const localPublicKeyJwk = await exportPublicKey(localResult.keyPair.publicKey);
+            if (!remoteKeyState.publicKeyJwk) {
+                const uploadResult = await api.encryption.uploadPublicKey(localPublicKeyJwk);
+                if (uploadResult?.keyVersion) myKeyVersionRef.current = uploadResult.keyVersion;
+                return localResult;
+            }
+            if (remoteKeyState.publicKeyJwk !== localPublicKeyJwk) {
+                return { missingLocalKey: true } as const;
+            }
+            if (remoteKeyState.keyVersion) myKeyVersionRef.current = remoteKeyState.keyVersion;
+            return localResult;
+        }
+
+        if (remoteKeyState.publicKeyJwk) {
+            return { missingLocalKey: true } as const;
+        }
+
+        const created = await getOrCreateKeyPair(currentUserId);
+        if (!created) return null;
+        const publicKeyJwk = await exportPublicKey(created.keyPair.publicKey);
+        const uploadResult = await api.encryption.uploadPublicKey(publicKeyJwk);
+        if (uploadResult?.keyVersion) myKeyVersionRef.current = uploadResult.keyVersion;
+        return created;
+    }, [currentUserId]);
+
+    useEffect(() => {
+        const handleKeyRestored = () => {
+            blobUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+            blobUrlsRef.current = [];
+            decryptInFlightRef.current.clear();
+            e2eKeyPairRef.current = null;
+            prevE2eKeyRef.current = null;
+            setE2eRecoveryRequired(false);
+            setPartnerKeyChanged(false);
+            setE2eError(null);
+            setE2eKey(null);
+            setDecryptedContents(new Map());
+            setDecryptedFileUrls(new Map());
+            setE2eBootstrapNonce((prev) => prev + 1);
+        };
+
+        window.addEventListener('gratonite:e2e-key-restored', handleKeyRestored);
+        return () => window.removeEventListener('gratonite:e2e-key-restored', handleKeyRestored);
     }, []);
 
     // Listen for remote typing events
@@ -1079,17 +1139,17 @@ const DirectMessage = () => {
         let cancelled = false;
         (async () => {
             try {
-                const result = await getOrCreateKeyPair(currentUserId);
-                if (!result || cancelled) { if (!cancelled) setE2eError('Failed to initialize encryption keys'); return; }
-                const { keyPair: myKeyPair, isNew } = result;
-                e2eKeyPairRef.current = myKeyPair;
-
-                // Upload public key if newly generated
-                if (isNew) {
-                    const jwk = await exportPublicKey(myKeyPair.publicKey);
-                    const uploadResult = await api.encryption.uploadPublicKey(jwk);
-                    if (uploadResult?.keyVersion) myKeyVersionRef.current = uploadResult.keyVersion;
+                const result = await loadOrBootstrapMyKeyPair();
+                if (cancelled) return;
+                if (!result) { setE2eError('Failed to initialize encryption keys'); return; }
+                if ('missingLocalKey' in result) {
+                    promptKeyRestore();
+                    return;
                 }
+                const { keyPair: myKeyPair } = result;
+                e2eKeyPairRef.current = myKeyPair;
+                setE2eRecoveryRequired(false);
+                setE2eError(null);
 
                 const data = await api.encryption.getPublicKey(recipientId);
                 if (cancelled) return;
@@ -1104,7 +1164,7 @@ const DirectMessage = () => {
         })();
 
         return () => { cancelled = true; };
-    }, [currentUserId, recipientId, isGroupDm]);
+    }, [currentUserId, recipientId, isGroupDm, loadOrBootstrapMyKeyPair, promptKeyRestore, e2eBootstrapNonce]);
 
     // Auto-enable E2E encryption for 1-on-1 DMs as soon as the shared key is ready
     useEffect(() => {
@@ -1121,16 +1181,17 @@ const DirectMessage = () => {
         let cancelled = false;
         (async () => {
             try {
-                const result = await getOrCreateKeyPair(currentUserId);
-                if (!result || cancelled) { if (!cancelled) setE2eError('Failed to initialize encryption keys'); return; }
-                const { keyPair: myKeyPair, isNew } = result;
-                e2eKeyPairRef.current = myKeyPair;
-
-                if (isNew) {
-                    const jwk = await exportPublicKey(myKeyPair.publicKey);
-                    const uploadResult = await api.encryption.uploadPublicKey(jwk);
-                    if (uploadResult?.keyVersion) myKeyVersionRef.current = uploadResult.keyVersion;
+                const result = await loadOrBootstrapMyKeyPair();
+                if (cancelled) return;
+                if (!result) { setE2eError('Failed to initialize encryption keys'); return; }
+                if ('missingLocalKey' in result) {
+                    promptKeyRestore();
+                    return;
                 }
+                const { keyPair: myKeyPair } = result;
+                e2eKeyPairRef.current = myKeyPair;
+                setE2eRecoveryRequired(false);
+                setE2eError(null);
 
                 // Attempt to fetch the existing group key for this user.
                 const keyData = await api.encryption.getGroupKey(dmChannelId);
@@ -1195,7 +1256,7 @@ const DirectMessage = () => {
         })();
 
         return () => { cancelled = true; };
-    }, [currentUserId, dmChannelId, isGroupDm, groupParticipants]);
+    }, [currentUserId, dmChannelId, isGroupDm, groupParticipants, loadOrBootstrapMyKeyPair, promptKeyRestore, e2eBootstrapNonce]);
 
     // Decrypt encrypted messages whenever the e2eKey or messages list changes
     useEffect(() => {
@@ -1797,6 +1858,10 @@ const DirectMessage = () => {
         if (!editingMessage || !dmChannelId) return;
         const newContent = inputValue.trim();
         if (!newContent) return;
+        if (e2eEnabled && !e2eKey) {
+            addToast({ title: 'Restore your encryption key to edit encrypted messages on this device', variant: 'error' });
+            return;
+        }
         if (newContent.length > 2000) {
             addToast({ title: `Message too long (${newContent.length}/2000)`, variant: 'error' });
             return;
@@ -1852,6 +1917,10 @@ const DirectMessage = () => {
         }
         if (rateLimitRemaining > 0) {
             addToast({ title: `Rate limited. Wait ${rateLimitRemaining}s`, variant: 'error' });
+            return;
+        }
+        if (e2eEnabled && !e2eKey) {
+            addToast({ title: 'Restore your encryption key to send encrypted messages on this device', variant: 'error' });
             return;
         }
         const dmWireContent = resolveDmWireContent(inputValue);
@@ -1920,8 +1989,8 @@ const DirectMessage = () => {
                         // Store decrypted version optimistically so sender sees plaintext immediately
                         setDecryptedContents(prev => { const next = new Map(prev); next.set(optimisticId, content ?? ''); return next; });
                     } catch {
-                        // Encryption failed — send plaintext as fallback
-                        sendPayload = { content, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined, ...(replyToApiId ? { replyToId: replyToApiId } : {}) };
+                        addToast({ title: 'Failed to encrypt message on this device', variant: 'error' });
+                        return;
                     }
                 } else {
                     sendPayload = { content, attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined, ...(replyToApiId ? { replyToId: replyToApiId } : {}) };
@@ -2163,7 +2232,7 @@ const DirectMessage = () => {
                 {e2eSupported && !e2eKey && e2eError && (
                     <div style={{ padding: '8px 16px', background: 'var(--warning-bg, rgba(234,179,8,0.15))', borderBottom: '1px solid var(--warning, #eab308)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--warning, #eab308)' }}>
                         <Lock size={14} />
-                        <span>Messages are not encrypted — {e2eError}</span>
+                        <span>{e2eRecoveryRequired ? 'Encrypted history is unavailable on this device — ' : 'Messages are not encrypted — '}{e2eError}</span>
                     </div>
                 )}
                 {partnerKeyChanged && (
@@ -2815,10 +2884,18 @@ const DirectMessage = () => {
                                                                 <RichTextRenderer content={decryptedContents.get(msg.id)!} members={dmMembersForMentions} />
                                                             )
                                                         ) : (
-                                                            <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                                                <Lock size={12} />
-                                                                {e2eKey ? 'Decrypting...' : 'Encrypted message'}
-                                                            </span>
+                                                            e2eRecoveryRequired && !e2eKey ? (
+                                                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                                                    <Lock size={12} />
+                                                                    Not available on this device
+                                                                    <button onClick={() => { if (typeof (window as any).__openSettings === 'function') (window as any).__openSettings('privacy'); }} style={{ color: 'var(--accent-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 'inherit', fontStyle: 'inherit', textDecoration: 'underline' }} title="Restore your encryption key in Privacy settings">Restore key →</button>
+                                                                </span>
+                                                            ) : (
+                                                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                                    <Lock size={12} />
+                                                                    {e2eKey ? 'Decrypting...' : 'Encrypted message'}
+                                                                </span>
+                                                            )
                                                         )
                                                     ) : (
                                                         <RichTextRenderer content={msg.content} members={dmMembersForMentions} />

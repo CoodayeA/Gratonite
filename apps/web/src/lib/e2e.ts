@@ -213,7 +213,9 @@ function openKeyDB(): Promise<IDBDatabase> {
  */
 export async function getOrCreateKeyPair(
   userId: string,
+  options?: { createIfMissing?: boolean },
 ): Promise<{ keyPair: { publicKey: CryptoKey; privateKey: CryptoKey }; isNew: boolean } | null> {
+  const createIfMissing = options?.createIfMissing ?? true;
   try {
     const db = await openKeyDB();
 
@@ -229,6 +231,7 @@ export async function getOrCreateKeyPair(
     );
 
     if (existing) return { keyPair: existing, isNew: false };
+    if (!createIfMissing) return null;
 
     // Generate a new key pair.
     const keyPair = await generateKeyPair();
@@ -307,8 +310,8 @@ export async function getPreviousKeyPair(
  * the user and imported on another device to restore decryption capability.
  */
 export async function exportKeyBundle(userId: string, password: string): Promise<string> {
-  const result = await getOrCreateKeyPair(userId);
-  if (!result) throw new Error('No key pair available');
+  const result = await getOrCreateKeyPair(userId, { createIfMissing: false });
+  if (!result) throw new Error('No local encryption key available');
 
   const enc = new TextEncoder();
   const privateKeyBytes = await crypto.subtle.exportKey('pkcs8', result.keyPair.privateKey);
@@ -354,7 +357,7 @@ export async function importKeyBundle(
   userId: string,
   bundleJson: string,
   password: string,
-): Promise<void> {
+): Promise<{ publicKeyJwk: string }> {
   const bundle = JSON.parse(bundleJson) as {
     version: number;
     salt: string;
@@ -421,6 +424,8 @@ export async function importKeyBundle(
     tx.onerror = () => reject(tx.error);
     tx.onabort = () => reject(tx.error);
   });
+
+  return { publicKeyJwk: await exportPublicKey(publicKey) };
 }
 
 // ---------------------------------------------------------------------------

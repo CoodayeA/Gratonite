@@ -128,6 +128,11 @@ keysRouter.post(
       .where(eq(userPublicKeys.userId, userId))
       .limit(1);
 
+    if (existing?.publicKeyJwk === publicKeyJwk) {
+      res.status(200).json({ success: true, keyVersion: existing.keyVersion ?? 1 });
+      return;
+    }
+
     const newKeyVersion = existing ? (existing.keyVersion ?? 1) + 1 : 1;
 
     await db

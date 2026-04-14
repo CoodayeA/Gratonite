@@ -65,7 +65,7 @@ export default function SettingsSecurityScreen({ navigation }: Props) {
   const handleClearKeys = () => {
     Alert.alert(
       'Clear Encryption Keys',
-      'This will remove your encryption keys. You will generate new keys on next login. Existing encrypted messages may become unreadable.',
+      'This will remove your encryption keys from this device. Existing encrypted messages will stay unreadable until you restore the correct key again.',
       [
         { text: 'Cancel', style: 'cancel' },
         {

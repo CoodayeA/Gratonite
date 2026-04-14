@@ -2188,21 +2188,21 @@ export const workflows = {
 
 export const encryption = {
   uploadPublicKey(publicKeyJwk: string) {
-    return apiFetch<void>('/users/@me/public-key', {
+    return apiFetch<{ keyVersion: number }>('/users/@me/public-key', {
       method: 'POST',
-      body: JSON.stringify({ publicKey: publicKeyJwk }),
+      body: JSON.stringify({ publicKeyJwk }),
     });
   },
 
   getPublicKey(userId: string) {
-    return apiFetch<{ publicKey: string | null }>(`/users/${userId}/public-key`);
+    return apiFetch<{ publicKeyJwk: string | null; keyVersion: number | null }>(`/users/${userId}/public-key`);
   },
 
   getGroupKey(channelId: string) {
-    return apiFetch<{ keyData: string | null; version: number | null }>(`/channels/${channelId}/group-key`);
+    return apiFetch<{ encryptedKey: string | null; version: number | null }>(`/channels/${channelId}/group-key`);
   },
 
-  setGroupKey(channelId: string, version: number, keyData: string) {
+  setGroupKey(channelId: string, version: number, keyData: Record<string, string>) {
     return apiFetch<void>(`/channels/${channelId}/group-key`, {
       method: 'POST',
       body: JSON.stringify({ version, keyData }),
