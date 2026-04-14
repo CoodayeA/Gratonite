@@ -2285,16 +2285,6 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             return;
         }
 
-        if (channelIsEncrypted && !channelE2EKey) {
-            addToast({
-                title: channelKeyRecoveryRequired
-                    ? 'Restore your encryption key in Privacy settings before sending in this channel'
-                    : 'Encryption key unavailable for this channel',
-                variant: 'error',
-            });
-            return;
-        }
-
         playSound('messageSend');
         haptic.messageSent();
 

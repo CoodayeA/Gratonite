@@ -546,11 +546,6 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
       return;
     }
 
-    if (recoveryRequired) {
-      toast.error('Restore your encryption key before sending in this conversation');
-      return;
-    }
-
     if (!isOnline) {
       const encrypted = await encryptMessage(text);
       await queueSend(channelId, text, encrypted.isEncrypted ? { isEncrypted: true, encryptedContent: encrypted.encryptedContent! } : undefined);
@@ -663,11 +658,6 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
       const mimeType = asset.mimeType || 'image/jpeg';
       const fileResp = await fetch(asset.uri);
       const fileBuffer = await fileResp.arrayBuffer();
-
-      if (recoveryRequired) {
-        toast.error('Restore your encryption key before uploading in this conversation');
-        return;
-      }
 
       if (e2eKey) {
         const { encryptedBuffer, encryptedFilename, iv } = await encryptFile(e2eKey, fileBuffer, filename);
@@ -1054,7 +1044,7 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
     const isNew = initialLoadDone.current;
 
     const resolvedContent = item.isEncrypted
-      ? (decryptedMessages.get(item.id) ?? (recoveryRequired ? '[Restore key to read]' : e2eKey ? 'Decrypting...' : '[Encrypted]'))
+      ? (decryptedMessages.get(item.id) ?? (e2eKey ? 'Decrypting...' : '[Encrypted message]'))
       : item.content;
 
     const replyPreview = item.replyTo

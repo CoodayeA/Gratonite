@@ -1166,11 +1166,7 @@ const DirectMessage = () => {
         return () => { cancelled = true; };
     }, [currentUserId, recipientId, isGroupDm, loadOrBootstrapMyKeyPair, promptKeyRestore, e2eBootstrapNonce]);
 
-    // Auto-enable E2E encryption for 1-on-1 DMs as soon as the shared key is ready
-    useEffect(() => {
-        if (!e2eSupported || !e2eKey || isGroupDm || !dmChannelId || e2eEnabled) return;
-        api.encryption.toggleE2E(dmChannelId, true).catch(() => {});
-    }, [e2eSupported, e2eKey, isGroupDm, dmChannelId, e2eEnabled]);
+    // E2E is no longer auto-enabled — users must explicitly enable it via settings.
 
     // E2E setup — fetches or creates group key for GROUP_DM channels
     useEffect(() => {
@@ -1858,10 +1854,6 @@ const DirectMessage = () => {
         if (!editingMessage || !dmChannelId) return;
         const newContent = inputValue.trim();
         if (!newContent) return;
-        if (e2eEnabled && !e2eKey) {
-            addToast({ title: 'Restore your encryption key to edit encrypted messages on this device', variant: 'error' });
-            return;
-        }
         if (newContent.length > 2000) {
             addToast({ title: `Message too long (${newContent.length}/2000)`, variant: 'error' });
             return;
@@ -1917,10 +1909,6 @@ const DirectMessage = () => {
         }
         if (rateLimitRemaining > 0) {
             addToast({ title: `Rate limited. Wait ${rateLimitRemaining}s`, variant: 'error' });
-            return;
-        }
-        if (e2eEnabled && !e2eKey) {
-            addToast({ title: 'Restore your encryption key to send encrypted messages on this device', variant: 'error' });
             return;
         }
         const dmWireContent = resolveDmWireContent(inputValue);
@@ -2232,7 +2220,11 @@ const DirectMessage = () => {
                 {e2eSupported && !e2eKey && e2eError && (
                     <div style={{ padding: '8px 16px', background: 'var(--warning-bg, rgba(234,179,8,0.15))', borderBottom: '1px solid var(--warning, #eab308)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--warning, #eab308)' }}>
                         <Lock size={14} />
-                        <span>{e2eRecoveryRequired ? 'Encrypted history is unavailable on this device — ' : 'Messages are not encrypted — '}{e2eError}</span>
+                        <span>{e2eRecoveryRequired ? 'Encrypted history is unavailable on this device — ' : 'Messages are not encrypted — '}</span>
+                        {e2eRecoveryRequired
+                            ? <button onClick={() => { if (typeof (window as any).__openSettings === 'function') (window as any).__openSettings('privacy'); }} style={{ color: 'var(--warning, #eab308)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 'inherit', textDecoration: 'underline' }}>Restore key in Privacy settings →</button>
+                            : <span>{e2eError}</span>
+                        }
                     </div>
                 )}
                 {partnerKeyChanged && (
@@ -2875,27 +2867,18 @@ const DirectMessage = () => {
                                                     {msg.isEncrypted ? (
                                                         decryptedContents.has(msg.id) ? (
                                                             decryptedContents.get(msg.id) === '[Decryption failed]' ? (
-                                                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                                                     <Lock size={12} />
-                                                                    Not available on this device
-                                                                    <button onClick={() => { if (typeof (window as any).__openSettings === 'function') (window as any).__openSettings('privacy'); }} style={{ color: 'var(--accent-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 'inherit', fontStyle: 'inherit', textDecoration: 'underline' }} title="Restore your encryption key in Privacy settings">Restore key →</button>
+                                                                    Encrypted message
                                                                 </span>
                                                             ) : (
                                                                 <RichTextRenderer content={decryptedContents.get(msg.id)!} members={dmMembersForMentions} />
                                                             )
                                                         ) : (
-                                                            e2eRecoveryRequired && !e2eKey ? (
-                                                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                                                                    <Lock size={12} />
-                                                                    Not available on this device
-                                                                    <button onClick={() => { if (typeof (window as any).__openSettings === 'function') (window as any).__openSettings('privacy'); }} style={{ color: 'var(--accent-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 'inherit', fontStyle: 'inherit', textDecoration: 'underline' }} title="Restore your encryption key in Privacy settings">Restore key →</button>
-                                                                </span>
-                                                            ) : (
-                                                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                                                    <Lock size={12} />
-                                                                    {e2eKey ? 'Decrypting...' : 'Encrypted message'}
-                                                                </span>
-                                                            )
+                                                            <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                                <Lock size={12} />
+                                                                {e2eKey ? 'Decrypting...' : 'Encrypted message'}
+                                                            </span>
                                                         )
                                                     ) : (
                                                         <RichTextRenderer content={msg.content} members={dmMembersForMentions} />
