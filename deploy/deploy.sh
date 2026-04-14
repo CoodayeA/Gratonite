@@ -50,12 +50,18 @@ cd apps/web
 pnpm run build:vite
 cd ../..
 
+# Build landing page
+echo "  Building landing page..."
+cd apps/landing
+pnpm run build
+cd ../..
+
 echo "✅ Build complete!"
 
 echo ""
 echo "📤 Step 2: Creating deployment package..."
-rm -rf deploy/api deploy/web/dist
-mkdir -p deploy/api deploy/web/dist
+rm -rf deploy/api deploy/web/dist deploy/landing
+mkdir -p deploy/api deploy/web/dist deploy/landing
 
 # Copy backend files
 cp -r apps/api/dist deploy/api/
@@ -66,6 +72,9 @@ cp apps/api/drizzle.config.ts deploy/api/
 
 # Copy frontend build
 cp -r apps/web/dist/* deploy/web/dist/
+
+# Copy landing page build
+cp -r apps/landing/out/* deploy/landing/
 
 echo "✅ Package created!"
 
