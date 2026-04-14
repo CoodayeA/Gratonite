@@ -503,21 +503,21 @@ const DirectMessage = () => {
         if (localResult) {
             const localPublicKeyJwk = await exportPublicKey(localResult.keyPair.publicKey);
             if (!remoteKeyState.publicKeyJwk) {
+                // No server key yet — upload local key
                 const uploadResult = await api.encryption.uploadPublicKey(localPublicKeyJwk);
                 if (uploadResult?.keyVersion) myKeyVersionRef.current = uploadResult.keyVersion;
                 return localResult;
             }
-            if (remoteKeyState.publicKeyJwk !== localPublicKeyJwk) {
-                return { missingLocalKey: true } as const;
+            if (remoteKeyState.publicKeyJwk === localPublicKeyJwk) {
+                // Keys match — all good
+                if (remoteKeyState.keyVersion) myKeyVersionRef.current = remoteKeyState.keyVersion;
+                return localResult;
             }
-            if (remoteKeyState.keyVersion) myKeyVersionRef.current = remoteKeyState.keyVersion;
-            return localResult;
+            // Local key differs from server — fall through to generate a fresh key pair.
         }
 
-        if (remoteKeyState.publicKeyJwk) {
-            return { missingLocalKey: true } as const;
-        }
-
+        // No local key (or stale key) — generate fresh key pair and upload.
+        // Old encrypted messages will be unreadable but the user can communicate going forward.
         const created = await getOrCreateKeyPair(currentUserId);
         if (!created) return null;
         const publicKeyJwk = await exportPublicKey(created.keyPair.publicKey);

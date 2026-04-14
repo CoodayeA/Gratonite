@@ -79,19 +79,20 @@ export function useE2E({
 
         if (keyPair) {
           const localPublicKeyJwk = await exportPublicKey(keyPair.publicKey);
-          if (remoteKey?.publicKeyJwk && remoteKey.publicKeyJwk !== localPublicKeyJwk) {
-            setRecoveryRequired(true);
-            setIsE2EReady(true);
-            return;
+          if (remoteKey?.publicKeyJwk && remoteKey.publicKeyJwk === localPublicKeyJwk) {
+            // Keys match — all good, proceed with existing keyPair
+          } else if (remoteKey?.publicKeyJwk) {
+            // Local key differs from server — generate a fresh key pair (new-device onboarding).
+            // Old encrypted messages will be unreadable but the user can communicate going forward.
+            keyPair = await getOrCreateKeyPair(userId, async (pubJwk) => {
+              await encryptionApi.uploadPublicKey(pubJwk);
+            });
           }
+          // else: no server key yet — upload will happen below via the normal flow
         }
 
         if (!keyPair) {
-          if (remoteKey?.publicKeyJwk) {
-            setRecoveryRequired(true);
-            setIsE2EReady(true);
-            return;
-          }
+          // No local key — generate fresh key pair and upload.
           keyPair = await getOrCreateKeyPair(userId, async (pubJwk) => {
             await encryptionApi.uploadPublicKey(pubJwk);
           });
