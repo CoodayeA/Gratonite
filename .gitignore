@@ -67,7 +67,7 @@ skills-lock.json
 docs/release-runbook.md
 # Product program tracker is tracked: docs/roadmap/PRODUCT-PROGRAM.md (keep in sync with ROADMAP.md)
 
-# AI assistant files (never commit)
+# Local assistant/tooling files (never commit)
 .cursor/
 AGENTS.md
 .aider*
