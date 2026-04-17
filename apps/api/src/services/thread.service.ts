@@ -1,4 +1,4 @@
-import { and, count, desc, eq, max, sql } from 'drizzle-orm';
+import { and, count, desc, eq, lt, max, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { channels } from '../db/schema/channels';
 import { messages } from '../db/schema/messages';
@@ -36,6 +36,25 @@ export type ForumThreadListItem = {
   lastActivity: string | null;
   opPreview: string | null;
   opAttachment: AttachmentSnapshot | null;
+};
+
+export type ThreadMessageListItem = {
+  id: string;
+  channelId: string;
+  authorId: string | null;
+  content: string | null;
+  attachments: AttachmentSnapshot[];
+  edited: boolean;
+  editedAt: Date | null;
+  createdAt: Date;
+  threadId: string | null;
+  replyToId: string | null;
+  author: {
+    id: string;
+    username: string | null;
+    displayName: string | null;
+    avatarHash: string | null;
+  } | null;
 };
 
 function normalizeTags(tags: unknown): ForumTagConfig[] {
@@ -241,4 +260,66 @@ export async function listForumThreads(channelId: string, userId: string, option
   }
 
   return result;
+}
+
+export async function getThreadMessages(threadId: string, options: {
+  before?: string;
+  limit?: number;
+} = {}): Promise<ThreadMessageListItem[]> {
+  const limit = Math.min(options.limit ?? 50, 100);
+  let beforeCreatedAt: Date | undefined;
+
+  if (options.before) {
+    const [cursor] = await db.select({ createdAt: messages.createdAt })
+      .from(messages)
+      .where(and(eq(messages.threadId, threadId), eq(messages.id, options.before)))
+      .limit(1);
+
+    if (cursor?.createdAt) {
+      beforeCreatedAt = cursor.createdAt;
+    }
+  }
+
+  const rows = await db.select({
+    id: messages.id,
+    channelId: messages.channelId,
+    content: messages.content,
+    attachments: messages.attachments,
+    edited: messages.edited,
+    editedAt: messages.editedAt,
+    createdAt: messages.createdAt,
+    authorId: messages.authorId,
+    threadId: messages.threadId,
+    replyToId: messages.replyToId,
+    authorUsername: users.username,
+    authorDisplayName: users.displayName,
+    authorAvatarHash: users.avatarHash,
+  })
+    .from(messages)
+    .leftJoin(users, eq(users.id, messages.authorId))
+    .where(and(
+      eq(messages.threadId, threadId),
+      ...(beforeCreatedAt ? [lt(messages.createdAt, beforeCreatedAt)] : []),
+    ))
+    .orderBy(desc(messages.createdAt))
+    .limit(limit);
+
+  return rows.map((row) => ({
+    id: row.id,
+    channelId: row.channelId,
+    authorId: row.authorId,
+    content: row.content,
+    attachments: Array.isArray(row.attachments) ? row.attachments as AttachmentSnapshot[] : [],
+    edited: row.edited,
+    editedAt: row.editedAt,
+    createdAt: row.createdAt,
+    threadId: row.threadId,
+    replyToId: row.replyToId,
+    author: row.authorId ? {
+      id: row.authorId,
+      username: row.authorUsername,
+      displayName: row.authorDisplayName,
+      avatarHash: row.authorAvatarHash,
+    } : null,
+  }));
 }

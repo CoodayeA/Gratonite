@@ -76,6 +76,13 @@ describe('Forum API', () => {
         messageCount: 3,
         createdAt: '2026-04-17T12:00:00.000Z',
         lastActivity: '2026-04-17T12:30:00.000Z',
+        opAttachment: {
+          id: 'file-1',
+          url: 'https://cdn.test/file-1.png',
+          filename: 'preview.png',
+          size: 1234,
+          mimeType: 'image/png',
+        },
       },
     ]);
 
@@ -95,6 +102,12 @@ describe('Forum API', () => {
         tags: ['showcase'],
         replyCount: 2,
         lastReplyAt: '2026-04-17T12:30:00.000Z',
+        opAttachment: expect.objectContaining({
+          id: 'file-1',
+          url: 'https://cdn.test/file-1.png',
+          filename: 'preview.png',
+          contentType: 'image/png',
+        }),
       }),
     ]);
   });
@@ -166,7 +179,21 @@ describe('Forum API', () => {
       createdAt: `2026-04-17T12:${String(index).padStart(2, '0')}:00.000Z`,
     })));
     mockJsonResponse([
-      { id: 'msg-1', channelId: 'forum-1', content: 'Original post', createdAt: '2026-04-17T11:59:00.000Z' },
+      {
+        id: 'msg-1',
+        channelId: 'forum-1',
+        content: 'Original post',
+        createdAt: '2026-04-17T11:59:00.000Z',
+        attachments: [
+          {
+            id: 'file-99',
+            url: 'https://cdn.test/file-99.png',
+            filename: 'op.png',
+            size: 2048,
+            mimeType: 'image/png',
+          },
+        ],
+      },
     ]);
 
     const post = await forum.getPost('thread-99');
@@ -186,6 +213,8 @@ describe('Forum API', () => {
       title: 'Long-running thread',
       content: 'Original post',
       replyCount: 100,
+      attachments: [expect.objectContaining({ id: 'file-99', contentType: 'image/png' })],
+      opAttachment: expect.objectContaining({ id: 'file-99', contentType: 'image/png' }),
     }));
   });
 

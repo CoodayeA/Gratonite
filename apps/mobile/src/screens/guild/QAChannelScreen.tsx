@@ -11,9 +11,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { forum as forumApi } from '../../lib/api';
+import * as ImagePicker from 'expo-image-picker';
+import { channels as channelsApi, files as filesApi, forum as forumApi, messages as messagesApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
@@ -21,14 +23,32 @@ import LoadingScreen from '../../components/LoadingScreen';
 import EmptyState from '../../components/EmptyState';
 import LoadErrorCard from '../../components/LoadErrorCard';
 import RichText from '../../components/RichText';
-import type { ForumPost, Message } from '../../types';
+import AttachmentPreview from '../../components/AttachmentPreview';
+import type { Attachment, Channel, ForumPost, Message } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../../navigation/types';
 import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'QAChannel'>;
+type PendingAttachment = {
+  uri: string;
+  name: string;
+  mimeType: string;
+  size: number;
+};
 
-export default function QAChannelScreen({ route, navigation }: Props) {
+function toPreviewAttachment(pending: PendingAttachment): Attachment {
+  return {
+    id: `pending:${pending.uri}`,
+    messageId: '',
+    filename: pending.name,
+    contentType: pending.mimeType,
+    size: pending.size,
+    url: pending.uri,
+  };
+}
+
+export default function QAChannelScreen({ route }: Props) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
   const toast = useToast();
   const { channelId, channelName } = route.params;
@@ -41,12 +61,23 @@ export default function QAChannelScreen({ route, navigation }: Props) {
   const [showNewQuestion, setShowNewQuestion] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
+  const [newAttachment, setNewAttachment] = useState<PendingAttachment | null>(null);
   const [creating, setCreating] = useState(false);
 
   // Question detail
   const [selectedPost, setSelectedPost] = useState<ForumPost | null>(null);
   const [replies, setReplies] = useState<Message[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [replyAttachment, setReplyAttachment] = useState<PendingAttachment | null>(null);
+  const [sendingReply, setSendingReply] = useState(false);
+  const [channelInfo, setChannelInfo] = useState<Channel | null>(null);
+
+  const attachmentBlockReason = channelInfo?.isEncrypted
+    ? 'Forum attachments are not available in encrypted channels yet.'
+    : channelInfo?.attachmentsEnabled === false
+      ? 'Attachments are disabled in this channel.'
+      : null;
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -72,21 +103,107 @@ export default function QAChannelScreen({ route, navigation }: Props) {
     fetchPosts();
   }, [fetchPosts]);
 
+  useEffect(() => {
+    channelsApi.get(channelId)
+      .then((channel) => setChannelInfo(channel))
+      .catch(() => setChannelInfo(null));
+  }, [channelId]);
+
+  const pickAttachment = useCallback(async (setter: (value: PendingAttachment | null) => void) => {
+    if (attachmentBlockReason) {
+      toast.error(attachmentBlockReason);
+      return;
+    }
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      toast.error('Photo library access is required to attach media');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images', 'videos'],
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets?.length) return;
+    const asset = result.assets[0];
+    setter({
+      uri: asset.uri,
+      name: asset.fileName ?? asset.uri.split('/').pop() ?? 'upload',
+      mimeType: asset.mimeType ?? 'application/octet-stream',
+      size: asset.fileSize ?? 0,
+    });
+  }, [attachmentBlockReason, toast]);
+
+  const uploadAttachment = useCallback(async (pending: PendingAttachment | null) => {
+    if (!pending) return null;
+    const formData = new FormData();
+    formData.append('file', {
+      uri: pending.uri,
+      name: pending.name,
+      type: pending.mimeType,
+    } as any);
+    const upload = await filesApi.upload(formData);
+    return {
+      id: upload.id,
+      attachment: {
+        id: upload.id,
+        messageId: '',
+        filename: upload.filename ?? pending.name,
+        contentType: upload.mimeType ?? pending.mimeType,
+        size: upload.size ?? pending.size,
+        url: upload.url,
+      } as Attachment,
+    };
+  }, []);
+
+  const loadPostDetail = useCallback(async (post: ForumPost) => {
+    setSelectedPost(post);
+    setLoadingReplies(true);
+    try {
+      const [fullPost, replyData] = await Promise.all([
+        forumApi.getPost(post.id),
+        forumApi.getReplies(post.id),
+      ]);
+      setSelectedPost({
+        ...fullPost,
+        opAttachment: fullPost.opAttachment ?? post.opAttachment ?? null,
+        attachments: fullPost.attachments?.length
+          ? fullPost.attachments
+          : (post.opAttachment ? [post.opAttachment] : []),
+      });
+      setReplies(replyData);
+    } catch {
+      setReplies([]);
+    } finally {
+      setLoadingReplies(false);
+    }
+  }, []);
+
   const handleCreateQuestion = async () => {
     const title = newTitle.trim();
     const content = newContent.trim();
-    if (!title || !content) {
-      toast.error('Title and content are required');
+    if (!title) {
+      toast.error('A title is required');
       return;
     }
 
     setCreating(true);
     try {
-      const post = await forumApi.createPost(channelId, { title, content, tags: ['question'] });
+      const uploaded = await uploadAttachment(newAttachment);
+      const post = await forumApi.createPost(channelId, {
+        title,
+        content,
+        tags: ['question'],
+        attachmentIds: uploaded ? [uploaded.id] : undefined,
+      });
       setPosts((prev) => [post, ...prev]);
       setShowNewQuestion(false);
       setNewTitle('');
       setNewContent('');
+      setNewAttachment(null);
+      await fetchPosts();
     } catch (err: any) {
       toast.error(err.message || 'Failed to post question');
     } finally {
@@ -95,15 +212,32 @@ export default function QAChannelScreen({ route, navigation }: Props) {
   };
 
   const handleOpenQuestion = async (post: ForumPost) => {
-    setSelectedPost(post);
-    setLoadingReplies(true);
+    setReplyText('');
+    setReplyAttachment(null);
+    await loadPostDetail(post);
+  };
+
+  const handleSendReply = async () => {
+    if (!selectedPost) return;
+    const text = replyText.trim();
+    if (!text && !replyAttachment) return;
+
+    setSendingReply(true);
     try {
-      const data = await forumApi.getReplies(post.id);
-      setReplies(data);
-    } catch {
-      setReplies([]);
+      const uploaded = await uploadAttachment(replyAttachment);
+      await messagesApi.send(selectedPost.channelId, {
+        content: text || null,
+        threadId: selectedPost.id,
+        attachmentIds: uploaded ? [uploaded.id] : undefined,
+      });
+      setReplyText('');
+      setReplyAttachment(null);
+      await loadPostDetail(selectedPost);
+      await fetchPosts();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to send answer');
     } finally {
-      setLoadingReplies(false);
+      setSendingReply(false);
     }
   };
 
@@ -146,6 +280,18 @@ export default function QAChannelScreen({ route, navigation }: Props) {
                 </View>
               ))}
             </View>
+          )}
+
+          {item.opAttachment && (
+            <View style={styles.cardAttachment}>
+              <AttachmentPreview attachment={item.opAttachment} />
+            </View>
+          )}
+
+          {!!item.content && (
+            <Text style={styles.questionSnippet} numberOfLines={2}>
+              {item.content}
+            </Text>
           )}
 
           <View style={styles.questionMeta}>
@@ -225,6 +371,15 @@ export default function QAChannelScreen({ route, navigation }: Props) {
       alignItems: 'center',
       marginTop: spacing.md,
       gap: spacing.xs,
+    },
+    cardAttachment: {
+      marginTop: spacing.md,
+    },
+    questionSnippet: {
+      color: colors.textSecondary,
+      fontSize: fontSize.sm,
+      marginTop: spacing.sm,
+      lineHeight: 20,
     },
     questionAuthor: {
       color: colors.textSecondary,
@@ -313,6 +468,49 @@ export default function QAChannelScreen({ route, navigation }: Props) {
       paddingVertical: spacing.lg,
       minHeight: 200,
     },
+    attachmentActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    attachmentButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    attachmentButtonText: {
+      color: colors.accentPrimary,
+      fontSize: fontSize.sm,
+      fontWeight: '600',
+    },
+    attachmentHint: {
+      color: colors.textMuted,
+      fontSize: fontSize.xs,
+      flex: 1,
+      textAlign: 'right',
+    },
+    attachmentPreviewWrap: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.lg,
+      gap: spacing.sm,
+    },
+    removeAttachmentButton: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.bgElevated,
+    },
+    removeAttachmentText: {
+      color: colors.textSecondary,
+      fontSize: fontSize.xs,
+      fontWeight: '600',
+    },
     // Detail
     detailScroll: {
       flex: 1,
@@ -336,6 +534,10 @@ export default function QAChannelScreen({ route, navigation }: Props) {
     },
     detailContent: {
       marginTop: spacing.md,
+    },
+    detailAttachment: {
+      marginTop: spacing.md,
+      gap: spacing.sm,
     },
     repliesSection: {
       padding: spacing.lg,
@@ -403,6 +605,49 @@ export default function QAChannelScreen({ route, navigation }: Props) {
       color: colors.textMuted,
       fontSize: fontSize.xs,
     },
+    replyAttachment: {
+      marginTop: spacing.sm,
+    },
+    replyComposer: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      padding: spacing.md,
+      gap: spacing.sm,
+      backgroundColor: colors.bgPrimary,
+    },
+    replyInput: {
+      backgroundColor: colors.inputBg,
+      borderRadius: borderRadius.lg,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      color: colors.textPrimary,
+      fontSize: fontSize.md,
+      minHeight: 44,
+      maxHeight: 120,
+    },
+    replyComposerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.sm,
+    },
+    replySendButton: {
+      minWidth: 88,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.accentPrimary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg,
+    },
+    replySendButtonDisabled: {
+      backgroundColor: colors.bgElevated,
+    },
+    replySendText: {
+      color: colors.white,
+      fontSize: fontSize.sm,
+      fontWeight: '700',
+    },
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   if (loading) return <LoadingScreen />;
@@ -447,23 +692,23 @@ export default function QAChannelScreen({ route, navigation }: Props) {
           style={styles.modalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setShowNewQuestion(false)} accessibilityLabel="Close">
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>Ask a Question</Text>
-              <TouchableOpacity
-                onPress={handleCreateQuestion}
-                disabled={creating || !newTitle.trim() || !newContent.trim()}
-              >
-                <Text
-                  style={[
-                    styles.postButton,
-                    (!newTitle.trim() || !newContent.trim() || creating) && styles.postButtonDisabled,
-                  ]}
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => { setShowNewQuestion(false); setNewAttachment(null); }} accessibilityLabel="Close">
+                  <Ionicons name="close" size={24} color={colors.textPrimary} />
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>Ask a Question</Text>
+                <TouchableOpacity
+                  onPress={handleCreateQuestion}
+                  disabled={creating || !newTitle.trim()}
                 >
-                  {creating ? 'Posting...' : 'Ask'}
+                  <Text
+                    style={[
+                      styles.postButton,
+                      (!newTitle.trim() || creating) && styles.postButtonDisabled,
+                    ]}
+                  >
+                    {creating ? 'Posting...' : 'Ask'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -477,30 +722,55 @@ export default function QAChannelScreen({ route, navigation }: Props) {
               maxLength={200}
             />
 
-            <TextInput
-              style={styles.contentInput}
-              value={newContent}
-              onChangeText={setNewContent}
-              placeholder="Provide details about your question..."
-              placeholderTextColor={colors.textMuted}
-              multiline
-              maxLength={4000}
-              textAlignVertical="top"
-            />
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+              <TextInput
+                style={styles.contentInput}
+                value={newContent}
+                onChangeText={setNewContent}
+                placeholder="Provide details about your question... (optional)"
+                placeholderTextColor={colors.textMuted}
+                multiline
+                maxLength={4000}
+                textAlignVertical="top"
+              />
+
+              <View style={styles.attachmentActions}>
+                <TouchableOpacity
+                  style={styles.attachmentButton}
+                  onPress={() => pickAttachment(setNewAttachment)}
+                  disabled={creating}
+                >
+                  <Ionicons name="attach-outline" size={18} color={colors.accentPrimary} />
+                  <Text style={styles.attachmentButtonText}>
+                    {newAttachment ? 'Replace media' : 'Attach media'}
+                  </Text>
+                </TouchableOpacity>
+                <Text style={styles.attachmentHint}>
+                  {attachmentBlockReason || 'Attachment-only questions are supported.'}
+                </Text>
+              </View>
+
+              {newAttachment && (
+                <View style={styles.attachmentPreviewWrap}>
+                  <AttachmentPreview attachment={toPreviewAttachment(newAttachment)} />
+                  <TouchableOpacity style={styles.removeAttachmentButton} onPress={() => setNewAttachment(null)}>
+                    <Text style={styles.removeAttachmentText}>Remove attachment</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
 
       {/* Question Detail Modal */}
       <Modal visible={!!selectedPost} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => { setSelectedPost(null); setReplies([]); }} accessibilityLabel="Close">
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-              <Text style={styles.modalTitle} numberOfLines={1}>
-                {selectedPost?.title}
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => { setSelectedPost(null); setReplies([]); setReplyText(''); setReplyAttachment(null); }} accessibilityLabel="Close">
+                  <Ionicons name="close" size={24} color={colors.textPrimary} />
+                </TouchableOpacity>
+                <Text style={styles.modalTitle} numberOfLines={1}>
+                  {selectedPost?.title}
               </Text>
               <View style={{ width: 24 }} />
             </View>
@@ -525,6 +795,13 @@ export default function QAChannelScreen({ route, navigation }: Props) {
                   )}
                   <View style={styles.detailContent}>
                     <RichText content={selectedPost.content} />
+                    {!!selectedPost.attachments?.length && (
+                      <View style={styles.detailAttachment}>
+                        {selectedPost.attachments.map((attachment) => (
+                          <AttachmentPreview key={attachment.id} attachment={attachment} />
+                        ))}
+                      </View>
+                    )}
                   </View>
                 </View>
               )}
@@ -564,12 +841,71 @@ export default function QAChannelScreen({ route, navigation }: Props) {
                           <Text style={styles.replyDate}>{formatRelativeTime(reply.createdAt)}</Text>
                         </View>
                         <RichText content={reply.content} />
+                        {!!reply.attachments?.length && (
+                          <View style={styles.replyAttachment}>
+                            {reply.attachments.map((attachment) => (
+                              <AttachmentPreview key={attachment.id} attachment={attachment} />
+                            ))}
+                          </View>
+                        )}
                       </View>
                     </View>
                   ))
                 )}
               </View>
             </ScrollView>
+
+            {selectedPost && (
+              <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                <View style={styles.replyComposer}>
+                  {replyAttachment && (
+                    <View style={styles.attachmentPreviewWrap}>
+                      <AttachmentPreview attachment={toPreviewAttachment(replyAttachment)} />
+                      <TouchableOpacity style={styles.removeAttachmentButton} onPress={() => setReplyAttachment(null)}>
+                        <Text style={styles.removeAttachmentText}>Remove attachment</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  <TextInput
+                    style={styles.replyInput}
+                    value={replyText}
+                    onChangeText={setReplyText}
+                    placeholder="Write an answer..."
+                    placeholderTextColor={colors.textMuted}
+                    multiline
+                    textAlignVertical="top"
+                  />
+                  <View style={styles.replyComposerActions}>
+                    <TouchableOpacity
+                      style={styles.attachmentButton}
+                      onPress={() => pickAttachment(setReplyAttachment)}
+                      disabled={sendingReply}
+                    >
+                      <Ionicons name="attach-outline" size={18} color={colors.accentPrimary} />
+                      <Text style={styles.attachmentButtonText}>Attach media</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.replySendButton,
+                        !replyText.trim() && !replyAttachment && styles.replySendButtonDisabled,
+                      ]}
+                      onPress={handleSendReply}
+                      disabled={sendingReply || (!replyText.trim() && !replyAttachment)}
+                    >
+                      {sendingReply ? (
+                        <ActivityIndicator size="small" color={colors.white} />
+                      ) : (
+                        <Text style={styles.replySendText}>Answer</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                  {!!attachmentBlockReason && (
+                    <Text style={styles.attachmentHint}>{attachmentBlockReason}</Text>
+                  )}
+                </View>
+              </KeyboardAvoidingView>
+            )}
           </View>
         </View>
       </Modal>

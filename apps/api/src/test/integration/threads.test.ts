@@ -7,7 +7,7 @@ import { channels } from '../../db/schema/channels';
 import { files } from '../../db/schema/files';
 import { messages } from '../../db/schema/messages';
 import { threads } from '../../db/schema/threads';
-import { createForumThread, listForumThreads } from '../../services/thread.service';
+import { createForumThread, getThreadMessages, listForumThreads } from '../../services/thread.service';
 
 vi.mock('../../lib/redis', () => ({
   redis: {
@@ -172,5 +172,73 @@ describe('Forum threads', () => {
       },
     });
     expect(result[0].lastActivity).toBeTruthy();
+  });
+
+  it('keeps attachment-only OPs visible in forum list payloads', async () => {
+    const { user } = await createTestUser();
+    const channel = await createForumChannel(user.id);
+    const image = await createUploadedFile(user.id);
+
+    await createForumThread({
+      channelId: channel.id,
+      authorId: user.id,
+      name: 'Screenshot only',
+      body: null,
+      attachmentIds: [image.id],
+    });
+
+    const result = await listForumThreads(channel.id, user.id);
+    expect(result[0]).toMatchObject({
+      opPreview: null,
+      opAttachment: {
+        id: image.id,
+        url: image.url,
+        filename: image.filename,
+        size: image.size,
+        mimeType: image.mimeType,
+      },
+    });
+  });
+
+  it('pages older thread messages when a before cursor is provided', async () => {
+    const { user } = await createTestUser();
+    const channel = await createForumChannel(user.id);
+
+    const thread = await createForumThread({
+      channelId: channel.id,
+      authorId: user.id,
+      name: 'Paged thread',
+      body: 'Original post',
+    });
+
+    await testDb.insert(messages).values([
+      {
+        channelId: channel.id,
+        authorId: user.id,
+        content: 'Reply 1',
+        threadId: thread.id,
+        createdAt: new Date('2026-04-17T12:01:00.000Z'),
+      },
+      {
+        channelId: channel.id,
+        authorId: user.id,
+        content: 'Reply 2',
+        threadId: thread.id,
+        createdAt: new Date('2026-04-17T12:02:00.000Z'),
+      },
+      {
+        channelId: channel.id,
+        authorId: user.id,
+        content: 'Reply 3',
+        threadId: thread.id,
+        createdAt: new Date('2026-04-17T12:03:00.000Z'),
+      },
+    ]);
+
+    const firstPage = await getThreadMessages(thread.id, { limit: 2 });
+    expect(firstPage.map((message) => message.content)).toEqual(['Reply 3', 'Reply 2']);
+
+    const secondPage = await getThreadMessages(thread.id, { limit: 2, before: firstPage[1].id });
+    expect(secondPage.map((message) => message.content)).toEqual(['Reply 1', 'Original post']);
   });
 });
