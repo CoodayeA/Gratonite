@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { search as searchApi } from '../../lib/api';
+import { channels as channelsApi, search as searchApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
@@ -119,24 +119,41 @@ export default function GlobalSearchScreen({ navigation }: Props) {
     setQuery(text);
   };
 
-  const handleResultPress = (item: SearchResult) => {
-    if (item.guildId && item.channelId) {
+  const handleResultPress = async (item: SearchResult) => {
+    if (!item.channelId) {
+      toast.info(item.content);
+      return;
+    }
+
+    if (!item.guildId) {
+      navigation.navigate('DirectMessage', {
+        channelId: item.channelId,
+        recipientName: item.channelName || item.author?.displayName || item.author?.username || 'Direct Message',
+      });
+      return;
+    }
+
+    try {
+      const channel = await channelsApi.get(item.channelId);
+      if (channel.type === 'forum') {
+        navigation.navigate('ForumChannel', {
+          channelId: item.channelId,
+          channelName: channel.name || item.channelName || 'Forum',
+        });
+        return;
+      }
+      navigation.navigate('ChannelChat', {
+        guildId: item.guildId,
+        channelId: item.channelId,
+        channelName: channel.name || item.channelName || 'Channel',
+      });
+    } catch {
       navigation.navigate('ChannelChat', {
         guildId: item.guildId,
         channelId: item.channelId,
         channelName: item.channelName || 'Channel',
       });
-      return;
     }
-
-    const details = [
-      item.guildName ? `Portal: ${item.guildName}` : null,
-      item.channelName ? `Channel: #${item.channelName}` : null,
-      item.author ? `Author: ${item.author.displayName || item.author.username}` : null,
-    ]
-      .filter(Boolean)
-      .join(' | ');
-    toast.info(details || item.content);
   };
 
   const styles = useMemo(() => StyleSheet.create({

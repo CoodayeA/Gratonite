@@ -407,11 +407,18 @@ export default function NotificationInboxScreen({ navigation }: Props) {
 
     if (item.channelId) {
       if (item.guildId) {
-        let channelName = 'Channel';
+        let channelName = item.channelName || 'Channel';
         try {
           const channel = await channelsApi.get(item.channelId);
           if (channel?.name) {
             channelName = channel.name;
+          }
+          if (channel?.type === 'forum') {
+            navigation.navigate('ForumChannel', {
+              channelId: item.channelId,
+              channelName,
+            });
+            return;
           }
         } catch {
           // Keep generic fallback if the channel lookup fails.
@@ -516,8 +523,13 @@ export default function NotificationInboxScreen({ navigation }: Props) {
                 {item.preview}
               </Text>
             )}
-            {(item.guildName || item.trustSummary) && (
+            {(item.channelName || item.guildName || item.trustSummary) && (
               <View style={styles.contextRow}>
+                {item.channelName ? (
+                  <View style={styles.contextPill}>
+                    <Text style={styles.contextPillText}>#{item.channelName}</Text>
+                  </View>
+                ) : null}
                 {item.guildName ? (
                   <View style={styles.contextPill}>
                     <Text style={styles.contextPillText}>{item.guildName}</Text>

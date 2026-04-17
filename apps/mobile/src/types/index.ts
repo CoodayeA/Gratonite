@@ -40,6 +40,7 @@ export interface Guild {
   description: string | null;
   memberCount: number;
   createdAt: string;
+  defaultMemberNotificationLevel?: 'all' | 'mentions' | 'nothing' | null;
 }
 
 export interface Channel {
@@ -330,6 +331,7 @@ export interface Notification {
   senderId: string | null;
   senderName: string | null;
   channelId: string | null;
+  channelName?: string | null;
   guildId: string | null;
   guildName?: string | null;
   messageId?: string | null;

@@ -32,6 +32,7 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [creatingInvite, setCreatingInvite] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [savingNotificationDefault, setSavingNotificationDefault] = useState(false);
 
   const fetchGuild = useCallback(async () => {
     try {
@@ -101,6 +102,31 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
 
   const handleViewMembers = () => {
     navigation.navigate('GuildMemberList', { guildId, guildName });
+  };
+
+  const handleUpdateDefaultNotifications = async (level: Guild['defaultMemberNotificationLevel']) => {
+    if (!guild || savingNotificationDefault) return;
+    const previousLevel = guild.defaultMemberNotificationLevel ?? null;
+    setGuild({ ...guild, defaultMemberNotificationLevel: level });
+    setSavingNotificationDefault(true);
+    try {
+      const updated = await guildsApi.update(guildId, { defaultMemberNotificationLevel: level } as Partial<Guild>);
+      setGuild(updated);
+      toast.success(
+        level === 'all'
+          ? 'New members will default to all messages'
+          : level === 'mentions'
+            ? 'New members will default to mentions only'
+            : level === 'nothing'
+              ? 'New members will default to no notifications'
+              : 'Portal default notifications cleared',
+      );
+    } catch (err: any) {
+      setGuild({ ...guild, defaultMemberNotificationLevel: previousLevel });
+      toast.error(err.message || 'Failed to update default notifications');
+    } finally {
+      setSavingNotificationDefault(false);
+    }
   };
 
   const styles = useMemo(() => StyleSheet.create({
@@ -241,6 +267,48 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
       fontSize: fontSize.md,
       fontWeight: '500',
     },
+    inlineDescription: {
+      color: colors.textMuted,
+      fontSize: fontSize.sm,
+      lineHeight: 18,
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
+    optionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      gap: spacing.md,
+      ...(glass ? {
+        backgroundColor: glass.glassBackground,
+        borderRadius: borderRadius.lg,
+        borderWidth: 1,
+        borderColor: glass.glassBorder,
+        marginHorizontal: spacing.md,
+        marginBottom: spacing.xs,
+      } : neo ? {
+        borderTopWidth: neo.borderWidth,
+        borderTopColor: colors.border,
+      } : {
+        borderTopWidth: 1,
+        borderTopColor: colors.border,
+      }),
+    },
+    optionInfo: {
+      flex: 1,
+    },
+    optionLabel: {
+      color: colors.textPrimary,
+      fontSize: fontSize.md,
+      fontWeight: '600',
+    },
+    optionDescription: {
+      color: colors.textMuted,
+      fontSize: fontSize.sm,
+      marginTop: 2,
+    },
   }), [colors, spacing, fontSize, borderRadius, neo, glass]);
 
   const isOwner = guild?.ownerId === user?.id;
@@ -326,6 +394,53 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
 
         {canManageGuild ? (
           <>
+            <Text style={styles.sectionTitle}>MEMBER NOTIFICATIONS</Text>
+            <Text style={styles.inlineDescription}>
+              Set the default notification level for new members before they choose their own portal preference.
+            </Text>
+            {[
+              {
+                value: 'all' as const,
+                label: 'All Messages',
+                description: 'New members get notified for every message until they override it.',
+              },
+              {
+                value: 'mentions' as const,
+                label: '@Mentions Only',
+                description: 'New members only get mention alerts by default.',
+              },
+              {
+                value: 'nothing' as const,
+                label: 'Nothing',
+                description: 'New members start muted until they opt into notifications.',
+              },
+              {
+                value: null,
+                label: 'Clear Default',
+                description: 'Do not force a portal-wide default for new members.',
+              },
+            ].map((option) => {
+              const selected = (guild?.defaultMemberNotificationLevel ?? null) === option.value;
+              return (
+                <TouchableOpacity
+                  key={option.label}
+                  style={styles.optionRow}
+                  onPress={() => handleUpdateDefaultNotifications(option.value)}
+                  disabled={savingNotificationDefault}
+                >
+                  <View style={styles.optionInfo}>
+                    <Text style={styles.optionLabel}>{option.label}</Text>
+                    <Text style={styles.optionDescription}>{option.description}</Text>
+                  </View>
+                  <Ionicons
+                    name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={22}
+                    color={selected ? colors.accentPrimary : colors.textMuted}
+                  />
+                </TouchableOpacity>
+              );
+            })}
+
             <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('RoleList', { guildId })}>
               <Ionicons name="shield-outline" size={22} color={colors.textSecondary} />
               <Text style={styles.actionText}>Roles</Text>

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { eq, and, desc, inArray } from 'drizzle-orm';
 import { db } from '../db/index';
 import { notifications } from '../db/schema/notifications';
+import { channels } from '../db/schema/channels';
 import { guilds } from '../db/schema/guilds';
 import { requireAuth } from '../middleware/auth';
 import { evaluateNotificationTrust, getStoredNotificationTrust } from '../lib/notificationTrustMatrix';
@@ -17,12 +18,15 @@ notificationsRouter.get('/', requireAuth, async (req: Request, res: Response): P
     .orderBy(desc(notifications.createdAt))
     .limit(limit);
 
-  // Collect unique guildIds to resolve names in a single query
+  // Collect unique guild/channel ids to resolve names in single queries.
   const guildIds = new Set<string>();
+  const channelIds = new Set<string>();
   for (const n of notifs) {
     const d = (n.data ?? {}) as Record<string, unknown>;
     const gid = d.guildId as string | undefined;
+    const cid = d.channelId as string | undefined;
     if (gid) guildIds.add(gid);
+    if (cid) channelIds.add(cid);
   }
 
   let guildNameMap: Record<string, string> = {};
@@ -33,16 +37,26 @@ notificationsRouter.get('/', requireAuth, async (req: Request, res: Response): P
     guildNameMap = Object.fromEntries(guildRows.map(g => [g.id, g.name]));
   }
 
+  let channelNameMap: Record<string, string> = {};
+  if (channelIds.size > 0) {
+    const channelRows = await db.select({ id: channels.id, name: channels.name })
+      .from(channels)
+      .where(inArray(channels.id, [...channelIds]));
+    channelNameMap = Object.fromEntries(channelRows.map((channel) => [channel.id, channel.name]));
+  }
+
   // Flatten the data JSONB into top-level fields for the frontend
   const mapped = notifs.map(n => {
     const d = (n.data ?? {}) as Record<string, unknown>;
     const guildId = (d.guildId as string) ?? null;
+    const channelId = (d.channelId as string) ?? null;
     return {
       id: n.id,
       type: n.type,
       senderId: (d.senderId as string) ?? null,
       senderName: (d.senderName as string) ?? null,
-      channelId: (d.channelId as string) ?? null,
+      channelId,
+      channelName: channelId ? (channelNameMap[channelId] ?? null) : null,
       guildId,
       guildName: guildId ? (guildNameMap[guildId] ?? null) : null,
       messageId: (d.messageId as string) ?? null,

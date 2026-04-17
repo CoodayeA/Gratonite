@@ -145,6 +145,22 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
     return list;
   }, [localParticipant, participants]);
 
+  const connectionTone = connectionError ? colors.error : isConnected ? colors.success : colors.textMuted;
+  const connectionLabel = connectionError
+    ? 'Needs attention'
+    : isConnected
+      ? 'Connected'
+      : 'Connecting';
+  const connectionHint = connectionError
+    ? connectionError
+    : isDeafened
+      ? 'You are deafened, so remote audio is muted on this device.'
+      : isMuted
+        ? 'Your microphone is muted. Unmute when you are ready to speak.'
+        : allParticipants.length <= 1
+          ? 'You are connected. Invite someone else to join this voice room.'
+          : 'Connection looks healthy for a live conversation.';
+
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
@@ -164,6 +180,36 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
       fontSize: fontSize.sm,
       color: colors.success,
       fontWeight: '600',
+    },
+    connectionCard: {
+      marginHorizontal: spacing.lg,
+      marginBottom: spacing.md,
+      padding: spacing.md,
+      borderRadius: borderRadius.lg,
+      backgroundColor: colors.bgElevated,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: spacing.xs,
+    },
+    connectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    connectionTitle: {
+      color: colors.textPrimary,
+      fontSize: fontSize.md,
+      fontWeight: '700',
+    },
+    connectionMeta: {
+      color: connectionTone,
+      fontSize: fontSize.sm,
+      fontWeight: '700',
+    },
+    connectionHint: {
+      color: colors.textSecondary,
+      fontSize: fontSize.sm,
+      lineHeight: 18,
     },
     errorText: {
       fontSize: fontSize.sm,
@@ -272,7 +318,7 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
       fontWeight: '600',
       color: colors.textSecondary,
     },
-  }), [colors, spacing, fontSize, borderRadius, controlSize]);
+  }), [colors, spacing, fontSize, borderRadius, controlSize, connectionTone]);
 
   const renderParticipant = ({ item }: { item: LiveKitParticipant }) => (
     <View style={styles.participant}>
@@ -330,6 +376,17 @@ export default function VoiceChannelScreen({ route, navigation }: Props) {
         <Ionicons name="volume-medium" size={28} color={colors.accentPrimary} />
         <Text style={styles.channelName}>{channelName}</Text>
         {isConnected && <Text style={styles.statusText}>Voice Connected</Text>}
+      </View>
+
+      <View style={styles.connectionCard}>
+        <View style={styles.connectionHeader}>
+          <Text style={styles.connectionTitle}>Connection</Text>
+          <Text style={styles.connectionMeta}>{connectionLabel}</Text>
+        </View>
+        <Text style={styles.connectionHint}>{connectionHint}</Text>
+        <Text style={styles.connectionHint}>
+          {allParticipants.length} participant{allParticipants.length === 1 ? '' : 's'} in the room
+        </Text>
       </View>
 
       <FlatList

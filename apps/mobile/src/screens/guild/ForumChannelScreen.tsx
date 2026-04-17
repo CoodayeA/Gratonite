@@ -70,6 +70,7 @@ export default function ForumChannelScreen({ route }: Props) {
   const [replyAttachments, setReplyAttachments] = useState<PendingAttachment[]>([]);
   const [sendingReply, setSendingReply] = useState(false);
   const [channelInfo, setChannelInfo] = useState<Channel | null>(null);
+  const replyLocked = !!selectedPost?.locked;
 
   const attachmentBlockReason = channelInfo?.isEncrypted
     ? 'Forum attachments are not available in encrypted channels yet.'
@@ -220,6 +221,10 @@ export default function ForumChannelScreen({ route }: Props) {
 
   const handleSendReply = async () => {
     if (!selectedPost) return;
+    if (selectedPost.locked) {
+      toast.info('This post is locked. Replies are disabled.');
+      return;
+    }
     const text = replyText.trim();
     if (!text && replyAttachments.length === 0) return;
 
@@ -838,16 +843,22 @@ export default function ForumChannelScreen({ route }: Props) {
                     style={styles.replyInput}
                     value={replyText}
                     onChangeText={setReplyText}
-                    placeholder="Write a reply..."
+                    placeholder={replyLocked ? 'Replies are locked for this post' : 'Write a reply...'}
                     placeholderTextColor={colors.textMuted}
                     multiline
                     textAlignVertical="top"
+                    editable={!replyLocked}
                   />
+                  {replyLocked ? (
+                    <Text style={styles.attachmentHint}>
+                      Moderators locked this discussion. You can still read the thread and its attachments.
+                    </Text>
+                  ) : null}
                   <View style={styles.replyComposerActions}>
                     <TouchableOpacity
                       style={styles.attachmentButton}
                       onPress={() => pickAttachment(setReplyAttachments)}
-                      disabled={sendingReply}
+                      disabled={sendingReply || replyLocked}
                     >
                       <Ionicons name="attach-outline" size={18} color={colors.accentPrimary} />
                       <Text style={styles.attachmentButtonText}>{replyAttachments.length > 0 ? 'Add more media' : 'Attach media'}</Text>
@@ -856,10 +867,10 @@ export default function ForumChannelScreen({ route }: Props) {
                     <TouchableOpacity
                       style={[
                         styles.replySendButton,
-                        !replyText.trim() && replyAttachments.length === 0 && styles.replySendButtonDisabled,
+                        (replyLocked || (!replyText.trim() && replyAttachments.length === 0)) && styles.replySendButtonDisabled,
                       ]}
                       onPress={handleSendReply}
-                      disabled={sendingReply || (!replyText.trim() && replyAttachments.length === 0)}
+                      disabled={sendingReply || replyLocked || (!replyText.trim() && replyAttachments.length === 0)}
                     >
                       {sendingReply ? (
                         <ActivityIndicator size="small" color={colors.white} />
