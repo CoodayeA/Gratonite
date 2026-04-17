@@ -34,6 +34,12 @@ Run this before shipping or after touching deploy packaging:
 pnpm verify:deploy:artifacts
 ```
 
+This enforcement is wired into:
+
+- `.github/workflows/release-gates.yml`
+- `.github/workflows/deploy.yml`
+- `deploy/deploy.sh`
+
 The enforcement script fails when:
 
 - deploy staging directories stop being ignored in `.gitignore`

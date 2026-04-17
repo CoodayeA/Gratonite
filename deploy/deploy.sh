@@ -87,9 +87,19 @@ on_error() {
 trap on_error ERR
 
 echo ""
-echo "📦 Step 1: Building application locally..."
-CURRENT_STEP="local build"
+echo "🧪 Step 1: Verifying release prerequisites..."
+CURRENT_STEP="local release verification"
 cd "$(dirname "$0")/.."
+
+pnpm verify:deploy:artifacts
+pnpm --filter gratonite-api run guard:placeholders
+pnpm --filter gratonite-web run guard:placeholders
+
+echo "✅ Release prerequisites passed!"
+
+echo ""
+echo "📦 Step 2: Building application locally..."
+CURRENT_STEP="local build"
 
 # Install from repo root with filters to avoid EPERM on the Electron binary in
 # apps/desktop when running pnpm install inside a workspace subdirectory.
@@ -105,6 +115,7 @@ cd ../..
 echo "  Building frontend..."
 cd apps/web
 pnpm run build:vite
+pnpm run validate:sw-precache
 cd ../..
 
 # Build landing page
@@ -116,7 +127,7 @@ cd ../..
 echo "✅ Build complete!"
 
 echo ""
-echo "📤 Step 2: Creating deployment package..."
+echo "📤 Step 3: Creating deployment package..."
 CURRENT_STEP="local packaging"
 rm -rf deploy/api deploy/web/dist deploy/landing
 mkdir -p deploy/api deploy/web/dist deploy/landing
@@ -137,7 +148,7 @@ cp -r apps/landing/out/* deploy/landing/
 echo "✅ Package created!"
 
 echo ""
-echo "📡 Step 3: Uploading to server..."
+echo "📡 Step 4: Uploading to server..."
 CURRENT_STEP="remote upload"
 ssh -i "$SSH_KEY" "$USER@$SERVER" "mkdir -p '$REMOTE_DIR'"
 
@@ -153,7 +164,7 @@ rsync -avz --progress --delete \
 echo "✅ Upload complete!"
 
 echo ""
-echo "🛡️  Step 4: Remote preflight checks..."
+echo "🛡️  Step 5: Remote preflight checks..."
 CURRENT_STEP="remote preflight"
 ssh -i "$SSH_KEY" "$USER@$SERVER" "REMOTE_DIR='$REMOTE_DIR' bash -s" << 'ENDSSH'
 set -euo pipefail
@@ -260,7 +271,7 @@ echo "✅ Preflight checks passed."
 ENDSSH
 
 echo ""
-echo "🐳 Step 5: Restarting containers on server..."
+echo "🐳 Step 6: Restarting containers on server..."
 CURRENT_STEP="remote restart"
 ssh -i "$SSH_KEY" "$USER@$SERVER" "REMOTE_DIR='$REMOTE_DIR' bash -s" << 'ENDSSH'
 set -euo pipefail
@@ -304,7 +315,7 @@ echo ""
 ENDSSH
 
 echo ""
-echo "🔍 Step 6: Release verification..."
+echo "🔍 Step 7: Release verification..."
 CURRENT_STEP="health checks"
 for i in {1..20}; do
   code="$(curl -sS -m 10 -o /dev/null -w "%{http_code}" "$API_HEALTH_URL" || true)"

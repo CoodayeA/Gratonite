@@ -33,19 +33,23 @@ SERVER=178.156.253.237 USER=ferdinand SSH_KEY=~/.ssh/hetzner_key_new bash deploy
 
 `deploy/deploy.sh` is the source of truth for deploy behavior.
 
+`.github/workflows/deploy.yml` reruns deploy-critical local verification before it calls `deploy/deploy.sh`, so main-branch production deploys do not skip artifact ownership or web release checks.
+
 ## What `deploy/deploy.sh` Does
 
-1. Installs workspace dependencies needed for API and web builds.
-2. Builds the API with `pnpm`.
-3. Builds the web app with the production Vite build.
-4. Stages `deploy/api` and `deploy/web/dist`.
-5. Rsyncs `deploy/` to the remote server while protecting server `.env` files.
-6. Runs remote preflight checks for required secrets and legacy-proxy conflicts.
-7. Recreates `api`, `web`, `caddy`, and `livekit`.
-8. Runs database migrations.
-9. Polls the API health endpoint.
-10. Verifies landing, app shell, releases, service worker, and manifest URLs.
-11. Prints remote container diagnostics plus rollback guidance automatically if verification fails.
+1. Verifies deploy artifact ownership plus API/web placeholder guards.
+2. Installs workspace dependencies needed for API and web builds.
+3. Builds the API with `pnpm`.
+4. Builds the web app with the production Vite build and validates service-worker precache output.
+5. Builds the landing site.
+6. Stages `deploy/api` and `deploy/web/dist`.
+7. Rsyncs `deploy/` to the remote server while protecting server `.env` files.
+8. Runs remote preflight checks for required secrets and legacy-proxy conflicts.
+9. Recreates `api`, `web`, `caddy`, and `livekit`.
+10. Runs database migrations.
+11. Polls the API health endpoint.
+12. Verifies landing, app shell, releases, service worker, and manifest URLs.
+13. Prints remote container diagnostics plus rollback guidance automatically if verification fails.
 
 ## Production Routing Reality
 

@@ -23,6 +23,19 @@ jobs:
         with:
           version: 9
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Pre-deploy release verification
+        run: |
+          pnpm verify:deploy:artifacts
+          pnpm --filter gratonite-api run build
+          pnpm --filter gratonite-api run guard:placeholders
+          pnpm --filter gratonite-web run build:vite
+          pnpm --filter gratonite-web run guard:placeholders
+          pnpm --filter gratonite-web run validate:sw-precache
+          pnpm --dir apps/landing run build
+
       - name: Configure SSH key
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -60,3 +73,14 @@ jobs:
           SERVICE_WORKER_URL="${SERVICE_WORKER_URL:-https://gratonite.chat/app/sw.js}" \
           WEB_MANIFEST_URL="${WEB_MANIFEST_URL:-https://gratonite.chat/app/manifest.json}" \
           bash deploy/deploy.sh
+
+      - name: Deploy summary
+        if: always()
+        run: |
+          {
+            echo "## Production deploy guardrails"
+            echo "- reran deploy artifact ownership, API/web build checks, landing build, and SW validation before SSH"
+            echo "- canonical deploy path remains \`deploy/deploy.sh\`"
+            echo "- deploy script performs remote preflight, migrations, API/public URL verification, diagnostics, and rollback guidance"
+            echo "- operator sign-off checklist: \`docs/deploy-review-checklist.md\`"
+          } >> "$GITHUB_STEP_SUMMARY"

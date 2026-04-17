@@ -63,3 +63,19 @@ jobs:
 
       - name: Landing — static export build
         run: pnpm --dir apps/landing run build
+
+      - name: Release gate summary
+        if: always()
+        run: |
+          {
+            echo "## Release gate coverage"
+            echo "- deploy artifact ownership / ignored staging paths"
+            echo "- API build, lint, placeholder guard, and OpenAPI checks"
+            echo "- web lint, placeholder guard, Vite build, and service worker precache validation"
+            echo "- landing static export build"
+            echo
+            echo "## Still required before production"
+            echo "- run the DB-backed release verification in an environment that can execute \`pnpm --dir apps/api run verify:release\`"
+            echo "- use \`.github/workflows/deploy.yml\` or \`deploy/deploy.sh\` so remote health checks, public URL verification, and rollback guidance are not skipped"
+            echo "- follow \`docs/deploy-review-checklist.md\` for the operator sign-off"
+          } >> "$GITHUB_STEP_SUMMARY"

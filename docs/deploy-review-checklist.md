@@ -9,11 +9,12 @@ Use before shipping to production (e.g. Hetzner, `rsync` of `deploy/`, `docker-c
 3. **Confirm release hygiene automation** — at minimum:
    - `pnpm verify:deploy:artifacts`
    - landing build
-   - web lint + placeholder guard + Vite build
+   - web lint/guard + Vite build
    - service worker precache validation
-   - API `verify:release`
+   - API `verify:release` in a DB-backed environment
    - web smoke
-4. **Then** run the deploy pipeline (build → package → upload → restart → migrate → verify).
+4. **Use the canonical deploy path** — `.github/workflows/deploy.yml` or `deploy/deploy.sh`, not ad hoc `rsync` / manual container restarts.
+5. **Then** run the deploy pipeline (release verification → build → package → upload → restart → migrate → verify).
 
 If deploying without full context, infer changes from `git` / recent files, then review, then deploy.
 
@@ -25,5 +26,6 @@ Do not call deployment **done** until **server** checks (containers, API health,
 - **Auth and data paths**: extra scrutiny; run or point to tests when they exist.
 - **New env vars / migrations**: document for operators and call out deploy order.
 - **Deploy failures**: capture `docker compose ps`, API/web/Caddy log tails, and the rollback decision in the incident timeline.
+- **Artifact ownership**: treat `apps/api`, `apps/web`, and `apps/landing` as source of truth. `deploy/api`, `deploy/web/dist`, and `deploy/landing` are staging outputs or tracked mirrors that must stay enforced by `pnpm verify:deploy:artifacts`.
 
 Internal ops runbooks may live outside this repository.
