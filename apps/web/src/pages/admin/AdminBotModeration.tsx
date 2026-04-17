@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bot, CheckCircle2, XCircle, Clock, Eye, Search, Filter, Shield, AlertTriangle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
 
@@ -171,6 +172,14 @@ export default function AdminBotModeration() {
 
         {/* Header */}
         <div style={{ marginBottom: '32px' }}>
+          <div style={{ marginBottom: '14px', padding: '12px 14px', borderRadius: '12px', border: '1px solid rgba(99,102,241,0.25)', background: 'rgba(99,102,241,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+              Need live reports, guild mod queue, or appeal context while you review bots?
+            </div>
+            <Link to="/admin/moderation-workspace" style={{ color: 'var(--accent-primary)', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
+              Open moderation workspace
+            </Link>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
             <div style={{
               width: '40px',

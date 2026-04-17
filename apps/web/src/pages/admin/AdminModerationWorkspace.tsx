@@ -84,9 +84,35 @@ type BanEntry = {
   bannedAt: string;
 };
 
+type ModQueueStatus = 'pending' | 'approved' | 'rejected';
+
+type BotQueueItem = {
+  id: string;
+  name: string;
+  developer: string;
+  description: string;
+  createdAt: string;
+  status: BotStatus;
+};
+
+type ModQueueItem = {
+  id: string;
+  guildId: string;
+  type: string;
+  targetId: string | null;
+  content: string | null;
+  reporterId: string | null;
+  reporterUsername: string | null;
+  status: ModQueueStatus;
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+};
+
 type QueueSummary = {
   openReports: number;
   underReviewReports: number;
+  pendingModQueue: number;
   pendingBots: number;
   visibleAppeals: number;
 };
@@ -100,13 +126,13 @@ const WORKFLOW_STEPS = [
   },
   {
     title: 'Check context before acting',
-    description: 'Use the report target, guild context, warnings, ban state, and moderator notes without leaving the workspace.',
+    description: 'Use the report target, guild context, warnings, mod queue, ban state, and moderator notes without leaving the workspace.',
     href: '#moderator-context',
     accent: 'var(--accent-blue)',
   },
   {
     title: 'Close the loop',
-    description: 'Review appeal status and the action timeline so every decision is visible after the case moves on.',
+    description: 'Review the appeal lane, guild queue decisions, and the action timeline so every decision stays visible after handoff.',
     href: '#appeals-and-history',
     accent: 'var(--accent-purple)',
   },
@@ -125,6 +151,12 @@ const ACTION_CHOICES: Array<{ key: ReportStatus; label: string; tone: string }> 
   { key: 'dismissed', label: 'Dismiss', tone: 'var(--error)' },
   { key: 'open', label: 'Re-open', tone: 'var(--warning)' },
 ];
+
+const MOD_QUEUE_STATUS_LABELS: Record<ModQueueStatus, string> = {
+  pending: 'Pending',
+  approved: 'Approved',
+  rejected: 'Rejected',
+};
 
 function normalizeReportStatus(status: ApiReportStatus | ReportStatus | string | undefined): ReportStatus {
   if (status === 'investigating' || status === 'under_review') return 'under_review';
@@ -219,13 +251,17 @@ export default function AdminModerationWorkspace() {
   const [reports, setReports] = useState<WorkspaceReport[]>([]);
   const [auditFeed, setAuditFeed] = useState<AuditEntry[]>([]);
   const [pendingBots, setPendingBots] = useState(0);
+  const [pendingBotListings, setPendingBotListings] = useState<BotQueueItem[]>([]);
   const [guilds, setGuilds] = useState<GuildOption[]>([]);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [selectedGuildId, setSelectedGuildId] = useState('');
   const [reportSearch, setReportSearch] = useState('');
   const [reportStatusFilter, setReportStatusFilter] = useState<'all' | ReportStatus>('all');
   const [appealFilter, setAppealFilter] = useState<AppealFilter>('pending');
+  const [modQueueStatusFilter, setModQueueStatusFilter] = useState<ModQueueStatus>('pending');
   const [appeals, setAppeals] = useState<BanAppeal[]>([]);
+  const [modQueueItems, setModQueueItems] = useState<ModQueueItem[]>([]);
+  const [modQueueCounts, setModQueueCounts] = useState<Record<string, number>>({});
   const [reportHistory, setReportHistory] = useState<AuditEntry[]>([]);
   const [warningHistory, setWarningHistory] = useState<WarningEntry[]>([]);
   const [banHistory, setBanHistory] = useState<BanEntry[]>([]);
@@ -235,9 +271,12 @@ export default function AdminModerationWorkspace() {
   const [refreshing, setRefreshing] = useState(false);
   const [reportActionLoading, setReportActionLoading] = useState(false);
   const [appealsLoading, setAppealsLoading] = useState(false);
+  const [modQueueLoading, setModQueueLoading] = useState(false);
   const [contextLoading, setContextLoading] = useState(false);
   const [modNoteSaving, setModNoteSaving] = useState(false);
+  const [modQueueResolvingId, setModQueueResolvingId] = useState<string | null>(null);
   const [appealError, setAppealError] = useState('');
+  const [modQueueError, setModQueueError] = useState('');
 
   const hydrateQueue = useCallback(async (preserveSelection = true) => {
     const [reportsResponse, botsResponse, auditResponse, guildsResponse] = await Promise.all([
@@ -276,7 +315,20 @@ export default function AdminModerationWorkspace() {
         return new Date(right.reportedDate).getTime() - new Date(left.reportedDate).getTime();
       });
 
-    const botItems = (Array.isArray(botsResponse) ? botsResponse : (botsResponse as any)?.items ?? []) as Array<{ status?: BotStatus }>;
+    const botItems = ((Array.isArray(botsResponse) ? botsResponse : (botsResponse as any)?.items ?? []) as any[])
+      .flatMap((bot) => {
+        const id = typeof bot.id === 'string' && bot.id.trim() ? bot.id : null;
+        if (!id) return [];
+        return [{
+          id,
+          name: bot.name ?? 'Unnamed bot',
+          developer: bot.developerName ?? bot.ownerName ?? 'Unknown developer',
+          description: bot.description ?? '',
+          createdAt: bot.createdAt ?? bot.submittedAt ?? new Date().toISOString(),
+          status: (bot.status ?? 'pending') as BotStatus,
+        } satisfies BotQueueItem];
+      })
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
     const auditItems = ((Array.isArray(auditResponse) ? auditResponse : (auditResponse as any)?.items ?? []) as any[])
       .map((item, index) => ({
         id: item.id ?? `audit-${index}`,
@@ -296,6 +348,7 @@ export default function AdminModerationWorkspace() {
 
     setReports(nextReports);
     setPendingBots(botItems.filter((bot) => bot.status === 'pending').length);
+    setPendingBotListings(botItems.filter((bot) => bot.status === 'pending').slice(0, 4));
     setAuditFeed(auditItems);
     setGuilds(guildOptions);
     setSelectedReportId((current) => {
@@ -319,6 +372,43 @@ export default function AdminModerationWorkspace() {
       setRefreshing(false);
     }
   }, [addToast, hydrateQueue]);
+
+  const loadModQueue = useCallback(async () => {
+    if (!selectedGuildId) {
+      setModQueueItems([]);
+      setModQueueCounts({});
+      setModQueueError('');
+      return;
+    }
+
+    setModQueueLoading(true);
+    setModQueueError('');
+    try {
+      const response = await api.modQueue.list(selectedGuildId, modQueueStatusFilter);
+      const items = ((response as any)?.items ?? []) as any[];
+      const counts = (response as any)?.counts ?? {};
+      setModQueueItems(items.map((item) => ({
+        id: item.id,
+        guildId: item.guildId ?? selectedGuildId,
+        type: item.type ?? 'message',
+        targetId: item.targetId ?? null,
+        content: item.content ?? null,
+        reporterId: item.reporterId ?? null,
+        reporterUsername: item.reporterUsername ?? null,
+        status: (item.status ?? modQueueStatusFilter) as ModQueueStatus,
+        resolvedBy: item.resolvedBy ?? null,
+        resolvedAt: item.resolvedAt ?? null,
+        createdAt: item.createdAt ?? new Date().toISOString(),
+      })));
+      setModQueueCounts(counts);
+    } catch {
+      setModQueueItems([]);
+      setModQueueCounts({});
+      setModQueueError('Guild moderation queue is only visible for guilds you can manage.');
+    } finally {
+      setModQueueLoading(false);
+    }
+  }, [modQueueStatusFilter, selectedGuildId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -430,6 +520,10 @@ export default function AdminModerationWorkspace() {
   }, [appealFilter, selectedGuildId]);
 
   useEffect(() => {
+    void loadModQueue();
+  }, [loadModQueue]);
+
+  useEffect(() => {
     let cancelled = false;
     if (!selectedGuildId || !selectedReport?.subjectUserId) {
       setContextLoading(false);
@@ -483,9 +577,10 @@ export default function AdminModerationWorkspace() {
   const queueSummary = useMemo<QueueSummary>(() => ({
     openReports: reports.filter((report) => report.status === 'open').length,
     underReviewReports: reports.filter((report) => report.status === 'under_review').length,
+    pendingModQueue: modQueueCounts.pending ?? 0,
     pendingBots,
     visibleAppeals: appeals.filter((appeal) => appeal.appealStatus === 'pending').length,
-  }), [appeals, pendingBots, reports]);
+  }), [appeals, modQueueCounts.pending, pendingBots, reports]);
 
   const selectedAppeal = useMemo(() => {
     if (!selectedReport?.subjectUserId) return null;
@@ -503,6 +598,31 @@ export default function AdminModerationWorkspace() {
   }, [auditFeed, selectedGuildId]);
 
   const recentModerationFeed = useMemo(() => auditFeed.slice(0, 8), [auditFeed]);
+
+  const selectedGuildName = useMemo(
+    () => guilds.find((guild) => guild.id === selectedGuildId)?.name ?? 'Unknown guild',
+    [guilds, selectedGuildId],
+  );
+
+  const highlightedModQueueIds = useMemo(() => {
+    if (!selectedReport) return new Set<string>();
+    const candidateIds = new Set([
+      selectedReport.targetId,
+      selectedReport.subjectUserId ?? '',
+      selectedReport.reporterId,
+    ].filter(Boolean));
+    return new Set(
+      modQueueItems
+        .filter((item) => item.targetId && candidateIds.has(item.targetId))
+        .map((item) => item.id),
+    );
+  }, [modQueueItems, selectedReport]);
+
+  const displayedModQueueItems = useMemo(() => {
+    const relatedItems = modQueueItems.filter((item) => highlightedModQueueIds.has(item.id));
+    const remainingItems = modQueueItems.filter((item) => !highlightedModQueueIds.has(item.id));
+    return [...relatedItems, ...remainingItems].slice(0, 6);
+  }, [highlightedModQueueIds, modQueueItems]);
 
   const handleReportAction = useCallback(async (nextStatus: ReportStatus) => {
     if (!selectedReport) return;
@@ -547,6 +667,20 @@ export default function AdminModerationWorkspace() {
     }
   }, [addToast, refreshWorkspace, selectedGuildId]);
 
+  const handleModQueueResolve = useCallback(async (itemId: string, status: Extract<ModQueueStatus, 'approved' | 'rejected'>) => {
+    if (!selectedGuildId) return;
+    setModQueueResolvingId(itemId);
+    try {
+      await api.modQueue.resolve(selectedGuildId, itemId, status);
+      addToast({ title: `Queue item ${status}`, variant: status === 'approved' ? 'success' : 'info' });
+      await loadModQueue();
+    } catch {
+      addToast({ title: `Failed to mark queue item ${status}`, variant: 'error' });
+    } finally {
+      setModQueueResolvingId(null);
+    }
+  }, [addToast, loadModQueue, selectedGuildId]);
+
   const cards = useMemo(() => [
     {
       label: 'Open reports',
@@ -560,6 +694,13 @@ export default function AdminModerationWorkspace() {
       value: queueSummary.underReviewReports,
       description: 'Reports that already have a moderator actively working them.',
       icon: Clock3,
+      accent: 'var(--accent-blue)',
+    },
+    {
+      label: 'Guild queue',
+      value: queueSummary.pendingModQueue,
+      description: selectedGuildId ? 'Pending mod-queue escalations for the guild in focus.' : 'Pick a guild to inspect community queue items.',
+      icon: Shield,
       accent: 'var(--accent-blue)',
     },
     {
@@ -591,7 +732,7 @@ export default function AdminModerationWorkspace() {
               Unify the queue, the context, and the audit trail
             </h1>
             <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6, maxWidth: '760px' }}>
-              Start with the report queue, pull in guild-level moderator context, then close the case with an action history and appeal view that stays attached to the same workflow.
+              Start with the report queue, pull in guild-level moderator context, then close the case with audit history, appeals, mod-queue escalations, and adjacent bot review state in one place.
             </p>
           </div>
 
@@ -701,6 +842,28 @@ export default function AdminModerationWorkspace() {
                 </div>
               ))
             )}
+            <div style={{ display: 'grid', gap: '10px', paddingTop: '4px', borderTop: '1px solid var(--stroke)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Pending bot moderation</div>
+                <Link to="/admin/bot-moderation" style={{ color: 'var(--accent-primary)', fontSize: '12px', fontWeight: 700, textDecoration: 'none' }}>
+                  Open bot queue
+                </Link>
+              </div>
+              {pendingBotListings.length === 0 ? (
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No bot listings are waiting for review right now.</div>
+              ) : (
+                pendingBotListings.map((bot) => (
+                  <div key={bot.id} style={{ background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '12px', display: 'grid', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{bot.name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{formatRelative(bot.createdAt)}</div>
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>by {bot.developer}</div>
+                    {bot.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>{bot.description}</div>}
+                  </div>
+                ))
+              )}
+            </div>
             <Link to="/admin/audit" style={{ color: 'var(--accent-primary)', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
               Open the full audit log
             </Link>
@@ -1096,44 +1259,149 @@ export default function AdminModerationWorkspace() {
             )}
           </section>
 
-          <section id="appeals-and-history" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '18px', padding: '20px', display: 'grid', gap: '16px' }}>
+          <section id="appeals-and-history" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '18px', padding: '20px', display: 'grid', gap: '20px' }}>
             <div>
-              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>Appeals and action visibility</h2>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>Appeals, mod queue, and action visibility</h2>
               <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Keep the ban appeal queue and the last decisions next to the report flow instead of hidden in separate utilities.
+                Keep guild escalations and ban appeals beside the same report flow so moderators can finish the case without bouncing between tools.
               </p>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                {(['pending', 'all'] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setAppealFilter(filter)}
-                    style={{
-                      border: '1px solid',
-                      borderColor: appealFilter === filter ? 'var(--accent-primary)' : 'var(--stroke)',
-                      background: appealFilter === filter ? 'var(--accent-primary)' : 'transparent',
-                      color: appealFilter === filter ? '#fff' : 'var(--text-secondary)',
-                      borderRadius: '999px',
-                      padding: '6px 12px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {filter === 'pending' ? 'Pending only' : 'All visible'}
-                  </button>
-                ))}
+            <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: '16px', padding: '16px', display: 'grid', gap: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>Guild moderation queue</h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    Review community escalations for {selectedGuildId ? selectedGuildName : 'the selected guild'} and keep related items attached to the case in focus.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  {(['pending', 'approved', 'rejected'] as const).map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => setModQueueStatusFilter(status)}
+                      style={{
+                        border: '1px solid',
+                        borderColor: modQueueStatusFilter === status ? 'var(--accent-primary)' : 'var(--stroke)',
+                        background: modQueueStatusFilter === status ? 'var(--accent-primary)' : 'transparent',
+                        color: modQueueStatusFilter === status ? '#fff' : 'var(--text-secondary)',
+                        borderRadius: '999px',
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {MOD_QUEUE_STATUS_LABELS[status]} ({modQueueCounts[status] ?? 0})
+                    </button>
+                  ))}
+                </div>
               </div>
-              {selectedGuildId ? (
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Guild in focus: {guilds.find((guild) => guild.id === selectedGuildId)?.name ?? 'Unknown guild'}</div>
+
+              {!selectedGuildId ? (
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Pick a guild to inspect its moderation queue.</div>
+              ) : modQueueLoading ? (
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Loading mod queue…</div>
+              ) : modQueueError ? (
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6 }}>{modQueueError}</div>
+              ) : displayedModQueueItems.length === 0 ? (
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No {MOD_QUEUE_STATUS_LABELS[modQueueStatusFilter].toLowerCase()} mod-queue items are visible for this guild.</div>
               ) : (
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Pick a guild to inspect appeals.</div>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {displayedModQueueItems.map((item) => {
+                    const isRelated = highlightedModQueueIds.has(item.id);
+                    return (
+                      <div key={item.id} style={{ background: isRelated ? 'rgba(59,130,246,0.08)' : 'var(--bg-elevated)', border: isRelated ? '1px solid var(--accent-blue)' : '1px solid var(--stroke)', borderRadius: '16px', padding: '16px', display: 'grid', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', background: 'var(--bg-primary)', borderRadius: '999px', padding: '4px 10px' }}>
+                              {item.type.replace(/_/g, ' ')}
+                            </span>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: item.status === 'approved' ? 'var(--success)' : item.status === 'rejected' ? 'var(--error)' : 'var(--accent-blue)', background: item.status === 'approved' ? 'rgba(34,197,94,0.12)' : item.status === 'rejected' ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)', borderRadius: '999px', padding: '4px 10px' }}>
+                              {MOD_QUEUE_STATUS_LABELS[item.status]}
+                            </span>
+                            {isRelated && (
+                              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent-blue)', background: 'rgba(59,130,246,0.12)', borderRadius: '999px', padding: '4px 10px' }}>
+                                Related to selected report
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            {formatDateTime(item.resolvedAt ?? item.createdAt)}
+                          </div>
+                        </div>
+
+                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                          {item.content ?? 'No queue details were captured for this escalation.'}
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'grid', gap: '4px' }}>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                              Reporter {item.reporterUsername ? `@${item.reporterUsername}` : 'unknown'}
+                              {item.targetId ? ` · Target ${item.targetId}` : ''}
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                              {item.resolvedAt ? `Resolved ${formatRelative(item.resolvedAt)}` : `Queued ${formatRelative(item.createdAt)}`}
+                            </div>
+                          </div>
+                          {item.status === 'pending' && (
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                              <button
+                                onClick={() => void handleModQueueResolve(item.id, 'approved')}
+                                disabled={modQueueResolvingId === item.id}
+                                style={{ border: '1px solid var(--success)', background: 'transparent', color: 'var(--success)', borderRadius: '12px', padding: '8px 12px', fontSize: '12px', fontWeight: 700, cursor: modQueueResolvingId === item.id ? 'not-allowed' : 'pointer', opacity: modQueueResolvingId === item.id ? 0.55 : 1, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                              >
+                                <CheckCircle2 size={14} />
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => void handleModQueueResolve(item.id, 'rejected')}
+                                disabled={modQueueResolvingId === item.id}
+                                style={{ border: '1px solid var(--error)', background: 'transparent', color: 'var(--error)', borderRadius: '12px', padding: '8px 12px', fontSize: '12px', fontWeight: 700, cursor: modQueueResolvingId === item.id ? 'not-allowed' : 'pointer', opacity: modQueueResolvingId === item.id ? 0.55 : 1, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                              >
+                                <XCircle size={14} />
+                                Reject
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
 
             <div style={{ display: 'grid', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>Ban appeals</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  {(['pending', 'all'] as const).map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setAppealFilter(filter)}
+                      style={{
+                        border: '1px solid',
+                        borderColor: appealFilter === filter ? 'var(--accent-primary)' : 'var(--stroke)',
+                        background: appealFilter === filter ? 'var(--accent-primary)' : 'transparent',
+                        color: appealFilter === filter ? '#fff' : 'var(--text-secondary)',
+                        borderRadius: '999px',
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {filter === 'pending' ? 'Pending only' : 'All visible'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                {selectedGuildId ? `Guild in focus: ${selectedGuildName}` : 'Pick a guild to inspect appeals.'}
+              </div>
+
               {appealsLoading ? (
                 <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Loading appeals…</div>
               ) : appealError ? (
