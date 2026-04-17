@@ -331,8 +331,11 @@ export interface Notification {
   senderName: string | null;
   channelId: string | null;
   guildId: string | null;
+  guildName?: string | null;
+  messageId?: string | null;
   content: string;
   preview: string | null;
+  trustSummary?: string | null;
   read: boolean;
   createdAt: string;
 }

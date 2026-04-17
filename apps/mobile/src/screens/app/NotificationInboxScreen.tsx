@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-import { notifications as notifApi } from '../../lib/api';
+import { channels as channelsApi, notifications as notifApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme, useGlass } from '../../lib/theme';
 import { formatRelativeTime } from '../../lib/formatters';
@@ -292,6 +292,25 @@ export default function NotificationInboxScreen({ navigation }: Props) {
       marginTop: 2,
       fontStyle: 'italic',
     },
+    contextRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.xs,
+      marginTop: spacing.sm,
+    },
+    contextPill: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 4,
+      borderRadius: borderRadius.full,
+      backgroundColor: glassExtras ? 'rgba(255,255,255,0.12)' : colors.bgElevated,
+      borderWidth: 1,
+      borderColor: glassExtras ? 'rgba(255,255,255,0.2)' : colors.border,
+    },
+    contextPillText: {
+      color: glassExtras ? colors.textPrimary : colors.textSecondary,
+      fontSize: fontSize.xs,
+      fontWeight: '600',
+    },
     unreadDot: {
       width: 10,
       height: 10,
@@ -388,9 +407,18 @@ export default function NotificationInboxScreen({ navigation }: Props) {
 
     if (item.channelId) {
       if (item.guildId) {
+        let channelName = 'Channel';
+        try {
+          const channel = await channelsApi.get(item.channelId);
+          if (channel?.name) {
+            channelName = channel.name;
+          }
+        } catch {
+          // Keep generic fallback if the channel lookup fails.
+        }
         navigation.navigate('ChannelChat', {
           channelId: item.channelId,
-          channelName: 'Channel',
+          channelName,
           guildId: item.guildId,
         });
         return;
@@ -411,7 +439,7 @@ export default function NotificationInboxScreen({ navigation }: Props) {
     if (item.guildId) {
       navigation.navigate('GuildChannels', {
         guildId: item.guildId,
-        guildName: 'Portal',
+        guildName: item.guildName || 'Portal',
       });
     }
   };
@@ -487,6 +515,20 @@ export default function NotificationInboxScreen({ navigation }: Props) {
               <Text style={styles.notifPreview} numberOfLines={1}>
                 {item.preview}
               </Text>
+            )}
+            {(item.guildName || item.trustSummary) && (
+              <View style={styles.contextRow}>
+                {item.guildName ? (
+                  <View style={styles.contextPill}>
+                    <Text style={styles.contextPillText}>{item.guildName}</Text>
+                  </View>
+                ) : null}
+                {item.trustSummary ? (
+                  <View style={styles.contextPill}>
+                    <Text style={styles.contextPillText}>{item.trustSummary}</Text>
+                  </View>
+                ) : null}
+              </View>
             )}
           </View>
           {!item.read && <View style={styles.unreadDot} />}

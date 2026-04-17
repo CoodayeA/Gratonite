@@ -675,12 +675,14 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
           encryptedContent,
           isEncrypted: true,
           attachmentIds: [uploadRes.id],
+          ...(replyingTo ? { replyToId: replyingTo.id } : {}),
           ...(gk != null ? { keyVersion: gk.version } : {}),
         });
         setMessageList((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;
           return [...prev, msg];
         });
+        setReplyingTo(null);
         setDecryptedMessages((prev) => new Map(prev).set(msg.id, ''));
         setAttachmentUriOverrides((prev) => {
           const next = new Map(prev);
@@ -697,11 +699,16 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
           type: mimeType,
         } as any);
         const uploadRes = await filesApi.upload(formData);
-        const msg = await messagesApi.send(channelId, uploadRes.url);
+        const msg = await messagesApi.send(channelId, {
+          content: null,
+          attachmentIds: [uploadRes.id],
+          ...(replyingTo ? { replyToId: replyingTo.id } : {}),
+        });
         setMessageList((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;
           return [...prev, msg];
         });
+        setReplyingTo(null);
       }
       mediumImpact();
       playSound('messageSend');

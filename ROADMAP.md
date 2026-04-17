@@ -25,6 +25,7 @@ Gratonite has a live production deployment and self-hosting stack with **140** d
 - **Saved searches + search page entry** — persisted named queries on `GlobalSearch`; sidebar opens `/guild/:guildId/search`
 - **Mobile quiet hours** — same JSON as web in notification settings
 - **Public API docs** — `docs/api/openapi.yaml` + `docs/api/WEBHOOK-EVENTS.md`
+- **Mobile parity audit (core member flows)** — mobile now sends chat/DM media on the canonical attachment contract, global search matches the canonical search response with quick `has:` / mentions filters, and the notification inbox shows guild trust context with accurate channel naming on open
 - **Quality & stability (April 2026)** — Call and screen-share error mapping, LiveKit + native fallback behavior (no false success on cancel), throttled voice join/leave toasts, guild overview loading skeleton and global search “before you search” empty state, API/socket/federation hardening (payload limits, LiveKit token TTL helper, hostname checks), desktop main-process test coverage and safer `second-instance` handling; `docs/SECURITY-AUDIT.md`, `docs/QUALITY-CHECKLIST.md`, What’s New `2026-04-03d`
 - **Search UX polish** — empty/loading states, active-filter chips, `has:` type badges in `GlobalSearch`
 - **Service worker / precache** — invalid-URL guard in `sw.js` registration, precache manifest validated

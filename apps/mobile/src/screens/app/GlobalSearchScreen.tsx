@@ -3,6 +3,7 @@ import {
   View,
   Text,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
@@ -21,6 +22,14 @@ import type { AppStackParamList } from '../../navigation/types';
 import PatternBackground from '../../components/PatternBackground';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'GlobalSearch'>;
+type SearchHasFilter = 'file' | 'image' | 'embed' | 'link';
+
+const QUICK_FILTERS: Array<{ value: SearchHasFilter; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
+  { value: 'image', label: 'Images', icon: 'image-outline' },
+  { value: 'file', label: 'Files', icon: 'attach-outline' },
+  { value: 'link', label: 'Links', icon: 'link-outline' },
+  { value: 'embed', label: 'Embeds', icon: 'albums-outline' },
+];
 
 export default function GlobalSearchScreen({ navigation }: Props) {
   const { colors, spacing, fontSize, borderRadius, neo } = useTheme();
@@ -31,15 +40,15 @@ export default function GlobalSearchScreen({ navigation }: Props) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  const [selectedHas, setSelectedHas] = useState<SearchHasFilter | null>(null);
+  const [mentionsMeOnly, setMentionsMeOnly] = useState(false);
   const PAGE_SIZE = 25;
 
-  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
 
   useEffect(() => {
     return () => {
       mountedRef.current = false;
-      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, []);
 
@@ -54,7 +63,12 @@ export default function GlobalSearchScreen({ navigation }: Props) {
     setLoading(true);
     setHasSearched(true);
     try {
-      const data = await searchApi.messages({ q: q.trim(), limit: PAGE_SIZE });
+      const data = await searchApi.messages({
+        q: q.trim(),
+        has: selectedHas ?? undefined,
+        mentionsMe: mentionsMeOnly,
+        limit: PAGE_SIZE,
+      });
       if (!mountedRef.current) return;
       setResults(data);
       setHasMore(data.length >= PAGE_SIZE);
@@ -65,13 +79,26 @@ export default function GlobalSearchScreen({ navigation }: Props) {
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, []);
+  }, [mentionsMeOnly, selectedHas, toast]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      performSearch(query);
+    }, 350);
+    return () => clearTimeout(timeout);
+  }, [performSearch, query]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore || !query.trim()) return;
     setLoadingMore(true);
     try {
-      const data = await searchApi.messages({ q: query.trim(), limit: PAGE_SIZE, offset: results.length });
+      const data = await searchApi.messages({
+        q: query.trim(),
+        has: selectedHas ?? undefined,
+        mentionsMe: mentionsMeOnly,
+        limit: PAGE_SIZE,
+        offset: results.length,
+      });
       if (!mountedRef.current) return;
       setResults((prev) => {
         const existingIds = new Set(prev.map((r) => r.id));
@@ -86,12 +113,10 @@ export default function GlobalSearchScreen({ navigation }: Props) {
     } finally {
       if (mountedRef.current) setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, query, results.length]);
+  }, [hasMore, loadingMore, mentionsMeOnly, query, results.length, selectedHas, toast]);
 
   const handleQueryChange = (text: string) => {
     setQuery(text);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => performSearch(text.trim()), 500);
   };
 
   const handleResultPress = (item: SearchResult) => {
@@ -191,6 +216,34 @@ export default function GlobalSearchScreen({ navigation }: Props) {
       textAlign: 'center',
       paddingHorizontal: spacing.xxxl,
     },
+    filterRow: {
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.sm,
+      gap: spacing.sm,
+    },
+    filterChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.full,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.bgSecondary,
+    },
+    filterChipActive: {
+      borderColor: colors.accentPrimary,
+      backgroundColor: colors.accentPrimary + '16',
+    },
+    filterChipText: {
+      color: colors.textSecondary,
+      fontSize: fontSize.sm,
+      fontWeight: '600',
+    },
+    filterChipTextActive: {
+      color: colors.accentPrimary,
+    },
   }), [colors, spacing, fontSize, borderRadius, neo]);
 
   const renderResult = ({ item }: { item: SearchResult }) => {
@@ -241,6 +294,44 @@ export default function GlobalSearchScreen({ navigation }: Props) {
         placeholder="Search messages..."
         autoFocus
       />
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+      >
+        {QUICK_FILTERS.map((filter) => {
+          const active = selectedHas === filter.value;
+          return (
+            <TouchableOpacity
+              key={filter.value}
+              style={[styles.filterChip, active && styles.filterChipActive]}
+              onPress={() => setSelectedHas((current) => current === filter.value ? null : filter.value)}
+            >
+              <Ionicons
+                name={filter.icon}
+                size={16}
+                color={active ? colors.accentPrimary : colors.textSecondary}
+              />
+              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                {filter.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+        <TouchableOpacity
+          style={[styles.filterChip, mentionsMeOnly && styles.filterChipActive]}
+          onPress={() => setMentionsMeOnly((current) => !current)}
+        >
+          <Ionicons
+            name="at-outline"
+            size={16}
+            color={mentionsMeOnly ? colors.accentPrimary : colors.textSecondary}
+          />
+          <Text style={[styles.filterChipText, mentionsMeOnly && styles.filterChipTextActive]}>
+            Mentions Me
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
 
       {loading ? (
         <ActivityIndicator
@@ -269,7 +360,7 @@ export default function GlobalSearchScreen({ navigation }: Props) {
                 <Ionicons name="search-outline" size={48} color={colors.textMuted} />
                 <Text style={styles.hintTitle}>Search messages</Text>
                 <Text style={styles.hintSubtitle}>
-                  Find messages across all your portals and DMs
+                  Find messages across all your portals and DMs. Add quick filters for files, links, or mentions when you need to narrow things down.
                 </Text>
               </View>
             )

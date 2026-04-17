@@ -18,6 +18,10 @@ Execution-focused tracker for initiatives that span **search, notifications, fed
 
 ---
 
+**Cross-cutting completion:** ✅ **Mobile parity audit (core member flows)** — chat / DM media uploads now use canonical attachment IDs, mobile search consumes the canonical search response with quick `has:` + mentions filters, and the notification inbox surfaces guild trust context plus accurate channel naming when opening a hit. Forum browse/create/reply, voice basics, and settings basics were re-audited against the current backend contracts with no new blocking gaps.
+
+---
+
 ## 1. Search & discovery
 
 | Initiative | Status | Where |

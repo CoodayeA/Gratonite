@@ -1003,13 +1003,34 @@ export const invites = {
 // ---------------------------------------------------------------------------
 
 export const search = {
-  messages(params: { q: string; channelId?: string; authorId?: string; limit?: number; offset?: number }) {
-    const parts: string[] = [`q=${encodeURIComponent(params.q)}`];
-    if (params.channelId) parts.push(`channelId=${params.channelId}`);
-    if (params.authorId) parts.push(`authorId=${params.authorId}`);
-    if (params.limit) parts.push(`limit=${params.limit}`);
-    if (params.offset !== undefined) parts.push(`offset=${params.offset}`);
-    return apiFetch<SearchResult[]>(`/search/messages?${parts.join('&')}`);
+  async messages(params: {
+    q: string;
+    guildId?: string;
+    channelId?: string;
+    authorId?: string;
+    before?: string;
+    after?: string;
+    has?: 'file' | 'image' | 'embed' | 'link';
+    mentionsMe?: boolean;
+    limit?: number;
+    offset?: number;
+  }) {
+    const query = new URLSearchParams();
+    query.set('query', params.q);
+    if (params.guildId) query.set('guildId', params.guildId);
+    if (params.channelId) query.set('channelId', params.channelId);
+    if (params.authorId) query.set('authorId', params.authorId);
+    if (params.before) query.set('before', params.before);
+    if (params.after) query.set('after', params.after);
+    if (params.has) query.set('has', params.has);
+    if (params.mentionsMe) query.set('mentionsMe', 'true');
+    if (params.limit) query.set('limit', String(params.limit));
+    if (params.offset !== undefined) query.set('offset', String(params.offset));
+
+    const response = await apiFetch<
+      SearchResult[] | { results?: SearchResult[] }
+    >(`/search/messages?${query.toString()}`);
+    return Array.isArray(response) ? response : response.results ?? [];
   },
 };
 

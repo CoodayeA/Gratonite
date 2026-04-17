@@ -20,7 +20,7 @@ jest.mock('expo-secure-store', () => ({
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
-import { forum, messages, setTokens, getAccessToken, loadTokens } from '../src/lib/api';
+import { forum, messages, search, setTokens, getAccessToken, loadTokens } from '../src/lib/api';
 
 beforeEach(async () => {
   jest.clearAllMocks();
@@ -320,5 +320,56 @@ describe('Forum API', () => {
       content: 'Updated reply',
       attachments: [expect.objectContaining({ id: 'file-9' })],
     }));
+  });
+});
+
+describe('Search API', () => {
+  function mockJsonResponse(body: unknown) {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: { get: jest.fn() },
+      json: jest.fn().mockResolvedValue(body),
+    });
+  }
+
+  it('unwraps canonical search responses and forwards mobile parity filters', async () => {
+    mockJsonResponse({
+      results: [
+        {
+          id: 'msg-1',
+          channelId: 'channel-1',
+          channelName: 'general',
+          guildId: 'guild-1',
+          guildName: 'Builders',
+          content: 'Attachment search hit',
+          createdAt: '2026-04-17T12:00:00.000Z',
+          author: { id: 'user-1', username: 'ada', displayName: 'Ada', avatarHash: null },
+        },
+      ],
+      total: 1,
+      limit: 25,
+      offset: 0,
+    });
+
+    const results = await search.messages({
+      q: 'attachment',
+      has: 'image',
+      mentionsMe: true,
+      limit: 25,
+      offset: 0,
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.gratonite.chat/api/v1/search/messages?query=attachment&has=image&mentionsMe=true&limit=25&offset=0',
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+    expect(results).toEqual([
+      expect.objectContaining({
+        id: 'msg-1',
+        guildName: 'Builders',
+        channelName: 'general',
+      }),
+    ]);
   });
 });
