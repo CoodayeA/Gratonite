@@ -46,6 +46,7 @@ const Home = () => {
     const isMobile = useIsMobile();
     const [joiningLounge, setJoiningLounge] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const hasGuilds = guilds.length > 0;
 
     const handleJoinLounge = async () => {
         if (joiningLounge) return;
@@ -179,11 +180,68 @@ const Home = () => {
                                 description="Try a different search term to find your server."
                             />
                         ) : (
-                            <EmptyState
-                                type="server"
-                                title="No servers yet"
-                                description="Create your own server or join an existing one to get started!"
-                            />
+                            <div style={{
+                                padding: '20px',
+                                background: 'var(--bg-secondary)',
+                                borderRadius: '12px',
+                                border: '1px solid var(--stroke)',
+                                display: 'grid',
+                                gap: '12px',
+                            }}>
+                                <EmptyState
+                                    type="server"
+                                    title="Choose your first move"
+                                    description="Create your own community, join the Gratonite Lounge, or explore public spaces to see how Gratonite feels in action."
+                                />
+                                <div style={{ display: 'grid', gap: '8px' }}>
+                                    <button
+                                        onClick={() => setActiveModal('createGuild')}
+                                        style={{
+                                            width: '100%',
+                                            minHeight: '44px',
+                                            borderRadius: '10px',
+                                            border: 'none',
+                                            background: 'var(--accent-primary)',
+                                            color: '#111',
+                                            fontWeight: 700,
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        Create your community
+                                    </button>
+                                    <button
+                                        onClick={handleJoinLounge}
+                                        disabled={joiningLounge}
+                                        style={{
+                                            width: '100%',
+                                            minHeight: '44px',
+                                            borderRadius: '10px',
+                                            border: '1px solid var(--stroke)',
+                                            background: 'var(--bg-tertiary)',
+                                            color: 'var(--text-primary)',
+                                            fontWeight: 600,
+                                            cursor: joiningLounge ? 'wait' : 'pointer',
+                                        }}
+                                    >
+                                        {joiningLounge ? 'Joining Gratonite Lounge...' : 'Join Gratonite Lounge'}
+                                    </button>
+                                    <button
+                                        onClick={() => navigate('/discover')}
+                                        style={{
+                                            width: '100%',
+                                            minHeight: '44px',
+                                            borderRadius: '10px',
+                                            border: '1px solid var(--stroke)',
+                                            background: 'transparent',
+                                            color: 'var(--text-secondary)',
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        Explore public communities
+                                    </button>
+                                </div>
+                            </div>
                         )
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -256,6 +314,85 @@ const Home = () => {
 
                 <h1 style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: '8px', letterSpacing: '-0.02em' }}>Gratonite</h1>
                 <p style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '32px' }}>{getGreeting()}, {displayName}. What would you like to do?</p>
+
+                {!hasGuilds && (
+                    <div style={{
+                        width: '100%',
+                        marginBottom: '24px',
+                        padding: '20px',
+                        background: 'linear-gradient(135deg, rgba(88,101,242,0.12), rgba(88,101,242,0.04))',
+                        border: '1px solid rgba(88,101,242,0.2)',
+                        borderRadius: '20px',
+                        display: 'grid',
+                        gap: '16px',
+                    }}>
+                        <div>
+                            <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: '8px' }}>
+                                First session
+                            </div>
+                            <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Three easy ways to get started</h2>
+                            <p style={{ margin: '8px 0 0', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                                Pick the path that fits you best: make a space of your own, join the Gratonite Lounge, or browse public communities before you commit.
+                            </p>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '12px' }}>
+                            {[
+                                {
+                                    title: 'Create a community',
+                                    body: 'Start with a template, then add channels, roles, and invites.',
+                                    icon: <Plus size={18} />,
+                                    action: () => setActiveModal('createGuild'),
+                                },
+                                {
+                                    title: 'Join the Lounge',
+                                    body: 'See a real Gratonite space in action and meet people already here.',
+                                    icon: <MessageSquare size={18} />,
+                                    action: handleJoinLounge,
+                                },
+                                {
+                                    title: 'Explore public spaces',
+                                    body: 'Browse communities first if you want to get your bearings before joining.',
+                                    icon: <Compass size={18} />,
+                                    action: () => navigate('/discover'),
+                                },
+                            ].map((item) => (
+                                <button
+                                    key={item.title}
+                                    onClick={item.action}
+                                    disabled={item.title === 'Join the Lounge' && joiningLounge}
+                                    style={{
+                                        textAlign: 'left',
+                                        padding: '16px',
+                                        borderRadius: '16px',
+                                        border: '1px solid var(--stroke)',
+                                        background: 'var(--bg-elevated)',
+                                        color: 'var(--text-primary)',
+                                        cursor: item.title === 'Join the Lounge' && joiningLounge ? 'wait' : 'pointer',
+                                        display: 'grid',
+                                        gap: '10px',
+                                    }}
+                                >
+                                    <div style={{
+                                        width: '36px',
+                                        height: '36px',
+                                        borderRadius: '12px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: 'rgba(88,101,242,0.12)',
+                                        color: 'var(--accent-primary)',
+                                    }}>
+                                        {item.icon}
+                                    </div>
+                                    <div style={{ fontWeight: 700 }}>{item.title}</div>
+                                    <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                                        {item.title === 'Join the Lounge' && joiningLounge ? 'Joining lounge...' : item.body}
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Stories Bar */}
                 <div style={{ width: '100%', marginBottom: '16px' }}>

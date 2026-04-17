@@ -159,6 +159,14 @@ const GuildOverview = () => {
 
     const textChannels = channels.filter(c => c.type !== 'category' && c.type !== 'GUILD_CATEGORY' && c.type !== 'voice' && c.type !== 'GUILD_VOICE' && c.type !== 'stage' && c.type !== 'GUILD_STAGE_VOICE');
     const voiceChannels = channels.filter(c => c.type === 'voice' || c.type === 'GUILD_VOICE' || c.type === 'stage' || c.type === 'GUILD_STAGE_VOICE');
+    const isOwner = guild?.ownerId === currentUser.id;
+    const setupChecklist = [
+        { id: 'identity', label: 'Add an icon and description so people know what this portal is for.', done: Boolean(guild?.iconHash && guild?.description) },
+        { id: 'text', label: 'Create at least one text channel for conversation.', done: textChannels.length > 0 },
+        { id: 'voice', label: 'Create at least one voice channel for drop-ins.', done: voiceChannels.length > 0 },
+        { id: 'invite', label: 'Invite your first people so the space stops feeling empty.', done: (guild?.memberCount ?? 0) > 1 },
+    ];
+    const completedSetupCount = setupChecklist.filter((item) => item.done).length;
 
     const guildName = guild?.name || 'Loading...';
     const guildInitial = guildName.charAt(0).toUpperCase();
@@ -259,7 +267,11 @@ const GuildOverview = () => {
                 {/* Left Column: Channels */}
                 <div>
                     <h1 style={{ fontSize: '32px', fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: '8px', letterSpacing: '-0.5px' }}>Welcome to {guildName}</h1>
-                    <p style={{ fontSize: '15px', color: 'var(--text-muted)', marginBottom: '40px' }}>Select a channel below to jump into the conversation.</p>
+                    <p style={{ fontSize: '15px', color: 'var(--text-muted)', marginBottom: '40px' }}>
+                        {isOwner && textChannels.length === 0 && voiceChannels.length === 0
+                            ? 'This portal is still in setup mode. Knock out the basics below, then invite people in.'
+                            : 'Select a channel below to jump into the conversation.'}
+                    </p>
 
                     {/* Text Channels Grid */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
@@ -267,7 +279,31 @@ const GuildOverview = () => {
                     </div>
                     <div className="channels-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', marginBottom: '40px' }}>
                         {textChannels.length === 0 && (
-                            <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '13px' }}>No text channels yet</div>
+                            <div style={{
+                                padding: '20px',
+                                border: '1px dashed var(--stroke)',
+                                borderRadius: '16px',
+                                background: 'var(--bg-elevated)',
+                                display: 'grid',
+                                gap: '12px',
+                            }}>
+                                <div style={{ fontWeight: 700 }}>No text channels yet</div>
+                                <div style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.5 }}>
+                                    {isOwner
+                                        ? 'Start with one chat channel for everyday conversation, plus a forum if you want longer threads.'
+                                        : 'The owner has not added a text channel yet.'}
+                                </div>
+                                {isOwner && (
+                                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                        <button className="auth-button" onClick={() => setActiveModal('guildSettings')} style={{ margin: 0, padding: '10px 14px', background: 'var(--accent-primary)', color: '#000', border: '3px solid #000', fontWeight: 800 }}>
+                                            Open Portal Settings
+                                        </button>
+                                        <button className="auth-button" onClick={() => setActiveModal('invite')} style={{ margin: 0, padding: '10px 14px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800 }}>
+                                            Invite your first people
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         )}
                         {textChannels.map(ch => (
                             <Link key={ch.id} to={`/guild/${guildId}/channel/${ch.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -287,7 +323,26 @@ const GuildOverview = () => {
                     </div>
                     <div className="channels-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
                         {voiceChannels.length === 0 && (
-                            <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '13px' }}>No voice channels yet</div>
+                            <div style={{
+                                padding: '20px',
+                                border: '1px dashed var(--stroke)',
+                                borderRadius: '16px',
+                                background: 'var(--bg-elevated)',
+                                display: 'grid',
+                                gap: '12px',
+                            }}>
+                                <div style={{ fontWeight: 700 }}>No voice channels yet</div>
+                                <div style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.5 }}>
+                                    {isOwner
+                                        ? 'Add a voice room for quick calls, hangouts, or events once people start arriving.'
+                                        : 'Voice spaces have not been set up here yet.'}
+                                </div>
+                                {isOwner && (
+                                    <button className="auth-button" onClick={() => setActiveModal('guildSettings')} style={{ margin: 0, padding: '10px 14px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800, width: 'fit-content' }}>
+                                        Open Portal Settings
+                                    </button>
+                                )}
+                            </div>
                         )}
                         {voiceChannels.map(ch => {
                             const participantCount = voiceParticipants[ch.id] || 0;
@@ -375,7 +430,7 @@ const GuildOverview = () => {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <button className="auth-button" onClick={() => setActiveModal('invite')} style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--accent-primary)', color: '#000', border: '3px solid #000', fontWeight: 800 }}>Create Invite</button>
-                        {guild?.ownerId === currentUser.id ? (
+                        {isOwner ? (
                             <>
                                 <button className="auth-button" onClick={() => setActiveModal('guildSettings')} style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800 }}>Portal Settings</button>
                                 <Link to={`/guild/${guildId}/workflows`} style={{ textDecoration: 'none' }}>
@@ -393,6 +448,62 @@ const GuildOverview = () => {
                             <button className="auth-button" onClick={() => setActiveModal('memberOptions')} style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800 }}>Server Options</button>
                         )}
                     </div>
+
+                    {isOwner && (
+                        <div style={{
+                            marginTop: '24px',
+                            padding: '20px',
+                            borderRadius: '16px',
+                            background: 'var(--bg-tertiary)',
+                            border: '1px solid var(--stroke)',
+                            display: 'grid',
+                            gap: '14px',
+                        }}>
+                            <div>
+                                <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: '6px' }}>
+                                    Setup checklist
+                                </div>
+                                <div style={{ fontSize: '18px', fontWeight: 800 }}>Get this portal ready for people</div>
+                                <div style={{ marginTop: '6px', color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.5 }}>
+                                    {completedSetupCount}/{setupChecklist.length} basics done. Finish the essentials, then share an invite.
+                                </div>
+                            </div>
+                            <div style={{ display: 'grid', gap: '10px' }}>
+                                {setupChecklist.map((item) => (
+                                    <div key={item.id} style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: '10px',
+                                        padding: '10px 12px',
+                                        borderRadius: '12px',
+                                        background: 'var(--bg-elevated)',
+                                        border: '1px solid var(--stroke)',
+                                    }}>
+                                        <div style={{
+                                            width: '20px',
+                                            height: '20px',
+                                            borderRadius: '999px',
+                                            flexShrink: 0,
+                                            marginTop: '2px',
+                                            background: item.done ? 'var(--success)' : 'transparent',
+                                            border: item.done ? 'none' : '2px solid var(--stroke)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#000',
+                                            fontSize: '12px',
+                                            fontWeight: 900,
+                                        }}>
+                                            {item.done ? '✓' : ''}
+                                        </div>
+                                        <div style={{ color: item.done ? 'var(--text-primary)' : 'var(--text-secondary)', lineHeight: 1.5, fontSize: '14px' }}>
+                                            {item.label}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
             </div>

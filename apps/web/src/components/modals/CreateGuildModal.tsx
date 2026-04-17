@@ -351,7 +351,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
 
             addToast({
                 title: 'Portal Created!',
-                description: `Welcome to ${guildName}`,
+                description: `Welcome to ${guildName}. Next: check your channels, invite your people, and make the space yours.`,
                 variant: 'success'
             });
 
@@ -528,7 +528,11 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                                     setTemplateCreating(true);
                                     try {
                                         const guild = await api.guilds.createFromTemplate(templateCode.trim());
-                                        addToast({ title: 'Portal Created from Template!', variant: 'success' });
+                                        addToast({
+                                            title: 'Portal Created from Template!',
+                                            description: 'Give it a quick once-over, then invite your first people in.',
+                                            variant: 'success',
+                                        });
                                         onGuildCreated?.({ id: guild.id, name: guild.name, iconHash: guild.iconHash ?? null });
                                         onClose();
                                         navigate(`/guild/${guild.id}`);

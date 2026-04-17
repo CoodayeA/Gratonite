@@ -1006,6 +1006,38 @@ const Discover = () => {
                         Create a guild and make it public to see it here. If federation is enabled, guilds from other
                         Gratonite instances will appear once they sync — this can take up to 48 hours for new instances.
                     </p>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '18px' }}>
+                        <button
+                            onClick={() => navigate('/')}
+                            style={{
+                                height: '40px',
+                                padding: '0 16px',
+                                borderRadius: '10px',
+                                border: '1px solid var(--stroke)',
+                                background: 'var(--bg-tertiary)',
+                                color: 'var(--text-primary)',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            Go to Home
+                        </button>
+                        <button
+                            onClick={() => window.open('https://gratonite.chat/docs/self-hosting', '_blank')}
+                            style={{
+                                height: '40px',
+                                padding: '0 16px',
+                                borderRadius: '10px',
+                                border: 'none',
+                                background: 'var(--accent-primary)',
+                                color: '#111',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            Learn how to launch one
+                        </button>
+                    </div>
                 </div>
             )}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', marginBottom: '40px' }}>
