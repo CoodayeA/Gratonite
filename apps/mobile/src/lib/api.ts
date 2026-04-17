@@ -22,6 +22,7 @@ import type {
   InvitePreview,
   SearchResult,
   Thread,
+  Attachment,
   ScheduledEvent,
   Poll,
   WikiPage,
@@ -1670,10 +1671,25 @@ export const serverFolders = {
 // Forum
 // ---------------------------------------------------------------------------
 
+function normalizeAttachment(raw: any): Attachment {
+  return {
+    id: raw?.id ?? '',
+    messageId: raw?.messageId ?? '',
+    filename: raw?.filename ?? 'Attachment',
+    contentType: raw?.contentType ?? raw?.mimeType ?? 'application/octet-stream',
+    size: Number(raw?.size ?? 0),
+    url: raw?.url ?? '',
+    width: raw?.width ?? null,
+    height: raw?.height ?? null,
+  };
+}
+
 function normalizeForumPost(raw: any, fallbackChannelId?: string): ForumPost {
   const messageCount = Number(raw?.messageCount ?? raw?.replyCount ?? 0);
   const hasCanonicalMessageCount = raw?.messageCount !== undefined;
   const tags = raw?.tags ?? raw?.forumTagIds ?? [];
+  const attachments = Array.isArray(raw?.attachments) ? raw.attachments.map((item: any) => normalizeAttachment(item)) : [];
+  const opAttachment = raw?.opAttachment ? normalizeAttachment(raw.opAttachment) : attachments[0] ?? null;
   return {
     id: raw?.id ?? '',
     channelId: raw?.channelId ?? fallbackChannelId ?? '',
@@ -1687,6 +1703,8 @@ function normalizeForumPost(raw: any, fallbackChannelId?: string): ForumPost {
     replyCount: hasCanonicalMessageCount ? Math.max(0, messageCount - 1) : messageCount,
     createdAt: raw?.createdAt ?? new Date().toISOString(),
     lastReplyAt: raw?.lastReplyAt ?? raw?.lastActivity ?? raw?.lastMessageAt ?? null,
+    attachments,
+    opAttachment,
   };
 }
 
@@ -1740,6 +1758,7 @@ export const forum = {
     return normalizeForumPost({
       ...thread,
       content: op?.content ?? '',
+      attachments: op?.attachments ?? [],
       messageCount: messages.length,
     });
   },

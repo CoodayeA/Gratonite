@@ -1,13 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { eq, desc } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '../db/index';
 import { threads, threadMembers } from '../db/schema/threads';
 import { messages } from '../db/schema/messages';
 import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
-import { createForumThread, listForumThreads } from '../services/thread.service';
+import { createForumThread, getThreadMessages, listForumThreads } from '../services/thread.service';
 import { ServiceError } from '../services/message.service';
 
 export const threadsRouter = Router({ mergeParams: true });
@@ -91,39 +91,7 @@ threadsRouter.get('/:threadId', requireAuth, async (req: Request, res: Response)
 threadsRouter.get('/:threadId/messages', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { threadId } = req.params as Record<string, string>;
   const limit = Math.min(Number(req.query.limit) || 50, 100);
-
-  const rows = await db.select({
-    id: messages.id,
-    channelId: messages.channelId,
-    content: messages.content,
-    attachments: messages.attachments,
-    edited: messages.edited,
-    editedAt: messages.editedAt,
-    createdAt: messages.createdAt,
-    authorId: messages.authorId,
-    threadId: messages.threadId,
-    replyToId: messages.replyToId,
-    authorUsername: users.username,
-    authorDisplayName: users.displayName,
-    authorAvatarHash: users.avatarHash,
-  })
-    .from(messages)
-    .leftJoin(users, eq(users.id, messages.authorId))
-    .where(eq(messages.threadId, threadId))
-    .orderBy(desc(messages.createdAt))
-    .limit(limit);
-
-  res.json(rows.map(r => ({
-    id: r.id,
-    channelId: r.channelId,
-    authorId: r.authorId,
-    content: r.content,
-    attachments: r.attachments,
-    edited: r.edited,
-    editedAt: r.editedAt,
-    createdAt: r.createdAt,
-    threadId: r.threadId,
-    replyToId: r.replyToId,
-    author: r.authorId ? { id: r.authorId, username: r.authorUsername, displayName: r.authorDisplayName, avatarHash: r.authorAvatarHash } : null,
-  })));
+  const before = typeof req.query.before === 'string' ? req.query.before : undefined;
+  const rows = await getThreadMessages(threadId, { before, limit });
+  res.json(rows);
 });

@@ -56,6 +56,7 @@ export interface Channel {
   disappearTimer?: number | null;
   /** Guild text channel E2E — when true, message payloads use channel encryption keys (web parity). */
   isEncrypted?: boolean;
+  attachmentsEnabled?: boolean;
 }
 
 export interface GuildEmoji {
@@ -619,6 +620,8 @@ export interface ForumPost {
   replyCount: number;
   createdAt: string;
   lastReplyAt: string | null;
+  attachments?: Attachment[];
+  opAttachment?: Attachment | null;
 }
 
 // ---------------------------------------------------------------------------
