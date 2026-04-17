@@ -384,6 +384,12 @@ const Friends = () => {
         }
     };
 
+    const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+    const matchesFriendSearch = (username: string, displayName: string) =>
+        !normalizedSearchQuery ||
+        username.toLowerCase().includes(normalizedSearchQuery) ||
+        displayName.toLowerCase().includes(normalizedSearchQuery);
+
     const handleFriendRowClick = (friend: Friend, e: React.MouseEvent) => {
         // Don't trigger if clicking on action buttons
         const target = e.target as HTMLElement;
@@ -749,7 +755,7 @@ const Friends = () => {
                     )}
 
                     {activeTab === 'online' && (() => {
-                        const onlineFriends = friends.filter(f => f.status !== 'offline' && (f.username.includes(searchQuery) || f.displayName.includes(searchQuery)));
+                        const onlineFriends = friends.filter(f => f.status !== 'offline' && matchesFriendSearch(f.username, f.displayName));
                         return (
                             <div>
                                 <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px', borderBottom: '1px solid var(--stroke)', paddingBottom: '8px' }}>
@@ -759,12 +765,24 @@ const Friends = () => {
                                 {onlineFriends.length === 0 && (
                                     <EmptyState
                                         type="friends"
-                                        title="No friends online"
-                                        description="Your people are quiet right now. Send a new invite, or jump into a portal and make a few more connections."
-                                        actionLabel="Add Friend"
-                                        onAction={() => setActiveTab('add')}
-                                        secondaryActionLabel="Explore portals"
-                                        onSecondaryAction={() => navigate('/discover')}
+                                        title={
+                                            normalizedSearchQuery
+                                                ? `No friends match “${searchQuery.trim()}”`
+                                                : friends.length === 0
+                                                    ? 'Build your circle'
+                                                    : 'No one is online right now'
+                                        }
+                                        description={
+                                            normalizedSearchQuery
+                                                ? 'Try a different name or clear your search to see everyone in your circle.'
+                                                : friends.length === 0
+                                                    ? 'Add a friend by username, share your invite link, or meet people in public communities to get this list started.'
+                                                    : 'Your friends will show up here when they come online. Add a few more people if you want this list to stay lively.'
+                                        }
+                                        actionLabel={normalizedSearchQuery ? 'Clear search' : 'Add Friend'}
+                                        onAction={normalizedSearchQuery ? () => setSearchQuery('') : () => setActiveTab('add')}
+                                        secondaryActionLabel={!normalizedSearchQuery ? 'Explore portals' : undefined}
+                                        onSecondaryAction={!normalizedSearchQuery ? () => navigate('/discover') : undefined}
                                     />
                                 )}
                             </div>
@@ -772,7 +790,7 @@ const Friends = () => {
                     })()}
 
                     {activeTab === 'all' && (() => {
-                        const allFiltered = friends.filter(f => f.username.toLowerCase().includes(searchQuery.toLowerCase()) || f.displayName.toLowerCase().includes(searchQuery.toLowerCase()));
+                        const allFiltered = friends.filter(f => matchesFriendSearch(f.username, f.displayName));
                         const groupedFriendIds = new Set(friendGroups.flatMap(g => g.friendIds));
                         const ungroupedFriends = allFiltered.filter(f => !groupedFriendIds.has(f.id));
 
@@ -1032,7 +1050,7 @@ const Friends = () => {
                                                     <div style={{ textAlign: 'center' }}>
                                                         <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{s.display_name || s.username}</div>
                                                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                                                            {s.sharedServers > 0 && `${s.sharedServers} shared server${s.sharedServers > 1 ? 's' : ''}`}
+                                                            {s.sharedServers > 0 && `${s.sharedServers} shared communit${s.sharedServers > 1 ? 'ies' : 'y'}`}
                                                             {s.sharedServers > 0 && s.mutualFriends > 0 && ' · '}
                                                             {s.mutualFriends > 0 && `${s.mutualFriends} mutual friend${s.mutualFriends > 1 ? 's' : ''}`}
                                                         </div>
@@ -1064,12 +1082,16 @@ const Friends = () => {
                                 {allFiltered.length === 0 && (
                                     <EmptyState
                                         type="friends"
-                                        title="No friends yet"
-                                        description="Your friends list is still a blank page. Add someone you know or discover a portal where your next conversation can start."
-                                        actionLabel="Add Friend"
-                                        onAction={() => setActiveTab('add')}
-                                        secondaryActionLabel="Explore portals"
-                                        onSecondaryAction={() => navigate('/discover')}
+                                        title={normalizedSearchQuery ? `No friends match “${searchQuery.trim()}”` : 'No friends yet'}
+                                        description={
+                                            normalizedSearchQuery
+                                                ? 'Try a different name or clear your search to see the rest of your list.'
+                                                : 'Add people by username, share your invite link, or start with the suggestions above to build your circle.'
+                                        }
+                                        actionLabel={normalizedSearchQuery ? 'Clear search' : 'Add Friend'}
+                                        onAction={normalizedSearchQuery ? () => setSearchQuery('') : () => setActiveTab('add')}
+                                        secondaryActionLabel={!normalizedSearchQuery ? 'Explore portals' : undefined}
+                                        onSecondaryAction={!normalizedSearchQuery ? () => navigate('/discover') : undefined}
                                     />
                                 )}
                             </div>
@@ -1082,7 +1104,7 @@ const Friends = () => {
                                 Pending Requests — {requests.length}
                             </h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                {requests.filter(r => r.username.includes(searchQuery) || r.displayName.includes(searchQuery)).map(req => (
+                                {requests.filter(r => matchesFriendSearch(r.username, r.displayName)).map(req => (
                                     <div key={req.id} className="friend-row hover-bg-tertiary" style={{
                                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                         padding: '12px 16px', borderRadius: '8px', cursor: 'pointer',
@@ -1126,16 +1148,22 @@ const Friends = () => {
                                         </div>
                                     </div>
                                 ))}
+                                {requests.filter(r => matchesFriendSearch(r.username, r.displayName)).length === 0 && (
+                                    <EmptyState
+                                        type="friends"
+                                        title={normalizedSearchQuery ? `No requests match “${searchQuery.trim()}”` : 'No pending requests'}
+                                        description={
+                                            normalizedSearchQuery
+                                                ? 'Clear your search to review every incoming or outgoing request.'
+                                                : 'Nothing is waiting on you right now. Send a fresh invite or come back later for replies.'
+                                        }
+                                        actionLabel={normalizedSearchQuery ? 'Clear search' : 'Add Friend'}
+                                        onAction={normalizedSearchQuery ? () => setSearchQuery('') : () => setActiveTab('add')}
+                                        secondaryActionLabel={!normalizedSearchQuery ? 'Explore portals' : undefined}
+                                        onSecondaryAction={!normalizedSearchQuery ? () => navigate('/discover') : undefined}
+                                    />
+                                )}
                             </div>
-                            {requests.filter(r => r.username.includes(searchQuery) || r.displayName.includes(searchQuery)).length === 0 && (
-                                <EmptyState
-                                    type="friends"
-                                    title="No pending requests"
-                                    description="Nothing is waiting on you right now. Send a fresh invite or come back later for replies."
-                                    actionLabel="Add Friend"
-                                    onAction={() => setActiveTab('add')}
-                                />
-                            )}
                         </div>
                     )}
 
@@ -1201,12 +1229,16 @@ const Friends = () => {
                                 {friendsWithActivity.length === 0 && onlineNoActivity.length === 0 && (
                                     <EmptyState
                                         type="friends"
-                                        title="No friends are active right now"
-                                        description="When someone starts playing, listening, or watching, it will land here. Until then, invite a friend or check in on your pending requests."
-                                        actionLabel="Add Friend"
-                                        onAction={() => setActiveTab('add')}
-                                        secondaryActionLabel="View requests"
-                                        onSecondaryAction={() => setActiveTab('pending')}
+                                        title={friends.length === 0 ? 'Friend activity starts after you connect' : 'No friends are active right now'}
+                                        description={
+                                            friends.length === 0
+                                                ? 'Add a few people first, then their games, music, and other live activity will appear here automatically.'
+                                                : 'When your friends start an activity, it will show up here. Invite a few more people in if you want this feed to stay useful.'
+                                        }
+                                        actionLabel={friends.length === 0 ? 'Add Friend' : undefined}
+                                        onAction={friends.length === 0 ? () => setActiveTab('add') : undefined}
+                                        secondaryActionLabel={friends.length === 0 ? 'View requests' : 'Add Friend'}
+                                        onSecondaryAction={friends.length === 0 ? () => setActiveTab('pending') : () => setActiveTab('add')}
                                     />
                                 )}
                             </div>

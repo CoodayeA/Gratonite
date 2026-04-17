@@ -160,13 +160,48 @@ const GuildOverview = () => {
     const textChannels = channels.filter(c => c.type !== 'category' && c.type !== 'GUILD_CATEGORY' && c.type !== 'voice' && c.type !== 'GUILD_VOICE' && c.type !== 'stage' && c.type !== 'GUILD_STAGE_VOICE');
     const voiceChannels = channels.filter(c => c.type === 'voice' || c.type === 'GUILD_VOICE' || c.type === 'stage' || c.type === 'GUILD_STAGE_VOICE');
     const isOwner = guild?.ownerId === currentUser.id;
+    const openPortalSettings = () => setActiveModal('guildSettings');
     const setupChecklist = [
-        { id: 'identity', label: 'Add an icon and description so people know what this portal is for.', done: Boolean(guild?.iconHash && guild?.description) },
-        { id: 'text', label: 'Create at least one text channel for conversation.', done: textChannels.length > 0 },
-        { id: 'voice', label: 'Create at least one voice channel for drop-ins.', done: voiceChannels.length > 0 },
-        { id: 'invite', label: 'Invite your first people so the space stops feeling empty.', done: (guild?.memberCount ?? 0) > 1 },
+        {
+            id: 'identity',
+            label: 'Add an icon and description so people know what this portal is for.',
+            hint: 'A clear icon, short description, and welcome note do most of the work for first impressions.',
+            done: Boolean(guild?.iconHash && guild?.description),
+            actionLabel: 'Open settings',
+            onAction: openPortalSettings,
+        },
+        {
+            id: 'text',
+            label: 'Create at least one text channel for conversation.',
+            hint: 'Start with a simple chat channel and one forum or help space before you branch out.',
+            done: textChannels.length > 0,
+            actionLabel: 'Add channels',
+            onAction: openPortalSettings,
+        },
+        {
+            id: 'voice',
+            label: 'Create at least one voice channel for drop-ins.',
+            hint: 'One open hangout room is enough for launch. You can add events or stage rooms later.',
+            done: voiceChannels.length > 0,
+            actionLabel: 'Add voice room',
+            onAction: openPortalSettings,
+        },
+        {
+            id: 'invite',
+            label: 'Invite your first people so the space stops feeling empty.',
+            hint: 'Send invites only after the basics are ready so newcomers land somewhere that already feels welcoming.',
+            done: (guild?.memberCount ?? 0) > 1,
+            actionLabel: 'Create invite',
+            onAction: () => setActiveModal('invite'),
+        },
     ];
     const completedSetupCount = setupChecklist.filter((item) => item.done).length;
+    const nextSetupStep = setupChecklist.find((item) => !item.done);
+    const ownerLaunchTips = [
+        'Pin one welcome thread or forum prompt so the first visitors know exactly where to speak.',
+        'Keep your first launch small: a general chat, one help or topic channel, and one voice room is enough.',
+        'After a few people join, watch which channels stay quiet and archive the extras before the layout sprawls.',
+    ];
 
     const guildName = guild?.name || 'Loading...';
     const guildInitial = guildName.charAt(0).toUpperCase();
@@ -445,7 +480,7 @@ const GuildOverview = () => {
                                 </Link>
                             </>
                         ) : (
-                            <button className="auth-button" onClick={() => setActiveModal('memberOptions')} style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800 }}>Server Options</button>
+                            <button className="auth-button" onClick={() => setActiveModal('memberOptions')} style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800 }}>Community options</button>
                         )}
                     </div>
 
@@ -497,10 +532,62 @@ const GuildOverview = () => {
                                             {item.done ? '✓' : ''}
                                         </div>
                                         <div style={{ color: item.done ? 'var(--text-primary)' : 'var(--text-secondary)', lineHeight: 1.5, fontSize: '14px' }}>
-                                            {item.label}
+                                            <div>{item.label}</div>
+                                            {!item.done && (
+                                                <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--text-muted)' }}>{item.hint}</div>
+                                            )}
                                         </div>
+                                        {!item.done && (
+                                            <button
+                                                className="auth-button"
+                                                onClick={item.onAction}
+                                                style={{ margin: 0, marginLeft: 'auto', padding: '8px 10px', minWidth: 'fit-content', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '2px solid #000', fontWeight: 800, alignSelf: 'center' }}
+                                            >
+                                                {item.actionLabel}
+                                            </button>
+                                        )}
                                     </div>
                                 ))}
+                            </div>
+                            <div style={{ display: 'grid', gap: '10px' }}>
+                                <div style={{
+                                    padding: '14px 16px',
+                                    borderRadius: '12px',
+                                    border: '1px solid var(--stroke)',
+                                    background: 'var(--bg-elevated)',
+                                    display: 'grid',
+                                    gap: '6px',
+                                }}>
+                                    <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-primary)' }}>
+                                        Next best step
+                                    </div>
+                                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                                        {nextSetupStep ? nextSetupStep.label : 'Your launch basics are done.'}
+                                    </div>
+                                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                                        {nextSetupStep
+                                            ? nextSetupStep.hint
+                                            : 'Now focus on seeding a first conversation, checking your moderation settings, and inviting people in waves.'}
+                                    </div>
+                                </div>
+                                <div style={{
+                                    padding: '14px 16px',
+                                    borderRadius: '12px',
+                                    border: '1px solid var(--stroke)',
+                                    background: 'var(--bg-elevated)',
+                                    display: 'grid',
+                                    gap: '8px',
+                                }}>
+                                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Launch tips for admins</div>
+                                    <div style={{ display: 'grid', gap: '8px' }}>
+                                        {ownerLaunchTips.map((tip) => (
+                                            <div key={tip} style={{ display: 'flex', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                                                <span style={{ color: 'var(--accent-primary)', fontWeight: 900 }}>•</span>
+                                                <span>{tip}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

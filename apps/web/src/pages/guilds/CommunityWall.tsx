@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Plus, Heart } from 'lucide-react';
 
 interface WallPost {
@@ -13,10 +13,17 @@ interface WallPost {
   createdAt: string;
 }
 
-export default function CommunityWall({ guildId }: { guildId: string }) {
+export default function CommunityWall({ guildId: _guildId }: { guildId: string }) {
   const [posts, setPosts] = useState<WallPost[]>([]);
   const [newPost, setNewPost] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const openComposer = (seed = '') => {
+    setNewPost(seed);
+    setShowForm(true);
+    requestAnimationFrame(() => composerRef.current?.focus());
+  };
 
   const addPost = () => {
     if (!newPost.trim()) return;
@@ -39,7 +46,7 @@ export default function CommunityWall({ guildId }: { guildId: string }) {
     <div style={{ padding: 24, maxWidth: 800, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Community Wall</h2>
-        <button onClick={() => setShowForm(!showForm)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'var(--accent-primary)', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+        <button onClick={() => showForm ? setShowForm(false) : openComposer(newPost)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'var(--accent-primary)', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
           <Plus size={16} /> Post
         </button>
       </div>
@@ -47,6 +54,7 @@ export default function CommunityWall({ guildId }: { guildId: string }) {
       {showForm && (
         <div style={{ background: 'var(--bg-elevated)', borderRadius: 8, padding: 16, marginBottom: 16, border: '1px solid var(--border-primary)' }}>
           <textarea
+            ref={composerRef}
             value={newPost}
             onChange={e => setNewPost(e.target.value)}
             placeholder="Share something with the community..."
@@ -59,10 +67,51 @@ export default function CommunityWall({ guildId }: { guildId: string }) {
         </div>
       )}
 
-      {posts.length === 0 && (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-          <p style={{ fontSize: 16, marginBottom: 8 }}>No posts yet</p>
-          <p style={{ fontSize: 13 }}>Be the first to share something!</p>
+      {posts.length === 0 && !showForm && (
+        <div style={{
+          borderRadius: 16,
+          border: '1px solid var(--border-primary)',
+          background: 'var(--bg-elevated)',
+          padding: 24,
+          display: 'grid',
+          gap: 16,
+        }}>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+            <p style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)' }}>Start the first wall post</p>
+            <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0 }}>
+              Use the wall for quick updates, shout-outs, event reminders, or photo drops so newcomers instantly see this community is alive.
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+            {[
+              'Welcome everyone 👋',
+              'What are we planning this week?',
+              'Share a photo or highlight',
+            ].map((idea) => (
+              <button
+                key={idea}
+                onClick={() => openComposer(idea)}
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: 12,
+                  border: '1px solid var(--border-primary)',
+                  background: 'var(--bg-primary)',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                {idea}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <button onClick={() => openComposer()} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', background: 'var(--accent-primary)', color: 'white', border: 'none', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+              <Plus size={16} /> Write first post
+            </button>
+          </div>
         </div>
       )}
 

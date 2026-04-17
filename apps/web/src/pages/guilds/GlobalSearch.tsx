@@ -198,6 +198,12 @@ export default function GlobalSearch() {
     doSearchWithParams(query, filters, 0, false);
   }, [query, filters, doSearchWithParams]);
 
+  const clearFilters = useCallback(() => {
+    setFilters({});
+    setOffset(0);
+    setHasMore(false);
+  }, []);
+
   const loadMore = useCallback(() => {
     const nextOffset = offset + SEARCH_LIMIT;
     setOffset(nextOffset);
@@ -225,11 +231,23 @@ export default function GlobalSearch() {
     });
   };
 
+  const hasActiveFilters = Boolean(
+    filters.guildId ||
+    filters.channelId ||
+    filters.authorId ||
+    filters.has ||
+    filters.mentionsMe ||
+    filters.before ||
+    filters.after
+  );
+
   return (
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
       {/* Main content */}
       <div style={{ flex: 1, padding: 24, overflow: 'auto' }}>
-        <h2 style={{ color: 'var(--text-primary)', margin: '0 0 16px', fontSize: 20, fontWeight: 700 }}>Search Messages</h2>
+        <h2 style={{ color: 'var(--text-primary)', margin: '0 0 16px', fontSize: 20, fontWeight: 700 }}>
+          {routeGuildId ? 'Search this community' : 'Search messages'}
+        </h2>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           <div style={{ flex: 1, position: 'relative' }}>
@@ -323,6 +341,15 @@ export default function GlobalSearch() {
 
       {/* Filter chips */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+        {filters.guildId && (
+          <span style={{
+            padding: '4px 12px', borderRadius: 16, background: 'var(--accent-primary)', color: '#000',
+            fontSize: 12, display: 'flex', alignItems: 'center', gap: 4,
+          }}>
+            <Hash size={12} /> This community
+            <X size={12} style={{ cursor: 'pointer' }} onClick={() => setFilters(prev => { const n = { ...prev }; delete n.guildId; return n; })} />
+          </span>
+        )}
         <button
           onClick={() => toggleFilter('has', 'file')}
           style={{
@@ -373,6 +400,17 @@ export default function GlobalSearch() {
           }}
           title="After date"
         />
+        {hasActiveFilters && (
+          <button
+            onClick={clearFilters}
+            style={{
+              padding: '4px 10px', borderRadius: 16, border: '1px solid var(--stroke)',
+              background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer',
+            }}
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       {/* Skeleton loading rows */}
@@ -407,16 +445,26 @@ export default function GlobalSearch() {
       {!loading && !error && searched && results.length === 0 && (
         <EmptyState
           type="search"
-          title="No results found"
-          description="Try adjusting your search filters or using different keywords."
+          title={routeGuildId ? 'No messages matched in this community' : 'No messages matched your search'}
+          description={
+            hasActiveFilters
+              ? 'Try broader keywords or clear one of the filters above to widen the search.'
+              : 'Try a shorter phrase, a person’s name, or a channel topic to broaden the results.'
+          }
+          actionLabel={hasActiveFilters ? 'Clear filters' : undefined}
+          onAction={hasActiveFilters ? clearFilters : undefined}
         />
       )}
 
       {!loading && !error && !searched && (
         <EmptyState
           type="search"
-          title="Search Messages"
-          description="Enter a keyword above and press Enter to search across your messages. Use filters to narrow down results."
+          title={routeGuildId ? 'Search within this community' : 'Search across your communities'}
+          description={
+            routeGuildId
+              ? 'Look for people, phrases, or topics in this community. Use filters if you want to narrow things down further.'
+              : 'Enter at least two characters to search your messages across every community you have joined.'
+          }
         />
       )}
 
@@ -513,7 +561,7 @@ export default function GlobalSearch() {
               }}>
                 <Bookmark size={24} style={{ opacity: 0.5, marginBottom: 8 }} />
                 <div>No saved searches yet</div>
-                <div style={{ fontSize: 12, marginTop: 4 }}>Click Save to bookmark a search</div>
+                <div style={{ fontSize: 12, marginTop: 4 }}>Save a useful search once so you can rerun it in one click later.</div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

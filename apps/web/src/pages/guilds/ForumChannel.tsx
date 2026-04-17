@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Search, Plus, MessageSquare, ChevronDown, Lock, X, ArrowLeft, Loader2, Clock, User, ThumbsUp, Filter } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 interface ForumPost {
     id: string;
@@ -56,6 +57,7 @@ const ForumChannel = () => {
     const [messagesLoading, setMessagesLoading] = useState(false);
     const [replyContent, setReplyContent] = useState('');
     const [isSendingReply, setIsSendingReply] = useState(false);
+    const replyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
     const postTags = ['Discussion', 'Help', 'Bug', 'Feature Request', 'Showcase', 'Community', 'Question'];
     const sorts: { label: string; value: SortOption; description: string }[] = [
@@ -247,8 +249,14 @@ const ForumChannel = () => {
                                 <span style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Loading messages...</span>
                             </div>
                         ) : threadMessages.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
-                                No messages yet. Be the first to reply!
+                            <div style={{ padding: '24px 0' }}>
+                                <EmptyState
+                                    type="chat"
+                                    title="No replies yet"
+                                    description="Break the ice with a first answer, a clarifying question, or a quick resource so this thread has momentum."
+                                    actionLabel={selectedPost.locked ? undefined : 'Write first reply'}
+                                    onAction={selectedPost.locked ? undefined : () => replyTextareaRef.current?.focus()}
+                                />
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -291,6 +299,7 @@ const ForumChannel = () => {
                         {!selectedPost.locked && (
                             <div style={{ marginTop: '24px', display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
                                 <textarea
+                                    ref={replyTextareaRef}
                                     value={replyContent}
                                     onChange={e => setReplyContent(e.target.value)}
                                     placeholder="Write a reply..."
@@ -518,8 +527,70 @@ const ForumChannel = () => {
                             </div>
                         ))}
                         {filteredPosts.length === 0 && !showNewPost && (
-                            <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
-                                {posts.length === 0 ? 'No posts yet. Create the first one!' : sortBy === 'unanswered' ? 'No unanswered posts.' : 'No posts match your filters.'}
+                            <div style={{ padding: '24px 0', display: 'grid', gap: '16px' }}>
+                                {posts.length === 0 ? (
+                                    <>
+                                        <EmptyState
+                                            type="chat"
+                                            title="Start the first forum thread"
+                                            description="Seed this forum with a welcome topic, FAQ, or starter prompt so newcomers immediately know what belongs here."
+                                            actionLabel="Create first post"
+                                            onAction={() => setShowNewPost(true)}
+                                        />
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                                            gap: '12px',
+                                        }}>
+                                            {[
+                                                'Welcome thread',
+                                                'Frequently asked questions',
+                                                'What should we discuss first?',
+                                            ].map((idea) => (
+                                                <button
+                                                    key={idea}
+                                                    onClick={() => {
+                                                        setShowNewPost(true);
+                                                        setNewPostTitle(idea);
+                                                        setNewPostBody('');
+                                                    }}
+                                                    style={{
+                                                        padding: '14px 16px',
+                                                        borderRadius: '12px',
+                                                        border: '1px solid var(--stroke)',
+                                                        background: 'var(--bg-secondary)',
+                                                        color: 'var(--text-primary)',
+                                                        cursor: 'pointer',
+                                                        textAlign: 'left',
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    {idea}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                ) : sortBy === 'unanswered' ? (
+                                    <EmptyState
+                                        type="search"
+                                        title="No open questions right now"
+                                        description="Everything visible has at least one reply. Switch back to Newest or start a fresh discussion."
+                                        actionLabel="Show newest"
+                                        onAction={() => setSortBy('newest')}
+                                    />
+                                ) : (
+                                    <EmptyState
+                                        type="search"
+                                        title="No threads match those filters"
+                                        description="Try a broader keyword, remove a tag, or switch back to the default sort to scan everything."
+                                        actionLabel="Clear filters"
+                                        onAction={() => {
+                                            setSearchQuery('');
+                                            setActiveTag(null);
+                                            setSortBy('newest');
+                                        }}
+                                    />
+                                )}
                             </div>
                         )}
                     </div>
