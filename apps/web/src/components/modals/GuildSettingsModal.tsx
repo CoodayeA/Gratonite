@@ -325,12 +325,102 @@ function CurrencyPanel({ guildId, addToast }: { guildId: string; addToast: (t: {
     );
 }
 
+type SettingsTab =
+    | 'overview' | 'channels' | 'roles' | 'members' | 'bans' | 'invites' | 'emojis' | 'automod' | 'audit' | 'branding'
+    | 'webhooks' | 'bots' | 'templates' | 'insights' | 'onboarding' | 'wordfilter' | 'security' | 'import' | 'boosts'
+    | 'welcome' | 'currency' | 'stickers' | 'rules' | 'discovery' | 'soundboard' | 'spam' | 'backups' | 'modqueue'
+    | 'highlights' | 'federation';
+
+type SettingsSection = {
+    title: string;
+    subtitle: string;
+    tabs: SettingsTab[];
+};
+
+const SETTINGS_TAB_LABELS: Record<SettingsTab, string> = {
+    overview: 'Overview',
+    channels: 'Channels',
+    roles: 'Roles',
+    members: 'Members',
+    bans: 'Bans',
+    invites: 'Invites',
+    emojis: 'Emojis',
+    automod: 'AutoMod',
+    audit: 'Audit Log',
+    branding: 'Brand Identity',
+    webhooks: 'Webhooks',
+    bots: 'Installed Bots',
+    templates: 'Templates',
+    insights: 'Insights',
+    onboarding: 'Onboarding',
+    wordfilter: 'Word Filter',
+    security: 'Security',
+    import: 'Import',
+    boosts: 'Server Boosts',
+    welcome: 'Welcome Screen',
+    currency: 'Server Currency',
+    stickers: 'Stickers',
+    rules: 'Server Rules',
+    discovery: 'Discovery Tags',
+    soundboard: 'Soundboard',
+    spam: 'Spam Detection',
+    backups: 'Backups',
+    modqueue: 'Mod Queue',
+    highlights: 'Highlights',
+    federation: 'Federation',
+};
+
+const SETTINGS_TAB_KEYWORDS: Record<SettingsTab, string[]> = {
+    overview: ['name', 'description', 'icon', 'banner', 'basics'],
+    channels: ['channel', 'category', 'voice', 'text', 'announcement'],
+    roles: ['permissions', 'moderator', 'member roles'],
+    members: ['people', 'directory', 'member list'],
+    bans: ['blocked users', 'ban list'],
+    invites: ['links', 'join'],
+    emojis: ['emoji'],
+    automod: ['moderation', 'rules', 'safety'],
+    audit: ['history', 'actions', 'logs'],
+    branding: ['brand', 'identity', 'appearance'],
+    webhooks: ['integrations', 'automation'],
+    bots: ['integrations', 'automation', 'apps'],
+    templates: ['clone', 'starter'],
+    insights: ['analytics', 'metrics'],
+    onboarding: ['new members', 'setup flow'],
+    wordfilter: ['blocked words', 'filter'],
+    security: ['permissions', 'risk'],
+    import: ['migrate', 'bring data'],
+    boosts: ['premium'],
+    welcome: ['greeting', 'join experience'],
+    currency: ['economy', 'coins'],
+    stickers: ['sticker'],
+    rules: ['guidelines', 'community rules'],
+    discovery: ['tags', 'discoverability'],
+    soundboard: ['voice'],
+    spam: ['raid', 'spam'],
+    backups: ['export', 'restore'],
+    modqueue: ['reports', 'triage'],
+    highlights: ['spotlight'],
+    federation: ['network', 'instance'],
+};
+
+const SETTINGS_SECTIONS: SettingsSection[] = [
+    { title: 'Overview and basics', subtitle: 'Identity, channels, and roles', tabs: ['overview', 'channels', 'roles'] },
+    { title: 'Members and moderation', subtitle: 'People, bans, invites, and trust tools', tabs: ['members', 'bans', 'invites', 'automod', 'wordfilter', 'spam', 'modqueue', 'security', 'audit'] },
+    { title: 'Community setup', subtitle: 'Welcome flows, rules, and discoverability', tabs: ['welcome', 'onboarding', 'rules', 'discovery', 'highlights', 'soundboard'] },
+    { title: 'Integrations and bots', subtitle: 'Webhooks, apps, templates, and imports', tabs: ['webhooks', 'bots', 'templates', 'import'] },
+    { title: 'Insights and identity', subtitle: 'Analytics and visual customization', tabs: ['insights', 'branding', 'emojis', 'stickers', 'boosts', 'currency'] },
+    { title: 'Advanced and federation', subtitle: 'Recovery and network-level settings', tabs: ['backups', 'federation'] },
+];
+
+const ALL_SETTINGS_TABS = SETTINGS_SECTIONS.flatMap((section) => section.tabs);
+
 const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId?: string | null }) => {
     const { addToast } = useToast();
     const { user: currentUser } = useUser();
     const navigate = useNavigate();
     const actorName = currentUser.name || currentUser.handle || 'Unknown';
-    const [activeTab, setActiveTab] = useState<'overview' | 'channels' | 'roles' | 'members' | 'bans' | 'invites' | 'emojis' | 'automod' | 'audit' | 'branding' | 'webhooks' | 'bots' | 'templates' | 'insights' | 'onboarding' | 'wordfilter' | 'security' | 'import' | 'boosts' | 'welcome' | 'currency' | 'stickers' | 'rules' | 'discovery' | 'soundboard' | 'spam' | 'backups' | 'modqueue' | 'highlights' | 'federation'>('overview');
+    const [activeTab, setActiveTab] = useState<SettingsTab>('overview');
+    const [settingsSearch, setSettingsSearch] = useState('');
     const [roles, setRoles] = useState<Role[]>([]);
     const [activeRole, setActiveRole] = useState<Role | null>(null);
     const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
@@ -1449,6 +1539,25 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         return true;
     });
     const onlineCount = members.filter(m => m.status === 'online').length;
+    const normalizedSettingsSearch = settingsSearch.trim().toLowerCase();
+    const visibleSettingsSections = SETTINGS_SECTIONS
+        .map((section) => {
+            if (!normalizedSettingsSearch) return section;
+            const tabs = section.tabs.filter((tab) => {
+                const haystack = [
+                    SETTINGS_TAB_LABELS[tab],
+                    ...SETTINGS_TAB_KEYWORDS[tab],
+                    section.title,
+                    section.subtitle,
+                ].join(' ').toLowerCase();
+                return haystack.includes(normalizedSettingsSearch);
+            });
+            return { ...section, tabs };
+        })
+        .filter((section) => section.tabs.length > 0);
+    const visibleMobileTabs = normalizedSettingsSearch
+        ? visibleSettingsSections.flatMap((section) => section.tabs)
+        : ALL_SETTINGS_TABS;
 
     const tabStyle = (tab: string): React.CSSProperties => ({
         padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: 500, marginBottom: '2px',
@@ -1466,94 +1575,42 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                         <div style={{ padding: '0 8px', marginBottom: '16px', fontWeight: 600, color: 'var(--text-primary)', fontSize: '15px' }}>
                             {serverName}
                         </div>
-                        {(['overview', 'channels', 'roles'] as const).map(tab => (
-                            <div key={tab} onClick={() => setActiveTab(tab)}
-                                onMouseEnter={() => setHoveredBtn(`tab-${tab}`)} onMouseLeave={() => setHoveredBtn(null)}
-                                style={tabStyle(tab)}
-                            >{tab.charAt(0).toUpperCase() + tab.slice(1)}</div>
-                        ))}
-                    </div>
-                    <div>
-                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>MEMBERS</div>
-                        {(['members', 'bans', 'invites'] as const).map(tab => (
-                            <div key={tab} onClick={() => setActiveTab(tab)}
-                                onMouseEnter={() => setHoveredBtn(`tab-${tab}`)} onMouseLeave={() => setHoveredBtn(null)}
-                                style={tabStyle(tab)}
-                            >{tab.charAt(0).toUpperCase() + tab.slice(1)}</div>
-                        ))}
-                    </div>
-                    <div>
-                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>MODERATION</div>
-                        {(['automod', 'wordfilter', 'spam', 'modqueue', 'audit', 'security'] as const).map(tab => (
-                            <div key={tab} onClick={() => setActiveTab(tab)}
-                                onMouseEnter={() => setHoveredBtn(`tab-${tab}`)} onMouseLeave={() => setHoveredBtn(null)}
-                                style={tabStyle(tab)}
-                            >{tab === 'automod' ? 'AutoMod' : tab === 'wordfilter' ? 'Word Filter' : tab === 'spam' ? 'Spam Detection' : tab === 'modqueue' ? 'Mod Queue' : tab === 'security' ? 'Security' : 'Audit Log'}</div>
-                        ))}
-                    </div>
-                    <div>
-                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>COMMUNITY</div>
-                        {(['welcome', 'onboarding', 'rules', 'discovery', 'soundboard', 'highlights'] as const).map(tab => (
-                            <div key={tab} onClick={() => setActiveTab(tab)}
-                                onMouseEnter={() => setHoveredBtn(`tab-${tab}`)} onMouseLeave={() => setHoveredBtn(null)}
-                                style={tabStyle(tab)}
-                            >{tab === 'welcome' ? 'Welcome Screen' : tab === 'onboarding' ? 'Onboarding' : tab === 'rules' ? 'Server Rules' : tab === 'discovery' ? 'Discovery Tags' : tab === 'soundboard' ? 'Soundboard' : 'Highlights'}</div>
-                        ))}
-                    </div>
-                    <div>
-                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>ANALYTICS</div>
-                        <div onClick={() => setActiveTab('insights')}
-                            onMouseEnter={() => setHoveredBtn('tab-insights')} onMouseLeave={() => setHoveredBtn(null)}
-                            style={tabStyle('insights')}
-                        >Insights</div>
-                    </div>
-                    <div>
-                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>CUSTOMIZATION</div>
-                        {(['emojis', 'stickers', 'branding'] as const).map(tab => (
-                            <div key={tab} onClick={() => setActiveTab(tab)}
-                                onMouseEnter={() => setHoveredBtn(`tab-${tab}`)} onMouseLeave={() => setHoveredBtn(null)}
-                                style={tabStyle(tab)}
-                            >{tab === 'emojis' ? 'Emojis' : tab === 'stickers' ? 'Stickers' : 'Brand Identity'}</div>
-                        ))}
-                    </div>
-                    <div>
-                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>INTEGRATIONS</div>
-                        {(['webhooks', 'bots'] as const).map(tab => (
-                            <div key={tab} onClick={() => setActiveTab(tab)}
-                                onMouseEnter={() => setHoveredBtn(`tab-${tab}`)} onMouseLeave={() => setHoveredBtn(null)}
-                                style={tabStyle(tab)}
-                            >{tab === 'webhooks' ? 'Webhooks' : 'Installed Bots'}</div>
-                        ))}
-                    </div>
-                    <div>
-                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>PREMIUM</div>
-                        <div onClick={() => setActiveTab('boosts')}
-                            onMouseEnter={() => setHoveredBtn('tab-boosts')} onMouseLeave={() => setHoveredBtn(null)}
-                            style={tabStyle('boosts')}
-                        >Server Boosts</div>
-                        <div onClick={() => setActiveTab('currency')}
-                            onMouseEnter={() => setHoveredBtn('tab-currency')} onMouseLeave={() => setHoveredBtn(null)}
-                            style={tabStyle('currency')}
-                        >Server Currency</div>
-                    </div>
-                    <div>
-                        <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>ADVANCED</div>
-                        <div onClick={() => setActiveTab('backups')}
-                            onMouseEnter={() => setHoveredBtn('tab-backups')} onMouseLeave={() => setHoveredBtn(null)}
-                            style={tabStyle('backups')}
-                        >Backups</div>
-                        <div onClick={() => setActiveTab('templates')}
-                            onMouseEnter={() => setHoveredBtn('tab-templates')} onMouseLeave={() => setHoveredBtn(null)}
-                            style={tabStyle('templates')}
-                        >Templates</div>
-                        <div onClick={() => setActiveTab('import')}
-                            onMouseEnter={() => setHoveredBtn('tab-import')} onMouseLeave={() => setHoveredBtn(null)}
-                            style={tabStyle('import')}
-                        >Import</div>
-                        <div onClick={() => setActiveTab('federation')}
-                            onMouseEnter={() => setHoveredBtn('tab-federation')} onMouseLeave={() => setHoveredBtn(null)}
-                            style={tabStyle('federation')}
-                        ><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Globe size={13} />Federation</span></div>
+                        <div style={{ position: 'relative', marginBottom: '20px' }}>
+                            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                            <input
+                                type="text"
+                                value={settingsSearch}
+                                onChange={(e) => setSettingsSearch(e.target.value)}
+                                placeholder="Jump to roles, webhooks, backups..."
+                                style={{ width: '100%', padding: '10px 12px 10px 34px', borderRadius: '10px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', boxSizing: 'border-box' }}
+                            />
+                        </div>
+                        <div style={{ display: 'grid', gap: '18px' }}>
+                            {visibleSettingsSections.map((section) => (
+                                <div key={section.title}>
+                                    <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '4px' }}>{section.title}</div>
+                                    <div style={{ padding: '0 12px', marginBottom: '8px', fontSize: '12px', lineHeight: 1.4, color: 'var(--text-muted)' }}>{section.subtitle}</div>
+                                    {section.tabs.map((tab) => (
+                                        <div
+                                            key={tab}
+                                            onClick={() => setActiveTab(tab)}
+                                            onMouseEnter={() => setHoveredBtn(`tab-${tab}`)}
+                                            onMouseLeave={() => setHoveredBtn(null)}
+                                            style={tabStyle(tab)}
+                                        >
+                                            {tab === 'federation'
+                                                ? <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Globe size={13} />{SETTINGS_TAB_LABELS[tab]}</span>
+                                                : SETTINGS_TAB_LABELS[tab]}
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
+                            {visibleSettingsSections.length === 0 && (
+                                <div style={{ padding: '0 12px', fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                                    No settings matched that search. Try “roles”, “notifications”, “bots”, or “backups”.
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -1562,9 +1619,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     <button onClick={onClose} style={{ marginRight: 'auto', padding: '6px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '16px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600 }}>
                         <X size={14} /> Close
                     </button>
-                    {(['overview', 'channels', 'roles', 'members', 'invites', 'templates', 'import', 'emojis', 'stickers', 'branding', 'webhooks', 'bots', 'automod', 'wordfilter', 'spam', 'bans', 'audit', 'modqueue', 'security', 'insights', 'onboarding', 'rules', 'discovery', 'welcome', 'boosts', 'currency', 'soundboard', 'backups', 'highlights', 'federation'] as const).map(tab => (
+                    {visibleMobileTabs.map(tab => (
                         <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>
-                            {tab === 'emojis' ? 'Emojis' : tab === 'stickers' ? 'Stickers' : tab === 'branding' ? 'Brand' : tab === 'webhooks' ? 'Webhooks' : tab === 'bots' ? 'Bots' : tab === 'automod' ? 'AutoMod' : tab === 'wordfilter' ? 'Word Filter' : tab === 'audit' ? 'Audit Log' : tab === 'welcome' ? 'Welcome' : tab === 'rules' ? 'Server Rules' : tab === 'discovery' ? 'Discovery' : tab === 'boosts' ? 'Boosts' : tab === 'currency' ? 'Currency' : tab === 'federation' ? 'Federation' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            {SETTINGS_TAB_LABELS[tab]}
                         </button>
                     ))}
                 </div>

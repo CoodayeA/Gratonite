@@ -760,9 +760,11 @@ const Friends = () => {
                                     <EmptyState
                                         type="friends"
                                         title="No friends online"
-                                        description="Everyone's offline right now. Check back later or add more friends to grow your circle!"
+                                        description="Your people are quiet right now. Send a new invite, or jump into a portal and make a few more connections."
                                         actionLabel="Add Friend"
                                         onAction={() => setActiveTab('add')}
+                                        secondaryActionLabel="Explore portals"
+                                        onSecondaryAction={() => navigate('/discover')}
                                     />
                                 )}
                             </div>
@@ -1063,9 +1065,11 @@ const Friends = () => {
                                     <EmptyState
                                         type="friends"
                                         title="No friends yet"
-                                        description="Search for people to add and start building your community!"
+                                        description="Your friends list is still a blank page. Add someone you know or discover a portal where your next conversation can start."
                                         actionLabel="Add Friend"
                                         onAction={() => setActiveTab('add')}
+                                        secondaryActionLabel="Explore portals"
+                                        onSecondaryAction={() => navigate('/discover')}
                                     />
                                 )}
                             </div>
@@ -1123,6 +1127,15 @@ const Friends = () => {
                                     </div>
                                 ))}
                             </div>
+                            {requests.filter(r => r.username.includes(searchQuery) || r.displayName.includes(searchQuery)).length === 0 && (
+                                <EmptyState
+                                    type="friends"
+                                    title="No pending requests"
+                                    description="Nothing is waiting on you right now. Send a fresh invite or come back later for replies."
+                                    actionLabel="Add Friend"
+                                    onAction={() => setActiveTab('add')}
+                                />
+                            )}
                         </div>
                     )}
 
@@ -1189,7 +1202,11 @@ const Friends = () => {
                                     <EmptyState
                                         type="friends"
                                         title="No friends are active right now"
-                                        description="When your friends start an activity, it will show up here."
+                                        description="When someone starts playing, listening, or watching, it will land here. Until then, invite a friend or check in on your pending requests."
+                                        actionLabel="Add Friend"
+                                        onAction={() => setActiveTab('add')}
+                                        secondaryActionLabel="View requests"
+                                        onSecondaryAction={() => setActiveTab('pending')}
                                     />
                                 )}
                             </div>

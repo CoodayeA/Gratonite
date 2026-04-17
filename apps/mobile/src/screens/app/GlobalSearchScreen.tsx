@@ -95,6 +95,15 @@ export default function GlobalSearchScreen({ navigation }: Props) {
   };
 
   const handleResultPress = (item: SearchResult) => {
+    if (item.guildId && item.channelId) {
+      navigation.navigate('ChannelChat', {
+        guildId: item.guildId,
+        channelId: item.channelId,
+        channelName: item.channelName || 'Channel',
+      });
+      return;
+    }
+
     const details = [
       item.guildName ? `Portal: ${item.guildName}` : null,
       item.channelName ? `Channel: #${item.channelName}` : null,

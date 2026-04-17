@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
 import {
   Shield, Users, FileText, MessageSquare, Globe, Bot, Server,
   Search, UserPlus, Check, X, AlertTriangle, Palette, Activity, Database,
-  Download, Zap, ChevronDown, ChevronUp,
+  Download, Zap, ChevronDown, ChevronUp, Workflow,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { ApiRequestError } from '../../lib/api/_core';
@@ -28,6 +28,7 @@ const ADMIN_SECTIONS: { title: string; items: AdminNavItem[] }[] = [
   {
     title: 'Trust & Safety',
     items: [
+      { label: 'Moderation Workspace', description: 'Start with the live queues, then fan out into reports, audit history, and bot review', icon: Workflow, path: '/admin/moderation-workspace', color: '#8b5cf6' },
       { label: 'Federation', description: 'Manage federated instances, verification requests, and abuse reports', icon: Globe, path: '/admin/federation', color: '#6366f1' },
       { label: 'User Reports', description: 'Review reports submitted by users', icon: AlertTriangle, path: '/admin/reports', color: '#ef4444' },
       { label: 'Bot Moderation', description: 'Review and manage bot listings', icon: Bot, path: '/admin/bot-moderation', color: '#f59e0b' },

@@ -51,6 +51,7 @@ const AdminTeam = lazy(() => import('./pages/admin/AdminTeam'));
 const AdminAuditLog = lazy(() => import('./pages/admin/AdminAuditLog'));
 const AdminBotModeration = lazy(() => import('./pages/admin/AdminBotModeration'));
 const AdminFeedback = lazy(() => import('./pages/admin/AdminFeedback'));
+const AdminModerationWorkspace = lazy(() => import('./pages/admin/AdminModerationWorkspace'));
 const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
 const AdminPortals = lazy(() => import('./pages/admin/AdminPortals'));
 const FederationAdmin = lazy(() => import('./pages/admin/FederationAdmin'));
@@ -4432,6 +4433,7 @@ const appRouter = createBrowserRouter(
                 <Route path="admin/audit" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminAuditLog /></Suspense></RequireAdmin>} />
                 <Route path="admin/bot-moderation" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminBotModeration /></Suspense></RequireAdmin>} />
                 <Route path="admin/feedback" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminFeedback /></Suspense></RequireAdmin>} />
+                <Route path="admin/moderation-workspace" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminModerationWorkspace /></Suspense></RequireAdmin>} />
                 <Route path="admin/reports" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminReports /></Suspense></RequireAdmin>} />
                 <Route path="admin/portals" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminPortals /></Suspense></RequireAdmin>} />
                 <Route path="admin/federation" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><FederationAdmin /></Suspense></RequireAdmin>} />

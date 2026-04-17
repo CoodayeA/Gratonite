@@ -7,9 +7,11 @@ type EmptyStateProps = {
     description: string;
     actionLabel?: string;
     onAction?: () => void;
+    secondaryActionLabel?: string;
+    onSecondaryAction?: () => void;
 };
 
-export const EmptyState = ({ type, title, description, actionLabel, onAction }: EmptyStateProps) => {
+export const EmptyState = ({ type, title, description, actionLabel, onAction, secondaryActionLabel, onSecondaryAction }: EmptyStateProps) => {
     // Generative abstract composition using pure CSS depending on type
     return (
         <div style={{
@@ -163,25 +165,48 @@ export const EmptyState = ({ type, title, description, actionLabel, onAction }: 
                 {description}
             </p>
 
-            {actionLabel && onAction && (
-                <RippleWrapper>
-                    <button
-                        onClick={onAction}
-                        style={{
-                            background: type === '404' ? 'var(--error)' : 'var(--accent-primary)',
-                            color: type === '404' ? 'white' : 'var(--bg-primary)',
-                            border: 'none', padding: '12px 32px', borderRadius: 'var(--radius-md)',
-                            fontSize: '15px', fontWeight: 600, cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', gap: '8px',
-                            boxShadow: `0 4px 14px ${type === '404' ? 'rgba(237, 66, 69, 0.4)' : 'var(--accent-primary-alpha)'}`
-                        }}
-                    >
-                        {type === 'chat' && <Sparkles size={18} />}
-                        {type === 'inventory' && <ShoppingBag size={18} />}
-                        {type === '404' && <AlertTriangle size={18} />}
-                        {actionLabel}
-                    </button>
-                </RippleWrapper>
+            {((actionLabel && onAction) || (secondaryActionLabel && onSecondaryAction)) && (
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    {actionLabel && onAction && (
+                        <RippleWrapper>
+                            <button
+                                onClick={onAction}
+                                style={{
+                                    background: type === '404' ? 'var(--error)' : 'var(--accent-primary)',
+                                    color: type === '404' ? 'white' : 'var(--bg-primary)',
+                                    border: 'none', padding: '12px 32px', borderRadius: 'var(--radius-md)',
+                                    fontSize: '15px', fontWeight: 600, cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    boxShadow: `0 4px 14px ${type === '404' ? 'rgba(237, 66, 69, 0.4)' : 'var(--accent-primary-alpha)'}`
+                                }}
+                            >
+                                {type === 'chat' && <Sparkles size={18} />}
+                                {type === 'inventory' && <ShoppingBag size={18} />}
+                                {type === '404' && <AlertTriangle size={18} />}
+                                {actionLabel}
+                            </button>
+                        </RippleWrapper>
+                    )}
+                    {secondaryActionLabel && onSecondaryAction && (
+                        <RippleWrapper>
+                            <button
+                                onClick={onSecondaryAction}
+                                style={{
+                                    background: 'transparent',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--stroke)',
+                                    padding: '12px 24px',
+                                    borderRadius: 'var(--radius-md)',
+                                    fontSize: '15px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                {secondaryActionLabel}
+                            </button>
+                        </RippleWrapper>
+                    )}
+                </div>
             )}
         </div>
     );

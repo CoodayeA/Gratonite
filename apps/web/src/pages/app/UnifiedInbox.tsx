@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Inbox, CheckCheck, AtSign, Reply, MessageSquare, Hash, ChevronRight, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api, API_BASE } from '../../lib/api';
 import { useToast } from '../../components/ui/ToastManager';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 type FilterTab = 'all' | 'mentions' | 'replies' | 'unreads';
 
@@ -73,6 +74,9 @@ const UnifiedInbox = () => {
     const [items, setItems] = useState<InboxItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
+    const [notificationSettings, setNotificationSettings] = useState<Record<string, any> | null>(null);
+    const [channelPrefs, setChannelPrefs] = useState<Record<string, { level: string; mutedUntil: string | null }>>({});
+    const [expandedReasonId, setExpandedReasonId] = useState<string | null>(null);
 
     const fetchInbox = useCallback(async () => {
         setLoading(true);
@@ -90,6 +94,24 @@ const UnifiedInbox = () => {
     useEffect(() => {
         fetchInbox();
     }, [fetchInbox]);
+
+    useEffect(() => {
+        api.users.getSettings()
+            .then((settings) => setNotificationSettings(settings))
+            .catch(() => setNotificationSettings(null));
+    }, []);
+
+    useEffect(() => {
+        const channelIds = [...new Set(items.map((item) => item.channelId).filter(Boolean))];
+        if (channelIds.length === 0) {
+            setChannelPrefs({});
+            return;
+        }
+
+        api.channels.getNotificationPrefsBulk(channelIds)
+            .then((prefs) => setChannelPrefs(prefs))
+            .catch(() => setChannelPrefs({}));
+    }, [items]);
 
     const handleMarkRead = useCallback(async (item: InboxItem) => {
         try {
@@ -125,6 +147,40 @@ const UnifiedInbox = () => {
     const sorted = [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     const grouped = groupByServer(sorted);
     const unreadCount = items.filter(i => !i.read).length;
+    const quietHours = notificationSettings?.notificationQuietHours ?? null;
+    const quietHoursActive = Boolean(quietHours?.enabled);
+    const mutedChannelCount = useMemo(
+        () => Object.values(channelPrefs).filter((pref) => pref.level === 'none' || (pref.mutedUntil && new Date(pref.mutedUntil).getTime() > Date.now())).length,
+        [channelPrefs],
+    );
+
+    const getExplanation = useCallback((item: InboxItem) => {
+        const reasons: string[] = [];
+        if (item.type === 'mention') {
+            reasons.push('You were mentioned directly, so this cut through your default inbox rules.');
+        } else if (item.type === 'reply') {
+            reasons.push('This looks like a reply to a conversation you were part of or following.');
+        } else {
+            reasons.push('This channel still has unread activity that matches your current inbox rules.');
+        }
+
+        const pref = channelPrefs[item.channelId];
+        if (pref?.level === 'mentions') {
+            reasons.push('This channel is set to mentions only, so Gratonite should only surface direct pings and reply-level activity here.');
+        } else if (pref?.level === 'none') {
+            reasons.push('This channel is muted now, but existing inbox items stay visible until you clear them.');
+        } else if (pref?.mutedUntil && new Date(pref.mutedUntil).getTime() > Date.now()) {
+            reasons.push(`This channel is snoozed until ${new Date(pref.mutedUntil).toLocaleString()}, so new push-style alerts can stay quiet while the inbox keeps context.`);
+        } else {
+            reasons.push('No channel-specific mute is overriding this conversation right now.');
+        }
+
+        if (quietHoursActive) {
+            reasons.push('Quiet hours are active, so real-time interruptions may be suppressed even while the inbox keeps the item waiting for you.');
+        }
+
+        return reasons;
+    }, [channelPrefs, quietHoursActive]);
 
     return (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', overflow: 'hidden' }}>
@@ -170,6 +226,32 @@ const UnifiedInbox = () => {
                         </p>
                     </div>
 
+                    {(quietHoursActive || mutedChannelCount > 0) && (
+                        <div style={{
+                            marginBottom: '24px',
+                            padding: '16px 18px',
+                            borderRadius: '12px',
+                            border: '1px solid var(--stroke)',
+                            background: 'var(--bg-secondary)',
+                            display: 'grid',
+                            gap: '6px',
+                        }}>
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                                Notification delivery guide
+                            </div>
+                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                                {quietHoursActive
+                                    ? 'Quiet hours are active, so Gratonite keeps important context here even when it avoids interrupting you in real time.'
+                                    : 'You have channel-level notification overrides active, so this inbox is the clearest place to confirm what still made it through.'}
+                            </div>
+                            {mutedChannelCount > 0 && (
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                    {mutedChannelCount} muted or snoozed channel{mutedChannelCount === 1 ? '' : 's'} currently affect delivery.
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Filter Tabs */}
                     <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', background: 'var(--bg-secondary)', borderRadius: '10px', padding: '4px' }}>
                         {FILTER_TABS.map(tab => (
@@ -196,15 +278,17 @@ const UnifiedInbox = () => {
                             Loading...
                         </div>
                     ) : sorted.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '64px 0' }}>
-                            <Inbox size={48} color="var(--text-muted)" style={{ marginBottom: '16px', opacity: 0.5 }} />
-                            <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>You're all caught up!</h3>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-                                {activeFilter === 'all'
-                                    ? 'No unread messages, mentions, or replies.'
-                                    : `No ${activeFilter} to show.`}
-                            </p>
-                        </div>
+                        <EmptyState
+                            type="notifications"
+                            title="You're all caught up"
+                            description={activeFilter === 'all'
+                                ? 'Nothing needs your attention right now. When new mentions, replies, or unread updates land, they will show up here.'
+                                : `No ${activeFilter} are waiting for you right now.`}
+                            actionLabel="Back to home"
+                            onAction={() => navigate('/')}
+                            secondaryActionLabel="Open discover"
+                            onSecondaryAction={() => navigate('/discover')}
+                        />
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                             {grouped.map(group => (
@@ -263,7 +347,7 @@ const UnifiedInbox = () => {
                                                 </div>
 
                                                 {/* Content */}
-                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                 <div style={{ flex: 1, minWidth: 0 }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
                                                         <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
                                                             {item.authorName}
@@ -282,6 +366,43 @@ const UnifiedInbox = () => {
                                                     }}>
                                                         {item.contentPreview || '(attachment)'}
                                                     </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setExpandedReasonId((current) => current === item.id ? null : item.id);
+                                                        }}
+                                                        style={{
+                                                            marginTop: '8px',
+                                                            padding: 0,
+                                                            background: 'none',
+                                                            border: 'none',
+                                                            color: 'var(--accent-primary)',
+                                                            fontSize: '12px',
+                                                            fontWeight: 600,
+                                                            cursor: 'pointer',
+                                                            textAlign: 'left',
+                                                        }}
+                                                    >
+                                                        {expandedReasonId === item.id ? 'Hide why this arrived' : 'Why did I get this?'}
+                                                    </button>
+                                                    {expandedReasonId === item.id && (
+                                                        <div style={{
+                                                            marginTop: '8px',
+                                                            padding: '10px 12px',
+                                                            borderRadius: '8px',
+                                                            background: 'var(--bg-primary)',
+                                                            border: '1px solid var(--stroke)',
+                                                            display: 'grid',
+                                                            gap: '6px',
+                                                        }}>
+                                                            {getExplanation(item).map((reason) => (
+                                                                <div key={reason} style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                                                                    {reason}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {/* Actions */}
