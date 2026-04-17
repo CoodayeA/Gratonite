@@ -86,6 +86,8 @@ ssh -i "$SSH_KEY" "$USER@$SERVER" "mkdir -p '$REMOTE_DIR'"
 rsync -avz --progress --delete \
   --filter='P .env' \
   --filter='P .env.*' \
+  --filter='P api/.pnpm-store' \
+  --filter='P api/node_modules' \
   -e "ssh -i $SSH_KEY" \
   deploy/ "$USER@$SERVER:$REMOTE_DIR/"
 
