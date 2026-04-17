@@ -1014,7 +1014,7 @@ export const threads = {
     return apiFetch<Thread[]>(`/channels/${channelId}/threads${qs}`);
   },
 
-  create(channelId: string, data: { name: string; messageId?: string; body?: string }) {
+  create(channelId: string, data: { name: string; messageId?: string; body?: string | null; attachmentIds?: string[]; tags?: string[] }) {
     return apiFetch<Thread>(`/channels/${channelId}/threads`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -1670,25 +1670,61 @@ export const serverFolders = {
 // Forum
 // ---------------------------------------------------------------------------
 
+function normalizeForumPost(raw: any, fallbackChannelId?: string): ForumPost {
+  const messageCount = Number(raw?.messageCount ?? raw?.replyCount ?? 0);
+  const hasCanonicalMessageCount = raw?.messageCount !== undefined;
+  const tags = raw?.tags ?? raw?.forumTagIds ?? [];
+  return {
+    id: raw?.id ?? '',
+    channelId: raw?.channelId ?? fallbackChannelId ?? '',
+    title: raw?.title ?? raw?.name ?? 'Untitled',
+    content: raw?.content ?? raw?.opPreview ?? raw?.body ?? '',
+    authorId: raw?.authorId ?? raw?.creatorId ?? raw?.author?.id ?? '',
+    authorName: raw?.authorName ?? raw?.creatorName ?? raw?.author?.displayName ?? raw?.author?.username,
+    tags: Array.isArray(tags) ? tags : [],
+    pinned: Boolean(raw?.pinned),
+    locked: Boolean(raw?.locked),
+    replyCount: hasCanonicalMessageCount ? Math.max(0, messageCount - 1) : messageCount,
+    createdAt: raw?.createdAt ?? new Date().toISOString(),
+    lastReplyAt: raw?.lastReplyAt ?? raw?.lastActivity ?? raw?.lastMessageAt ?? null,
+  };
+}
+
 export const forum = {
-  listPosts(channelId: string) {
-    return apiFetch<ForumPost[]>(`/channels/${channelId}/forum-posts`);
+  async listPosts(channelId: string) {
+    const data = await apiFetch<any[]>(`/channels/${channelId}/threads`);
+    return data.map((item) => normalizeForumPost(item, channelId));
   },
 
-  createPost(channelId: string, data: { title: string; content: string; tags?: string[] }) {
-    return apiFetch<ForumPost>(`/channels/${channelId}/forum-posts`, {
+  async createPost(channelId: string, data: { title: string; content?: string | null; tags?: string[]; attachmentIds?: string[] }) {
+    const thread = await apiFetch<any>(`/channels/${channelId}/threads`, {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        name: data.title,
+        body: data.content?.trim() || null,
+        tags: data.tags,
+        attachmentIds: data.attachmentIds,
+      }),
+    });
+    return normalizeForumPost({ ...thread, content: data.content ?? '', tags: data.tags ?? thread?.forumTagIds }, channelId);
+  },
+
+  async getPost(postId: string) {
+    const thread = await threads.get(postId);
+    const messages = await threads.getMessages(postId, { limit: 100 }).catch(() => []);
+    const oldestFirst = [...messages].reverse();
+    const op = oldestFirst[0];
+    return normalizeForumPost({
+      ...thread,
+      content: op?.content ?? '',
+      messageCount: messages.length,
     });
   },
 
-  getPost(postId: string) {
-    return apiFetch<ForumPost>(`/forum-posts/${postId}`);
-  },
-
-  getReplies(postId: string, params?: KeysetPaginationParams) {
-    const qs = buildQuery(params);
-    return apiFetch<Message[]>(`/forum-posts/${postId}/replies${qs}`);
+  async getReplies(postId: string, params?: KeysetPaginationParams) {
+    const data = await threads.getMessages(postId, params);
+    const oldestFirst = [...data].reverse();
+    return oldestFirst.slice(1);
   },
 };
 

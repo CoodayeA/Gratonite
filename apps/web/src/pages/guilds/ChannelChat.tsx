@@ -3509,6 +3509,8 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     channelId={channelId!}
                     channelName={channelName}
                     forumTags={channelForumTags}
+                    channelIsEncrypted={channelIsEncrypted}
+                    attachmentsEnabled={channelAttachmentsEnabled}
                     onOpenThread={(threadId) => setActiveThreadMessage?.({ id: 0, apiId: threadId } as any)}
                 />
             ) : null}
