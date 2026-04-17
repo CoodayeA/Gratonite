@@ -100,14 +100,14 @@ const Home = () => {
         return (
             <div style={{ flex: 1, overflowY: 'auto' }}>
                 <div style={{ padding: '16px' }}>
-                    <h1 style={{ fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: '12px' }}>Servers</h1>
+                    <h1 style={{ fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: '12px' }}>Communities</h1>
 
                     {/* Search */}
                     <div style={{ position: 'relative', marginBottom: '16px' }}>
                         <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                         <input
                             type="text"
-                            placeholder="Search servers..."
+                            placeholder="Search communities..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             style={{
@@ -176,8 +176,8 @@ const Home = () => {
                         searchQuery ? (
                             <EmptyState
                                 type="search"
-                                title="No servers match your search"
-                                description="Try a different search term to find your server."
+                                title="No communities match your search"
+                                description="Try a different search term to find the community you want."
                             />
                         ) : (
                             <div style={{

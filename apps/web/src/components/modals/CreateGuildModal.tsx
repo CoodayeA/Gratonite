@@ -351,7 +351,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
 
             addToast({
                 title: 'Portal Created!',
-                description: `Welcome to ${guildName}. Next: check your channels, invite your people, and make the space yours.`,
+                description: `Welcome to ${guildName}. Next: review the setup checklist, seed one conversation, and invite your first people in.`,
                 variant: 'success'
             });
 
@@ -374,7 +374,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
 
     return (
         <div className="modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
-            <div role="dialog" aria-modal="true" aria-label="Create server" style={{ width: step === 'template' ? '560px' : '500px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '32px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', border: '1px solid var(--stroke)', position: 'relative', animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }} onClick={e => e.stopPropagation()}>
+            <div role="dialog" aria-modal="true" aria-label="Create community" style={{ width: step === 'template' ? '560px' : '500px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '32px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', border: '1px solid var(--stroke)', position: 'relative', animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }} onClick={e => e.stopPropagation()}>
                 <button onClick={onClose} style={{ position: 'absolute', top: 24, right: 24, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                     <X size={24} />
                 </button>
@@ -382,7 +382,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                 {/* ── Step 1: Template picker ── */}
                 {step === 'template' && (
                     <>
-                        <h2 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>Create a Server</h2>
+                        <h2 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>Create a Community</h2>
                         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', textAlign: 'center' }}>
                             Pick a template or start blank. You can always customize everything after.
                         </p>
@@ -424,7 +424,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                                 className="hover-border-accent-only"
                             >
                                 <Plus size={20} style={{ color: 'var(--text-muted)' }} />
-                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Blank Server</span>
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Blank Community</span>
                             </div>
 
                             {/* Use a Template Code */}
@@ -444,7 +444,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                         </div>
 
                         <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.5 }}>
-                            Servers created here are hosted on gratonite.chat.
+                            Communities created here are hosted on gratonite.chat.
                             Want to host on your own infrastructure instead?
                         </p>
 
@@ -468,7 +468,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                             <>
                                 <div style={{ background: 'var(--bg-tertiary)', borderRadius: '10px', padding: '16px', marginBottom: '24px', border: '1px solid var(--stroke)' }}>
                                     <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>What gets imported</div>
-                                    {['Server name & icon', 'Text & voice channels', 'Roles & permissions', 'Emoji & stickers', 'Members (who consent)'].map(item => (
+                                    {['Community name & icon', 'Text & voice channels', 'Roles & permissions', 'Emoji & stickers', 'Members (who consent)'].map(item => (
                                         <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-primary)', marginBottom: '8px' }}>
                                             <span style={{ color: '#10b981', fontWeight: 700 }}>✓</span> {item}
                                         </div>
@@ -476,7 +476,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                                 </div>
                                 <div style={{ marginBottom: '24px' }}>
                                     <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>
-                                        {selectedTemplate.importSource} Server ID or Invite Link
+                                        {selectedTemplate.importSource} Community ID or Invite Link
                                     </label>
                                     <input
                                         type="text"
@@ -493,7 +493,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                         {(importing || importProgress > 0) && (
                             <div style={{ textAlign: 'center', padding: '20px 0' }}>
                                 <div style={{ fontSize: '40px', marginBottom: '16px' }}>⚡</div>
-                                <h3 style={{ fontWeight: 600, marginBottom: '8px' }}>Importing your server...</h3>
+                                <h3 style={{ fontWeight: 600, marginBottom: '8px' }}>Importing your community...</h3>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px' }}>This usually takes under 30 seconds.</p>
                                 <div style={{ background: 'var(--bg-tertiary)', borderRadius: '100px', height: '8px', overflow: 'hidden', marginBottom: '12px' }}>
                                     <div style={{ height: '100%', width: `${importProgress}%`, background: 'var(--accent-primary)', borderRadius: '100px', transition: 'width 0.3s' }} />
@@ -559,7 +559,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                         )}
 
                         <h2 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>
-                            {selectedTemplate ? selectedTemplate.name : 'Create Your Server'}
+                            {selectedTemplate ? selectedTemplate.name : 'Create Your Community'}
                         </h2>
                         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', textAlign: 'center' }}>Customize your portal before creating it.</p>
 
@@ -617,6 +617,21 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                             </div>
                             <div onClick={() => setIsPublic(!isPublic)} style={{ width: '40px', height: '20px', background: isPublic ? 'var(--accent-primary)' : 'var(--bg-tertiary)', borderRadius: '10px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s' }}>
                                 <div style={{ width: '16px', height: '16px', background: isPublic ? '#111' : 'var(--text-muted)', borderRadius: '50%', position: 'absolute', top: '2px', left: isPublic ? '22px' : '2px', transition: 'left 0.2s' }} />
+                            </div>
+                        </div>
+
+                        <div style={{
+                            background: 'var(--bg-tertiary)',
+                            borderRadius: '10px',
+                            border: '1px solid var(--stroke)',
+                            padding: '14px 16px',
+                            marginBottom: '24px',
+                            display: 'grid',
+                            gap: '8px',
+                        }}>
+                            <div style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--accent-primary)', fontWeight: 700 }}>After you create it</div>
+                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                                Review the starter channels, post one welcome message, then invite your first people once the space already feels lived in.
                             </div>
                         </div>
 

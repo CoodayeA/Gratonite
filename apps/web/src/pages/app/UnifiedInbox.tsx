@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Inbox, CheckCheck, AtSign, Reply, MessageSquare, Hash, ChevronRight, Filter } from 'lucide-react';
+import { Inbox, CheckCheck, AtSign, Reply, MessageSquare, Hash, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api, API_BASE } from '../../lib/api';
 import { useToast } from '../../components/ui/ToastManager';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 type FilterTab = 'all' | 'mentions' | 'replies' | 'unreads';
 
@@ -42,7 +43,7 @@ function formatRelativeDate(dateStr: string): string {
     return new Date(dateStr).toLocaleDateString();
 }
 
-function groupByServer(items: InboxItem[]): GroupedItems[] {
+function groupByCommunity(items: InboxItem[]): GroupedItems[] {
     const map = new Map<string, GroupedItems>();
     for (const item of items) {
         let group = map.get(item.guildId);
@@ -123,8 +124,9 @@ const UnifiedInbox = () => {
     });
 
     const sorted = [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    const grouped = groupByServer(sorted);
+    const grouped = groupByCommunity(sorted);
     const unreadCount = items.filter(i => !i.read).length;
+    const hasAnyNotifications = items.length > 0;
 
     return (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', overflow: 'hidden' }}>
@@ -166,7 +168,7 @@ const UnifiedInbox = () => {
                             Unified Inbox
                         </h1>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                            All your unread messages, mentions, and replies across all servers.
+                            Mentions, replies, and unread conversations from every community you belong to.
                         </p>
                     </div>
 
@@ -196,20 +198,67 @@ const UnifiedInbox = () => {
                             Loading...
                         </div>
                     ) : sorted.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '64px 0' }}>
-                            <Inbox size={48} color="var(--text-muted)" style={{ marginBottom: '16px', opacity: 0.5 }} />
-                            <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>You're all caught up!</h3>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-                                {activeFilter === 'all'
-                                    ? 'No unread messages, mentions, or replies.'
-                                    : `No ${activeFilter} to show.`}
-                            </p>
+                        <div style={{ display: 'grid', gap: '16px', padding: '24px 0' }}>
+                            {hasAnyNotifications ? (
+                                <EmptyState
+                                    type="notifications"
+                                    title={`No ${activeFilter} right now`}
+                                    description="You are caught up for this view. Switch back to everything to review the rest of your inbox."
+                                    actionLabel="View all notifications"
+                                    onAction={() => setActiveFilter('all')}
+                                />
+                            ) : (
+                                <>
+                                    <EmptyState
+                                        type="notifications"
+                                        title="No notifications yet"
+                                        description="Mentions, replies, and unread conversations will land here once you join communities and start chatting."
+                                        actionLabel="Explore communities"
+                                        onAction={() => navigate('/discover')}
+                                    />
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                                        gap: '12px',
+                                    }}>
+                                        {[
+                                            {
+                                                title: 'Join a community',
+                                                body: 'Browse public spaces to find active conversations worth jumping into.',
+                                            },
+                                            {
+                                                title: 'Say hello first',
+                                                body: 'Replies appear here automatically once people answer you back.',
+                                            },
+                                            {
+                                                title: 'Watch for mentions',
+                                                body: 'Ask teammates to @mention you while you are getting set up.',
+                                            },
+                                        ].map((tip) => (
+                                            <div
+                                                key={tip.title}
+                                                style={{
+                                                    padding: '16px',
+                                                    borderRadius: '12px',
+                                                    background: 'var(--bg-secondary)',
+                                                    border: '1px solid var(--stroke)',
+                                                    display: 'grid',
+                                                    gap: '6px',
+                                                }}
+                                            >
+                                                <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{tip.title}</div>
+                                                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{tip.body}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                         </div>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                             {grouped.map(group => (
                                 <div key={group.guildId}>
-                                    {/* Server Header */}
+                                    {/* Community Header */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                                         {group.guildIconHash ? (
                                             <img
