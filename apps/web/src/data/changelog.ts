@@ -24,6 +24,32 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-04-17d',
+    date: 'April 17, 2026',
+    title: 'Help Center & Docs Catch-Up',
+    tagline: 'The in-app help center and GitHub-facing docs now match the product more closely instead of drifting into stale placeholder copy.',
+    spotlight: [
+      {
+        emoji: '🧩',
+        title: 'Help That Matches the App',
+        description: 'The Help Center article set was rewritten around real Gratonite surfaces like guilds, forums, documents, global search, inbox, self-hosting, and federation.',
+        hint: 'Help Center',
+      },
+      {
+        emoji: '🗂️',
+        title: 'Cleaner Entry Points',
+        description: 'GitHub documentation now points people at the right starting docs, and the oldest stale help-center URLs and feature claims were removed.',
+        hint: 'README and docs index',
+      },
+    ],
+    entries: [
+      { type: 'improvement', text: 'Replaced the old Help Center article set with smaller, more accurate guides focused on real Gratonite concepts and current URLs.' },
+      { type: 'improvement', text: 'Removed stale Help Center references to placeholder domains, speculative premium/shop copy, and feature descriptions that were out of sync with the app.' },
+      { type: 'improvement', text: 'Help Center categories now center on getting started, guilds, messaging, integrations, privacy, and self-hosting instead of outdated filler sections.' },
+      { type: 'improvement', text: 'GitHub documentation index now points more clearly at the root product overview, self-hosting guides, release/deploy docs, and development entry points.' },
+    ],
+  },
+  {
     id: '2026-04-17c',
     date: 'April 17, 2026',
     title: 'Product Identity & Messaging Cleanup',

@@ -8,7 +8,7 @@ import {
   Shield,
   Server,
   Bot,
-  CreditCard,
+  Globe,
   Sparkles,
   MessageCircle,
   Lock,
@@ -22,10 +22,7 @@ const CATEGORIES: Category[] = [
   'Guilds & Channels',
   'Messaging & Chat',
   'Bots & Integrations',
-  'Billing & Premium',
-  'Cosmetics & Shop',
-  'Creator Tools',
-  'Marketplace & Auctions',
+  'Self-Hosting & Federation',
   'Privacy & Safety',
 ];
 
@@ -35,10 +32,7 @@ const CATEGORY_ICONS: Record<Exclude<Category, 'All'>, typeof Book> = {
   'Guilds & Channels': Server,
   'Messaging & Chat': MessageCircle,
   'Bots & Integrations': Bot,
-  'Billing & Premium': CreditCard,
-  'Cosmetics & Shop': Sparkles,
-  'Creator Tools': Sparkles,
-  'Marketplace & Auctions': Sparkles,
+  'Self-Hosting & Federation': Globe,
   'Privacy & Safety': Lock,
 };
 
@@ -48,10 +42,7 @@ const CATEGORY_COLORS: Record<Exclude<Category, 'All'>, string> = {
   'Guilds & Channels': 'var(--success)',
   'Messaging & Chat': '#60a5fa',
   'Bots & Integrations': '#a78bfa',
-  'Billing & Premium': '#f472b6',
-  'Cosmetics & Shop': '#fb7185',
-  'Creator Tools': '#14b8a6',
-  'Marketplace & Auctions': '#f59e0b',
+  'Self-Hosting & Federation': '#14b8a6',
   'Privacy & Safety': '#f87171',
 };
 
@@ -236,7 +227,7 @@ export default function HelpCenter() {
             color: 'var(--text-secondary)',
           }}
         >
-          Find answers about guilds, chats, privacy, and self-hosting
+          Find current answers about guilds, messaging, privacy, self-hosting, and federation.
         </p>
 
         {/* Search */}
