@@ -6,7 +6,7 @@ export const SITE_BRAND = "Gratonite Chat";
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/Gratonite_logo.png`;
 
 export const DEFAULT_DESCRIPTION =
-  "Gratonite is the open-source hangout platform: chat, voice, video, self-hosting, and private DMs for communities that want their space to feel owned, not rented.";
+  "Gratonite is open-source community software for chat, voice, video, self-hosting, and private DMs — built for groups that want their space to feel like their own.";
 
 type PageMetadataOptions = {
   title: string;
@@ -82,7 +82,7 @@ export function articleKeywords(postTitle: string, slug: string) {
   return [
     "Gratonite",
     "Gratonite Chat",
-    "open source community platform",
+    "open source hangout platform",
     "open source chat app",
     "privacy-first chat app",
     "self-hosted chat",

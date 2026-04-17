@@ -24,6 +24,8 @@ fi
 SSH_KEY="${SSH_KEY}"
 REMOTE_DIR="${REMOTE_DIR:-/home/$USER/gratonite-app}"
 API_HEALTH_URL="${API_HEALTH_URL:-https://api.gratonite.chat/health}"
+LANDING_PUBLIC_URL="${LANDING_PUBLIC_URL:-https://gratonite.chat}"
+APP_PUBLIC_URL="${APP_PUBLIC_URL:-https://gratonite.chat/app}"
 
 if [[ ! -f "$SSH_KEY" ]]; then
   echo "❌ SSH key not found: $SSH_KEY"
@@ -243,19 +245,51 @@ echo ""
 ENDSSH
 
 echo ""
-echo "🔍 Step 6: Health check..."
-for i in {1..20}; do
-  code="$(curl -sS -m 10 -o /dev/null -w "%{http_code}" "$API_HEALTH_URL" || true)"
-  if [[ "$code" == "200" ]]; then
-    echo "✅ API health check passed: $API_HEALTH_URL"
+echo "🔍 Step 6: Public verification..."
+declare -a checks=(
+  "API health|$API_HEALTH_URL|200|"
+  "Landing page|$LANDING_PUBLIC_URL|200|Gratonite"
+  "App shell|$APP_PUBLIC_URL|200|Gratonite"
+)
+
+for entry in "${checks[@]}"; do
+  IFS='|' read -r label url expected body_snippet <<< "$entry"
+  passed=false
+  for i in {1..20}; do
+    tmp_file="$(mktemp)"
+    code="$(curl -sS -m 10 -L -o "$tmp_file" -w "%{http_code}" "$url" || true)"
+    if [[ "$code" == "$expected" ]]; then
+      if [[ -z "$body_snippet" ]] || grep -qi "$body_snippet" "$tmp_file"; then
+        echo "✅ ${label} check passed: $url"
+        passed=true
+        rm -f "$tmp_file"
+        break
+      fi
+    fi
+    echo "  Waiting for ${label,,}... (attempt $i/20, status=${code:-n/a})"
+    rm -f "$tmp_file"
+    sleep 3
+  done
+
+  if [[ "$passed" != true ]]; then
+    echo "❌ ${label} check failed after deploy: $url"
     echo ""
-    echo "🎉 Deployment successful!"
-    echo ""
-    exit 0
+    echo "Rollback / diagnosis quick path:"
+    echo "  ssh -i \"$SSH_KEY\" \"$USER@$SERVER\""
+    echo "  cd \"$REMOTE_DIR\""
+    echo "  docker compose -f docker-compose.production.yml ps"
+    echo "  docker logs --tail=200 gratonite-api"
+    echo "  docker logs --tail=200 gratonite-web"
+    echo "  docker logs --tail=200 gratonite-caddy"
+    echo "  docker compose -f docker-compose.production.yml up -d --force-recreate api web caddy livekit"
+    exit 1
   fi
-  echo "  Waiting for API health... (attempt $i/20, status=${code:-n/a})"
-  sleep 3
 done
 
-echo "❌ API health check failed after deploy: $API_HEALTH_URL"
-exit 1
+echo ""
+echo "🎉 Deployment successful!"
+echo ""
+echo "If a rollback is still needed later:"
+echo "  ssh -i \"$SSH_KEY\" \"$USER@$SERVER\""
+echo "  cd \"$REMOTE_DIR\""
+echo "  docker compose -f docker-compose.production.yml logs --tail=200 api web caddy"

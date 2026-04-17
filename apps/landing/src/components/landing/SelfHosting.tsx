@@ -17,7 +17,7 @@ const benefits = [
     accent: "purple" as const,
   },
   {
-    title: "Your server, still connected",
+    title: "Your instance, still connected",
     description:
       "Self-host if you want control. Federation keeps you part of the wider Gratonite network.",
     accent: "gold" as const,
@@ -71,7 +71,7 @@ export function SelfHosting() {
               Self-Hosting
             </p>
             <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-4">
-              YOUR SERVER.
+              YOUR SPACE.
               <br />
               <span className="text-purple">YOUR RULES.</span>
             </h2>

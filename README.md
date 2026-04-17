@@ -16,11 +16,13 @@ Chat, voice, video, self-hosting, end-to-end encrypted DMs, and federation — n
 
 ---
 
-> Your server, your rules. No ads, no tracking, no phone number required.
+> Your community, your rules. No ads, no tracking, no phone number required.
 
 ## What is Gratonite?
 
-Gratonite is a community platform for people who want chat to feel like hanging out again, not managing another work app. You can use [gratonite.chat](https://gratonite.chat), or run your own instance in one command. Either way, your community stays yours.
+Gratonite is community software for people who want chat to feel like hanging out again, not managing another work app. You can use [gratonite.chat](https://gratonite.chat), or run your own instance in one command. Either way, your community stays yours.
+
+In Gratonite, a community space is called a **guild**. Inside a guild you add **channels** for the kind of conversation you need: chat, voice, forum, wiki, Q&A, and more.
 
 ## Why people switch to Gratonite
 
@@ -83,7 +85,7 @@ End-to-end encrypted DMs, federation addresses, relay-backed connectivity for ha
 
 **Guild channels are not end-to-end encrypted.** That trade-off is intentional so search, moderation, discovery, and server-side community tooling can work.
 
-**Federation is built in.** Gratonite instances can discover each other, exchange signed activities, route through the relay network when needed, and let people join communities across servers.
+**Federation is built in.** Gratonite instances can discover each other, exchange signed activities, route through the relay network when needed, and let people join communities across instances.
 
 Read more:
 

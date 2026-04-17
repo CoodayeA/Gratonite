@@ -44,9 +44,13 @@ jobs:
           DEPLOY_SERVER: ${{ vars.DEPLOY_SERVER }}
           DEPLOY_USER: ${{ vars.DEPLOY_USER }}
           API_HEALTH_URL: ${{ vars.API_HEALTH_URL }}
+          LANDING_PUBLIC_URL: ${{ vars.LANDING_PUBLIC_URL }}
+          APP_PUBLIC_URL: ${{ vars.APP_PUBLIC_URL }}
         run: |
           SERVER="${DEPLOY_SERVER:-178.156.253.237}" \
           USER="${DEPLOY_USER:-ferdinand}" \
           SSH_KEY="$HOME/.ssh/deploy_key" \
           API_HEALTH_URL="${API_HEALTH_URL:-https://api.gratonite.chat/health}" \
+          LANDING_PUBLIC_URL="${LANDING_PUBLIC_URL:-https://gratonite.chat}" \
+          APP_PUBLIC_URL="${APP_PUBLIC_URL:-https://gratonite.chat/app}" \
           bash deploy/deploy.sh

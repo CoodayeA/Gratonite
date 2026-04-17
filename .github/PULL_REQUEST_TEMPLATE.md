@@ -24,3 +24,5 @@
 
 - [ ] **Reviewed** the diff for correctness, security, and migrations (if any)
 - [ ] After deploy: follow **server + public URL** verification (not just SSH health)
+- [ ] Run or confirm the relevant `production-smoke` path for public/authenticated coverage
+- [ ] Note the rollback/logs path if the deploy degrades API, app shell, or landing

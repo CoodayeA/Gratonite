@@ -161,7 +161,7 @@ export default function FederationPage() {
               <Card className="p-6 bg-gray-900/50">
                 <h3 className="font-semibold mb-2">Gaming Communities</h3>
                 <p className="text-sm text-gray-400">
-                  Your server, your content rules. No platform banning your community
+                  Your instance, your content rules. No platform banning your community
                   for content that&apos;s legal but against someone else&apos;s ToS.
                 </p>
               </Card>
