@@ -9,11 +9,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as SecureStore from 'expo-secure-store';
 import { userSettings as settingsApi } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
-import { switchSoundPack } from '../../lib/soundEngine';
+import { switchSoundPack, setMuted as setSoundMuted, setVolume as setSoundVolume } from '../../lib/soundEngine';
 import SectionHeader from '../../components/SectionHeader';
 import LoadingScreen from '../../components/LoadingScreen';
 import LoadErrorCard from '../../components/LoadErrorCard';
@@ -77,7 +76,7 @@ export default function SettingsSoundScreen({ navigation }: Props) {
     const next = Math.max(0, Math.min(100, volume + delta));
     setVolume(next);
     save({ soundVolume: next });
-    SecureStore.setItemAsync('gratonite_sound_volume', String(next)).catch(() => {});
+    setSoundVolume(next);
   };
 
   const selectPack = (pack: string) => {
@@ -89,7 +88,7 @@ export default function SettingsSoundScreen({ navigation }: Props) {
   const toggleMute = (value: boolean) => {
     setMuted(value);
     save({ soundMuted: value });
-    SecureStore.setItemAsync('gratonite_sound_muted', String(value)).catch(() => {});
+    setSoundMuted(value);
   };
 
   const styles = useMemo(() => StyleSheet.create({

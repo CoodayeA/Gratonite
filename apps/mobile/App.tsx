@@ -124,12 +124,23 @@ function ThemedApp() {
 
   useSystemThemeListener();
 
+  const pendingOtaUpdate = useRef(false);
+
   React.useEffect(() => {
     initSounds();
     console.log(`[Gratonite] OTA_BUILD_STAMP: ${OTA_BUILD_STAMP}`);
     if (!__DEV__) {
+      // Silently download any available update; apply it the next time the
+      // user backgrounds the app so we never interrupt an active session.
       Updates.checkForUpdateAsync()
-        .then((update) => console.log(`[Gratonite] Update available: ${update.isAvailable}`))
+        .then(async (update) => {
+          if (update.isAvailable) {
+            const fetchResult = await Updates.fetchUpdateAsync();
+            if (fetchResult.isNew) {
+              pendingOtaUpdate.current = true;
+            }
+          }
+        })
         .catch(() => {});
     }
   }, []);
@@ -196,6 +207,11 @@ function ThemedApp() {
       if (nextState === 'background') {
         disconnectSocket();
         backgroundTimestamp.current = Date.now();
+        // Apply any downloaded OTA update once the user leaves the app
+        if (pendingOtaUpdate.current) {
+          pendingOtaUpdate.current = false;
+          Updates.reloadAsync().catch(() => {});
+        }
       }
     });
     return () => sub.remove();

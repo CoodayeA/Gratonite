@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { API_BASE } from '../lib/api';
@@ -20,6 +20,7 @@ export default function Avatar({ userId, avatarHash, name, size = 40, showStatus
   const liveStatus = useUserPresence(userId ?? '');
   const status = statusOverride ?? liveStatus;
   const statusSize = Math.max(10, size * 0.3);
+  const [imageError, setImageError] = useState(false);
 
   const STATUS_COLORS: Record<PresenceStatus, string> = {
     online: colors.online,
@@ -51,12 +52,13 @@ export default function Avatar({ userId, avatarHash, name, size = 40, showStatus
 
   return (
     <View style={{ width: size, height: size }}>
-      {imageUrl ? (
+      {imageUrl && !imageError ? (
         <Image
           source={{ uri: imageUrl }}
           style={{ width: size, height: size, borderRadius: size / 2 }}
           contentFit="cover"
           cachePolicy="memory-disk"
+          onError={() => setImageError(true)}
         />
       ) : (
         <View style={[styles.fallback, { width: size, height: size, borderRadius: size / 2 }]}>
