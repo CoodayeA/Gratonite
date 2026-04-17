@@ -12,14 +12,11 @@
  *   });
  */
 
-import { eq } from 'drizzle-orm';
 import { db } from '../db/index';
 import { logger } from './logger';
 import { notifications } from '../db/schema/notifications';
-import { userSettings } from '../db/schema/settings';
 import { getIO } from './socket-io';
-import { redis } from './redis';
-import { isWithinNotificationQuietHours } from './notificationQuietHours';
+import { evaluateNotificationTrust } from './notificationTrustMatrix';
 
 export interface CreateNotificationParams {
   userId: string;
@@ -38,6 +35,14 @@ export interface CreateNotificationParams {
  */
 export async function createNotification(params: CreateNotificationParams): Promise<void> {
   try {
+    const { shouldCreate, explanation } = await evaluateNotificationTrust({
+      userId: params.userId,
+      type: params.type,
+      data: params.data ?? null,
+    });
+
+    if (!shouldCreate) return;
+
     const [notif] = await db
       .insert(notifications)
       .values({
@@ -45,34 +50,15 @@ export async function createNotification(params: CreateNotificationParams): Prom
         type: params.type,
         title: params.title,
         body: params.body ?? null,
-        data: params.data ?? null,
+        data: {
+          ...(params.data ?? {}),
+          notificationTrust: explanation,
+        },
       })
       .returning();
 
-    // Check if the user is in DND — suppress the real-time push if so
-    let suppress = false;
-    try {
-      const status = await redis.get(`presence:${params.userId}`);
-      if (status === 'dnd') suppress = true;
-    } catch {
-      // Redis down — don't suppress
-    }
-
-    if (!suppress) {
-      try {
-        const [row] = await db
-          .select({ qh: userSettings.notificationQuietHours })
-          .from(userSettings)
-          .where(eq(userSettings.userId, params.userId))
-          .limit(1);
-        if (isWithinNotificationQuietHours(row?.qh)) suppress = true;
-      } catch {
-        /* ignore */
-      }
-    }
-
     // Emit to the user's private room so they get a real-time notification
-    if (!suppress) {
+    if (!explanation.realtimeSuppressed) {
       try {
         getIO().to(`user:${params.userId}`).emit('NOTIFICATION_CREATE', notif);
       } catch {

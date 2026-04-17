@@ -35,6 +35,7 @@ type Props = CompositeScreenProps<
 const NOTIFICATION_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   message: 'chatbubble',
   mention: 'at',
+  forum_reply: 'chatbubble',
   friend_request: 'person-add',
   friend_accept: 'people',
   guild_invite: 'mail',

@@ -692,7 +692,25 @@ export const telemetryApi = {
 
 export const notificationsApi = {
   list: (limit = 50) =>
-    apiFetch<{ id: string; type: string; senderId: string | null; senderName: string | null; channelId: string | null; guildId: string | null; guildName: string | null; messageId: string | null; content: string; preview: string | null; read: boolean; createdAt: string }[]>(`/notifications?limit=${limit}`),
+    apiFetch<{ id: string; type: string; senderId: string | null; senderName: string | null; channelId: string | null; guildId: string | null; guildName: string | null; messageId: string | null; content: string; preview: string | null; read: boolean; createdAt: string; trustSummary: string | null }[]>(`/notifications?limit=${limit}`),
+  explain: (notificationId: string) =>
+    apiFetch<{
+      version: 1;
+      type: string;
+      summary: string;
+      requiredLevel: 'all' | 'mentions' | 'always';
+      effectiveLevel: 'all' | 'mentions' | 'nothing' | 'always';
+      sourceScope: 'channel' | 'guild' | 'guild_default' | 'app_default' | 'direct' | 'system';
+      sourceLabel: string;
+      muted: boolean;
+      mutedUntil: string | null;
+      quietHoursActive: boolean;
+      presence: string | null;
+      realtimeSuppressed: boolean;
+      delivery: 'realtime' | 'inbox_only';
+      precedence: string[];
+      details: string[];
+    }>(`/notifications/${notificationId}/explanation`),
   markRead: (notificationId: string) =>
     apiFetch<void>(`/notifications/${notificationId}/read`, { method: 'POST' }),
   markAllRead: () =>
