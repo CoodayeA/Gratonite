@@ -20,6 +20,25 @@ type Notification = {
     channel: string;
     guildName?: string;
     guildId?: string;
+    trustSummary?: string | null;
+};
+
+type NotificationTrustExplanation = {
+    version: 1;
+    type: string;
+    summary: string;
+    requiredLevel: 'all' | 'mentions' | 'always';
+    effectiveLevel: 'all' | 'mentions' | 'nothing' | 'always';
+    sourceScope: 'channel' | 'guild' | 'guild_default' | 'app_default' | 'direct' | 'system';
+    sourceLabel: string;
+    muted: boolean;
+    mutedUntil: string | null;
+    quietHoursActive: boolean;
+    presence: string | null;
+    realtimeSuppressed: boolean;
+    delivery: 'realtime' | 'inbox_only';
+    precedence: string[];
+    details: string[];
 };
 
 type NotifGroup = {
@@ -47,6 +66,7 @@ const GROUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 function getFilterCategory(type: string): FilterTab {
     switch (type) {
         case 'mention': return 'mentions';
+        case 'forum_reply': return 'mentions';
         case 'dm': return 'dms';
         case 'friend_request': return 'social';
         case 'auction_new_bid':
@@ -167,6 +187,7 @@ function isGroup(item: Notification | NotifGroup): item is NotifGroup {
 const TypeIcon = ({ type }: { type: string }) => {
     switch (type) {
         case 'mention': return <AtSign size={16} />;
+        case 'forum_reply': return <MessageSquare size={16} />;
         case 'dm': return <Mail size={16} />;
         case 'reaction': return <Heart size={16} />;
         case 'friend_request': return <UserPlus size={16} />;
@@ -209,6 +230,9 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
     });
     const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [explanations, setExplanations] = useState<Record<string, NotificationTrustExplanation | null>>({});
+    const [openExplanations, setOpenExplanations] = useState<Set<string>>(new Set());
+    const [loadingExplanationId, setLoadingExplanationId] = useState<string | null>(null);
 
     const handleTabChange = useCallback((tab: FilterTab) => {
         setActiveTab(tab);
@@ -320,6 +344,7 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
                         : '/',
                     guildName: n.guildName || undefined,
                     guildId: n.guildId || undefined,
+                    trustSummary: n.trustSummary,
                 }));
                 setNotifications(mapped);
             })
@@ -383,6 +408,33 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
         onClose();
     };
 
+    const toggleExplanation = async (notif: Notification, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setOpenExplanations(prev => {
+            const next = new Set(prev);
+            if (next.has(notif.id)) next.delete(notif.id);
+            else next.add(notif.id);
+            return next;
+        });
+
+        if (explanations[notif.id] || loadingExplanationId === notif.id) return;
+
+        setLoadingExplanationId(notif.id);
+        try {
+            const explanation = await api.notifications.explain(notif.id);
+            setExplanations(prev => ({ ...prev, [notif.id]: explanation }));
+        } catch {
+            addToast({ title: 'Could not load notification explanation', variant: 'error' });
+            setOpenExplanations(prev => {
+                const next = new Set(prev);
+                next.delete(notif.id);
+                return next;
+            });
+        } finally {
+            setLoadingExplanationId(current => current === notif.id ? null : current);
+        }
+    };
+
     const renderNotification = (notif: Notification) => (
         <div key={notif.id} onClick={() => handleNotificationClick(notif)} className="hover-notif-item" style={{ padding: '12px 24px', borderBottom: '1px solid var(--stroke)', display: 'flex', gap: '12px', background: notif.read ? 'transparent' : 'rgba(82, 109, 245, 0.05)', cursor: 'pointer', transition: 'background 0.2s' }}>
             <input
@@ -415,6 +467,35 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
                     </div>
                 )}
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{notif.date}</div>
+                <button
+                    onClick={(e) => toggleExplanation(notif, e)}
+                    style={{ marginTop: '8px', background: 'transparent', border: 'none', color: 'var(--accent-blue)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: 0, textAlign: 'left' as const }}
+                >
+                    {openExplanations.has(notif.id) ? 'Hide why I got this' : 'Why did I get this?'}
+                </button>
+                {openExplanations.has(notif.id) && (
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ marginTop: '8px', padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '6px' }}
+                    >
+                        {loadingExplanationId === notif.id && !explanations[notif.id] ? (
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Loading explanation…</div>
+                        ) : (
+                            <>
+                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                                    {explanations[notif.id]?.summary || notif.trustSummary || 'This notification matched your current delivery settings.'}
+                                </div>
+                                {explanations[notif.id]?.details?.length ? (
+                                    <ul style={{ margin: 0, paddingLeft: '18px', color: 'var(--text-muted)', fontSize: '11px', lineHeight: 1.5 }}>
+                                        {explanations[notif.id]?.details.map((detail) => (
+                                            <li key={detail}>{detail}</li>
+                                        ))}
+                                    </ul>
+                                ) : null}
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
             <button onClick={(e) => dismissNotification(notif.id, e)} className="hover-text-primary" style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '4px', alignSelf: 'flex-start', flexShrink: 0, transition: 'color 0.2s' }}>
                 <X size={16} />

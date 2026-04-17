@@ -39,21 +39,47 @@ export function NotificationPrefsModal({ type, id, name, onClose }: Props) {
   const activePreset = PROFILES.find(p => p.level === level && p.muted === muted);
   const [muteDuration, setMuteDuration] = useState<number | null>(60);
   const [saving, setSaving] = useState(false);
+  const [effectiveSummary, setEffectiveSummary] = useState<string | null>(null);
 
   useEffect(() => {
     const token = getAccessToken();
     if (!token) return;
-    fetch(`${API_BASE}/users/@me/settings/notif?key=${encodeURIComponent(settingKey)}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    }).then(r => r.json()).then(data => {
-      if (data.value) {
-        setLevel(data.value.level || 'all');
-        if (data.value.mutedUntil && new Date(data.value.mutedUntil) > new Date()) {
-          setMuted(true);
+
+    const load = async () => {
+      try {
+        if (type === 'channel') {
+          const pref = await api.channels.getNotificationPrefs(id);
+          const explicitLevel = pref.level === 'none' ? 'nothing' : pref.level;
+          const effectiveLevel = pref.effective?.effectiveLevel ?? 'all';
+          setLevel((explicitLevel === 'default' ? effectiveLevel : explicitLevel) as NotifLevel);
+          const activeMute = Boolean(
+            pref.mutedUntil && new Date(pref.mutedUntil) > new Date(),
+          ) || Boolean(pref.effective?.muted);
+          setMuted(activeMute);
+          setEffectiveSummary(pref.effective
+            ? `Effective now: ${pref.effective.effectiveLevel === 'all' ? 'All messages' : pref.effective.effectiveLevel === 'mentions' ? 'Mentions and direct replies' : 'Nothing'} via ${pref.effective.sourceLabel}.`
+            : null);
+          return;
         }
+
+        const data = await fetch(`${API_BASE}/users/@me/settings/notif?key=${encodeURIComponent(settingKey)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then(r => r.json());
+
+        if (data.value) {
+          setLevel(data.value.level || 'all');
+          if (data.value.mutedUntil && new Date(data.value.mutedUntil) > new Date()) {
+            setMuted(true);
+          }
+        }
+        setEffectiveSummary(null);
+      } catch {
+        addToast({ title: 'Failed to load notification preferences', variant: 'error' });
       }
-    }).catch(() => { addToast({ title: 'Failed to load notification preferences', variant: 'error' }); });
-  }, [settingKey]);
+    };
+
+    load();
+  }, [addToast, id, settingKey, type]);
 
   async function save() {
     setSaving(true);
@@ -116,6 +142,11 @@ export function NotificationPrefsModal({ type, id, name, onClose }: Props) {
           </div>
           <div className="notif-section">
             <label className="notif-section-title">Notifications</label>
+            {effectiveSummary && (
+              <div style={{ marginBottom: '10px', padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-tertiary)', color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.45 }}>
+                {effectiveSummary}
+              </div>
+            )}
             {(['all', 'mentions', 'nothing'] as NotifLevel[]).map(l => (
               <label key={l} className="notif-radio">
                 <input type="radio" name="level" value={l} checked={level === l} onChange={() => setLevel(l)} />

@@ -4,6 +4,21 @@
 import { apiFetch } from './_core';
 import type { Channel } from './_core';
 
+type EffectiveNotificationPreference = {
+  effectiveLevel: 'all' | 'mentions' | 'nothing';
+  sourceScope: 'channel' | 'guild' | 'guild_default' | 'app_default' | 'direct' | 'system';
+  sourceLabel: string;
+  muted: boolean;
+  mutedUntil: string | null;
+  precedence: string[];
+};
+
+type ChannelNotificationPrefResponse = {
+  level: string;
+  mutedUntil: string | null;
+  effective?: EffectiveNotificationPreference;
+};
+
 function assertGuildId(guildId: string): asserts guildId is string {
   if (!guildId || guildId === 'null' || guildId === 'undefined') {
     throw new Error(`Invalid guildId: ${guildId}`);
@@ -130,7 +145,7 @@ export const channelsApi = {
   },
 
   getNotificationPrefs: (channelId: string) =>
-    apiFetch<{ level: string; mutedUntil: string | null }>(`/channels/${channelId}/notification-prefs`),
+    apiFetch<ChannelNotificationPrefResponse>(`/channels/${channelId}/notification-prefs`),
 
   getNotificationPrefsBulk: (channelIds: string[]) => {
     const params = new URLSearchParams({ channelIds: channelIds.join(',') });
@@ -138,7 +153,7 @@ export const channelsApi = {
   },
 
   setNotificationPrefs: (channelId: string, data: { level: 'all' | 'mentions' | 'none' | 'default'; mutedUntil?: string | null }) =>
-    apiFetch<{ level: string; mutedUntil: string | null }>(`/channels/${channelId}/notification-prefs`, {
+    apiFetch<ChannelNotificationPrefResponse>(`/channels/${channelId}/notification-prefs`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),

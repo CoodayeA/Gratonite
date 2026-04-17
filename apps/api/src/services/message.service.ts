@@ -20,7 +20,7 @@ import { guilds } from '../db/schema/guilds';
 import { guildMembers } from '../db/schema/guilds';
 import { messageReactions } from '../db/schema/reactions';
 import { channelPins } from '../db/schema/pins';
-import { threads } from '../db/schema/threads';
+import { threads, threadMembers } from '../db/schema/threads';
 import { messageEditHistory } from '../db/schema/messageEditHistory';
 import { messageDrafts } from '../db/schema/message-drafts';
 import { scheduledMessages } from '../db/schema/scheduled-messages';
@@ -798,6 +798,55 @@ export class MessageService {
             data: { senderId: authorId, senderName, channelId, messageId: newMessage.id },
           }).catch(err => logger.error('[messages] notification failed:', err));
         }
+      }
+    }
+
+    if (threadId) {
+      try {
+        await db
+          .insert(threadMembers)
+          .values({ threadId, userId: authorId })
+          .onConflictDoNothing();
+
+        if (chan?.guildId && chan.type === 'GUILD_FORUM') {
+          const [thread] = await db
+            .select({ id: threads.id, name: threads.name, creatorId: threads.creatorId })
+            .from(threads)
+            .where(eq(threads.id, threadId))
+            .limit(1);
+
+          if (thread) {
+            const participants = await db
+              .select({ userId: threadMembers.userId })
+              .from(threadMembers)
+              .where(eq(threadMembers.threadId, thread.id));
+
+            const recipientIds = [...new Set([
+              thread.creatorId,
+              ...participants.map((participant) => participant.userId),
+            ])].filter((userId) => userId !== authorId && !mentionedUserIds.has(userId));
+
+            for (const recipientId of recipientIds) {
+              createNotification({
+                userId: recipientId,
+                type: 'forum_reply',
+                title: `${senderName} replied in ${thread.name}`,
+                body: preview || '(attachment)',
+                data: {
+                  senderId: authorId,
+                  senderName,
+                  channelId,
+                  guildId: chan.guildId,
+                  messageId: newMessage.id,
+                  threadId: thread.id,
+                  threadName: thread.name,
+                },
+              }).catch(err => logger.error('[messages] forum reply notification failed:', err));
+            }
+          }
+        }
+      } catch (err) {
+        logger.error('[messages] thread participation update failed:', err);
       }
     }
 

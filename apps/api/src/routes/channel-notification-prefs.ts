@@ -3,29 +3,37 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '../db/index';
 import { channelNotificationPrefs } from '../db/schema/channel-notification-prefs';
 import { requireAuth } from '../middleware/auth';
+import { resolveEffectiveNotificationPreference } from '../lib/notificationTrustMatrix';
 
 export const channelNotifPrefsRouter = Router({ mergeParams: true });
 export const channelNotifPrefsBulkRouter = Router();
 
-/** GET /api/v1/channels/:channelId/notification-prefs */
-channelNotifPrefsRouter.get('/notification-prefs', requireAuth, async (req: Request, res: Response): Promise<void> => {
-  const { channelId } = req.params as Record<string, string>;
-
+async function serializeChannelPreference(userId: string, channelId: string) {
   const [pref] = await db
     .select()
     .from(channelNotificationPrefs)
     .where(and(
-      eq(channelNotificationPrefs.userId, req.userId!),
+      eq(channelNotificationPrefs.userId, userId),
       eq(channelNotificationPrefs.channelId, channelId),
     ))
     .limit(1);
 
-  if (!pref) {
-    res.json({ level: 'default', mutedUntil: null });
-    return;
-  }
+  const effective = await resolveEffectiveNotificationPreference({
+    userId,
+    channelId,
+  });
 
-  res.json(pref);
+  return {
+    level: pref?.level ?? 'default',
+    mutedUntil: pref?.mutedUntil ? pref.mutedUntil.toISOString() : null,
+    effective,
+  };
+}
+
+/** GET /api/v1/channels/:channelId/notification-prefs */
+channelNotifPrefsRouter.get('/notification-prefs', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { channelId } = req.params as Record<string, string>;
+  res.json(await serializeChannelPreference(req.userId!, channelId));
 });
 
 /** PUT /api/v1/channels/:channelId/notification-prefs */
@@ -40,7 +48,7 @@ channelNotifPrefsRouter.put('/notification-prefs', requireAuth, async (req: Requ
 
   const parsedMutedUntil = mutedUntil ? new Date(mutedUntil) : null;
 
-  const [upserted] = await db
+  await db
     .insert(channelNotificationPrefs)
     .values({
       userId: req.userId!,
@@ -57,7 +65,7 @@ channelNotifPrefsRouter.put('/notification-prefs', requireAuth, async (req: Requ
     })
     .returning();
 
-  res.json(upserted);
+  res.json(await serializeChannelPreference(req.userId!, channelId));
 });
 
 /** GET /api/v1/channels/notification-prefs/bulk?channelIds=a,b,c */

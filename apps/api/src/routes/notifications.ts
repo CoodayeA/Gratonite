@@ -4,6 +4,7 @@ import { db } from '../db/index';
 import { notifications } from '../db/schema/notifications';
 import { guilds } from '../db/schema/guilds';
 import { requireAuth } from '../middleware/auth';
+import { evaluateNotificationTrust, getStoredNotificationTrust } from '../lib/notificationTrustMatrix';
 
 export const notificationsRouter = Router();
 
@@ -49,10 +50,38 @@ notificationsRouter.get('/', requireAuth, async (req: Request, res: Response): P
       preview: n.body ?? null,
       read: n.read,
       createdAt: n.createdAt,
+      trustSummary: getStoredNotificationTrust(d)?.summary ?? null,
     };
   });
 
   res.json(mapped);
+});
+
+/** GET /api/v1/notifications/:id/explanation */
+notificationsRouter.get('/:id/explanation', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params as Record<string, string>;
+  const [notification] = await db.select().from(notifications)
+    .where(and(eq(notifications.id, id), eq(notifications.userId, req.userId!)))
+    .limit(1);
+
+  if (!notification) {
+    res.status(404).json({ code: 'NOT_FOUND', message: 'Notification not found' });
+    return;
+  }
+
+  const data = (notification.data ?? {}) as Record<string, unknown>;
+  const stored = getStoredNotificationTrust(data);
+  if (stored) {
+    res.json(stored);
+    return;
+  }
+
+  const { explanation } = await evaluateNotificationTrust({
+    userId: req.userId!,
+    type: notification.type,
+    data,
+  });
+  res.json(explanation);
 });
 
 /** GET /api/v1/notifications/unread-count */
