@@ -2,6 +2,7 @@ const CACHE_NAME = 'gratonite-v5';
 const API_CACHE_NAME = 'gratonite-api-v2';
 const FONT_CACHE_NAME = 'gratonite-fonts-v1';
 const STATIC_ASSETS = ['/app/', '/app/index.html', '/app/manifest.json', '/app/offline.html'];
+const APP_URL = new URL('/app/', self.location.origin).toString();
 
 // API paths that should be cached for offline access
 const CACHEABLE_API_PATHS = [
@@ -219,7 +220,7 @@ self.addEventListener('notificationclick', (event) => {
           if (clients.length > 0) {
             clients[0].focus();
           } else {
-            await self.clients.openWindow('/app');
+            await self.clients.openWindow(APP_URL);
           }
           return;
         }
@@ -267,7 +268,7 @@ self.addEventListener('notificationclick', (event) => {
           if (clients.length > 0) {
             clients[0].focus();
           } else {
-            await self.clients.openWindow('/app');
+            await self.clients.openWindow(APP_URL);
           }
         }
       })()

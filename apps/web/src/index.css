@@ -393,7 +393,8 @@ html[data-cb-mode="tritanopia"] #root {
     --heading-3: clamp(1.2rem, 1.1rem + 0.5vw, 1.5rem);
 }
 
-/* Button Shape: Sharp */
+/* Button Shape: Square (keep sharp as a legacy alias) */
+[data-button-shape="square"],
 [data-button-shape="sharp"] {
     --radius-sm: 0px !important;
     --radius-md: 0px !important;
@@ -407,6 +408,26 @@ html[data-cb-mode="tritanopia"] #root {
     --radius-md: 9999px !important;
     --radius-lg: 9999px !important;
     --radius-xl: 9999px !important;
+}
+
+/* Push the selected radius contract into common interactive controls.
+   Preserve explicit circular controls like swatches and icon badges. */
+button:not([style*="border-radius: 50%"]):not([style*="border-radius:50%"]):not([style*="border-radius: 9999px"]):not([style*="border-radius:9999px"]),
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+select,
+textarea,
+.auth-button,
+.auth-input,
+.input-icon-btn,
+.bg-upload-btn {
+    border-radius: var(--radius-md) !important;
+}
+
+button[style*="border-radius: 50%"],
+button[style*="border-radius:50%"],
+input[style*="border-radius: 50%"],
+input[style*="border-radius:50%"] {
+    border-radius: 50% !important;
 }
 
 * {
@@ -2964,9 +2985,9 @@ button:active:not(:disabled) {
 /* Subtle: light frosted glass on panels and sidebars */
 [data-glass-mode="subtle"] .glass-panel,
 [data-glass-mode="subtle"] .guild-rail,
-[data-glass-mode="subtle"] .channels-sidebar,
-[data-glass-mode="subtle"] .dm-sidebar {
-    background: rgba(var(--bg-sidebar-rgb, 20, 20, 30), 0.7) !important;
+[data-glass-mode="subtle"] .channel-sidebar,
+[data-glass-mode="subtle"] .members-sidebar {
+    background: rgba(var(--bg-sidebar-rgb, 20, 20, 30), 0.82) !important;
     backdrop-filter: blur(12px) saturate(1.2) !important;
     -webkit-backdrop-filter: blur(12px) saturate(1.2) !important;
 }
@@ -2974,9 +2995,9 @@ button:active:not(:disabled) {
 /* Full: strong frosted glass on all major surfaces */
 [data-glass-mode="full"] .glass-panel,
 [data-glass-mode="full"] .guild-rail,
-[data-glass-mode="full"] .channels-sidebar,
-[data-glass-mode="full"] .dm-sidebar {
-    background: rgba(var(--bg-sidebar-rgb, 20, 20, 30), 0.45) !important;
+[data-glass-mode="full"] .channel-sidebar,
+[data-glass-mode="full"] .members-sidebar {
+    background: rgba(var(--bg-sidebar-rgb, 20, 20, 30), 0.68) !important;
     backdrop-filter: blur(24px) saturate(1.6) !important;
     -webkit-backdrop-filter: blur(24px) saturate(1.6) !important;
 }
@@ -2993,8 +3014,8 @@ button:active:not(:disabled) {
 /* Off: ensure no extra blur */
 [data-glass-mode="off"] .glass-panel,
 [data-glass-mode="off"] .guild-rail,
-[data-glass-mode="off"] .channels-sidebar,
-[data-glass-mode="off"] .dm-sidebar {
+[data-glass-mode="off"] .channel-sidebar,
+[data-glass-mode="off"] .members-sidebar {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }

@@ -4,15 +4,54 @@ import { api } from '../../../lib/api';
 function GuildInsightsPanel({ guildId }: { guildId: string }) {
     const [data, setData] = useState<{ memberCount: number; memberGrowth7d: number; messages7d: number; topChannels: { channelId: string; name: string; messages: number }[] } | null>(null);
     const [prevData, setPrevData] = useState<{ memberCount: number; messages7d: number } | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [reloadKey, setReloadKey] = useState(0);
 
     useEffect(() => {
-        api.get<any>(`/guilds/${guildId}/insights`).then(d => {
+        let cancelled = false;
+        setLoading(true);
+        setError(null);
+
+        api.guilds.getInsights(guildId, 7).then(d => {
+            if (cancelled) return;
             setData(d);
             setPrevData({ memberCount: Math.max(0, (d.memberCount || 0) - (d.memberGrowth7d || 0)), messages7d: Math.round((d.messages7d || 0) * 0.9) });
-        }).catch(() => {});
-    }, [guildId]);
+        }).catch((err: unknown) => {
+            if (cancelled) return;
+            setData(null);
+            setPrevData(null);
+            setError(err instanceof Error ? err.message : 'Unable to load server insights.');
+        }).finally(() => {
+            if (!cancelled) setLoading(false);
+        });
 
-    if (!data) return <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-muted)' }}>Loading insights...</div>;
+        return () => {
+            cancelled = true;
+        };
+    }, [guildId, reloadKey]);
+
+    if (loading) return <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-muted)' }}>Loading insights...</div>;
+    if (error) return (
+        <div style={{ padding: '48px 0', textAlign: 'center' }}>
+            <div style={{ color: 'var(--error)', marginBottom: '12px' }}>{error}</div>
+            <button
+                onClick={() => setReloadKey((value) => value + 1)}
+                style={{
+                    padding: '8px 14px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--stroke)',
+                    background: 'var(--bg-elevated)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                }}
+            >
+                Retry
+            </button>
+        </div>
+    );
+    if (!data) return <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-muted)' }}>No insights are available yet.</div>;
 
     const msgTrend = prevData && prevData.messages7d > 0
         ? Math.round(((data.messages7d - prevData.messages7d) / prevData.messages7d) * 100)

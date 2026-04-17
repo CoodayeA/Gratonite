@@ -2040,7 +2040,7 @@ guildsRouter.get('/:guildId/insights', requireAuth, async (req: Request, res: Re
       res.status(403).json({ code: 'FORBIDDEN' }); return;
     }
 
-    const range = Math.min(Math.max(parseInt(req.query.range as string) || 7, 7), 30);
+    const range = Math.min(Math.max(parseInt(req.query.range as string) || 7, 7), 90);
 
     const [memberCount] = await db.select({ count: sql<number>`count(*)`.mapWith(Number) }).from(guildMembers).where(eq(guildMembers.guildId, guildId));
     const [newMembers] = await db.select({ count: sql<number>`count(*)`.mapWith(Number) }).from(guildMembers).where(and(eq(guildMembers.guildId, guildId), gt(guildMembers.joinedAt, sql`now() - interval '7 days'`)));

@@ -238,6 +238,7 @@ const SettingsModal = ({
     const settingsSearchRef = useRef<HTMLInputElement>(null);
     const [birthdayMonth, setBirthdayMonth] = useState(() => localStorage.getItem('gratonite_birthday_month') ?? '');
     const [birthdayDay, setBirthdayDay] = useState(() => localStorage.getItem('gratonite_birthday_day') ?? '');
+    const lastSyncedSettingsRef = useRef<string | null>(null);
 
     // Settings search index — maps keywords to tabs
     const settingsIndex = useMemo(() => [
@@ -521,30 +522,81 @@ const SettingsModal = ({
         if (settingsFetchedRef.current) return;
         settingsFetchedRef.current = true;
         api.users.getSettings().then((s: Record<string, unknown>) => {
-            if (s?.theme) setTheme(s.theme as AppTheme);
-            if (s?.colorMode) setColorMode(s.colorMode as ColorMode);
-            if (s?.fontFamily) setFontFamily(s.fontFamily as FontFamily);
-            if (s?.fontSize) setFontSize(s.fontSize as FontSize);
-            if (s?.glassMode !== undefined) setGlassMode(s.glassMode as GlassMode);
-            if (s?.buttonShape) setButtonShape(s.buttonShape as ButtonShape);
-            if (s?.highContrast !== undefined) setHighContrast(s.highContrast as boolean);
-            if (s?.compactMode !== undefined) setCompactMode(s.compactMode as boolean);
-            if (s?.accentColor) setAccentColor(s.accentColor as string);
-            if (s?.reducedMotion !== undefined) setReducedEffects(s.reducedMotion as boolean);
-            if (s?.lowPower !== undefined) setLowPower(s.lowPower as boolean);
+            const nextTheme = (s?.theme as AppTheme | undefined) ?? theme;
+            const nextColorMode = (s?.colorMode as ColorMode | undefined) ?? colorMode;
+            const nextFontFamily = (s?.fontFamily as FontFamily | undefined) ?? fontFamily;
+            const nextFontSize = (s?.fontSize as FontSize | undefined) ?? fontSize;
+            const nextGlassMode = (s?.glassMode as GlassMode | undefined) ?? glassMode;
+            const nextButtonShape = (s?.buttonShape as ButtonShape | undefined) ?? buttonShape;
+            const nextHighContrast = (s?.highContrast as boolean | undefined) ?? highContrast;
+            const nextCompactMode = (s?.compactMode as boolean | undefined) ?? compactMode;
+            const nextAccentColor = (s?.accentColor as string | undefined) ?? accentColor;
+            const nextReducedMotion = (s?.reducedMotion as boolean | undefined) ?? reducedEffects;
+            const nextLowPower = (s?.lowPower as boolean | undefined) ?? lowPower;
+            const nextScreenReaderMode = (s?.screenReaderMode as boolean | undefined) ?? screenReaderMode;
+            const nextLinkUnderlines = (s?.linkUnderlines as boolean | undefined) ?? linkUnderlines;
+            const nextFocusIndicatorSize = (s?.focusIndicatorSize as FocusIndicatorSize | undefined) ?? focusIndicatorSize;
+            const nextColorBlindMode = (s?.colorBlindMode as ColorBlindMode | boolean | undefined);
+
+            if (s?.theme) setTheme(nextTheme);
+            if (s?.colorMode) setColorMode(nextColorMode);
+            if (s?.fontFamily) setFontFamily(nextFontFamily);
+            if (s?.fontSize) setFontSize(nextFontSize);
+            if (s?.glassMode !== undefined) setGlassMode(nextGlassMode);
+            if (s?.buttonShape) setButtonShape(nextButtonShape);
+            if (s?.highContrast !== undefined) setHighContrast(nextHighContrast);
+            if (s?.compactMode !== undefined) setCompactMode(nextCompactMode);
+            if (s?.accentColor !== undefined) setAccentColor(nextAccentColor);
+            if (s?.reducedMotion !== undefined) setReducedEffects(nextReducedMotion);
+            if (s?.lowPower !== undefined) setLowPower(nextLowPower);
+            if (s?.screenReaderMode !== undefined) setScreenReaderMode(nextScreenReaderMode);
+            if (s?.linkUnderlines !== undefined) setLinkUnderlines(nextLinkUnderlines);
+            if (s?.focusIndicatorSize !== undefined) setFocusIndicatorSize(nextFocusIndicatorSize);
             if (s?.soundVolume !== undefined) {
                 const vol = (s.soundVolume as number) > 1 ? (s.soundVolume as number) / 100 : (s.soundVolume as number);
                 setSoundVolumeState(vol);
                 setSoundVolume(vol);
             }
-            if (s?.colorBlindMode !== undefined) {
+            if (nextColorBlindMode !== undefined) {
                 // Migrate old boolean true → 'deuteranopia'
-                const cb = s.colorBlindMode === true ? 'deuteranopia' : s.colorBlindMode === false ? 'none' : s.colorBlindMode;
+                const cb = nextColorBlindMode === true ? 'deuteranopia' : nextColorBlindMode === false ? 'none' : nextColorBlindMode;
                 if (cb === 'deuteranopia' || cb === 'protanopia' || cb === 'tritanopia' || cb === 'none') setColorBlindMode(cb as ColorBlindMode);
             }
+            const birthday = (s?.birthday as { month?: number; day?: number } | null | undefined) ?? null;
+            const nextBirthdayMonth = birthday?.month ? String(birthday.month) : '';
+            const nextBirthdayDay = birthday?.day ? String(birthday.day) : '';
+            setBirthdayMonth(nextBirthdayMonth);
+            setBirthdayDay(nextBirthdayDay);
+            if (nextBirthdayMonth) {
+                localStorage.setItem('gratonite_birthday_month', nextBirthdayMonth);
+            } else {
+                localStorage.removeItem('gratonite_birthday_month');
+            }
+            if (nextBirthdayDay) {
+                localStorage.setItem('gratonite_birthday_day', nextBirthdayDay);
+            } else {
+                localStorage.removeItem('gratonite_birthday_day');
+            }
+            lastSyncedSettingsRef.current = JSON.stringify({
+                theme: nextTheme,
+                colorMode: nextColorMode,
+                fontFamily: nextFontFamily,
+                fontSize: nextFontSize,
+                glassMode: nextGlassMode,
+                buttonShape: nextButtonShape,
+                highContrast: nextHighContrast,
+                compactMode: nextCompactMode,
+                accentColor: nextAccentColor,
+                reducedMotion: nextReducedMotion,
+                lowPower: nextLowPower,
+                screenReaderMode: nextScreenReaderMode,
+                linkUnderlines: nextLinkUnderlines,
+                focusIndicatorSize: nextFocusIndicatorSize,
+                colorBlindMode: nextColorBlindMode === true ? 'deuteranopia' : nextColorBlindMode === false ? 'none' : nextColorBlindMode ?? colorBlindMode,
+            });
             // Mark as loaded AFTER applying server values so auto-save doesn't fire with defaults
             settingsLoadedRef.current = true;
-        }).catch(() => { settingsLoadedRef.current = true; /* settings may not exist yet — allow auto-save with defaults */ });
+        }).catch(() => { settingsLoadedRef.current = false; });
 
         // Auto-sync nameplateStyle: if DB has no value but localStorage does, push it to the API
         const localNameplate = localStorage.getItem('gratonite-nameplate-style');
@@ -558,13 +610,14 @@ const SettingsModal = ({
 
     // Debounced settings save
     const settingsSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const saveSettingsToApi = useCallback((data: Record<string, unknown>) => {
+    const saveSettingsToApi = useCallback((data: Record<string, unknown>, serialized: string) => {
         if (settingsSaveTimerRef.current) clearTimeout(settingsSaveTimerRef.current);
         settingsSaveTimerRef.current = setTimeout(async () => {
             let lastErr: unknown;
             for (let attempt = 0; attempt < 3; attempt++) {
                 try {
                     await api.users.updateSettings(data);
+                    lastSyncedSettingsRef.current = serialized;
                     return;
                 } catch (err) {
                     lastErr = err;
@@ -584,7 +637,10 @@ const SettingsModal = ({
     // Persist theme settings to backend whenever they change
     useEffect(() => {
         if (!settingsLoadedRef.current) return;
-        saveSettingsToApi({ theme, colorMode, fontFamily, fontSize, glassMode, buttonShape, highContrast, compactMode, accentColor, reducedMotion: reducedEffects, lowPower, screenReaderMode, linkUnderlines, focusIndicatorSize, colorBlindMode });
+        const payload = { theme, colorMode, fontFamily, fontSize, glassMode, buttonShape, highContrast, compactMode, accentColor, reducedMotion: reducedEffects, lowPower, screenReaderMode, linkUnderlines, focusIndicatorSize, colorBlindMode };
+        const serialized = JSON.stringify(payload);
+        if (serialized === lastSyncedSettingsRef.current) return;
+        saveSettingsToApi(payload, serialized);
     }, [theme, colorMode, fontFamily, fontSize, glassMode, buttonShape, highContrast, compactMode, accentColor, reducedEffects, lowPower, screenReaderMode, linkUnderlines, focusIndicatorSize, colorBlindMode, saveSettingsToApi]);
 
     const persistedAvatarUrl = ctxUser.avatarHash ? `${API_BASE}/files/${ctxUser.avatarHash}` : null;
@@ -1287,7 +1343,14 @@ const SettingsModal = ({
                                                     const day = parseInt(birthdayDay || '0');
                                                     if (!month || !day) { addToast({ title: 'Select month and day', variant: 'error' }); return; }
                                                     try {
-                                                        await api.users.updateSettings({ birthday: { month, day } });
+                                                        const updated = await api.users.updateSettings({ birthday: { month, day } });
+                                                        const persistedBirthday = (updated?.birthday as { month?: number; day?: number } | null | undefined) ?? { month, day };
+                                                        const persistedMonth = persistedBirthday?.month ? String(persistedBirthday.month) : '';
+                                                        const persistedDay = persistedBirthday?.day ? String(persistedBirthday.day) : '';
+                                                        setBirthdayMonth(persistedMonth);
+                                                        setBirthdayDay(persistedDay);
+                                                        if (persistedMonth) localStorage.setItem('gratonite_birthday_month', persistedMonth);
+                                                        if (persistedDay) localStorage.setItem('gratonite_birthday_day', persistedDay);
                                                         addToast({ title: 'Birthday saved', variant: 'success' });
                                                     } catch { addToast({ title: 'Failed to save birthday', variant: 'error' }); }
                                                 }}

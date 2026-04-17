@@ -467,22 +467,66 @@ export default function GuildInsights({ guildId }: { guildId: string }) {
   const [channelComp, setChannelComp] = useState<ChannelComparisonData | null>(null);
   const [engagement, setEngagement] = useState<EngagementData | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Load base insights
   useEffect(() => {
-    api.get<InsightsData>(`/guilds/${guildId}/insights?range=${range}`).then(setData).catch(() => {});
-  }, [guildId, range]);
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    api.guilds.getInsights(guildId, range).then((insights) => {
+      if (cancelled) return;
+      setData(insights);
+    }).catch((err: unknown) => {
+      if (cancelled) return;
+      setData(null);
+      setError(err instanceof Error ? err.message : 'Unable to load server insights.');
+    }).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [guildId, range, reloadKey]);
 
   // Load advanced data when tab changes
   useEffect(() => {
+    let cancelled = false;
+
     if (tab === 'growth' || tab === 'overview') {
-      api.get<GrowthData>(`/stats/guilds/${guildId}/growth?range=${range}`).then(setGrowth).catch(() => {});
-      api.get<HeatmapData>(`/stats/guilds/${guildId}/activity-heatmap?range=${range}`).then(setHeatmap).catch(() => {});
-      api.get<ChannelComparisonData>(`/stats/guilds/${guildId}/channel-comparison?range=${range}`).then(setChannelComp).catch(() => {});
+      Promise.allSettled([
+        api.get<GrowthData>(`/stats/guilds/${guildId}/growth?range=${range}`),
+        api.get<HeatmapData>(`/stats/guilds/${guildId}/activity-heatmap?range=${range}`),
+        api.get<ChannelComparisonData>(`/stats/guilds/${guildId}/channel-comparison?range=${range}`),
+      ]).then(([growthResult, heatmapResult, channelCompResult]) => {
+        if (cancelled) return;
+        setGrowth(growthResult.status === 'fulfilled' ? growthResult.value : null);
+        setHeatmap(heatmapResult.status === 'fulfilled' ? heatmapResult.value : null);
+        setChannelComp(channelCompResult.status === 'fulfilled' ? channelCompResult.value : null);
+      });
+    } else {
+      setGrowth(null);
+      setHeatmap(null);
+      setChannelComp(null);
     }
+
     if (tab === 'engagement' || tab === 'overview') {
-      api.get<EngagementData>(`/stats/guilds/${guildId}/engagement?range=${range}`).then(setEngagement).catch(() => {});
+      api.get<EngagementData>(`/stats/guilds/${guildId}/engagement?range=${range}`).then((result) => {
+        if (!cancelled) setEngagement(result);
+      }).catch(() => {
+        if (!cancelled) setEngagement(null);
+      });
+    } else {
+      setEngagement(null);
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [guildId, range, tab]);
 
   const handleExport = useCallback(async () => {
@@ -508,7 +552,33 @@ export default function GuildInsights({ guildId }: { guildId: string }) {
     }
   }, [guildId, range]);
 
-  if (!data) return <div style={{ padding: 24, color: 'var(--text-muted)' }}>Loading insights...</div>;
+  if (loading) return <div style={{ padding: 24, color: 'var(--text-muted)' }}>Loading insights...</div>;
+  if (error) {
+    return (
+      <div style={{ padding: 24 }}>
+        <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: 12, padding: 20, color: 'var(--text-primary)' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Insights unavailable</div>
+          <div style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>{error}</div>
+          <button
+            onClick={() => setReloadKey((current) => current + 1)}
+            style={{
+              padding: '8px 14px',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: '1px solid var(--stroke)',
+              background: 'var(--bg-elevated)',
+              color: 'var(--text-primary)',
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (!data) return <div style={{ padding: 24, color: 'var(--text-muted)' }}>No insights available yet.</div>;
 
   const sectionStyle: React.CSSProperties = {
     background: 'var(--bg-tertiary)', borderRadius: 8,

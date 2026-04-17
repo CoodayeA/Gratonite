@@ -29,9 +29,10 @@ const isLocalhostHost = typeof window !== 'undefined'
   && ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
 
 // Register service worker for PWA support (Phase 9, Item 145)
-if ('serviceWorker' in navigator && import.meta.env.PROD && !isLocalhostHost) {
+if ('serviceWorker' in navigator && import.meta.env.PROD && !isLocalhostHost && window.location.protocol === 'https:') {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/app/sw.js', { scope: '/app/' }).then(reg => {
+    const serviceWorkerUrl = new URL('/app/sw.js', window.location.origin);
+    navigator.serviceWorker.register(serviceWorkerUrl, { scope: '/app/' }).then(reg => {
       // Check for updates every 30 minutes
       setInterval(() => {
         reg.update().catch((err) => {

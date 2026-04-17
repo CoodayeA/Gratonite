@@ -335,8 +335,8 @@ const SettingsThemeTab = ({ addToast }: Props) => {
           <button key={c.color} onClick={() => setAccentColor(c.color)} title={c.name} style={{ width: '32px', height: '32px', borderRadius: '50%', border: accentColor === c.color ? '3px solid var(--text-primary)' : '2px solid var(--stroke)', background: c.color, cursor: 'pointer', padding: 0, transition: 'all 0.15s' }} />
         ))}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '8px' }}>
-          <input type="text" value={customHex} onChange={(e) => { setCustomHex(e.target.value); setHexError(false); }} placeholder="#hex" style={{ width: '80px', padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: `1px solid ${hexError ? 'var(--error)' : 'var(--stroke)'}`, color: 'var(--text-primary)', fontSize: '12px' }} />
-          <button onClick={() => { if (/^#[0-9a-fA-F]{6}$/.test(customHex)) { setAccentColor(customHex); setHexError(false); } else { setHexError(true); } }} style={{ padding: '6px 10px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600 }}>Apply</button>
+          <input type="text" value={customHex} onChange={(e) => { setCustomHex(e.target.value); setHexError(false); }} placeholder="#hex" style={{ width: '80px', padding: '6px 8px', borderRadius: 'var(--radius-md)', background: 'var(--bg-tertiary)', border: `1px solid ${hexError ? 'var(--error)' : 'var(--stroke)'}`, color: 'var(--text-primary)', fontSize: '12px' }} />
+          <button onClick={() => { if (/^#[0-9a-fA-F]{6}$/.test(customHex)) { setAccentColor(customHex); setHexError(false); } else { setHexError(true); } }} style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600 }}>Apply</button>
         </div>
       </div>
 
@@ -361,7 +361,7 @@ const SettingsThemeTab = ({ addToast }: Props) => {
             key={opt.value}
             onClick={() => setMessageDensity(opt.value)}
             style={{
-              flex: 1, padding: '12px', borderRadius: '10px', cursor: 'pointer', userSelect: 'none',
+              flex: 1, padding: '12px', borderRadius: 'var(--radius-lg)', cursor: 'pointer', userSelect: 'none',
               border: `2px solid ${messageDensity === opt.value ? 'var(--accent-primary)' : 'var(--stroke)'}`,
               background: messageDensity === opt.value ? 'color-mix(in srgb, var(--accent-primary) 10%, var(--bg-tertiary))' : 'var(--bg-tertiary)',
               transition: 'border-color 0.15s, background 0.15s',
@@ -376,16 +376,15 @@ const SettingsThemeTab = ({ addToast }: Props) => {
       {/* Glass & Layout */}
       <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Layout & Effects</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)' }}>
           <span style={{ fontWeight: 600 }}>Glass Mode</span>
           <select value={glassMode} onChange={(e) => setGlassMode(e.target.value as any)} className="auth-input" style={{ width: 'auto', padding: '6px 10px', margin: 0, height: '32px', fontSize: '13px' }}>
             <option value="off">Off</option>
             <option value="subtle">Subtle</option>
-            <option value="medium">Medium</option>
-            <option value="heavy">Heavy</option>
+            <option value="full">Full</option>
           </select>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)' }}>
           <span style={{ fontWeight: 600 }}>Button Shape</span>
           <select value={buttonShape} onChange={(e) => setButtonShape(e.target.value as any)} className="auth-input" style={{ width: 'auto', padding: '6px 10px', margin: 0, height: '32px', fontSize: '13px' }}>
             <option value="rounded">Rounded</option>
@@ -393,19 +392,19 @@ const SettingsThemeTab = ({ addToast }: Props) => {
             <option value="square">Square</option>
           </select>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)' }}>
           <div><div style={{ fontWeight: 600 }}>Channel Backgrounds</div><div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Show custom images/videos in channels.</div></div>
           <div role="switch" aria-checked={showChannelBackgrounds} tabIndex={0} onClick={() => setShowChannelBackgrounds(!showChannelBackgrounds)} style={{ width: '40px', height: '24px', background: showChannelBackgrounds ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
             <div style={{ position: 'absolute', height: '16px', width: '16px', left: showChannelBackgrounds ? '20px' : '4px', bottom: '4px', backgroundColor: showChannelBackgrounds ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)' }}>
           <div><div style={{ fontWeight: 600 }}>Animated Backgrounds</div><div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Play video backgrounds in channels.</div></div>
           <div role="switch" aria-checked={playMovingBackgrounds} tabIndex={0} onClick={() => setPlayMovingBackgrounds(!playMovingBackgrounds)} style={{ width: '40px', height: '24px', background: playMovingBackgrounds ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
             <div style={{ position: 'absolute', height: '16px', width: '16px', left: playMovingBackgrounds ? '20px' : '4px', bottom: '4px', backgroundColor: playMovingBackgrounds ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)' }}>
           <div><div style={{ fontWeight: 600 }}>Low Power Mode</div><div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Disables animations and effects to save battery.</div></div>
           <div role="switch" aria-checked={lowPower} tabIndex={0} onClick={() => setLowPower(!lowPower)} style={{ width: '40px', height: '24px', background: lowPower ? 'var(--accent-primary)' : 'var(--stroke)', borderRadius: '12px', position: 'relative', cursor: 'pointer', transition: '0.2s', flexShrink: 0 }}>
             <div style={{ position: 'absolute', height: '16px', width: '16px', left: lowPower ? '20px' : '4px', bottom: '4px', backgroundColor: lowPower ? '#000' : 'white', transition: '.4s', borderRadius: '50%' }}></div>
@@ -425,8 +424,8 @@ const SettingsThemeTab = ({ addToast }: Props) => {
           <div style={{ width: '90vw', maxWidth: '900px', maxHeight: '80vh' }}>
             {(() => { const t = resolveTheme(fullPreviewId); return t ? <ThemePreview theme={t} colorMode={colorMode} /> : null; })()}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '16px' }}>
-              <button onClick={() => { setTheme(fullPreviewId as any); (window as any).__gratoniteFullPreview = undefined; setFullPreviewId(undefined); window.dispatchEvent(new Event('gratonite:full-preview-changed')); playSound('click'); }} style={{ padding: '10px 20px', borderRadius: '8px', background: 'var(--accent-primary)', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}>Apply Theme</button>
-              <button onClick={() => { (window as any).__gratoniteFullPreview = undefined; setFullPreviewId(undefined); window.dispatchEvent(new Event('gratonite:full-preview-changed')); }} style={{ padding: '10px 20px', borderRadius: '8px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--stroke)', fontWeight: 600, cursor: 'pointer' }}>Close Preview</button>
+              <button onClick={() => { setTheme(fullPreviewId as any); (window as any).__gratoniteFullPreview = undefined; setFullPreviewId(undefined); window.dispatchEvent(new Event('gratonite:full-preview-changed')); playSound('click'); }} style={{ padding: '10px 20px', borderRadius: 'var(--radius-md)', background: 'var(--accent-primary)', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}>Apply Theme</button>
+              <button onClick={() => { (window as any).__gratoniteFullPreview = undefined; setFullPreviewId(undefined); window.dispatchEvent(new Event('gratonite:full-preview-changed')); }} style={{ padding: '10px 20px', borderRadius: 'var(--radius-md)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--stroke)', fontWeight: 600, cursor: 'pointer' }}>Close Preview</button>
             </div>
           </div>
         </div>

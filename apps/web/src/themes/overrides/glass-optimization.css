@@ -9,6 +9,10 @@
 .glass-sidebar,
 .glass-rail,
 .glass-elevated,
+.channel-sidebar,
+.members-sidebar,
+[class*="channel-sidebar"],
+[class*="members-sidebar"],
 [class*="glass-"] {
   will-change: transform;
   -webkit-backface-visibility: hidden;
@@ -16,26 +20,30 @@
 }
 
 /* Low-power mode: reduce blur radius to save GPU cycles */
-[data-low-power="true"] .glass-panel,
-[data-low-power="true"] .glass-sidebar,
-[data-low-power="true"] .glass-rail,
-[data-low-power="true"] .glass-elevated,
-[data-low-power="true"] [class*="glass-"] {
+.low-power .glass-panel,
+.low-power .glass-sidebar,
+.low-power .glass-rail,
+.low-power .glass-elevated,
+.low-power .channel-sidebar,
+.low-power .members-sidebar,
+.low-power [class*="glass-"] {
   backdrop-filter: blur(8px) !important;
   -webkit-backdrop-filter: blur(8px) !important;
 }
 
 /* Very low blur for reduced-motion preference */
 @media (prefers-reduced-motion: reduce) {
-  .glass-panel,
-  .glass-sidebar,
-  .glass-rail,
-  .glass-elevated,
-  [class*="glass-"] {
-    backdrop-filter: blur(4px) !important;
-    -webkit-backdrop-filter: blur(4px) !important;
-    transition: none !important;
-  }
+    .glass-panel,
+    .glass-sidebar,
+    .glass-rail,
+    .glass-elevated,
+    .channel-sidebar,
+    .members-sidebar,
+    [class*="glass-"] {
+      backdrop-filter: blur(4px) !important;
+      -webkit-backdrop-filter: blur(4px) !important;
+      transition: none !important;
+    }
 }
 
 /* No glass mode: disable all backdrop filters */
@@ -43,6 +51,8 @@
 [data-glass-mode="off"] .glass-sidebar,
 [data-glass-mode="off"] .glass-rail,
 [data-glass-mode="off"] .glass-elevated,
+[data-glass-mode="off"] .channel-sidebar,
+[data-glass-mode="off"] .members-sidebar,
 [data-glass-mode="off"] [class*="glass-"] {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -54,6 +64,8 @@
 [data-glass-mode="subtle"] .glass-sidebar,
 [data-glass-mode="subtle"] .glass-rail,
 [data-glass-mode="subtle"] .glass-elevated,
+[data-glass-mode="subtle"] .channel-sidebar,
+[data-glass-mode="subtle"] .members-sidebar,
 [data-glass-mode="subtle"] [class*="glass-"] {
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;

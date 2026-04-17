@@ -10,7 +10,7 @@ export type ColorMode = 'light' | 'dark';
 export type FontFamily = 'inter' | 'outfit' | 'space-grotesk' | 'fira-code';
 export type FontSize = 'small' | 'medium' | 'large' | 'extra-large';
 export type GlassMode = 'off' | 'subtle' | 'full';
-export type ButtonShape = 'rounded' | 'sharp' | 'pill';
+export type ButtonShape = 'rounded' | 'square' | 'pill';
 export type FocusIndicatorSize = 'normal' | 'large';
 export type ColorBlindMode = 'none' | 'deuteranopia' | 'protanopia' | 'tritanopia';
 export type MessageDensity = 'compact' | 'comfortable' | 'cozy';
@@ -77,6 +77,34 @@ function resolveVars(themeId: string, mode: ColorMode): ThemeVariables | null {
     return mode === 'light' ? def.light : def.dark;
 }
 
+function normalizeGlassMode(value: string | null): GlassMode {
+    switch (value) {
+        case 'subtle':
+        case 'full':
+        case 'off':
+            return value;
+        case 'medium':
+            return 'subtle';
+        case 'heavy':
+            return 'full';
+        default:
+            return 'full';
+    }
+}
+
+function normalizeButtonShape(value: string | null): ButtonShape {
+    switch (value) {
+        case 'pill':
+        case 'square':
+            return value;
+        case 'sharp':
+            return 'square';
+        case 'rounded':
+        default:
+            return 'rounded';
+    }
+}
+
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     const [theme, setThemeState] = useState<AppTheme>(() => {
         const saved = localStorage.getItem('gratonite_theme');
@@ -111,7 +139,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     });
 
     const [glassMode, setGlassModeState] = useState<GlassMode>(() => {
-        return (localStorage.getItem('gratonite_glass_mode') as GlassMode) || 'full';
+        return normalizeGlassMode(localStorage.getItem('gratonite_glass_mode'));
     });
 
     const [reducedEffects, setReducedEffectsState] = useState<boolean>(() => {
@@ -142,7 +170,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     });
 
     const [buttonShape, setButtonShapeState] = useState<ButtonShape>(() => {
-        return (localStorage.getItem('gratonite_button_shape') as ButtonShape) || 'rounded';
+        return normalizeButtonShape(localStorage.getItem('gratonite_button_shape'));
     });
 
     const [screenReaderMode, setScreenReaderModeState] = useState<boolean>(() => {
@@ -216,8 +244,9 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const setGlassMode = (mode: GlassMode) => {
-        setGlassModeState(mode);
-        localStorage.setItem('gratonite_glass_mode', mode);
+        const normalized = normalizeGlassMode(mode);
+        setGlassModeState(normalized);
+        localStorage.setItem('gratonite_glass_mode', normalized);
     };
 
     const setReducedEffects = (reduced: boolean) => {
@@ -246,8 +275,9 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const setButtonShape = (shape: ButtonShape) => {
-        setButtonShapeState(shape);
-        localStorage.setItem('gratonite_button_shape', shape);
+        const normalized = normalizeButtonShape(shape);
+        setButtonShapeState(normalized);
+        localStorage.setItem('gratonite_button_shape', normalized);
     };
 
     const setScreenReaderMode = (sr: boolean) => {

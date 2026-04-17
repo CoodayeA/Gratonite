@@ -58,6 +58,25 @@ export const guildsApi = {
 
   get: (guildId: string, options?: RequestInit) => { assertGuildId(guildId); return apiFetch<Guild>(`/guilds/${guildId}`, options); },
 
+  getInsights: (
+    guildId: string,
+    range: 7 | 30 | 90 = 7,
+  ) => {
+    assertGuildId(guildId);
+    return apiFetch<{
+      memberCount: number;
+      memberGrowth7d: number;
+      messages7d: number;
+      topChannels: Array<{ channelId: string; name: string; messages: number }>;
+      hourlyMessages: number[];
+      dailyMessages: number[];
+      dailyJoins: number[];
+      dailyLeaves: number[];
+      activeUsers24h: number;
+      dateLabels: string[];
+    }>(`/guilds/${guildId}/insights?range=${range}`);
+  },
+
   getPublicStats: (guildId: string) =>
     apiFetch<{
       guild: { id: string; name: string; iconHash: string | null; bannerHash: string | null; description: string | null; createdAt: string };
