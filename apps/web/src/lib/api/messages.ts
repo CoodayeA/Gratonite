@@ -134,7 +134,7 @@ export const searchApi = {
 };
 
 export const threadsApi = {
-  create: (channelId: string, data: { name: string; body?: string; type?: string; archiveAfter?: number; message?: string; messageId?: string }) =>
+  create: (channelId: string, data: { name: string; body?: string | null; attachmentIds?: string[]; tags?: string[]; type?: string; archiveAfter?: number; message?: string; messageId?: string }) =>
     apiFetch<Thread>(`/channels/${channelId}/threads`, {
       method: 'POST',
       body: JSON.stringify(data),

@@ -2231,6 +2231,10 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     );
 
     const handleSendMessage = async () => {
+        if (channelTypeStr === 'GUILD_FORUM') {
+            addToast({ title: 'Use New Post or forum replies to add content here.', variant: 'error' });
+            return;
+        }
         if (inputValue.trim() === '' && chatAttachedFiles.length === 0) return;
         if (!channelId) return;
 
@@ -3906,7 +3910,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             )}
             </div>{/* end content area wrapper */}
 
-            <div className="input-area" style={{ zIndex: 2, position: 'relative' }}>
+            <div className="input-area" style={{ zIndex: 2, position: 'relative', ...(channelTypeStr === 'GUILD_FORUM' ? { display: 'none' } : {}) }}>
                 {slowRemaining > 0 && (
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 16px',

@@ -3,12 +3,13 @@
  * Posts display as cards with colorful gradient thumbnails, tags, reply counts.
  * Supports grid (default) and list view modes.
  */
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, type Dispatch, type SetStateAction } from 'react';
 import {
     MessageSquare, CheckCircle, Clock, Plus, ChevronDown, Search,
-    Loader2, X, LayoutGrid, List, Lock, ThumbsUp, Tag, ArrowLeft, Send,
+    Loader2, X, LayoutGrid, List, Lock, Tag, ArrowLeft, Send,
+    Paperclip, File as FileIcon,
 } from 'lucide-react';
-import { api } from '../../lib/api';
+import { api, API_BASE, getAccessToken } from '../../lib/api';
 import Avatar from '../ui/Avatar';
 
 type ForumTag = { id: string; name: string; color?: string };
@@ -24,6 +25,22 @@ type ForumThread = {
     tags?: string[];
     solved?: boolean;
     locked?: boolean;
+    opAttachment?: AttachmentSnapshot | null;
+};
+
+type AttachmentSnapshot = {
+    id: string;
+    url: string;
+    filename: string;
+    size: number;
+    mimeType: string;
+};
+
+type PendingAttachment = {
+    name: string;
+    sizeLabel: string;
+    file: File;
+    previewUrl?: string;
 };
 
 type SortMode = 'latest' | 'oldest' | 'most-replies';
@@ -59,11 +76,158 @@ function threadInitials(name: string): string {
     return name.slice(0, 2).toUpperCase();
 }
 
+function formatFileSize(size: number): string {
+    if (size < 1024) return `${size} B`;
+    if (size < 1048576) return `${(size / 1024).toFixed(1)} KB`;
+    return `${(size / 1048576).toFixed(1)} MB`;
+}
+
+function filesToPending(files: File[]): PendingAttachment[] {
+    return files.map(file => ({
+        name: file.name,
+        sizeLabel: formatFileSize(file.size),
+        file,
+        previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
+    }));
+}
+
+function revokePendingAttachments(files: PendingAttachment[]) {
+    files.forEach(file => {
+        if (file.previewUrl) URL.revokeObjectURL(file.previewUrl);
+    });
+}
+
+function uploadWithProgress(file: File, onProgress: (pct: number) => void) {
+    return new Promise<AttachmentSnapshot>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('purpose', 'attachment');
+        xhr.upload.onprogress = event => {
+            if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100));
+        };
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                resolve(JSON.parse(xhr.responseText));
+            } else {
+                try {
+                    const body = JSON.parse(xhr.responseText);
+                    reject(new Error(body?.message || xhr.statusText || 'Upload failed'));
+                } catch {
+                    reject(new Error(xhr.statusText || 'Upload failed'));
+                }
+            }
+        };
+        xhr.onerror = () => reject(new Error('Network error'));
+        xhr.open('POST', `${API_BASE}/files/upload`);
+        const token = getAccessToken();
+        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.send(formData);
+    });
+}
+
+async function uploadPendingAttachments(
+    files: PendingAttachment[],
+    setProgress: Dispatch<SetStateAction<Record<string, number>>>,
+) {
+    const uploaded: AttachmentSnapshot[] = [];
+    for (const pending of files) {
+        setProgress(prev => ({ ...prev, [pending.name]: 0 }));
+        try {
+            const result = await uploadWithProgress(pending.file, pct => {
+                setProgress(prev => ({ ...prev, [pending.name]: pct }));
+            });
+            uploaded.push(result);
+            setProgress(prev => ({ ...prev, [pending.name]: 100 }));
+        } catch (err) {
+            setProgress(prev => ({ ...prev, [pending.name]: -1 }));
+            throw err;
+        }
+    }
+    return uploaded;
+}
+
+function PendingAttachmentList({
+    files,
+    progress,
+    onRemove,
+}: {
+    files: PendingAttachment[];
+    progress: Record<string, number>;
+    onRemove: (index: number) => void;
+}) {
+    if (files.length === 0) return null;
+    return (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+            {files.map((file, index) => {
+                const pct = progress[file.name];
+                const isUploading = pct !== undefined && pct >= 0 && pct < 100;
+                const isFailed = pct === -1;
+                return (
+                    <div key={`${file.name}-${index}`} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 10px', background: 'var(--bg-tertiary)', border: `1px solid ${isFailed ? 'var(--error)' : 'var(--stroke)'}`, borderRadius: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                            {file.previewUrl ? <img src={file.previewUrl} alt="" style={{ width: 22, height: 22, borderRadius: 4, objectFit: 'cover' }} /> : <FileIcon size={13} />}
+                            <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{file.sizeLabel}</span>
+                            {isUploading && <span style={{ color: 'var(--accent-primary)', fontSize: '10px' }}>{pct}%</span>}
+                            {isFailed && <span style={{ color: 'var(--error)', fontSize: '10px' }}>failed</span>}
+                            <button
+                                onClick={() => onRemove(index)}
+                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex' }}
+                                aria-label={`Remove ${file.name}`}
+                            >
+                                <X size={12} />
+                            </button>
+                        </div>
+                        {isUploading && (
+                            <div style={{ height: '2px', background: 'var(--stroke)', borderRadius: '1px', overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: `${pct}%`, background: 'var(--accent-primary)', transition: 'width 0.2s ease' }} />
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function AttachmentRenderer({ attachments }: { attachments?: AttachmentSnapshot[] }) {
+    if (!attachments || attachments.length === 0) return null;
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+            {attachments.map(att => {
+                const isImage = att.mimeType?.startsWith('image/');
+                const isVideo = att.mimeType?.startsWith('video/');
+                const isAudio = att.mimeType?.startsWith('audio/');
+                if (isImage) {
+                    return (
+                        <div key={att.id} style={{ maxWidth: '520px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)' }}>
+                            <img src={att.url} alt={att.filename} loading="lazy" decoding="async" style={{ width: '100%', display: 'block', maxHeight: '420px', objectFit: 'contain' }} />
+                        </div>
+                    );
+                }
+                if (isVideo) {
+                    return <video key={att.id} controls preload="metadata" src={att.url} style={{ maxWidth: '520px', borderRadius: '8px', display: 'block' }} />;
+                }
+                if (isAudio) {
+                    return <audio key={att.id} controls src={att.url} style={{ width: '100%', maxWidth: '520px' }} />;
+                }
+                return (
+                    <a key={att.id} href={att.url} download={att.filename} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', maxWidth: '360px' }}>
+                        <FileIcon size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13px', fontWeight: 600 }}>{att.filename}</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '11px', flexShrink: 0 }}>{formatFileSize(att.size)}</span>
+                    </a>
+                );
+            })}
+        </div>
+    );
+}
+
 export default function ForumView({
     channelId,
     channelName,
     forumTags = [],
-    onOpenThread,
 }: {
     channelId: string;
     channelName: string;
@@ -81,8 +245,12 @@ export default function ForumView({
     const [newTitle, setNewTitle] = useState('');
     const [newContent, setNewContent] = useState('');
     const [newTags, setNewTags] = useState<string[]>([]);
+    const [newAttachments, setNewAttachments] = useState<PendingAttachment[]>([]);
+    const [newUploadProgress, setNewUploadProgress] = useState<Record<string, number>>({});
+    const [createError, setCreateError] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
     const [activePost, setActivePost] = useState<ForumThread | null>(null);
+    const newFileInputRef = useRef<HTMLInputElement>(null);
 
     const fetchThreads = useCallback(async () => {
         setLoading(true);
@@ -93,13 +261,14 @@ export default function ForumView({
                 name: t.name || t.title || 'Untitled',
                 messageCount: t.messageCount ?? t.replyCount ?? 0,
                 createdAt: t.createdAt,
-                lastMessageAt: t.lastMessageAt || t.updatedAt || t.createdAt,
+                lastMessageAt: t.lastActivity || t.lastMessageAt || t.updatedAt || t.createdAt,
                 authorId: t.authorId || t.creatorId,
                 authorName: t.authorName || t.creatorName || t.author?.displayName || t.author?.username || 'Unknown',
                 authorAvatarHash: (t.authorAvatarHash || t.creatorAvatarHash || t.author?.avatarHash) ?? null,
-                tags: t.tags || [],
+                tags: t.tags || t.forumTagIds || [],
                 solved: t.solved || t.archived || false,
                 locked: t.locked || false,
+                opAttachment: t.opAttachment ?? null,
             }));
             setThreads(mapped);
         } catch {
@@ -124,21 +293,33 @@ export default function ForumView({
     const handleCreate = async () => {
         if (!newTitle.trim()) return;
         setCreating(true);
+        setCreateError(null);
         try {
+            const uploaded = await uploadPendingAttachments(newAttachments, setNewUploadProgress);
             const thread = await api.threads.create(channelId, {
                 name: newTitle.trim(),
-                body: newContent.trim() || undefined,
+                body: newContent.trim() || null,
+                attachmentIds: uploaded.map(file => file.id),
+                tags: newTags,
             } as any);
             setShowCreate(false);
+            const title = newTitle.trim();
+            const tags = [...newTags];
+            const opAttachment = uploaded.find(file => file.mimeType.startsWith('image/')) ?? uploaded[0] ?? null;
             setNewTitle('');
             setNewContent('');
             setNewTags([]);
+            revokePendingAttachments(newAttachments);
+            setNewAttachments([]);
+            setNewUploadProgress({});
             fetchThreads();
             if (thread?.id) {
-                const newPost: ForumThread = { id: thread.id, name: newTitle.trim(), createdAt: thread.createdAt ?? new Date().toISOString(), messageCount: 0 };
+                const newPost: ForumThread = { id: thread.id, name: title, createdAt: thread.createdAt ?? new Date().toISOString(), messageCount: uploaded.length > 0 || newContent.trim() ? 1 : 0, tags, opAttachment };
                 setActivePost(newPost);
             }
-        } catch { /* errors surface via toast in parent */ }
+        } catch (err: any) {
+            setCreateError(err?.message || 'Could not create post');
+        }
         setCreating(false);
     };
 
@@ -304,7 +485,7 @@ export default function ForumView({
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                         <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>Create a new post</span>
                         <button
-                            onClick={() => { setShowCreate(false); setNewTitle(''); setNewContent(''); setNewTags([]); }}
+                            onClick={() => { setShowCreate(false); setNewTitle(''); setNewContent(''); setNewTags([]); revokePendingAttachments(newAttachments); setNewAttachments([]); setNewUploadProgress({}); setCreateError(null); }}
                             style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         ><X size={14} /></button>
                     </div>
@@ -325,6 +506,21 @@ export default function ForumView({
                         onChange={e => setNewContent(e.target.value)}
                         placeholder="Describe your post… (optional)"
                         rows={4}
+                        onPaste={e => {
+                            const items = e.clipboardData?.items;
+                            if (!items) return;
+                            const pasted: File[] = [];
+                            for (const item of Array.from(items)) {
+                                if (item.type.startsWith('image/')) {
+                                    const file = item.getAsFile();
+                                    if (file) pasted.push(new File([file], file.name || `pasted-image.${item.type.split('/')[1] || 'png'}`, { type: file.type }));
+                                }
+                            }
+                            if (pasted.length > 0) {
+                                e.preventDefault();
+                                setNewAttachments(prev => [...prev, ...filesToPending(pasted)]);
+                            }
+                        }}
                         style={{
                             width: '100%', padding: '10px 12px', borderRadius: '8px',
                             border: '1px solid var(--stroke)', background: 'var(--bg-primary)',
@@ -349,9 +545,41 @@ export default function ForumView({
                             ))}
                         </div>
                     )}
+                    <input
+                        ref={newFileInputRef}
+                        type="file"
+                        multiple
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                            const selected = Array.from(e.target.files || []);
+                            if (selected.length > 0) setNewAttachments(prev => [...prev, ...filesToPending(selected)]);
+                            e.target.value = '';
+                        }}
+                    />
+                    <PendingAttachmentList
+                        files={newAttachments}
+                        progress={newUploadProgress}
+                        onRemove={index => {
+                            setNewAttachments(prev => {
+                                const next = [...prev];
+                                const removed = next.splice(index, 1)[0];
+                                if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+                                return next;
+                            });
+                        }}
+                    />
+                    {createError && (
+                        <div style={{ marginBottom: '12px', color: 'var(--error)', fontSize: '12px', fontWeight: 600 }}>{createError}</div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                         <button
-                            onClick={() => { setShowCreate(false); setNewTitle(''); setNewContent(''); setNewTags([]); }}
+                            onClick={() => newFileInputRef.current?.click()}
+                            style={{ marginRight: 'auto', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                            <Paperclip size={14} /> Attach
+                        </button>
+                        <button
+                            onClick={() => { setShowCreate(false); setNewTitle(''); setNewContent(''); setNewTags([]); revokePendingAttachments(newAttachments); setNewAttachments([]); setNewUploadProgress({}); setCreateError(null); }}
                             style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'transparent', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
                         >Cancel</button>
                         <button
@@ -377,6 +605,7 @@ export default function ForumView({
                     <ForumPostView
                         thread={activePost}
                         forumTags={forumTags}
+                        channelId={channelId}
                         channelName={channelName}
                         onBack={() => { setActivePost(null); fetchThreads(); }}
                         onResolve={(threadId) => setThreads(prev => prev.map(t => t.id === threadId ? { ...t, solved: true } : t))}
@@ -440,6 +669,7 @@ function GridCard({ thread, forumTags, onSelectPost }: {
     const [hovered, setHovered] = useState(false);
     const gradient = threadGradient(thread.id + thread.name);
     const initials = threadInitials(thread.name);
+    const thumbnail = thread.opAttachment?.mimeType?.startsWith('image/') ? thread.opAttachment : null;
 
     return (
         <div
@@ -457,13 +687,14 @@ function GridCard({ thread, forumTags, onSelectPost }: {
         >
             {/* Thumbnail */}
             <div style={{
-                height: '120px', background: gradient,
+                height: '120px', background: thumbnail ? `url(${thumbnail.url}) center/cover` : gradient,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 position: 'relative', overflow: 'hidden',
             }}>
-                <span style={{ fontSize: '36px', fontWeight: 800, color: 'rgba(255,255,255,0.25)', letterSpacing: '-1px', userSelect: 'none' }}>
+                {!thumbnail && <span style={{ fontSize: '36px', fontWeight: 800, color: 'rgba(255,255,255,0.25)', letterSpacing: '-1px', userSelect: 'none' }}>
                     {initials}
-                </span>
+                </span>}
+                {thumbnail && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.35))' }} />}
                 {thread.locked && (
                     <div style={{ position: 'absolute', top: '8px', right: '8px', padding: '2px 8px', borderRadius: '6px', background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 700, color: '#fff' }}>
                         <Lock size={10} /> Locked
@@ -546,6 +777,7 @@ function ListRow({ thread, forumTags, onSelectPost }: {
 }) {
     const [hovered, setHovered] = useState(false);
     const gradient = threadGradient(thread.id + thread.name);
+    const thumbnail = thread.opAttachment?.mimeType?.startsWith('image/') ? thread.opAttachment : null;
 
     return (
         <div
@@ -561,10 +793,10 @@ function ListRow({ thread, forumTags, onSelectPost }: {
             }}
         >
             {/* Mini thumbnail */}
-            <div style={{ width: '44px', height: '44px', borderRadius: '8px', background: gradient, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: '16px', fontWeight: 800, color: 'rgba(255,255,255,0.3)', userSelect: 'none' }}>
+            <div style={{ width: '44px', height: '44px', borderRadius: '8px', background: thumbnail ? `url(${thumbnail.url}) center/cover` : gradient, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {!thumbnail && <span style={{ fontSize: '16px', fontWeight: 800, color: 'rgba(255,255,255,0.3)', userSelect: 'none' }}>
                     {threadInitials(thread.name)}
-                </span>
+                </span>}
             </div>
 
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -595,16 +827,18 @@ function ListRow({ thread, forumTags, onSelectPost }: {
 
 type PostMessage = {
     id: string;
-    content: string;
+    content: string | null;
+    attachments?: AttachmentSnapshot[];
     authorId?: string;
     authorName?: string;
     authorAvatarHash?: string | null;
     createdAt: string;
 };
 
-function ForumPostView({ thread, forumTags, channelName, onBack, onResolve }: {
+function ForumPostView({ thread, forumTags, channelId, channelName, onBack, onResolve }: {
     thread: ForumThread;
     forumTags: ForumTag[];
+    channelId: string;
     channelName: string;
     onBack: () => void;
     onResolve?: (threadId: string) => void;
@@ -617,16 +851,21 @@ function ForumPostView({ thread, forumTags, channelName, onBack, onResolve }: {
         try { return localStorage.getItem(draftKey) ?? ''; } catch { return ''; }
     });
     const [sending, setSending] = useState(false);
+    const [replyAttachments, setReplyAttachments] = useState<PendingAttachment[]>([]);
+    const [replyUploadProgress, setReplyUploadProgress] = useState<Record<string, number>>({});
+    const [replyError, setReplyError] = useState<string | null>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const replyFileInputRef = useRef<HTMLInputElement>(null);
 
     const fetchMessages = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await api.messages.list(thread.id);
-            const mapped: PostMessage[] = (Array.isArray(data) ? data : []).map((m: any) => ({
+            const data = await api.threads.listMessages(thread.id);
+            const mapped: PostMessage[] = (Array.isArray(data) ? [...data].reverse() : []).map((m: any) => ({
                 id: m.id ?? m.apiId ?? String(Math.random()),
-                content: m.content ?? '',
+                content: m.content ?? null,
+                attachments: Array.isArray(m.attachments) ? m.attachments : [],
                 authorId: m.authorId ?? m.author?.id,
                 authorName: m.authorName ?? m.author?.displayName ?? m.author?.username ?? 'Unknown',
                 authorAvatarHash: m.authorAvatarHash ?? m.author?.avatarHash ?? null,
@@ -642,15 +881,26 @@ function ForumPostView({ thread, forumTags, channelName, onBack, onResolve }: {
     useEffect(() => { fetchMessages(); }, [fetchMessages]);
 
     const handleSend = async () => {
-        if (!reply.trim() || sending) return;
+        if ((!reply.trim() && replyAttachments.length === 0) || sending) return;
         setSending(true);
+        setReplyError(null);
         try {
-            await api.messages.send(thread.id, { content: reply.trim() });
+            const uploaded = await uploadPendingAttachments(replyAttachments, setReplyUploadProgress);
+            await api.messages.send(channelId, {
+                content: reply.trim() || null,
+                threadId: thread.id,
+                attachmentIds: uploaded.map(file => file.id),
+            });
             setReply('');
+            revokePendingAttachments(replyAttachments);
+            setReplyAttachments([]);
+            setReplyUploadProgress({});
             try { localStorage.removeItem(draftKey); } catch { /* ok */ }
             await fetchMessages();
             setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
-        } catch { /* silent */ }
+        } catch (err: any) {
+            setReplyError(err?.message || 'Could not send reply');
+        }
         setSending(false);
     };
 
@@ -751,8 +1001,9 @@ function ForumPostView({ thread, forumTags, channelName, onBack, onResolve }: {
                                     <span style={{ marginLeft: 'auto', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 700, background: 'rgba(82,109,245,0.12)', color: 'var(--accent-primary)', border: '1px solid rgba(82,109,245,0.25)' }}>OP</span>
                                 </div>
                                 <div style={{ fontSize: '14px', lineHeight: 1.6, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                    {op.content || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No content.</span>}
+                                    {op.content || ((op.attachments?.length ?? 0) === 0 ? <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No content.</span> : null)}
                                 </div>
+                                <AttachmentRenderer attachments={op.attachments} />
                             </div>
                         ) : (
                             <div style={{ padding: '16px 18px', borderRadius: '12px', marginBottom: '20px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
@@ -781,6 +1032,7 @@ function ForumPostView({ thread, forumTags, channelName, onBack, onResolve }: {
                                     <div style={{ fontSize: '13px', lineHeight: 1.55, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                         {msg.content}
                                     </div>
+                                    <AttachmentRenderer attachments={msg.attachments} />
                                 </div>
                             ))}
                         </div>
@@ -795,11 +1047,50 @@ function ForumPostView({ thread, forumTags, channelName, onBack, onResolve }: {
                     padding: '12px 16px', borderTop: '1px solid var(--stroke)',
                     background: 'var(--bg-primary)', flexShrink: 0,
                 }}>
+                    <input
+                        ref={replyFileInputRef}
+                        type="file"
+                        multiple
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                            const selected = Array.from(e.target.files || []);
+                            if (selected.length > 0) setReplyAttachments(prev => [...prev, ...filesToPending(selected)]);
+                            e.target.value = '';
+                        }}
+                    />
+                    <PendingAttachmentList
+                        files={replyAttachments}
+                        progress={replyUploadProgress}
+                        onRemove={index => {
+                            setReplyAttachments(prev => {
+                                const next = [...prev];
+                                const removed = next.splice(index, 1)[0];
+                                if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+                                return next;
+                            });
+                        }}
+                    />
+                    {replyError && (
+                        <div style={{ margin: '0 0 8px', color: 'var(--error)', fontSize: '12px', fontWeight: 600 }}>{replyError}</div>
+                    )}
                     <div style={{
                         display: 'flex', gap: '10px', alignItems: 'flex-end',
                         background: 'var(--bg-elevated)', borderRadius: '10px',
                         border: '1px solid var(--stroke)', padding: '10px 12px',
                     }}>
+                        <button
+                            onClick={() => replyFileInputRef.current?.click()}
+                            title="Attach files"
+                            aria-label="Attach files"
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: '34px', height: '34px', borderRadius: '8px', border: '1px solid var(--stroke)',
+                                background: 'var(--bg-tertiary)', color: 'var(--text-muted)', cursor: 'pointer',
+                                flexShrink: 0,
+                            }}
+                        >
+                            <Paperclip size={15} />
+                        </button>
                         <textarea
                             ref={textareaRef}
                             value={reply}
@@ -808,6 +1099,21 @@ function ForumPostView({ thread, forumTags, channelName, onBack, onResolve }: {
                                 try { if (e.target.value) { localStorage.setItem(draftKey, e.target.value); } else { localStorage.removeItem(draftKey); } } catch { /* ok */ }
                             }}
                             onKeyDown={handleKeyDown}
+                            onPaste={e => {
+                                const items = e.clipboardData?.items;
+                                if (!items) return;
+                                const pasted: File[] = [];
+                                for (const item of Array.from(items)) {
+                                    if (item.type.startsWith('image/')) {
+                                        const file = item.getAsFile();
+                                        if (file) pasted.push(new File([file], file.name || `pasted-image.${item.type.split('/')[1] || 'png'}`, { type: file.type }));
+                                    }
+                                }
+                                if (pasted.length > 0) {
+                                    e.preventDefault();
+                                    setReplyAttachments(prev => [...prev, ...filesToPending(pasted)]);
+                                }
+                            }}
                             placeholder="Write a reply… (Enter to send, Shift+Enter for new line)"
                             rows={1}
                             style={{
@@ -818,14 +1124,14 @@ function ForumPostView({ thread, forumTags, channelName, onBack, onResolve }: {
                         />
                         <button
                             onClick={handleSend}
-                            disabled={!reply.trim() || sending}
+                            disabled={(!reply.trim() && replyAttachments.length === 0) || sending}
                             aria-label="Send reply"
                             style={{
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 width: '34px', height: '34px', borderRadius: '8px', border: 'none',
-                                background: reply.trim() ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                                color: reply.trim() ? '#fff' : 'var(--text-muted)',
-                                cursor: reply.trim() && !sending ? 'pointer' : 'not-allowed',
+                                background: reply.trim() || replyAttachments.length > 0 ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                                color: reply.trim() || replyAttachments.length > 0 ? '#fff' : 'var(--text-muted)',
+                                cursor: (reply.trim() || replyAttachments.length > 0) && !sending ? 'pointer' : 'not-allowed',
                                 flexShrink: 0, transition: 'background 0.15s',
                             }}
                         >

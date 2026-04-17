@@ -1,14 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { eq, and, desc, count, max, sql, asc } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { db } from '../db/index';
 import { threads, threadMembers } from '../db/schema/threads';
 import { messages } from '../db/schema/messages';
 import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
-import { getIO } from '../lib/socket-io';
-import { logger } from '../lib/logger';
+import { createForumThread, listForumThreads } from '../services/thread.service';
+import { ServiceError } from '../services/message.service';
 
 export const threadsRouter = Router({ mergeParams: true });
 
@@ -17,47 +17,51 @@ const VALID_ARCHIVE_AFTER = [3600, 86400, 259200, 604800]; // 1h, 24h, 3d, 1w
 const createThreadSchema = z.object({
   name: z.string().min(1).max(100),
   messageId: z.string().uuid().optional(),
-  body: z.string().optional(),
+  body: z.string().optional().nullable(),
+  attachmentIds: z.array(z.string().uuid()).optional(),
   tags: z.array(z.string()).optional(),
   archiveAfter: z.number().int().refine(v => VALID_ARCHIVE_AFTER.includes(v)).optional(),
 });
 
 /** POST /channels/:channelId/threads */
 threadsRouter.post('/', requireAuth, validate(createThreadSchema), async (req: Request, res: Response): Promise<void> => {
-  const { channelId } = req.params as Record<string, string>;
-  const { name, messageId, body, archiveAfter } = req.body;
+  try {
+    const { channelId } = req.params as Record<string, string>;
+    const { name, messageId, body, attachmentIds, tags, archiveAfter } = req.body as z.infer<typeof createThreadSchema>;
 
-  const [thread] = await db.insert(threads).values({
-    channelId,
-    name,
-    creatorId: req.userId!,
-    originMessageId: messageId || null,
-    archiveAfter: archiveAfter || null,
-  }).returning();
-
-  // Auto-join creator
-  await db.insert(threadMembers).values({ threadId: thread.id, userId: req.userId! });
-
-  // If created from a message, update the message's threadId
-  if (messageId) {
-    await db.update(messages).set({ threadId: thread.id }).where(eq(messages.id, messageId));
-  }
-
-  // If a body is provided (forum post), create the initial message in the thread
-  if (body && body.trim()) {
-    await db.insert(messages).values({
+    const thread = await createForumThread({
       channelId,
       authorId: req.userId!,
-      content: body.trim(),
-      threadId: thread.id,
+      name,
+      messageId,
+      body,
+      attachmentIds,
+      tags,
+      archiveAfter,
     });
+
+    res.status(201).json(thread);
+  } catch (err) {
+    if (err instanceof ServiceError) {
+      const statusMap: Record<string, number> = {
+        NOT_FOUND: 404,
+        FORBIDDEN: 403,
+        VALIDATION_ERROR: 400,
+        AUTOMOD_BLOCKED: 403,
+        BLOCKED_CONTENT: 400,
+        WORD_FILTER_WARN: 400,
+        RATE_LIMITED: 429,
+      };
+      const status = statusMap[err.code] ?? 400;
+      if (err.code === 'RATE_LIMITED') {
+        res.status(status).json({ error: 'SLOW_MODE', retryAfter: err.retryAfter });
+      } else {
+        res.status(status).json({ code: err.code, message: err.message });
+      }
+      return;
+    }
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to create thread' });
   }
-
-  try {
-    getIO().to(`channel:${channelId}`).emit('THREAD_CREATE', thread);
-  } catch (err) { logger.debug({ msg: 'socket emit failed', event: 'THREAD_CREATE', err }); }
-
-  res.status(201).json(thread);
 });
 
 /** GET /channels/:channelId/threads?sort=latest|top&filter=active|archived|mine */
@@ -66,85 +70,7 @@ threadsRouter.get('/', requireAuth, async (req: Request, res: Response): Promise
   const sortParam = (req.query.sort as string) || 'latest';
   const filter = (req.query.filter as string) || 'active';
 
-  // Build filter conditions
-  const conditions = [eq(threads.channelId, channelId)];
-  if (filter === 'archived') {
-    conditions.push(eq(threads.archived, true));
-  } else if (filter === 'mine') {
-    conditions.push(eq(threads.creatorId, req.userId!));
-  } else {
-    // 'active' (default)
-    conditions.push(eq(threads.archived, false));
-  }
-
-  // Fetch threads with creator info
-  const threadList = await db.select({
-    id: threads.id,
-    channelId: threads.channelId,
-    name: threads.name,
-    creatorId: threads.creatorId,
-    originMessageId: threads.originMessageId,
-    archived: threads.archived,
-    locked: threads.locked,
-    archiveAfter: threads.archiveAfter,
-    createdAt: threads.createdAt,
-    creatorName: users.displayName,
-    creatorUsername: users.username,
-    creatorAvatarHash: users.avatarHash,
-  }).from(threads)
-    .leftJoin(users, eq(users.id, threads.creatorId))
-    .where(and(...conditions))
-    .orderBy(desc(threads.createdAt));
-
-  // Fetch message counts for each thread
-  const threadIds = threadList.map(t => t.id);
-  let messageCounts: Record<string, { messageCount: number; lastActivity: string | null }> = {};
-  if (threadIds.length > 0) {
-    const counts = await db.select({
-      threadId: messages.threadId,
-      messageCount: count(messages.id),
-      lastActivity: max(messages.createdAt),
-    }).from(messages)
-      .where(sql`${messages.threadId} IN (${sql.join(threadIds.map(id => sql`${id}`), sql`, `)})`)
-      .groupBy(messages.threadId);
-
-    for (const c of counts) {
-      if (c.threadId) {
-        messageCounts[c.threadId] = {
-          messageCount: Number(c.messageCount),
-          lastActivity: c.lastActivity ? new Date(c.lastActivity).toISOString() : null,
-        };
-      }
-    }
-  }
-
-  let result = threadList.map(t => ({
-    id: t.id,
-    channelId: t.channelId,
-    name: t.name,
-    creatorId: t.creatorId,
-    creatorName: t.creatorName ?? t.creatorUsername ?? 'Unknown',
-    creatorAvatarHash: t.creatorAvatarHash,
-    originMessageId: t.originMessageId,
-    archived: t.archived,
-    locked: t.locked,
-    archiveAfter: t.archiveAfter,
-    createdAt: t.createdAt,
-    messageCount: messageCounts[t.id]?.messageCount ?? 0,
-    lastActivity: messageCounts[t.id]?.lastActivity ?? (t.createdAt ? new Date(t.createdAt).toISOString() : null),
-  }));
-
-  // Sort
-  if (sortParam === 'top') {
-    result.sort((a, b) => b.messageCount - a.messageCount);
-  } else {
-    // 'latest' — sort by last activity
-    result.sort((a, b) => {
-      const aTime = a.lastActivity ? new Date(a.lastActivity).getTime() : 0;
-      const bTime = b.lastActivity ? new Date(b.lastActivity).getTime() : 0;
-      return bTime - aTime;
-    });
-  }
+  const result = await listForumThreads(channelId, req.userId!, { sort: sortParam, filter });
 
   res.json(result);
 });
