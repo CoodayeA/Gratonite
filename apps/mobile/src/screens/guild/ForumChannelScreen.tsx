@@ -72,8 +72,8 @@ export default function ForumChannelScreen({ route, navigation }: Props) {
   const handleCreatePost = async () => {
     const title = newTitle.trim();
     const content = newContent.trim();
-    if (!title || !content) {
-      toast.error('Title and content are required');
+    if (!title) {
+      toast.error('A title is required');
       return;
     }
 
@@ -419,12 +419,12 @@ export default function ForumChannelScreen({ route, navigation }: Props) {
               <Text style={styles.modalTitle}>New Post</Text>
               <TouchableOpacity
                 onPress={handleCreatePost}
-                disabled={creating || !newTitle.trim() || !newContent.trim()}
+                disabled={creating || !newTitle.trim()}
               >
                 <Text
                   style={[
                     styles.postButton,
-                    (!newTitle.trim() || !newContent.trim() || creating) && styles.postButtonDisabled,
+                    (!newTitle.trim() || creating) && styles.postButtonDisabled,
                   ]}
                 >
                   {creating ? 'Posting...' : 'Post'}
@@ -445,7 +445,7 @@ export default function ForumChannelScreen({ route, navigation }: Props) {
               style={styles.contentInput}
               value={newContent}
               onChangeText={setNewContent}
-              placeholder="What do you want to discuss?"
+              placeholder="What do you want to discuss? (optional)"
               placeholderTextColor={colors.textMuted}
               multiline
               maxLength={4000}

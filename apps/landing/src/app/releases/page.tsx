@@ -20,6 +20,19 @@ export const metadata: Metadata = createPageMetadata({
 
 const releases = [
   {
+    version: "1.0.6",
+    date: "April 17, 2026",
+    summary: "Reliability foundations for forum safety, production smoke, mobile forum alignment, and deploy artifact hygiene.",
+    accent: "gold" as const,
+    changes: [
+      "Encrypted forum channels now block forum attachments with clear guidance until the encrypted upload path is supported there",
+      "Mobile forum list, create, detail, and replies now use canonical threads and thread message APIs instead of legacy forum-post endpoints",
+      "Mobile forum posts can be created with a title and optional body, matching the web forum model more closely",
+      "A separate production-smoke GitHub workflow now verifies public health, app HTML, release notes, and optional authenticated chat/forum flows",
+      "Generated deploy package directories are ignored and documented as local build output rather than source of truth",
+    ],
+  },
+  {
     version: "1.0.5",
     date: "April 17, 2026",
     summary: "Forum image uploads, attachment replies, richer forum cards, and deploy reliability fixes.",

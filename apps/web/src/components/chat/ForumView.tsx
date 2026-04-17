@@ -228,10 +228,14 @@ export default function ForumView({
     channelId,
     channelName,
     forumTags = [],
+    channelIsEncrypted = false,
+    attachmentsEnabled = true,
 }: {
     channelId: string;
     channelName: string;
     forumTags: ForumTag[];
+    channelIsEncrypted?: boolean;
+    attachmentsEnabled?: boolean;
     onOpenThread: (threadId: string) => void;
 }) {
     const [threads, setThreads] = useState<ForumThread[]>([]);
@@ -251,6 +255,11 @@ export default function ForumView({
     const [creating, setCreating] = useState(false);
     const [activePost, setActivePost] = useState<ForumThread | null>(null);
     const newFileInputRef = useRef<HTMLInputElement>(null);
+    const attachmentBlockReason = channelIsEncrypted
+        ? 'Forum attachments are not available in encrypted channels yet. Use text only here, or post attachments in a non-encrypted forum.'
+        : !attachmentsEnabled
+            ? 'Attachments are disabled in this channel.'
+            : null;
 
     const fetchThreads = useCallback(async () => {
         setLoading(true);
@@ -292,6 +301,10 @@ export default function ForumView({
 
     const handleCreate = async () => {
         if (!newTitle.trim()) return;
+        if (attachmentBlockReason && newAttachments.length > 0) {
+            setCreateError(attachmentBlockReason);
+            return;
+        }
         setCreating(true);
         setCreateError(null);
         try {
@@ -518,6 +531,10 @@ export default function ForumView({
                             }
                             if (pasted.length > 0) {
                                 e.preventDefault();
+                                if (attachmentBlockReason) {
+                                    setCreateError(attachmentBlockReason);
+                                    return;
+                                }
                                 setNewAttachments(prev => [...prev, ...filesToPending(pasted)]);
                             }
                         }}
@@ -546,12 +563,18 @@ export default function ForumView({
                         </div>
                     )}
                     <input
+                        data-testid="forum-create-file-input"
                         ref={newFileInputRef}
                         type="file"
                         multiple
                         style={{ display: 'none' }}
                         onChange={e => {
                             const selected = Array.from(e.target.files || []);
+                            if (selected.length > 0 && attachmentBlockReason) {
+                                setCreateError(attachmentBlockReason);
+                                e.target.value = '';
+                                return;
+                            }
                             if (selected.length > 0) setNewAttachments(prev => [...prev, ...filesToPending(selected)]);
                             e.target.value = '';
                         }}
@@ -571,10 +594,17 @@ export default function ForumView({
                     {createError && (
                         <div style={{ marginBottom: '12px', color: 'var(--error)', fontSize: '12px', fontWeight: 600 }}>{createError}</div>
                     )}
+                    {attachmentBlockReason && (
+                        <div style={{ marginBottom: '12px', color: 'var(--text-muted)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Lock size={13} /> {attachmentBlockReason}
+                        </div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                         <button
                             onClick={() => newFileInputRef.current?.click()}
-                            style={{ marginRight: 'auto', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            disabled={!!attachmentBlockReason}
+                            title={attachmentBlockReason || 'Attach files'}
+                            style={{ marginRight: 'auto', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, cursor: attachmentBlockReason ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', opacity: attachmentBlockReason ? 0.55 : 1 }}
                         >
                             <Paperclip size={14} /> Attach
                         </button>
@@ -607,6 +637,7 @@ export default function ForumView({
                         forumTags={forumTags}
                         channelId={channelId}
                         channelName={channelName}
+                        attachmentBlockReason={attachmentBlockReason}
                         onBack={() => { setActivePost(null); fetchThreads(); }}
                         onResolve={(threadId) => setThreads(prev => prev.map(t => t.id === threadId ? { ...t, solved: true } : t))}
                     />
@@ -835,11 +866,12 @@ type PostMessage = {
     createdAt: string;
 };
 
-function ForumPostView({ thread, forumTags, channelId, channelName, onBack, onResolve }: {
+function ForumPostView({ thread, forumTags, channelId, channelName, attachmentBlockReason, onBack, onResolve }: {
     thread: ForumThread;
     forumTags: ForumTag[];
     channelId: string;
     channelName: string;
+    attachmentBlockReason: string | null;
     onBack: () => void;
     onResolve?: (threadId: string) => void;
 }) {
@@ -882,6 +914,10 @@ function ForumPostView({ thread, forumTags, channelId, channelName, onBack, onRe
 
     const handleSend = async () => {
         if ((!reply.trim() && replyAttachments.length === 0) || sending) return;
+        if (attachmentBlockReason && replyAttachments.length > 0) {
+            setReplyError(attachmentBlockReason);
+            return;
+        }
         setSending(true);
         setReplyError(null);
         try {
@@ -1048,12 +1084,18 @@ function ForumPostView({ thread, forumTags, channelId, channelName, onBack, onRe
                     background: 'var(--bg-primary)', flexShrink: 0,
                 }}>
                     <input
+                        data-testid="forum-reply-file-input"
                         ref={replyFileInputRef}
                         type="file"
                         multiple
                         style={{ display: 'none' }}
                         onChange={e => {
                             const selected = Array.from(e.target.files || []);
+                            if (selected.length > 0 && attachmentBlockReason) {
+                                setReplyError(attachmentBlockReason);
+                                e.target.value = '';
+                                return;
+                            }
                             if (selected.length > 0) setReplyAttachments(prev => [...prev, ...filesToPending(selected)]);
                             e.target.value = '';
                         }}
@@ -1073,6 +1115,11 @@ function ForumPostView({ thread, forumTags, channelId, channelName, onBack, onRe
                     {replyError && (
                         <div style={{ margin: '0 0 8px', color: 'var(--error)', fontSize: '12px', fontWeight: 600 }}>{replyError}</div>
                     )}
+                    {attachmentBlockReason && (
+                        <div style={{ margin: '0 0 8px', color: 'var(--text-muted)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Lock size={13} /> {attachmentBlockReason}
+                        </div>
+                    )}
                     <div style={{
                         display: 'flex', gap: '10px', alignItems: 'flex-end',
                         background: 'var(--bg-elevated)', borderRadius: '10px',
@@ -1080,13 +1127,15 @@ function ForumPostView({ thread, forumTags, channelId, channelName, onBack, onRe
                     }}>
                         <button
                             onClick={() => replyFileInputRef.current?.click()}
-                            title="Attach files"
+                            title={attachmentBlockReason || 'Attach files'}
                             aria-label="Attach files"
+                            disabled={!!attachmentBlockReason}
                             style={{
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 width: '34px', height: '34px', borderRadius: '8px', border: '1px solid var(--stroke)',
-                                background: 'var(--bg-tertiary)', color: 'var(--text-muted)', cursor: 'pointer',
+                                background: 'var(--bg-tertiary)', color: 'var(--text-muted)', cursor: attachmentBlockReason ? 'not-allowed' : 'pointer',
                                 flexShrink: 0,
+                                opacity: attachmentBlockReason ? 0.55 : 1,
                             }}
                         >
                             <Paperclip size={15} />
@@ -1111,6 +1160,10 @@ function ForumPostView({ thread, forumTags, channelId, channelName, onBack, onRe
                                 }
                                 if (pasted.length > 0) {
                                     e.preventDefault();
+                                    if (attachmentBlockReason) {
+                                        setReplyError(attachmentBlockReason);
+                                        return;
+                                    }
                                     setReplyAttachments(prev => [...prev, ...filesToPending(pasted)]);
                                 }
                             }}

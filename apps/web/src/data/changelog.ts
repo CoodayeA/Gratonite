@@ -24,6 +24,39 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-04-17b',
+    date: 'April 17, 2026',
+    title: 'Reliability Foundations for Forums and Production Smoke',
+    tagline: 'Forum safety, mobile forum API alignment, production smoke checks, and cleaner deploy artifact ownership.',
+    spotlight: [
+      {
+        emoji: '🛡️',
+        title: 'Encrypted Forum Safety',
+        description: 'Forum attachments are now blocked with a clear message in encrypted channels until the forum flow can reuse the existing encrypted upload path safely.',
+        hint: 'Encrypted forum channel → New Post or Reply',
+      },
+      {
+        emoji: '📱',
+        title: 'Mobile Forum Alignment',
+        description: 'Mobile forum screens now use the canonical thread and message APIs instead of the legacy forum-post endpoints, keeping web and mobile closer together.',
+        hint: 'Mobile forum channel → browse or create a post',
+      },
+      {
+        emoji: '🧪',
+        title: 'Production Smoke Checks',
+        description: 'A new production smoke suite verifies public health, app HTML, release notes, and optional authenticated forum/chat flows when smoke credentials are configured.',
+        hint: 'GitHub Actions → production-smoke',
+      },
+    ],
+    entries: [
+      { type: 'improvement', text: 'Forum attachment controls now respect encrypted and attachment-disabled channels with visible guidance instead of attempting unsafe uploads.' },
+      { type: 'improvement', text: 'Mobile forum list, create, detail, and replies now read and write through canonical threads and thread messages APIs.' },
+      { type: 'improvement', text: 'Mobile forum posts can be created with a title and optional body, matching the web forum model more closely.' },
+      { type: 'feature', text: 'Added a separate production-smoke workflow with public checks enabled by default and authenticated chat/forum checks gated by smoke secrets and IDs.' },
+      { type: 'improvement', text: 'Generated deploy package directories are now ignored and documented as local build output rather than source of truth.' },
+    ],
+  },
+  {
     id: '2026-04-17a',
     date: 'April 17, 2026',
     title: 'Forum Image Uploads, Replies, and Post Cards',
