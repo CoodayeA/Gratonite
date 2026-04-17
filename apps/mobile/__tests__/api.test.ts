@@ -20,7 +20,7 @@ jest.mock('expo-secure-store', () => ({
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
-import { forum, setTokens, getAccessToken, loadTokens } from '../src/lib/api';
+import { forum, messages, setTokens, getAccessToken, loadTokens } from '../src/lib/api';
 
 beforeEach(async () => {
   jest.clearAllMocks();
@@ -146,6 +146,46 @@ describe('Forum API', () => {
     }));
   });
 
+  it('passes attachment-heavy post edits through the canonical thread update endpoint', async () => {
+    mockJsonResponse({
+      id: 'thread-2',
+      channelId: 'forum-1',
+      name: 'Edited title',
+      creatorId: 'user-2',
+      creatorName: 'Grace',
+      forumTagIds: ['art'],
+      messageCount: 2,
+      createdAt: '2026-04-17T13:00:00.000Z',
+      lastActivity: '2026-04-17T13:30:00.000Z',
+    });
+
+    const post = await forum.updatePost('thread-2', {
+      title: 'Edited title',
+      content: 'Fresh copy',
+      tags: ['art'],
+      attachmentIds: ['file-1', 'file-2'],
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.gratonite.chat/api/v1/threads/thread-2',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: 'Edited title',
+          body: 'Fresh copy',
+          tags: ['art'],
+          attachmentIds: ['file-1', 'file-2'],
+        }),
+      }),
+    );
+    expect(post).toEqual(expect.objectContaining({
+      id: 'thread-2',
+      title: 'Edited title',
+      content: 'Fresh copy',
+      tags: ['art'],
+    }));
+  });
+
   it('loads forum replies from thread messages', async () => {
     mockJsonResponse([
       { id: 'reply-1', channelId: 'forum-1', content: 'Reply', createdAt: '2026-04-17T12:05:00.000Z' },
@@ -244,5 +284,41 @@ describe('Forum API', () => {
     expect(replies).toHaveLength(100);
     expect(replies[0]).toEqual(expect.objectContaining({ id: 'msg-2', content: 'Message 2' }));
     expect(replies[99]).toEqual(expect.objectContaining({ id: 'msg-101', content: 'Message 101' }));
+  });
+
+  it('edits forum replies with attachment snapshots through the shared message endpoint', async () => {
+    mockJsonResponse({
+      id: 'reply-1',
+      channelId: 'forum-1',
+      content: 'Updated reply',
+      attachments: [
+        {
+          id: 'file-9',
+          url: 'https://cdn.test/file-9.png',
+          filename: 'updated.png',
+          size: 4096,
+          mimeType: 'image/png',
+        },
+      ],
+      createdAt: '2026-04-17T12:05:00.000Z',
+    });
+
+    const reply = await messages.edit('forum-1', 'reply-1', {
+      content: 'Updated reply',
+      attachmentIds: ['file-9'],
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.gratonite.chat/api/v1/channels/forum-1/messages/reply-1',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ content: 'Updated reply', attachmentIds: ['file-9'] }),
+      }),
+    );
+    expect(reply).toEqual(expect.objectContaining({
+      id: 'reply-1',
+      content: 'Updated reply',
+      attachments: [expect.objectContaining({ id: 'file-9' })],
+    }));
   });
 });

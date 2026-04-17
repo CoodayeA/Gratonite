@@ -1,4 +1,4 @@
-import { and, count, desc, eq, lt, max, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, lt, max, sql } from 'drizzle-orm';
 import { db } from '../db/index';
 import { channels } from '../db/schema/channels';
 import { messages } from '../db/schema/messages';
@@ -6,7 +6,7 @@ import { threads, threadMembers } from '../db/schema/threads';
 import { users } from '../db/schema/users';
 import { getIO } from '../lib/socket-io';
 import { logger } from '../lib/logger';
-import { messageService, ServiceError } from './message.service';
+import { assertCanSendMessage, messageService, ServiceError } from './message.service';
 
 type ForumTagConfig = { id: string; name: string; color?: string };
 
@@ -102,6 +102,7 @@ export async function createForumThread(data: {
   tags?: string[];
   archiveAfter?: number | null;
 }) {
+  await assertCanSendMessage(data.channelId, data.authorId);
   const normalizedTags = await validateForumTags(data.channelId, data.tags);
 
   const [thread] = await db.insert(threads).values({
@@ -144,6 +145,100 @@ export async function createForumThread(data: {
   }
 
   return thread;
+}
+
+export async function updateForumThread(data: {
+  threadId: string;
+  authorId: string;
+  name?: string;
+  body?: string | null;
+  attachmentIds?: string[];
+  tags?: string[];
+}) {
+  const [thread] = await db.select().from(threads).where(eq(threads.id, data.threadId)).limit(1);
+  if (!thread) {
+    throw new ServiceError('NOT_FOUND', 'Thread not found');
+  }
+
+  await assertCanSendMessage(thread.channelId, data.authorId);
+
+  if (thread.creatorId !== data.authorId) {
+    throw new ServiceError('FORBIDDEN', 'You can only edit your own forum posts');
+  }
+
+  const [op] = await db.select({
+    id: messages.id,
+    content: messages.content,
+    attachments: messages.attachments,
+  })
+    .from(messages)
+    .where(eq(messages.threadId, thread.id))
+    .orderBy(asc(messages.createdAt))
+    .limit(1);
+
+  const nextName = data.name !== undefined ? data.name.trim() : thread.name;
+  const nextTags = data.tags !== undefined ? await validateForumTags(thread.channelId, data.tags) : thread.forumTagIds;
+  const nextContent = data.body !== undefined ? (data.body?.trim() || null) : (op?.content ?? null);
+  const currentAttachmentIds = Array.isArray(op?.attachments)
+    ? op.attachments
+      .map((attachment) => typeof attachment?.id === 'string' ? attachment.id : null)
+      .filter((attachmentId): attachmentId is string => Boolean(attachmentId))
+    : [];
+  const nextAttachmentIds = data.attachmentIds !== undefined ? data.attachmentIds : currentAttachmentIds;
+  const updatingOp = data.body !== undefined || data.attachmentIds !== undefined;
+
+  if (updatingOp && !nextContent && nextAttachmentIds.length === 0) {
+    throw new ServiceError('VALIDATION_ERROR', 'Forum posts must keep text or at least one attachment');
+  }
+
+  const metadataChanged = nextName !== thread.name
+    || data.tags !== undefined;
+  let updatedThread = thread;
+
+  if (metadataChanged) {
+    [updatedThread] = await db.update(threads)
+      .set({
+        name: nextName,
+        forumTagIds: nextTags,
+      })
+      .where(eq(threads.id, thread.id))
+      .returning();
+  }
+
+  try {
+    if (updatingOp) {
+      if (op) {
+        await messageService.updateMessage(thread.channelId, op.id, data.authorId, {
+          content: nextContent,
+          attachmentIds: nextAttachmentIds,
+        });
+      } else {
+        await messageService.createMessage(thread.channelId, data.authorId, {
+          content: nextContent,
+          attachmentIds: nextAttachmentIds,
+          threadId: thread.id,
+        });
+      }
+    }
+  } catch (err) {
+    if (metadataChanged) {
+      await db.update(threads)
+        .set({
+          name: thread.name,
+          forumTagIds: thread.forumTagIds,
+        })
+        .where(eq(threads.id, thread.id));
+    }
+    throw err;
+  }
+
+  try {
+    getIO().to(`channel:${thread.channelId}`).emit('THREAD_UPDATE', updatedThread);
+  } catch (err) {
+    logger.debug({ msg: 'socket emit failed', event: 'THREAD_UPDATE', err });
+  }
+
+  return updatedThread;
 }
 
 export async function listForumThreads(channelId: string, userId: string, options: {

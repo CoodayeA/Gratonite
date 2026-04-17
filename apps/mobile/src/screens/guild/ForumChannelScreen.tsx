@@ -59,7 +59,7 @@ export default function ForumChannelScreen({ route }: Props) {
   const [showNewPost, setShowNewPost] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
-  const [newAttachment, setNewAttachment] = useState<PendingAttachment | null>(null);
+  const [newAttachments, setNewAttachments] = useState<PendingAttachment[]>([]);
   const [creating, setCreating] = useState(false);
 
   // Post detail
@@ -67,7 +67,7 @@ export default function ForumChannelScreen({ route }: Props) {
   const [replies, setReplies] = useState<Message[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [replyText, setReplyText] = useState('');
-  const [replyAttachment, setReplyAttachment] = useState<PendingAttachment | null>(null);
+  const [replyAttachments, setReplyAttachments] = useState<PendingAttachment[]>([]);
   const [sendingReply, setSendingReply] = useState(false);
   const [channelInfo, setChannelInfo] = useState<Channel | null>(null);
 
@@ -106,7 +106,7 @@ export default function ForumChannelScreen({ route }: Props) {
       .catch(() => setChannelInfo(null));
   }, [channelId]);
 
-  const pickAttachment = useCallback(async (setter: (value: PendingAttachment | null) => void) => {
+  const pickAttachment = useCallback(async (setter: React.Dispatch<React.SetStateAction<PendingAttachment[]>>) => {
     if (attachmentBlockReason) {
       toast.error(attachmentBlockReason);
       return;
@@ -121,38 +121,43 @@ export default function ForumChannelScreen({ route }: Props) {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images', 'videos'],
       quality: 0.8,
+      allowsMultipleSelection: true,
+      selectionLimit: 0,
     });
 
     if (result.canceled || !result.assets?.length) return;
-    const asset = result.assets[0];
-    setter({
+    const selected = result.assets.map((asset) => ({
       uri: asset.uri,
       name: asset.fileName ?? asset.uri.split('/').pop() ?? 'upload',
       mimeType: asset.mimeType ?? 'application/octet-stream',
       size: asset.fileSize ?? 0,
-    });
+    }));
+    setter((prev) => [...prev, ...selected]);
   }, [attachmentBlockReason, toast]);
 
-  const uploadAttachment = useCallback(async (pending: PendingAttachment | null) => {
-    if (!pending) return null;
-    const formData = new FormData();
-    formData.append('file', {
-      uri: pending.uri,
-      name: pending.name,
-      type: pending.mimeType,
-    } as any);
-    const upload = await filesApi.upload(formData);
-    return {
-      id: upload.id,
-      attachment: {
+  const uploadAttachments = useCallback(async (pendingList: PendingAttachment[]) => {
+    const uploaded: Array<{ id: string; attachment: Attachment }> = [];
+    for (const pending of pendingList) {
+      const formData = new FormData();
+      formData.append('file', {
+        uri: pending.uri,
+        name: pending.name,
+        type: pending.mimeType,
+      } as any);
+      const upload = await filesApi.upload(formData);
+      uploaded.push({
         id: upload.id,
-        messageId: '',
-        filename: upload.filename ?? pending.name,
-        contentType: upload.mimeType ?? pending.mimeType,
-        size: upload.size ?? pending.size,
-        url: upload.url,
-      } as Attachment,
-    };
+        attachment: {
+          id: upload.id,
+          messageId: '',
+          filename: upload.filename ?? pending.name,
+          contentType: upload.mimeType ?? pending.mimeType,
+          size: upload.size ?? pending.size,
+          url: upload.url,
+        } as Attachment,
+      });
+    }
+    return uploaded;
   }, []);
 
   const loadPostDetail = useCallback(async (post: ForumPost) => {
@@ -188,17 +193,17 @@ export default function ForumChannelScreen({ route }: Props) {
 
     setCreating(true);
     try {
-      const uploaded = await uploadAttachment(newAttachment);
+      const uploaded = await uploadAttachments(newAttachments);
       const post = await forumApi.createPost(channelId, {
         title,
         content,
-        attachmentIds: uploaded ? [uploaded.id] : undefined,
+        attachmentIds: uploaded.length > 0 ? uploaded.map((item) => item.id) : undefined,
       });
       setPosts((prev) => [post, ...prev]);
       setShowNewPost(false);
       setNewTitle('');
       setNewContent('');
-      setNewAttachment(null);
+      setNewAttachments([]);
       await fetchPosts();
     } catch (err: any) {
       toast.error(err.message || 'Failed to create post');
@@ -209,25 +214,25 @@ export default function ForumChannelScreen({ route }: Props) {
 
   const handleOpenPost = async (post: ForumPost) => {
     setReplyText('');
-    setReplyAttachment(null);
+    setReplyAttachments([]);
     await loadPostDetail(post);
   };
 
   const handleSendReply = async () => {
     if (!selectedPost) return;
     const text = replyText.trim();
-    if (!text && !replyAttachment) return;
+    if (!text && replyAttachments.length === 0) return;
 
     setSendingReply(true);
     try {
-      const uploaded = await uploadAttachment(replyAttachment);
+      const uploaded = await uploadAttachments(replyAttachments);
       await messagesApi.send(selectedPost.channelId, {
         content: text || null,
         threadId: selectedPost.id,
-        attachmentIds: uploaded ? [uploaded.id] : undefined,
+        attachmentIds: uploaded.length > 0 ? uploaded.map((item) => item.id) : undefined,
       });
       setReplyText('');
-      setReplyAttachment(null);
+      setReplyAttachments([]);
       await loadPostDetail(selectedPost);
       await fetchPosts();
     } catch (err: any) {
@@ -657,7 +662,7 @@ export default function ForumChannelScreen({ route }: Props) {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => { setShowNewPost(false); setNewAttachment(null); }} accessibilityLabel="Close">
+              <TouchableOpacity onPress={() => { setShowNewPost(false); setNewAttachments([]); }} accessibilityLabel="Close">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>New Post</Text>
@@ -699,12 +704,12 @@ export default function ForumChannelScreen({ route }: Props) {
             <View style={styles.attachmentActions}>
               <TouchableOpacity
                 style={styles.attachmentButton}
-                onPress={() => pickAttachment(setNewAttachment)}
+                onPress={() => pickAttachment(setNewAttachments)}
                 disabled={creating}
               >
                 <Ionicons name="attach-outline" size={18} color={colors.accentPrimary} />
                 <Text style={styles.attachmentButtonText}>
-                  {newAttachment ? 'Replace media' : 'Attach media'}
+                  {newAttachments.length > 0 ? 'Add more media' : 'Attach media'}
                 </Text>
               </TouchableOpacity>
               <Text style={styles.attachmentHint}>
@@ -712,12 +717,16 @@ export default function ForumChannelScreen({ route }: Props) {
               </Text>
             </View>
 
-            {newAttachment && (
+            {newAttachments.length > 0 && (
               <View style={styles.attachmentPreviewWrap}>
-                <AttachmentPreview attachment={toPreviewAttachment(newAttachment)} />
-                <TouchableOpacity style={styles.removeAttachmentButton} onPress={() => setNewAttachment(null)}>
-                  <Text style={styles.removeAttachmentText}>Remove attachment</Text>
-                </TouchableOpacity>
+                {newAttachments.map((attachment, index) => (
+                  <View key={`${attachment.uri}-${index}`}>
+                    <AttachmentPreview attachment={toPreviewAttachment(attachment)} />
+                    <TouchableOpacity style={styles.removeAttachmentButton} onPress={() => setNewAttachments((prev) => prev.filter((_, currentIndex) => currentIndex !== index))}>
+                      <Text style={styles.removeAttachmentText}>Remove attachment</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
               </View>
             )}
           </View>
@@ -729,7 +738,7 @@ export default function ForumChannelScreen({ route }: Props) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => { setSelectedPost(null); setReplies([]); setReplyText(''); setReplyAttachment(null); }} accessibilityLabel="Close">
+              <TouchableOpacity onPress={() => { setSelectedPost(null); setReplies([]); setReplyText(''); setReplyAttachments([]); }} accessibilityLabel="Close">
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle} numberOfLines={1}>
@@ -813,12 +822,16 @@ export default function ForumChannelScreen({ route }: Props) {
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
               >
                 <View style={styles.replyComposer}>
-                  {replyAttachment && (
+                  {replyAttachments.length > 0 && (
                     <View style={styles.attachmentPreviewWrap}>
-                      <AttachmentPreview attachment={toPreviewAttachment(replyAttachment)} />
-                      <TouchableOpacity style={styles.removeAttachmentButton} onPress={() => setReplyAttachment(null)}>
-                        <Text style={styles.removeAttachmentText}>Remove attachment</Text>
-                      </TouchableOpacity>
+                      {replyAttachments.map((attachment, index) => (
+                        <View key={`${attachment.uri}-${index}`}>
+                          <AttachmentPreview attachment={toPreviewAttachment(attachment)} />
+                          <TouchableOpacity style={styles.removeAttachmentButton} onPress={() => setReplyAttachments((prev) => prev.filter((_, currentIndex) => currentIndex !== index))}>
+                            <Text style={styles.removeAttachmentText}>Remove attachment</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
                     </View>
                   )}
                   <TextInput
@@ -833,20 +846,20 @@ export default function ForumChannelScreen({ route }: Props) {
                   <View style={styles.replyComposerActions}>
                     <TouchableOpacity
                       style={styles.attachmentButton}
-                      onPress={() => pickAttachment(setReplyAttachment)}
+                      onPress={() => pickAttachment(setReplyAttachments)}
                       disabled={sendingReply}
                     >
                       <Ionicons name="attach-outline" size={18} color={colors.accentPrimary} />
-                      <Text style={styles.attachmentButtonText}>Attach media</Text>
+                      <Text style={styles.attachmentButtonText}>{replyAttachments.length > 0 ? 'Add more media' : 'Attach media'}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
                       style={[
                         styles.replySendButton,
-                        !replyText.trim() && !replyAttachment && styles.replySendButtonDisabled,
+                        !replyText.trim() && replyAttachments.length === 0 && styles.replySendButtonDisabled,
                       ]}
                       onPress={handleSendReply}
-                      disabled={sendingReply || (!replyText.trim() && !replyAttachment)}
+                      disabled={sendingReply || (!replyText.trim() && replyAttachments.length === 0)}
                     >
                       {sendingReply ? (
                         <ActivityIndicator size="small" color={colors.white} />

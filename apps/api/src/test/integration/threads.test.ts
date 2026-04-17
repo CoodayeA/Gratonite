@@ -7,7 +7,8 @@ import { channels } from '../../db/schema/channels';
 import { files } from '../../db/schema/files';
 import { messages } from '../../db/schema/messages';
 import { threads } from '../../db/schema/threads';
-import { createForumThread, getThreadMessages, listForumThreads } from '../../services/thread.service';
+import { messageService } from '../../services/message.service';
+import { createForumThread, getThreadMessages, listForumThreads, updateForumThread } from '../../services/thread.service';
 
 vi.mock('../../lib/redis', () => ({
   redis: {
@@ -240,5 +241,124 @@ describe('Forum threads', () => {
 
     const secondPage = await getThreadMessages(thread.id, { limit: 2, before: firstPage[1].id });
     expect(secondPage.map((message) => message.content)).toEqual(['Reply 1', 'Original post']);
+  });
+
+  it('rejects forum attachments in encrypted channels during create and edit flows', async () => {
+    const { user } = await createTestUser();
+    const channel = await createForumChannel(user.id);
+    const image = await createUploadedFile(user.id);
+
+    await testDb.update(channels)
+      .set({ isEncrypted: true })
+      .where(eq(channels.id, channel.id));
+
+    await expect(createForumThread({
+      channelId: channel.id,
+      authorId: user.id,
+      name: 'Encrypted image drop',
+      attachmentIds: [image.id],
+    })).rejects.toThrow(/encrypted/i);
+
+    const thread = await createForumThread({
+      channelId: channel.id,
+      authorId: user.id,
+      name: 'Encrypted text only',
+      body: 'Text is fine here',
+    });
+
+    await expect(messageService.createMessage(channel.id, user.id, {
+      content: null,
+      threadId: thread.id,
+      attachmentIds: [image.id],
+    })).rejects.toThrow(/encrypted/i);
+
+    await expect(updateForumThread({
+      threadId: thread.id,
+      authorId: user.id,
+      attachmentIds: [image.id],
+    })).rejects.toThrow(/encrypted/i);
+  });
+
+  it('updates forum posts with thread metadata and attachment swaps', async () => {
+    const { user } = await createTestUser();
+    const channel = await createForumChannel(user.id);
+    const firstImage = await createUploadedFile(user.id, { filename: 'before.png' });
+    const nextImage = await createUploadedFile(user.id, { filename: 'after.png' });
+
+    const thread = await createForumThread({
+      channelId: channel.id,
+      authorId: user.id,
+      name: 'Original title',
+      body: 'Original body',
+      attachmentIds: [firstImage.id],
+      tags: ['showcase'],
+    });
+
+    const updated = await updateForumThread({
+      threadId: thread.id,
+      authorId: user.id,
+      name: 'Updated title',
+      body: null,
+      attachmentIds: [nextImage.id],
+      tags: ['help'],
+    });
+
+    expect(updated.name).toBe('Updated title');
+    expect(updated.forumTagIds).toEqual(['help']);
+
+    const [threadRow] = await testDb.select().from(threads).where(eq(threads.id, thread.id));
+    expect(threadRow.name).toBe('Updated title');
+    expect(threadRow.forumTagIds).toEqual(['help']);
+
+    const [op] = await testDb.select().from(messages).where(eq(messages.threadId, thread.id));
+    expect(op.content).toBeNull();
+    expect(op.attachments).toEqual([
+      expect.objectContaining({
+        id: nextImage.id,
+        filename: nextImage.filename,
+      }),
+    ]);
+    expect(op.edited).toBe(true);
+  });
+
+  it('lets reply authors replace forum reply attachments', async () => {
+    const { user } = await createTestUser();
+    const channel = await createForumChannel(user.id);
+    const firstImage = await createUploadedFile(user.id, { filename: 'reply-before.png' });
+    const nextImage = await createUploadedFile(user.id, { filename: 'reply-after.png' });
+
+    const thread = await createForumThread({
+      channelId: channel.id,
+      authorId: user.id,
+      name: 'Reply edit thread',
+      body: 'Original post',
+    });
+
+    const reply = await messageService.createMessage(channel.id, user.id, {
+      content: null,
+      threadId: thread.id,
+      attachmentIds: [firstImage.id],
+    });
+
+    const updatedReply = await messageService.updateMessage(channel.id, reply.id, user.id, {
+      content: 'Updated reply',
+      attachmentIds: [nextImage.id],
+    });
+
+    expect(updatedReply.content).toBe('Updated reply');
+    expect(updatedReply.attachments).toEqual([
+      expect.objectContaining({
+        id: nextImage.id,
+        filename: nextImage.filename,
+      }),
+    ]);
+
+    const [replyRow] = await testDb.select().from(messages).where(eq(messages.id, reply.id));
+    expect(replyRow.attachments).toEqual([
+      expect.objectContaining({
+        id: nextImage.id,
+      }),
+    ]);
+    expect(replyRow.edited).toBe(true);
   });
 });

@@ -16,7 +16,7 @@ export const messagesApi = {
       body: JSON.stringify(data),
     }),
 
-  edit: (channelId: string, messageId: string, data: { content?: string; encryptedContent?: string; isEncrypted?: boolean; keyVersion?: number }) =>
+  edit: (channelId: string, messageId: string, data: { content?: string | null; attachmentIds?: string[]; encryptedContent?: string; isEncrypted?: boolean; keyVersion?: number }) =>
     apiFetch<Message>(`/channels/${channelId}/messages/${messageId}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
@@ -142,6 +142,12 @@ export const threadsApi = {
 
   list: (channelId: string, sort?: string) =>
     apiFetch<Thread[]>(`/channels/${channelId}/threads${sort ? `?sort=${sort}` : ''}`),
+
+  update: (threadId: string, data: { name?: string; body?: string | null; attachmentIds?: string[]; tags?: string[] }) =>
+    apiFetch<Thread>(`/threads/${threadId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
 
   get: (threadId: string) =>
     apiFetch<Thread>(`/threads/${threadId}`),
