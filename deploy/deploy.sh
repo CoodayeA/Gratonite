@@ -36,7 +36,7 @@ cd "$(dirname "$0")/.."
 
 # Install from repo root with filters to avoid EPERM on the Electron binary in
 # apps/desktop when running pnpm install inside a workspace subdirectory.
-pnpm install --filter gratonite-api... --filter gratonite-web...
+pnpm install --filter gratonite-api... --filter gratonite-web... --filter @gratonite/landing...
 
 # Build backend
 echo "  Building backend..."
