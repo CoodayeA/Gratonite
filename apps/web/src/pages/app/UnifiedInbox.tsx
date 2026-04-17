@@ -182,7 +182,6 @@ const UnifiedInbox = () => {
         return reasons;
     }, [channelPrefs, quietHoursActive]);
     const hasAnyNotifications = items.length > 0;
-    const hasAnyNotifications = items.length > 0;
 
     return (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', overflow: 'hidden' }}>
