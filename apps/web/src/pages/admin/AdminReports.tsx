@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Flag,
   CheckCircle2,
@@ -49,6 +50,12 @@ const ACTION_OPTIONS = [
   { key: 'delete', label: 'Delete Content', icon: XCircle, color: 'var(--error)' },
   { key: 'escalate', label: 'Escalate', icon: Shield, color: 'var(--accent-purple)' },
 ];
+
+function normalizeStatus(raw: string | undefined): ReportStatus {
+  if (raw === 'investigating' || raw === 'under_review') return 'under_review';
+  if (raw === 'resolved' || raw === 'dismissed') return raw;
+  return 'open';
+}
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -155,10 +162,10 @@ export default function AdminReports() {
         id,
         targetType: (['message', 'user', 'guild'].includes(r.targetType) ? r.targetType : 'message') as TargetType,
         reason: r.reason ?? 'Other',
-        reporter: r.reporterName ?? r.reporter ?? 'Unknown',
-        details: r.details ?? r.description ?? '',
+        reporter: r.reporterName ?? r.reporterUsername ?? r.reporter ?? 'Unknown',
+        details: r.targetPreview ?? r.details ?? r.description ?? '',
         reportedDate: r.createdAt ?? r.reportedDate ?? new Date().toISOString(),
-        status: (['open', 'under_review', 'resolved', 'dismissed'].includes(r.status) ? r.status : 'open') as ReportStatus,
+        status: normalizeStatus(r.status),
         priority: priorityMap[r.priority] ?? 'medium',
         targetName: r.targetName ?? r.targetId ?? '',
       }];
@@ -256,6 +263,14 @@ export default function AdminReports() {
 
         {/* Header */}
         <div style={{ marginBottom: '32px' }}>
+          <div style={{ marginBottom: '14px', padding: '12px 14px', borderRadius: '12px', border: '1px solid rgba(99,102,241,0.25)', background: 'rgba(99,102,241,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+              Need guild context, appeal visibility, or recent action history while you review reports?
+            </div>
+            <Link to="/admin/moderation-workspace" style={{ color: 'var(--accent-primary)', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
+              Open moderation workspace
+            </Link>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
             <div
               style={{

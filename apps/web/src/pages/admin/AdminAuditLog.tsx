@@ -20,6 +20,12 @@ type AuditEntryType =
   | 'bot_approved'
   | 'bot_rejected'
   | 'guild_reported'
+  | 'moderation_review'
+  | 'moderation_resolved'
+  | 'moderation_dismissed'
+  | 'moderation_note'
+  | 'appeal_approved'
+  | 'appeal_denied'
   | 'settings_changed'
   | 'team_invited'
   | 'feedback_resolved';
@@ -44,7 +50,8 @@ function parseAuditEntry(raw: any): AuditEntry {
   const categoryMap: Record<string, AuditCategory> = {
     user_login: 'user', user_ban: 'user',
     bot_approved: 'bot', bot_rejected: 'bot',
-    guild_reported: 'guild',
+    guild_reported: 'guild', appeal_approved: 'guild', appeal_denied: 'guild',
+    moderation_review: 'user', moderation_resolved: 'user', moderation_dismissed: 'user', moderation_note: 'user',
     settings_changed: 'system', team_invited: 'system', feedback_resolved: 'system',
   };
   return {
@@ -63,7 +70,9 @@ function parseAuditEntry(raw: any): AuditEntry {
 
 const BADGE_STYLES_MAP: Record<AuditEntryType, boolean> = {
   user_login: true, user_ban: true, bot_approved: true, bot_rejected: true,
-  guild_reported: true, settings_changed: true, team_invited: true, feedback_resolved: true,
+  guild_reported: true, moderation_review: true, moderation_resolved: true, moderation_dismissed: true,
+  moderation_note: true, appeal_approved: true, appeal_denied: true,
+  settings_changed: true, team_invited: true, feedback_resolved: true,
 };
 
 type FilterCategory = 'all' | AuditCategory;
@@ -74,6 +83,12 @@ const BADGE_STYLES: Record<AuditEntryType, { bg: string; color: string; label: s
   bot_approved:      { bg: 'var(--success)',        color: '#fff', label: 'Approved' },
   bot_rejected:      { bg: 'var(--error)',          color: '#fff', label: 'Rejected' },
   guild_reported:    { bg: 'var(--warning)',        color: '#111', label: 'Reported' },
+  moderation_review: { bg: 'var(--accent-blue)',    color: '#fff', label: 'Review' },
+  moderation_resolved: { bg: 'var(--success)',      color: '#fff', label: 'Resolved' },
+  moderation_dismissed: { bg: 'var(--text-muted)',  color: '#fff', label: 'Dismissed' },
+  moderation_note:   { bg: 'var(--accent-purple)',  color: '#fff', label: 'Note' },
+  appeal_approved:   { bg: 'var(--success)',        color: '#fff', label: 'Appeal OK' },
+  appeal_denied:     { bg: 'var(--warning)',        color: '#111', label: 'Appeal Denied' },
   settings_changed:  { bg: 'var(--accent-purple)',  color: '#fff', label: 'Settings' },
   team_invited:      { bg: 'var(--accent-blue)',    color: '#fff', label: 'Invite' },
   feedback_resolved: { bg: 'var(--success)',        color: '#fff', label: 'Resolved' },
@@ -87,6 +102,12 @@ function entryIcon(type: AuditEntryType) {
     case 'bot_approved':      return <Shield size={size} />;
     case 'bot_rejected':      return <AlertTriangle size={size} />;
     case 'guild_reported':    return <AlertTriangle size={size} />;
+    case 'moderation_review': return <Shield size={size} />;
+    case 'moderation_resolved': return <Activity size={size} />;
+    case 'moderation_dismissed': return <AlertTriangle size={size} />;
+    case 'moderation_note':   return <Settings size={size} />;
+    case 'appeal_approved':   return <Shield size={size} />;
+    case 'appeal_denied':     return <AlertTriangle size={size} />;
     case 'settings_changed':  return <Settings size={size} />;
     case 'team_invited':      return <User size={size} />;
     case 'feedback_resolved': return <Activity size={size} />;
@@ -98,12 +119,19 @@ function iconColor(type: AuditEntryType): string {
     case 'user_ban':
     case 'bot_rejected':
     case 'guild_reported':
+    case 'moderation_dismissed':
       return 'var(--error)';
+    case 'appeal_denied':
+      return 'var(--warning)';
     case 'bot_approved':
     case 'feedback_resolved':
+    case 'moderation_resolved':
+    case 'appeal_approved':
       return 'var(--success)';
+    case 'moderation_note':
     case 'settings_changed':
       return 'var(--accent-purple)';
+    case 'moderation_review':
     case 'user_login':
     case 'team_invited':
     default:

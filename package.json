@@ -4,6 +4,7 @@
   "scripts": {
     "verify:release:all": "npm --prefix apps/web run verify:prod && pnpm --dir apps/api run verify:release && npm --prefix apps/web run smoke:e2e",
     "verify:launch:super-gate": "node tools/verify-launch-super-gate.mjs",
+    "verify:deploy:artifacts": "node tools/check-deploy-artifact-hygiene.mjs",
     "install:workspace:no-desktop": "pnpm install --filter \"!gratonite-desktop\"",
     "i18n:check": "node tools/check-i18n-parity.mjs",
     "i18n:check:strict": "node tools/check-i18n-parity.mjs --strict",

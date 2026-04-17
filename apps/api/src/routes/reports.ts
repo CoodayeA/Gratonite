@@ -134,7 +134,7 @@ reportsRouter.get(
 
     const limit = Math.min(Number(req.query.limit) || 50, 100);
     const offset = Number(req.query.offset) || 0;
-    const statusFilter = req.query.status as string | undefined;
+    const statusFilter = normalizeReportStatus(req.query.status as string | undefined);
     const targetTypeFilter = req.query.targetType as string | undefined;
 
     let items = await db
