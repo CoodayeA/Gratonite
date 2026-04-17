@@ -2,6 +2,32 @@ name: production-smoke
 
 on:
   workflow_dispatch:
+    inputs:
+      public_only:
+        description: Run only the public health/app checks
+        required: false
+        default: false
+        type: boolean
+      smoke_base_url:
+        description: Override the app base URL for this run
+        required: false
+        type: string
+      smoke_api_health_url:
+        description: Override the API health URL for this run
+        required: false
+        type: string
+      smoke_guild_id:
+        description: Override the smoke guild ID for this run
+        required: false
+        type: string
+      smoke_chat_channel_id:
+        description: Override the smoke chat channel ID for this run
+        required: false
+        type: string
+      smoke_forum_channel_id:
+        description: Override the smoke forum channel ID for this run
+        required: false
+        type: string
   schedule:
     - cron: '24 11 * * *'
 
@@ -33,14 +59,27 @@ jobs:
       - name: Install Playwright browser
         run: pnpm --filter gratonite-web exec playwright install --with-deps chromium
 
-      - name: Run production smoke
+      - name: Validate smoke configuration
         env:
-          SMOKE_BASE_URL: ${{ vars.SMOKE_BASE_URL || 'https://gratonite.chat' }}
-          SMOKE_API_HEALTH_URL: ${{ vars.SMOKE_API_HEALTH_URL || 'https://api.gratonite.chat/health' }}
+          SMOKE_BASE_URL: ${{ inputs.smoke_base_url || vars.SMOKE_BASE_URL || 'https://gratonite.chat' }}
+          SMOKE_API_HEALTH_URL: ${{ inputs.smoke_api_health_url || vars.SMOKE_API_HEALTH_URL || 'https://api.gratonite.chat/health' }}
           SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
           SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
-          SMOKE_GUILD_ID: ${{ vars.SMOKE_GUILD_ID }}
-          SMOKE_CHAT_CHANNEL_ID: ${{ vars.SMOKE_CHAT_CHANNEL_ID }}
-          SMOKE_FORUM_CHANNEL_ID: ${{ vars.SMOKE_FORUM_CHANNEL_ID }}
+          SMOKE_GUILD_ID: ${{ inputs.smoke_guild_id || vars.SMOKE_GUILD_ID }}
+          SMOKE_CHAT_CHANNEL_ID: ${{ inputs.smoke_chat_channel_id || vars.SMOKE_CHAT_CHANNEL_ID }}
+          SMOKE_FORUM_CHANNEL_ID: ${{ inputs.smoke_forum_channel_id || vars.SMOKE_FORUM_CHANNEL_ID }}
+          SMOKE_PUBLIC_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.public_only || false }}
+        run: pnpm --filter gratonite-web run smoke:check-env
+
+      - name: Run production smoke
+        env:
+          SMOKE_BASE_URL: ${{ inputs.smoke_base_url || vars.SMOKE_BASE_URL || 'https://gratonite.chat' }}
+          SMOKE_API_HEALTH_URL: ${{ inputs.smoke_api_health_url || vars.SMOKE_API_HEALTH_URL || 'https://api.gratonite.chat/health' }}
+          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+          SMOKE_GUILD_ID: ${{ inputs.smoke_guild_id || vars.SMOKE_GUILD_ID }}
+          SMOKE_CHAT_CHANNEL_ID: ${{ inputs.smoke_chat_channel_id || vars.SMOKE_CHAT_CHANNEL_ID }}
+          SMOKE_FORUM_CHANNEL_ID: ${{ inputs.smoke_forum_channel_id || vars.SMOKE_FORUM_CHANNEL_ID }}
+          SMOKE_PUBLIC_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.public_only || false }}
           SMOKE_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
         run: pnpm --filter gratonite-web run smoke:production
