@@ -77,7 +77,48 @@ function resolveVars(themeId: string, mode: ColorMode): ThemeVariables | null {
     return mode === 'light' ? def.light : def.dark;
 }
 
-function normalizeGlassMode(value: string | null): GlassMode {
+export function normalizeColorMode(value: string | null | undefined): ColorMode {
+    return value === 'light' ? 'light' : 'dark';
+}
+
+export function normalizeFontFamily(value: string | null | undefined): FontFamily {
+    switch (value?.toLowerCase()) {
+        case 'outfit':
+        case 'space-grotesk':
+        case 'fira-code':
+        case 'inter':
+            return value.toLowerCase() as FontFamily;
+        case 'mono':
+            return 'fira-code';
+        case 'system':
+        case 'serif':
+        default:
+            return 'inter';
+    }
+}
+
+export function normalizeFontSize(value: string | number | null | undefined): FontSize {
+    if (typeof value === 'number') {
+        if (value <= 12) return 'small';
+        if (value <= 16) return 'medium';
+        if (value <= 20) return 'large';
+        return 'extra-large';
+    }
+
+    switch (value) {
+        case 'small':
+        case 'medium':
+        case 'large':
+        case 'extra-large':
+            return value;
+        default: {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) ? normalizeFontSize(parsed) : 'medium';
+        }
+    }
+}
+
+export function normalizeGlassMode(value: string | null | undefined): GlassMode {
     switch (value) {
         case 'subtle':
         case 'full':
@@ -92,7 +133,7 @@ function normalizeGlassMode(value: string | null): GlassMode {
     }
 }
 
-function normalizeButtonShape(value: string | null): ButtonShape {
+export function normalizeButtonShape(value: string | null | undefined): ButtonShape {
     switch (value) {
         case 'pill':
         case 'square':
@@ -105,6 +146,24 @@ function normalizeButtonShape(value: string | null): ButtonShape {
     }
 }
 
+export function normalizeFocusIndicatorSize(value: string | null | undefined): FocusIndicatorSize {
+    return value === 'large' ? 'large' : 'normal';
+}
+
+export function normalizeColorBlindMode(value: string | boolean | null | undefined): ColorBlindMode {
+    switch (value) {
+        case true:
+        case 'deuteranopia':
+            return 'deuteranopia';
+        case 'protanopia':
+        case 'tritanopia':
+        case 'none':
+            return value;
+        default:
+            return 'none';
+    }
+}
+
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     const [theme, setThemeState] = useState<AppTheme>(() => {
         const saved = localStorage.getItem('gratonite_theme');
@@ -113,7 +172,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
     const [colorMode, setColorModeState] = useState<ColorMode>(() => {
         const saved = localStorage.getItem('gratonite_color_mode');
-        if (saved) return saved as ColorMode;
+        if (saved) return normalizeColorMode(saved);
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
             return 'light';
         }
@@ -121,11 +180,11 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     });
 
     const [fontFamily, setFontFamilyState] = useState<FontFamily>(() => {
-        return (localStorage.getItem('gratonite_font') as FontFamily) || 'inter';
+        return normalizeFontFamily(localStorage.getItem('gratonite_font'));
     });
 
     const [fontSize, setFontSizeState] = useState<FontSize>(() => {
-        return (localStorage.getItem('gratonite_font_size') as FontSize) || 'medium';
+        return normalizeFontSize(localStorage.getItem('gratonite_font_size'));
     });
 
     const [showChannelBackgrounds, setShowChannelBackgroundsState] = useState<boolean>(() => {
@@ -184,14 +243,11 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     });
 
     const [focusIndicatorSize, setFocusIndicatorSizeState] = useState<FocusIndicatorSize>(() => {
-        return (localStorage.getItem('gratonite_focus_indicator_size') as FocusIndicatorSize) || 'normal';
+        return normalizeFocusIndicatorSize(localStorage.getItem('gratonite_focus_indicator_size'));
     });
 
     const [colorBlindMode, setColorBlindModeState] = useState<ColorBlindMode>(() => {
-        const saved = localStorage.getItem('gratonite_color_blind_mode');
-        if (saved === 'true') return 'deuteranopia';
-        if (saved === 'deuteranopia' || saved === 'protanopia' || saved === 'tritanopia') return saved;
-        return 'none';
+        return normalizeColorBlindMode(localStorage.getItem('gratonite_color_blind_mode'));
     });
 
     const [lowDataMode, setLowDataModeState] = useState<boolean>(() => {
@@ -219,18 +275,21 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const setColorMode = (newMode: ColorMode) => {
-        setColorModeState(newMode);
-        localStorage.setItem('gratonite_color_mode', newMode);
+        const normalized = normalizeColorMode(newMode);
+        setColorModeState(normalized);
+        localStorage.setItem('gratonite_color_mode', normalized);
     };
 
     const setFontFamily = (newFont: FontFamily) => {
-        setFontFamilyState(newFont);
-        localStorage.setItem('gratonite_font', newFont);
+        const normalized = normalizeFontFamily(newFont);
+        setFontFamilyState(normalized);
+        localStorage.setItem('gratonite_font', normalized);
     };
 
     const setFontSize = (newSize: FontSize) => {
-        setFontSizeState(newSize);
-        localStorage.setItem('gratonite_font_size', newSize);
+        const normalized = normalizeFontSize(newSize);
+        setFontSizeState(normalized);
+        localStorage.setItem('gratonite_font_size', normalized);
     };
 
     const setShowChannelBackgrounds = (show: boolean) => {
@@ -291,13 +350,15 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const setFocusIndicatorSize = (size: FocusIndicatorSize) => {
-        setFocusIndicatorSizeState(size);
-        localStorage.setItem('gratonite_focus_indicator_size', size);
+        const normalized = normalizeFocusIndicatorSize(size);
+        setFocusIndicatorSizeState(normalized);
+        localStorage.setItem('gratonite_focus_indicator_size', normalized);
     };
 
     const setColorBlindMode = (cb: ColorBlindMode) => {
-        setColorBlindModeState(cb);
-        localStorage.setItem('gratonite_color_blind_mode', cb);
+        const normalized = normalizeColorBlindMode(cb);
+        setColorBlindModeState(normalized);
+        localStorage.setItem('gratonite_color_blind_mode', normalized);
     };
 
     const setLowDataMode = (ldm: boolean) => {

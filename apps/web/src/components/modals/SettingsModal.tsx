@@ -1,6 +1,23 @@
 ﻿import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { X, Check, ZoomIn, ZoomOut, RotateCw, Volume2, VolumeX, UserX, Copy, Info, Link2, Globe, Search, Download, Upload, Star, Sun, Moon, Dices, Eye, Sparkles, Palette, ShoppingBag, Edit3, Trash2, Share2 } from 'lucide-react';
-import { useTheme, ButtonShape, AppTheme, ColorMode, FontFamily, FontSize, GlassMode, FocusIndicatorSize, ColorBlindMode } from '../ui/ThemeProvider';
+import {
+    useTheme,
+    ButtonShape,
+    AppTheme,
+    ColorMode,
+    FontFamily,
+    FontSize,
+    GlassMode,
+    FocusIndicatorSize,
+    ColorBlindMode,
+    normalizeButtonShape,
+    normalizeColorBlindMode,
+    normalizeColorMode,
+    normalizeFocusIndicatorSize,
+    normalizeFontFamily,
+    normalizeFontSize,
+    normalizeGlassMode,
+} from '../ui/ThemeProvider';
 import { haptic } from '../../utils/haptics';
 import { useToast } from '../ui/ToastManager';
 import { useUser } from '../../contexts/UserContext';
@@ -523,11 +540,11 @@ const SettingsModal = ({
         settingsFetchedRef.current = true;
         api.users.getSettings().then((s: Record<string, unknown>) => {
             const nextTheme = (s?.theme as AppTheme | undefined) ?? theme;
-            const nextColorMode = (s?.colorMode as ColorMode | undefined) ?? colorMode;
-            const nextFontFamily = (s?.fontFamily as FontFamily | undefined) ?? fontFamily;
-            const nextFontSize = (s?.fontSize as FontSize | undefined) ?? fontSize;
-            const nextGlassMode = (s?.glassMode as GlassMode | undefined) ?? glassMode;
-            const nextButtonShape = (s?.buttonShape as ButtonShape | undefined) ?? buttonShape;
+            const nextColorMode = normalizeColorMode((s?.colorMode as string | undefined) ?? colorMode);
+            const nextFontFamily = normalizeFontFamily((s?.fontFamily as string | undefined) ?? fontFamily);
+            const nextFontSize = normalizeFontSize((s?.fontSize as string | number | undefined) ?? fontSize);
+            const nextGlassMode = normalizeGlassMode((s?.glassMode as string | undefined) ?? glassMode);
+            const nextButtonShape = normalizeButtonShape((s?.buttonShape as string | undefined) ?? buttonShape);
             const nextHighContrast = (s?.highContrast as boolean | undefined) ?? highContrast;
             const nextCompactMode = (s?.compactMode as boolean | undefined) ?? compactMode;
             const nextAccentColor = (s?.accentColor as string | undefined) ?? accentColor;
@@ -535,8 +552,8 @@ const SettingsModal = ({
             const nextLowPower = (s?.lowPower as boolean | undefined) ?? lowPower;
             const nextScreenReaderMode = (s?.screenReaderMode as boolean | undefined) ?? screenReaderMode;
             const nextLinkUnderlines = (s?.linkUnderlines as boolean | undefined) ?? linkUnderlines;
-            const nextFocusIndicatorSize = (s?.focusIndicatorSize as FocusIndicatorSize | undefined) ?? focusIndicatorSize;
-            const nextColorBlindMode = (s?.colorBlindMode as ColorBlindMode | boolean | undefined);
+            const nextFocusIndicatorSize = normalizeFocusIndicatorSize((s?.focusIndicatorSize as string | undefined) ?? focusIndicatorSize);
+            const nextColorBlindMode = normalizeColorBlindMode(s?.colorBlindMode as ColorBlindMode | boolean | undefined);
 
             if (s?.theme) setTheme(nextTheme);
             if (s?.colorMode) setColorMode(nextColorMode);
@@ -557,11 +574,7 @@ const SettingsModal = ({
                 setSoundVolumeState(vol);
                 setSoundVolume(vol);
             }
-            if (nextColorBlindMode !== undefined) {
-                // Migrate old boolean true → 'deuteranopia'
-                const cb = nextColorBlindMode === true ? 'deuteranopia' : nextColorBlindMode === false ? 'none' : nextColorBlindMode;
-                if (cb === 'deuteranopia' || cb === 'protanopia' || cb === 'tritanopia' || cb === 'none') setColorBlindMode(cb as ColorBlindMode);
-            }
+            setColorBlindMode(nextColorBlindMode);
             const birthday = (s?.birthday as { month?: number; day?: number } | null | undefined) ?? null;
             const nextBirthdayMonth = birthday?.month ? String(birthday.month) : '';
             const nextBirthdayDay = birthday?.day ? String(birthday.day) : '';
@@ -592,7 +605,7 @@ const SettingsModal = ({
                 screenReaderMode: nextScreenReaderMode,
                 linkUnderlines: nextLinkUnderlines,
                 focusIndicatorSize: nextFocusIndicatorSize,
-                colorBlindMode: nextColorBlindMode === true ? 'deuteranopia' : nextColorBlindMode === false ? 'none' : nextColorBlindMode ?? colorBlindMode,
+                colorBlindMode: nextColorBlindMode,
             });
             // Mark as loaded AFTER applying server values so auto-save doesn't fire with defaults
             settingsLoadedRef.current = true;
@@ -637,7 +650,23 @@ const SettingsModal = ({
     // Persist theme settings to backend whenever they change
     useEffect(() => {
         if (!settingsLoadedRef.current) return;
-        const payload = { theme, colorMode, fontFamily, fontSize, glassMode, buttonShape, highContrast, compactMode, accentColor, reducedMotion: reducedEffects, lowPower, screenReaderMode, linkUnderlines, focusIndicatorSize, colorBlindMode };
+        const payload = {
+            theme,
+            colorMode: normalizeColorMode(colorMode),
+            fontFamily: normalizeFontFamily(fontFamily),
+            fontSize: normalizeFontSize(fontSize),
+            glassMode: normalizeGlassMode(glassMode),
+            buttonShape: normalizeButtonShape(buttonShape),
+            highContrast,
+            compactMode,
+            accentColor,
+            reducedMotion: reducedEffects,
+            lowPower,
+            screenReaderMode,
+            linkUnderlines,
+            focusIndicatorSize: normalizeFocusIndicatorSize(focusIndicatorSize),
+            colorBlindMode: normalizeColorBlindMode(colorBlindMode),
+        };
         const serialized = JSON.stringify(payload);
         if (serialized === lastSyncedSettingsRef.current) return;
         saveSettingsToApi(payload, serialized);

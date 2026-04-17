@@ -344,9 +344,9 @@ const SettingsThemeTab = ({ addToast }: Props) => {
       <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Font</h3>
       <select value={fontFamily} onChange={(e) => setFontFamily(e.target.value as any)} className="auth-input" style={{ width: 'auto', padding: '8px 12px', margin: 0, marginBottom: '32px', height: '36px' }}>
         <option value="inter">Inter (Default)</option>
-        <option value="system">System Font</option>
-        <option value="mono">Monospace</option>
-        <option value="serif">Serif</option>
+        <option value="outfit">Outfit</option>
+        <option value="space-grotesk">Space Grotesk</option>
+        <option value="fira-code">Fira Code</option>
       </select>
 
       {/* Message Density */}
