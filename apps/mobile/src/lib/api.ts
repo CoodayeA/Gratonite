@@ -741,10 +741,18 @@ export const messages = {
     });
   },
 
-  edit(channelId: string, messageId: string, content: string) {
+  edit(
+    channelId: string,
+    messageId: string,
+    contentOrBody: string | { content?: string | null; attachmentIds?: string[] },
+  ) {
     return apiFetch<Message>(`/channels/${channelId}/messages/${messageId}`, {
       method: 'PATCH',
-      body: JSON.stringify({ content }),
+      body: JSON.stringify(
+        typeof contentOrBody === 'string'
+          ? { content: contentOrBody }
+          : contentOrBody,
+      ),
     });
   },
 
@@ -1018,6 +1026,13 @@ export const threads = {
   create(channelId: string, data: { name: string; messageId?: string; body?: string | null; attachmentIds?: string[]; tags?: string[] }) {
     return apiFetch<Thread>(`/channels/${channelId}/threads`, {
       method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update(threadId: string, data: { name?: string; body?: string | null; attachmentIds?: string[]; tags?: string[] }) {
+    return apiFetch<Thread>(`/threads/${threadId}`, {
+      method: 'PATCH',
       body: JSON.stringify(data),
     });
   },
@@ -1749,6 +1764,16 @@ export const forum = {
       }),
     });
     return normalizeForumPost({ ...thread, content: data.content ?? '', tags: data.tags ?? thread?.forumTagIds }, channelId);
+  },
+
+  async updatePost(postId: string, data: { title?: string; content?: string | null; tags?: string[]; attachmentIds?: string[] }) {
+    const thread = await threads.update(postId, {
+      name: data.title,
+      body: data.content,
+      tags: data.tags,
+      attachmentIds: data.attachmentIds,
+    }) as any;
+    return normalizeForumPost({ ...thread, content: data.content ?? '', tags: data.tags ?? thread?.forumTagIds });
   },
 
   async getPost(postId: string) {

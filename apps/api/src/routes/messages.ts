@@ -213,12 +213,13 @@ const sendMessageSchema = z
  * Schema for PATCH /:messageId — edit message.
  */
 const editMessageSchema = z.object({
-  content: z.string().min(1).max(2000).optional(),
+  content: z.string().max(2000).nullable().optional(),
+  attachmentIds: z.array(z.string().uuid()).optional(),
   encryptedContent: z.string().optional(),
   isEncrypted: z.boolean().optional(),
   keyVersion: z.number().int().optional(),
-}).refine((d) => d.content !== undefined || d.isEncrypted, {
-  message: 'Edit must have content or be an encrypted update',
+}).refine((d) => d.content !== undefined || d.attachmentIds !== undefined || d.isEncrypted, {
+  message: 'Edit must change content, attachments, or encrypted content',
 });
 
 // ---------------------------------------------------------------------------

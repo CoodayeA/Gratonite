@@ -191,6 +191,36 @@ function PendingAttachmentList({
     );
 }
 
+function ExistingAttachmentList({
+    attachments,
+    onRemove,
+}: {
+    attachments: AttachmentSnapshot[];
+    onRemove: (attachmentId: string) => void;
+}) {
+    if (attachments.length === 0) return null;
+    return (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+            {attachments.map((attachment) => (
+                <div key={attachment.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 10px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    {attachment.mimeType?.startsWith('image/')
+                        ? <img src={attachment.url} alt="" style={{ width: 22, height: 22, borderRadius: 4, objectFit: 'cover' }} />
+                        : <FileIcon size={13} />}
+                    <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{attachment.filename}</span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{formatFileSize(attachment.size)}</span>
+                    <button
+                        onClick={() => onRemove(attachment.id)}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex' }}
+                        aria-label={`Remove ${attachment.filename}`}
+                    >
+                        <X size={12} />
+                    </button>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 function AttachmentRenderer({ attachments }: { attachments?: AttachmentSnapshot[] }) {
     if (!attachments || attachments.length === 0) return null;
     return (
@@ -254,6 +284,7 @@ export default function ForumView({
     const [createError, setCreateError] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
     const [activePost, setActivePost] = useState<ForumThread | null>(null);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const newFileInputRef = useRef<HTMLInputElement>(null);
     const attachmentBlockReason = channelIsEncrypted
         ? 'Forum attachments are not available in encrypted channels yet. Use text only here, or post attachments in a non-encrypted forum.'
@@ -287,6 +318,9 @@ export default function ForumView({
     }, [channelId]);
 
     useEffect(() => { fetchThreads(); }, [fetchThreads]);
+    useEffect(() => {
+        api.users.getMe().then((me: any) => setCurrentUserId(me.id)).catch(() => setCurrentUserId(null));
+    }, []);
 
     const filtered = useMemo(() => {
         return threads
@@ -638,6 +672,7 @@ export default function ForumView({
                         channelId={channelId}
                         channelName={channelName}
                         attachmentBlockReason={attachmentBlockReason}
+                        currentUserId={currentUserId}
                         onBack={() => { setActivePost(null); fetchThreads(); }}
                         onResolve={(threadId) => setThreads(prev => prev.map(t => t.id === threadId ? { ...t, solved: true } : t))}
                     />
@@ -864,20 +899,24 @@ type PostMessage = {
     authorName?: string;
     authorAvatarHash?: string | null;
     createdAt: string;
+    edited?: boolean;
 };
 
-function ForumPostView({ thread, forumTags, channelId, channelName, attachmentBlockReason, onBack, onResolve }: {
+function ForumPostView({ thread, forumTags, channelId, channelName, attachmentBlockReason, currentUserId, onBack, onResolve }: {
     thread: ForumThread;
     forumTags: ForumTag[];
     channelId: string;
     channelName: string;
     attachmentBlockReason: string | null;
+    currentUserId: string | null;
     onBack: () => void;
     onResolve?: (threadId: string) => void;
 }) {
     const [messages, setMessages] = useState<PostMessage[]>([]);
     const [loading, setLoading] = useState(true);
     const [resolved, setResolved] = useState(thread.solved ?? false);
+    const [threadTitle, setThreadTitle] = useState(thread.name);
+    const [threadTags, setThreadTags] = useState<string[]>(thread.tags || []);
     const draftKey = `forum-draft-${thread.id}`;
     const [reply, setReply] = useState(() => {
         try { return localStorage.getItem(draftKey) ?? ''; } catch { return ''; }
@@ -886,9 +925,27 @@ function ForumPostView({ thread, forumTags, channelId, channelName, attachmentBl
     const [replyAttachments, setReplyAttachments] = useState<PendingAttachment[]>([]);
     const [replyUploadProgress, setReplyUploadProgress] = useState<Record<string, number>>({});
     const [replyError, setReplyError] = useState<string | null>(null);
+    const [editingPost, setEditingPost] = useState(false);
+    const [editTitle, setEditTitle] = useState(thread.name);
+    const [editTags, setEditTags] = useState<string[]>(thread.tags || []);
+    const [editContent, setEditContent] = useState('');
+    const [editExistingAttachments, setEditExistingAttachments] = useState<AttachmentSnapshot[]>([]);
+    const [editPendingAttachments, setEditPendingAttachments] = useState<PendingAttachment[]>([]);
+    const [editUploadProgress, setEditUploadProgress] = useState<Record<string, number>>({});
+    const [editError, setEditError] = useState<string | null>(null);
+    const [savingPost, setSavingPost] = useState(false);
+    const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
+    const [editReplyContent, setEditReplyContent] = useState('');
+    const [editReplyExistingAttachments, setEditReplyExistingAttachments] = useState<AttachmentSnapshot[]>([]);
+    const [editReplyPendingAttachments, setEditReplyPendingAttachments] = useState<PendingAttachment[]>([]);
+    const [editReplyUploadProgress, setEditReplyUploadProgress] = useState<Record<string, number>>({});
+    const [editReplyError, setEditReplyError] = useState<string | null>(null);
+    const [savingReply, setSavingReply] = useState(false);
     const bottomRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const replyFileInputRef = useRef<HTMLInputElement>(null);
+    const editPostFileInputRef = useRef<HTMLInputElement>(null);
+    const editReplyFileInputRef = useRef<HTMLInputElement>(null);
 
     const fetchMessages = useCallback(async () => {
         setLoading(true);
@@ -902,6 +959,7 @@ function ForumPostView({ thread, forumTags, channelId, channelName, attachmentBl
                 authorName: m.authorName ?? m.author?.displayName ?? m.author?.username ?? 'Unknown',
                 authorAvatarHash: m.authorAvatarHash ?? m.author?.avatarHash ?? null,
                 createdAt: m.createdAt ?? new Date().toISOString(),
+                edited: Boolean(m.edited || m.editedAt),
             }));
             setMessages(mapped);
         } catch {
@@ -911,6 +969,118 @@ function ForumPostView({ thread, forumTags, channelId, channelName, attachmentBl
     }, [thread.id]);
 
     useEffect(() => { fetchMessages(); }, [fetchMessages]);
+    useEffect(() => {
+        setThreadTitle(thread.name);
+        setThreadTags(thread.tags || []);
+    }, [thread.id, thread.name, thread.tags]);
+
+    const clearPostEditor = useCallback(() => {
+        revokePendingAttachments(editPendingAttachments);
+        setEditingPost(false);
+        setEditTitle(threadTitle);
+        setEditTags(threadTags);
+        setEditContent(messages[0]?.content ?? '');
+        setEditExistingAttachments(messages[0]?.attachments ?? []);
+        setEditPendingAttachments([]);
+        setEditUploadProgress({});
+        setEditError(null);
+    }, [editPendingAttachments, messages, threadTags, threadTitle]);
+
+    const startPostEditor = useCallback(() => {
+        setEditingPost(true);
+        setEditTitle(threadTitle);
+        setEditTags(threadTags);
+        setEditContent(messages[0]?.content ?? '');
+        setEditExistingAttachments(messages[0]?.attachments ?? []);
+        setEditPendingAttachments([]);
+        setEditUploadProgress({});
+        setEditError(null);
+    }, [messages, threadTags, threadTitle]);
+
+    const clearReplyEditor = useCallback(() => {
+        revokePendingAttachments(editReplyPendingAttachments);
+        setEditingReplyId(null);
+        setEditReplyContent('');
+        setEditReplyExistingAttachments([]);
+        setEditReplyPendingAttachments([]);
+        setEditReplyUploadProgress({});
+        setEditReplyError(null);
+    }, [editReplyPendingAttachments]);
+
+    const startReplyEditor = useCallback((message: PostMessage) => {
+        clearReplyEditor();
+        setEditingReplyId(message.id);
+        setEditReplyContent(message.content ?? '');
+        setEditReplyExistingAttachments(message.attachments ?? []);
+    }, [clearReplyEditor]);
+
+    const handleSavePost = useCallback(async () => {
+        if (!editTitle.trim() || savingPost) return;
+        if (attachmentBlockReason && editPendingAttachments.length > 0) {
+            setEditError(attachmentBlockReason);
+            return;
+        }
+        setSavingPost(true);
+        setEditError(null);
+        try {
+            const uploaded = await uploadPendingAttachments(editPendingAttachments, setEditUploadProgress);
+            const attachmentIds = [
+                ...editExistingAttachments.map((attachment) => attachment.id),
+                ...uploaded.map((attachment) => attachment.id),
+            ];
+            const body = editContent.trim() || null;
+            if (!body && attachmentIds.length === 0) {
+                setEditError('Posts must keep text or at least one attachment.');
+                setSavingPost(false);
+                return;
+            }
+            await api.threads.update(thread.id, {
+                name: editTitle.trim(),
+                body,
+                tags: editTags,
+                attachmentIds,
+            });
+            setThreadTitle(editTitle.trim());
+            setThreadTags(editTags);
+            clearPostEditor();
+            await fetchMessages();
+        } catch (err: any) {
+            setEditError(err?.message || 'Could not save post');
+        }
+        setSavingPost(false);
+    }, [attachmentBlockReason, clearPostEditor, editContent, editExistingAttachments, editPendingAttachments, editTags, editTitle, fetchMessages, savingPost, thread.id]);
+
+    const handleSaveReply = useCallback(async () => {
+        if (!editingReplyId || savingReply) return;
+        if (attachmentBlockReason && editReplyPendingAttachments.length > 0) {
+            setEditReplyError(attachmentBlockReason);
+            return;
+        }
+        setSavingReply(true);
+        setEditReplyError(null);
+        try {
+            const uploaded = await uploadPendingAttachments(editReplyPendingAttachments, setEditReplyUploadProgress);
+            const attachmentIds = [
+                ...editReplyExistingAttachments.map((attachment) => attachment.id),
+                ...uploaded.map((attachment) => attachment.id),
+            ];
+            const content = editReplyContent.trim() || null;
+            if (!content && attachmentIds.length === 0) {
+                setEditReplyError('Replies must keep text or at least one attachment.');
+                setSavingReply(false);
+                return;
+            }
+            await api.messages.edit(channelId, editingReplyId, {
+                content,
+                attachmentIds,
+            });
+            clearReplyEditor();
+            await fetchMessages();
+        } catch (err: any) {
+            setEditReplyError(err?.message || 'Could not save reply');
+        }
+        setSavingReply(false);
+    }, [attachmentBlockReason, channelId, clearReplyEditor, editReplyContent, editReplyExistingAttachments, editReplyPendingAttachments, editingReplyId, fetchMessages, savingReply]);
 
     const handleSend = async () => {
         if ((!reply.trim() && replyAttachments.length === 0) || sending) return;
@@ -954,7 +1124,7 @@ function ForumPostView({ thread, forumTags, channelId, channelName, attachmentBl
 
     const op = messages[0];
     const replies = messages.slice(1);
-    const gradient = threadGradient(thread.id + thread.name);
+    const gradient = threadGradient(thread.id + threadTitle);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -982,16 +1152,16 @@ function ForumPostView({ thread, forumTags, channelId, channelName, attachmentBl
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {/* Thumbnail dot */}
                     <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: gradient, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 800, color: 'rgba(255,255,255,0.35)', userSelect: 'none' }}>{threadInitials(thread.name)}</span>
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: 'rgba(255,255,255,0.35)', userSelect: 'none' }}>{threadInitials(threadTitle)}</span>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {thread.name}
+                            {threadTitle}
                         </h2>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
                             {resolved && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '1px 7px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', fontSize: '10px', fontWeight: 700, color: '#10b981' }}><CheckCircle size={9} /> Solved</span>}
                             {thread.locked && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '1px 7px', borderRadius: '8px', fontSize: '10px', fontWeight: 700, color: 'var(--error)' }}><Lock size={9} /> Locked</span>}
-                            {(thread.tags || []).slice(0, 3).map(tagId => {
+                            {threadTags.slice(0, 3).map(tagId => {
                                 const tag = forumTags.find(t => t.id === tagId);
                                 return tag ? <span key={tagId} style={{ padding: '1px 7px', borderRadius: '20px', fontSize: '10px', fontWeight: 700, background: `${tag.color || '#5865f2'}20`, color: tag.color || 'var(--accent-primary)', border: `1px solid ${tag.color || 'var(--accent-primary)'}40` }}>{tag.name}</span> : null;
                             })}
@@ -1009,6 +1179,14 @@ function ForumPostView({ thread, forumTags, channelId, channelName, attachmentBl
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '5px 12px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', fontSize: '12px', fontWeight: 700, color: '#10b981', flexShrink: 0 }}>
                             <CheckCircle size={13} /> Resolved
                         </span>
+                    )}
+                    {op?.authorId === currentUserId && (
+                        <button
+                            onClick={editingPost ? clearPostEditor : startPostEditor}
+                            style={{ padding: '5px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: editingPost ? 'var(--bg-tertiary)' : 'transparent', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                        >
+                            {editingPost ? 'Cancel Edit' : 'Edit Post'}
+                        </button>
                     )}
                 </div>
             </div>
@@ -1036,10 +1214,89 @@ function ForumPostView({ thread, forumTags, channelId, channelName, attachmentBl
                                     </div>
                                     <span style={{ marginLeft: 'auto', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 700, background: 'rgba(82,109,245,0.12)', color: 'var(--accent-primary)', border: '1px solid rgba(82,109,245,0.25)' }}>OP</span>
                                 </div>
-                                <div style={{ fontSize: '14px', lineHeight: 1.6, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                    {op.content || ((op.attachments?.length ?? 0) === 0 ? <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No content.</span> : null)}
-                                </div>
-                                <AttachmentRenderer attachments={op.attachments} />
+                                {editingPost ? (
+                                    <>
+                                        <input
+                                            value={editTitle}
+                                            onChange={e => setEditTitle(e.target.value)}
+                                            placeholder="Post title"
+                                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '15px', fontWeight: 700, fontFamily: 'inherit', marginBottom: '10px', boxSizing: 'border-box', outline: 'none' }}
+                                        />
+                                        {forumTags.length > 0 && (
+                                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                                                {forumTags.map(tag => (
+                                                    <button
+                                                        key={tag.id}
+                                                        onClick={() => setEditTags(prev => prev.includes(tag.id) ? prev.filter(t => t !== tag.id) : [...prev, tag.id])}
+                                                        style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, border: `1px solid ${editTags.includes(tag.id) ? (tag.color || 'var(--accent-primary)') : 'var(--stroke)'}`, background: editTags.includes(tag.id) ? `${tag.color || 'var(--accent-primary)'}18` : 'var(--bg-tertiary)', color: editTags.includes(tag.id) ? (tag.color || 'var(--accent-primary)') : 'var(--text-secondary)', cursor: 'pointer' }}
+                                                    >{tag.name}</button>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <textarea
+                                            value={editContent}
+                                            onChange={e => setEditContent(e.target.value)}
+                                            rows={4}
+                                            placeholder="Describe your post…"
+                                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'inherit', resize: 'vertical', marginBottom: '12px', boxSizing: 'border-box', outline: 'none' }}
+                                        />
+                                        <input
+                                            ref={editPostFileInputRef}
+                                            type="file"
+                                            multiple
+                                            style={{ display: 'none' }}
+                                            onChange={e => {
+                                                const selected = Array.from(e.target.files || []);
+                                                if (selected.length > 0 && attachmentBlockReason) {
+                                                    setEditError(attachmentBlockReason);
+                                                    e.target.value = '';
+                                                    return;
+                                                }
+                                                if (selected.length > 0) setEditPendingAttachments(prev => [...prev, ...filesToPending(selected)]);
+                                                e.target.value = '';
+                                            }}
+                                        />
+                                        <ExistingAttachmentList
+                                            attachments={editExistingAttachments}
+                                            onRemove={(attachmentId) => setEditExistingAttachments(prev => prev.filter((attachment) => attachment.id !== attachmentId))}
+                                        />
+                                        <PendingAttachmentList
+                                            files={editPendingAttachments}
+                                            progress={editUploadProgress}
+                                            onRemove={index => {
+                                                setEditPendingAttachments(prev => {
+                                                    const next = [...prev];
+                                                    const removed = next.splice(index, 1)[0];
+                                                    if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+                                                    return next;
+                                                });
+                                            }}
+                                        />
+                                        {editError && <div style={{ marginBottom: '12px', color: 'var(--error)', fontSize: '12px', fontWeight: 600 }}>{editError}</div>}
+                                        {attachmentBlockReason && <div style={{ marginBottom: '12px', color: 'var(--text-muted)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><Lock size={13} /> {attachmentBlockReason}</div>}
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                            <button
+                                                onClick={() => editPostFileInputRef.current?.click()}
+                                                disabled={!!attachmentBlockReason}
+                                                style={{ marginRight: 'auto', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, cursor: attachmentBlockReason ? 'not-allowed' : 'pointer', opacity: attachmentBlockReason ? 0.55 : 1 }}
+                                            >
+                                                Add attachments
+                                            </button>
+                                            <button onClick={clearPostEditor} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'transparent', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                                            <button onClick={handleSavePost} disabled={savingPost || !editTitle.trim()} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: editTitle.trim() ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: editTitle.trim() ? '#fff' : 'var(--text-muted)', fontSize: '13px', fontWeight: 700, cursor: editTitle.trim() && !savingPost ? 'pointer' : 'not-allowed', opacity: savingPost ? 0.7 : 1 }}>
+                                                {savingPost ? 'Saving…' : 'Save Post'}
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div style={{ fontSize: '14px', lineHeight: 1.6, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                            {op.content || ((op.attachments?.length ?? 0) === 0 ? <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No content.</span> : null)}
+                                        </div>
+                                        {op.edited && <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>(edited)</div>}
+                                        <AttachmentRenderer attachments={op.attachments} />
+                                    </>
+                                )}
                             </div>
                         ) : (
                             <div style={{ padding: '16px 18px', borderRadius: '12px', marginBottom: '20px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
@@ -1064,11 +1321,72 @@ function ForumPostView({ thread, forumTags, channelId, channelName, attachmentBl
                                         <Avatar userId={msg.authorId || ''} displayName={msg.authorName || ''} avatarHash={msg.authorAvatarHash} size={24} />
                                         <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{msg.authorName || 'Unknown'}</span>
                                         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{timeAgo(msg.createdAt)}</span>
+                                        {msg.edited && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>(edited)</span>}
+                                        {msg.authorId === currentUserId && (
+                                            <button
+                                                onClick={() => editingReplyId === msg.id ? clearReplyEditor() : startReplyEditor(msg)}
+                                                style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: '8px', border: '1px solid var(--stroke)', background: editingReplyId === msg.id ? 'var(--bg-tertiary)' : 'transparent', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                                            >
+                                                {editingReplyId === msg.id ? 'Cancel' : 'Edit'}
+                                            </button>
+                                        )}
                                     </div>
-                                    <div style={{ fontSize: '13px', lineHeight: 1.55, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                        {msg.content}
-                                    </div>
-                                    <AttachmentRenderer attachments={msg.attachments} />
+                                    {editingReplyId === msg.id ? (
+                                        <>
+                                            <textarea
+                                                value={editReplyContent}
+                                                onChange={e => setEditReplyContent(e.target.value)}
+                                                rows={3}
+                                                placeholder="Edit reply…"
+                                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'inherit', resize: 'vertical', marginBottom: '12px', boxSizing: 'border-box', outline: 'none' }}
+                                            />
+                                            <input
+                                                ref={editReplyFileInputRef}
+                                                type="file"
+                                                multiple
+                                                style={{ display: 'none' }}
+                                                onChange={e => {
+                                                    const selected = Array.from(e.target.files || []);
+                                                    if (selected.length > 0 && attachmentBlockReason) {
+                                                        setEditReplyError(attachmentBlockReason);
+                                                        e.target.value = '';
+                                                        return;
+                                                    }
+                                                    if (selected.length > 0) setEditReplyPendingAttachments(prev => [...prev, ...filesToPending(selected)]);
+                                                    e.target.value = '';
+                                                }}
+                                            />
+                                            <ExistingAttachmentList
+                                                attachments={editReplyExistingAttachments}
+                                                onRemove={(attachmentId) => setEditReplyExistingAttachments(prev => prev.filter((attachment) => attachment.id !== attachmentId))}
+                                            />
+                                            <PendingAttachmentList
+                                                files={editReplyPendingAttachments}
+                                                progress={editReplyUploadProgress}
+                                                onRemove={index => {
+                                                    setEditReplyPendingAttachments(prev => {
+                                                        const next = [...prev];
+                                                        const removed = next.splice(index, 1)[0];
+                                                        if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+                                                        return next;
+                                                    });
+                                                }}
+                                            />
+                                            {editReplyError && <div style={{ marginBottom: '12px', color: 'var(--error)', fontSize: '12px', fontWeight: 600 }}>{editReplyError}</div>}
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                                <button onClick={() => editReplyFileInputRef.current?.click()} disabled={!!attachmentBlockReason} style={{ marginRight: 'auto', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, cursor: attachmentBlockReason ? 'not-allowed' : 'pointer', opacity: attachmentBlockReason ? 0.55 : 1 }}>Add attachments</button>
+                                                <button onClick={clearReplyEditor} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'transparent', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                                                <button onClick={handleSaveReply} disabled={savingReply} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: 'var(--accent-primary)', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: savingReply ? 'not-allowed' : 'pointer', opacity: savingReply ? 0.7 : 1 }}>{savingReply ? 'Saving…' : 'Save Reply'}</button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div style={{ fontSize: '13px', lineHeight: 1.55, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                                {msg.content}
+                                            </div>
+                                            <AttachmentRenderer attachments={msg.attachments} />
+                                        </>
+                                    )}
                                 </div>
                             ))}
                         </div>

@@ -7,7 +7,7 @@ import { messages } from '../db/schema/messages';
 import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
-import { createForumThread, getThreadMessages, listForumThreads } from '../services/thread.service';
+import { createForumThread, getThreadMessages, listForumThreads, updateForumThread } from '../services/thread.service';
 import { ServiceError } from '../services/message.service';
 
 export const threadsRouter = Router({ mergeParams: true });
@@ -21,6 +21,20 @@ const createThreadSchema = z.object({
   attachmentIds: z.array(z.string().uuid()).optional(),
   tags: z.array(z.string()).optional(),
   archiveAfter: z.number().int().refine(v => VALID_ARCHIVE_AFTER.includes(v)).optional(),
+});
+
+const updateThreadSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  body: z.string().nullable().optional(),
+  attachmentIds: z.array(z.string().uuid()).optional(),
+  tags: z.array(z.string()).optional(),
+}).refine((data) => (
+  data.name !== undefined
+  || data.body !== undefined
+  || data.attachmentIds !== undefined
+  || data.tags !== undefined
+), {
+  message: 'Thread update must change the title, body, attachments, or tags',
 });
 
 /** POST /channels/:channelId/threads */
@@ -85,6 +99,37 @@ threadsRouter.get('/:threadId', requireAuth, async (req: Request, res: Response)
   const members = await db.select({ userId: threadMembers.userId }).from(threadMembers).where(eq(threadMembers.threadId, threadId));
 
   res.json({ ...thread, memberCount: members.length });
+});
+
+/** PATCH /threads/:threadId */
+threadsRouter.patch('/:threadId', requireAuth, validate(updateThreadSchema), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { threadId } = req.params as Record<string, string>;
+    const body = req.body as z.infer<typeof updateThreadSchema>;
+
+    const thread = await updateForumThread({
+      threadId,
+      authorId: req.userId!,
+      name: body.name,
+      body: body.body,
+      attachmentIds: body.attachmentIds,
+      tags: body.tags,
+    });
+
+    res.json(thread);
+  } catch (err) {
+    if (err instanceof ServiceError) {
+      const statusMap: Record<string, number> = {
+        NOT_FOUND: 404,
+        FORBIDDEN: 403,
+        VALIDATION_ERROR: 400,
+        RATE_LIMITED: 429,
+      };
+      res.status(statusMap[err.code] ?? 400).json({ code: err.code, message: err.message });
+      return;
+    }
+    res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Failed to update thread' });
+  }
 });
 
 /** GET /threads/:threadId/messages — same as channel messages but scoped to thread */

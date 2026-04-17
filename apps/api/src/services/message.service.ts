@@ -114,6 +114,82 @@ async function resolveChannel(
   return channel;
 }
 
+export async function assertCanSendMessage(
+  channelId: string,
+  userId: string,
+): Promise<typeof channels.$inferSelect> {
+  const channel = await resolveChannel(channelId, userId);
+
+  if (channel.guildId) {
+    const canSend = await hasChannelPermission(userId, channel.guildId, channelId, Permissions.SEND_MESSAGES);
+    if (!canSend) {
+      throw new ServiceError('FORBIDDEN', 'Missing SEND_MESSAGES permission in this channel');
+    }
+
+    const [member] = await db.select({ timeoutUntil: guildMembers.timeoutUntil })
+      .from(guildMembers)
+      .where(and(eq(guildMembers.guildId, channel.guildId), eq(guildMembers.userId, userId)))
+      .limit(1);
+    if (member?.timeoutUntil && member.timeoutUntil > new Date()) {
+      throw new ServiceError('FORBIDDEN', 'You are timed out in this server');
+    }
+  }
+
+  return channel;
+}
+
+function assertForumAttachmentSupport(
+  channel: typeof channels.$inferSelect,
+  threadId: string | null | undefined,
+  attachmentIds?: string[],
+) {
+  if (!threadId || !attachmentIds || attachmentIds.length === 0) {
+    return;
+  }
+  if (channel.type === 'GUILD_FORUM' && channel.isEncrypted) {
+    throw new ServiceError('VALIDATION_ERROR', 'Forum attachments are not available in encrypted channels yet');
+  }
+}
+
+async function resolveAttachmentSnapshots(authorId: string, attachmentIds?: string[]) {
+  if (!attachmentIds || attachmentIds.length === 0) {
+    return [] as Array<{
+      id: string;
+      url: string;
+      filename: string;
+      size: number;
+      mimeType: string;
+    }>;
+  }
+
+  const fileRows = await db
+    .select()
+    .from(files)
+    .where(
+      or(
+        ...attachmentIds.map((id) => eq(files.id, id)),
+      ) as ReturnType<typeof eq>,
+    );
+
+  if (fileRows.length !== attachmentIds.length) {
+    throw new ServiceError('VALIDATION_ERROR', 'One or more attachment IDs are invalid');
+  }
+
+  for (const file of fileRows) {
+    if (file.uploaderId !== authorId) {
+      throw new ServiceError('VALIDATION_ERROR', 'You can only attach files you have uploaded');
+    }
+  }
+
+  return fileRows.map((f: any) => ({
+    id: f.id,
+    url: f.url,
+    filename: f.filename,
+    size: f.size,
+    mimeType: f.mimeType,
+  }));
+}
+
 /**
  * formatMessage — Shape a database message row for API responses.
  */
@@ -344,26 +420,7 @@ export class MessageService {
       }>;
     },
   ) {
-    const channel = await resolveChannel(channelId, authorId);
-
-    // Check SEND_MESSAGES permission for guild channels
-    if (channel.guildId) {
-      const canSend = await hasChannelPermission(authorId, channel.guildId, channelId, Permissions.SEND_MESSAGES);
-      if (!canSend) {
-        throw new ServiceError('FORBIDDEN', 'Missing SEND_MESSAGES permission in this channel');
-      }
-    }
-
-    // Check if user is timed out in this guild
-    if (channel.guildId) {
-      const [member] = await db.select({ timeoutUntil: guildMembers.timeoutUntil })
-        .from(guildMembers)
-        .where(and(eq(guildMembers.guildId, channel.guildId), eq(guildMembers.userId, authorId)))
-        .limit(1);
-      if (member?.timeoutUntil && member.timeoutUntil > new Date()) {
-        throw new ServiceError('FORBIDDEN', 'You are timed out in this server');
-      }
-    }
+    const channel = await assertCanSendMessage(channelId, authorId);
 
     // Slow mode enforcement
     const [slowCh] = await db.select({ rateLimitPerUser: channels.rateLimitPerUser }).from(channels).where(eq(channels.id, channelId)).limit(1);
@@ -453,43 +510,8 @@ export class MessageService {
       }
     }
 
-    // Resolve attachments and verify ownership
-    let attachmentSnapshot: Array<{
-      id: string;
-      url: string;
-      filename: string;
-      size: number;
-      mimeType: string;
-    }> = [];
-
-    if (attachmentIds && attachmentIds.length > 0) {
-      const fileRows = await db
-        .select()
-        .from(files)
-        .where(
-          or(
-            ...attachmentIds.map((id) => eq(files.id, id)),
-          ) as ReturnType<typeof eq>,
-        );
-
-      if (fileRows.length !== attachmentIds.length) {
-        throw new ServiceError('VALIDATION_ERROR', 'One or more attachment IDs are invalid');
-      }
-
-      for (const file of fileRows) {
-        if (file.uploaderId !== authorId) {
-          throw new ServiceError('VALIDATION_ERROR', 'You can only attach files you have uploaded');
-        }
-      }
-
-      attachmentSnapshot = fileRows.map((f: any) => ({
-        id: f.id,
-        url: f.url,
-        filename: f.filename,
-        size: f.size,
-        mimeType: f.mimeType,
-      }));
-    }
+    assertForumAttachmentSupport(channel, threadId, attachmentIds);
+    const attachmentSnapshot = await resolveAttachmentSnapshots(authorId, attachmentIds);
 
     // Compute expiresAt
     let expiresAt: Date | undefined;
@@ -945,13 +967,14 @@ export class MessageService {
     messageId: string,
     authorId: string,
     data: {
-      content?: string;
+      content?: string | null;
+      attachmentIds?: string[];
       encryptedContent?: string;
       isEncrypted?: boolean;
       keyVersion?: number;
     },
   ) {
-    await resolveChannel(channelId, authorId);
+    const channel = await resolveChannel(channelId, authorId);
 
     const [message] = await db
       .select()
@@ -967,7 +990,24 @@ export class MessageService {
       throw new ServiceError('FORBIDDEN', 'You can only edit your own messages');
     }
 
-    const { content, encryptedContent, isEncrypted, keyVersion } = data;
+    const { content, attachmentIds, encryptedContent, isEncrypted, keyVersion } = data;
+
+    if (attachmentIds !== undefined && attachmentIds.length > 0 && channel.attachmentsEnabled === false) {
+      throw new ServiceError('FORBIDDEN', 'File attachments are disabled in this channel');
+    }
+    if ((isEncrypted || message.isEncrypted) && attachmentIds !== undefined) {
+      throw new ServiceError('VALIDATION_ERROR', 'Encrypted message edits cannot change attachments via plaintext attachment IDs');
+    }
+    assertForumAttachmentSupport(channel, message.threadId, attachmentIds);
+    const nextAttachments = attachmentIds !== undefined
+      ? await resolveAttachmentSnapshots(authorId, attachmentIds)
+      : (Array.isArray(message.attachments) ? message.attachments as Array<{
+        id: string;
+        url: string;
+        filename: string;
+        size: number;
+        mimeType: string;
+      }> : []);
 
     // Save current content to edit history before overwriting
     if (message.content) {
@@ -984,9 +1024,18 @@ export class MessageService {
       updateFields.isEncrypted = true;
       if (keyVersion !== undefined) updateFields.keyVersion = keyVersion;
     } else {
-      updateFields.content = content;
+      const normalizedContent = content === undefined
+        ? message.content
+        : (content?.trim() || null);
+      if (!normalizedContent && nextAttachments.length === 0) {
+        throw new ServiceError('VALIDATION_ERROR', 'Message must have content or at least one attachment');
+      }
+      updateFields.content = normalizedContent;
       updateFields.isEncrypted = false;
       updateFields.encryptedContent = null;
+    }
+    if (attachmentIds !== undefined) {
+      updateFields.attachments = nextAttachments;
     }
 
     const [updated] = await db
