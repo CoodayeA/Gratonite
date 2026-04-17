@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Search, FileText, Calendar, User, Hash, X, Bookmark, BookmarkPlus, Trash2, Edit2, Check, ChevronDown, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, FileText, Calendar, User, Hash, X, Bookmark, BookmarkPlus, Trash2, Edit2, Check, ChevronDown, ChevronRight, AlertCircle, RefreshCw, Users, LayoutGrid, FolderOpen } from 'lucide-react';
 import { api } from '../../lib/api';
 import { EmptyState } from '../../components/ui/EmptyState';
 
@@ -39,9 +39,90 @@ interface SavedSearch {
   createdAt: string;
 }
 
+interface SearchPersonResult {
+  id: string;
+  username: string;
+  displayName: string | null;
+  avatarHash: string | null;
+}
+
+interface SearchChannelResult {
+  id: string;
+  name: string;
+  type: string;
+  topic?: string | null;
+}
+
+interface SearchFileResult {
+  id: string;
+  filename: string;
+  channelId: string;
+  channelName: string | null;
+  mimeType: string | null;
+  uploadedBy: string | null;
+}
+
+interface SearchDocumentResult {
+  id: string;
+  title: string;
+  snippet: string;
+  channelId: string;
+  channelName: string;
+  folder?: string | null;
+}
+
+interface SearchForumResult {
+  id: string;
+  title: string;
+  preview: string;
+  channelId: string;
+  channelName: string;
+  authorName: string | null;
+}
+
 const SAVED_SEARCHES_KEY = 'gratonite_saved_searches_v1';
 
 const SEARCH_LIMIT = 25;
+const DISCOVERY_LIMIT = 6;
+
+const isForumChannelType = (type?: string) => type === 'GUILD_FORUM' || type === 'GUILD_QA';
+const isDocumentChannelType = (type?: string) => type === 'GUILD_DOCUMENT' || type === 'GUILD_WIKI';
+const buildSnippet = (text: string | null | undefined, query: string) => {
+  const source = (text ?? '').trim();
+  if (!source) return 'No preview available yet.';
+  const lower = source.toLowerCase();
+  const needle = query.toLowerCase();
+  const idx = lower.indexOf(needle);
+  if (idx === -1) return source.slice(0, 110) + (source.length > 110 ? '...' : '');
+  const start = Math.max(0, idx - 40);
+  const end = Math.min(source.length, idx + needle.length + 70);
+  return `${start > 0 ? '...' : ''}${source.slice(start, end)}${end < source.length ? '...' : ''}`;
+};
+
+function SearchSurfaceSection({
+  title,
+  icon,
+  subtitle,
+  children,
+}: {
+  title: string;
+  icon: ReactNode;
+  subtitle: string;
+  children: ReactNode;
+}) {
+  return (
+    <div style={{ border: '1px solid var(--stroke)', borderRadius: 10, background: 'var(--bg-secondary)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', borderBottom: '1px solid var(--stroke)' }}>
+        <span style={{ color: 'var(--accent-primary)', display: 'flex' }}>{icon}</span>
+        <div>
+          <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: 13 }}>{title}</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>{subtitle}</div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>{children}</div>
+    </div>
+  );
+}
 
 export default function GlobalSearch() {
   const navigate = useNavigate();
@@ -55,6 +136,12 @@ export default function GlobalSearch() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({});
+  const [discoveryLoading, setDiscoveryLoading] = useState(false);
+  const [peopleResults, setPeopleResults] = useState<SearchPersonResult[]>([]);
+  const [channelResults, setChannelResults] = useState<SearchChannelResult[]>([]);
+  const [fileResults, setFileResults] = useState<SearchFileResult[]>([]);
+  const [documentResults, setDocumentResults] = useState<SearchDocumentResult[]>([]);
+  const [forumResults, setForumResults] = useState<SearchForumResult[]>([]);
 
   // Saved searches state
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
@@ -100,6 +187,143 @@ export default function GlobalSearch() {
     }
   }, []);
 
+  const resetDiscoveryResults = useCallback(() => {
+    setPeopleResults([]);
+    setChannelResults([]);
+    setFileResults([]);
+    setDocumentResults([]);
+    setForumResults([]);
+  }, []);
+
+  const loadDiscoveryResults = useCallback(async (searchQuery: string, guildScopeId?: string) => {
+    const trimmedQuery = searchQuery.trim();
+    if (trimmedQuery.length < 2) {
+      resetDiscoveryResults();
+      return;
+    }
+
+    setDiscoveryLoading(true);
+    try {
+      if (!guildScopeId) {
+        const users = await api.users.searchUsers(trimmedQuery);
+        setPeopleResults(users.slice(0, DISCOVERY_LIMIT).map(user => ({
+          id: user.id,
+          username: user.username,
+          displayName: user.displayName,
+          avatarHash: user.avatarHash,
+        })));
+        setChannelResults([]);
+        setFileResults([]);
+        setDocumentResults([]);
+        setForumResults([]);
+        return;
+      }
+
+      const [membersResult, channelsResult, filesResult] = await Promise.all([
+        api.guilds.getMembers(guildScopeId, { search: trimmedQuery, limit: DISCOVERY_LIMIT }),
+        api.channels.getGuildChannels(guildScopeId),
+        api.fileManager.list(guildScopeId, trimmedQuery, 1).catch(() => [] as any[]),
+      ]);
+
+      const channels = (channelsResult as any[])
+        .filter(channel => channel.type !== 'GUILD_CATEGORY')
+        .map(channel => ({
+          id: channel.id as string,
+          name: (channel.name ?? 'untitled') as string,
+          type: (channel.type ?? 'GUILD_TEXT') as string,
+          topic: (channel.topic ?? null) as string | null,
+        }));
+      const channelNameToId = new Map(channels.map(channel => [channel.name.toLowerCase(), channel.id]));
+      const matchedChannels = channels
+        .filter(channel => {
+          const haystack = `${channel.name} ${channel.topic ?? ''}`.toLowerCase();
+          return haystack.includes(trimmedQuery.toLowerCase());
+        })
+        .slice(0, DISCOVERY_LIMIT);
+
+      const people = (membersResult as any[]).slice(0, DISCOVERY_LIMIT).map(member => ({
+        id: member.userId ?? member.id,
+        username: member.username ?? 'unknown',
+        displayName: member.displayName ?? member.nickname ?? null,
+        avatarHash: member.avatarHash ?? null,
+      }));
+
+      const files = (filesResult as any[])
+        .map(file => {
+          const inferredChannelId =
+            file.channelId ??
+            file.channel?.id ??
+            (typeof file.channelName === 'string' ? channelNameToId.get(file.channelName.toLowerCase()) : undefined);
+          return {
+            id: file.id as string,
+            filename: (file.filename ?? file.name ?? 'Untitled file') as string,
+            channelId: inferredChannelId as string | undefined,
+            channelName: (file.channelName ?? file.channel?.name ?? null) as string | null,
+            mimeType: (file.mimeType ?? null) as string | null,
+            uploadedBy: (file.uploadedBy ?? file.ownerName ?? file.authorName ?? null) as string | null,
+          };
+        })
+        .filter((file): file is SearchFileResult => Boolean(file.channelId))
+        .slice(0, DISCOVERY_LIMIT);
+
+      const forumChannels = channels.filter(channel => isForumChannelType(channel.type)).slice(0, 4);
+      const documentChannels = channels.filter(channel => isDocumentChannelType(channel.type)).slice(0, 4);
+
+      const [forumSettled, documentSettled] = await Promise.all([
+        Promise.allSettled(forumChannels.map(channel => api.threads.list(channel.id, 'latest'))),
+        Promise.allSettled(documentChannels.map(channel => api.wiki.listPages(channel.id))),
+      ]);
+
+      const forumMatches = forumSettled.flatMap((result, index) => {
+        if (result.status !== 'fulfilled') return [];
+        const channel = forumChannels[index];
+        return (result.value as any[])
+          .filter(thread => {
+            const haystack = `${thread.name ?? ''} ${thread.creatorName ?? ''} ${thread.tag ?? ''}`.toLowerCase();
+            return haystack.includes(trimmedQuery.toLowerCase());
+          })
+          .slice(0, 2)
+          .map(thread => ({
+            id: thread.id as string,
+            title: (thread.name ?? 'Untitled thread') as string,
+            preview: buildSnippet(thread.message ?? thread.body ?? thread.content ?? '', trimmedQuery),
+            channelId: channel.id,
+            channelName: channel.name,
+            authorName: (thread.creatorName ?? null) as string | null,
+          }));
+      }).slice(0, DISCOVERY_LIMIT);
+
+      const documentMatches = documentSettled.flatMap((result, index) => {
+        if (result.status !== 'fulfilled') return [];
+        const channel = documentChannels[index];
+        return (result.value as any[])
+          .filter(page => {
+            const haystack = `${page.title ?? ''} ${page.content ?? ''}`.toLowerCase();
+            return haystack.includes(trimmedQuery.toLowerCase());
+          })
+          .slice(0, 2)
+          .map(page => ({
+            id: page.id as string,
+            title: (page.title ?? 'Untitled page') as string,
+            snippet: buildSnippet(page.content ?? '', trimmedQuery),
+            channelId: channel.id,
+            channelName: channel.name,
+            folder: (page.folder ?? null) as string | null,
+          }));
+      }).slice(0, DISCOVERY_LIMIT);
+
+      setPeopleResults(people);
+      setChannelResults(matchedChannels);
+      setFileResults(files);
+      setDocumentResults(documentMatches);
+      setForumResults(forumMatches);
+    } catch {
+      resetDiscoveryResults();
+    } finally {
+      setDiscoveryLoading(false);
+    }
+  }, [resetDiscoveryResults]);
+
   const saveCurrentSearch = useCallback(() => {
     if (!newSearchName.trim()) return;
 
@@ -126,6 +350,7 @@ export default function GlobalSearch() {
 
   const doSearchWithParams = useCallback(async (searchQuery: string, searchFilters: SearchFilters, searchOffset = 0, append = false) => {
     if (searchQuery.trim().length < 2) return;
+    const guildScopeId = searchFilters.guildId ?? routeGuildId;
     if (append) {
       setLoadingMore(true);
     } else {
@@ -149,14 +374,18 @@ export default function GlobalSearch() {
       const newResults = data.results as SearchResult[];
       setResults(prev => append ? [...prev, ...newResults] : newResults);
       setHasMore(newResults.length >= SEARCH_LIMIT);
+      if (!append) {
+        await loadDiscoveryResults(searchQuery, guildScopeId);
+      }
     } catch {
       setError(true);
       if (!append) setResults([]);
+      if (!append) resetDiscoveryResults();
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, []);
+  }, [loadDiscoveryResults, resetDiscoveryResults, routeGuildId]);
 
   const applySavedSearch = useCallback((saved: SavedSearch) => {
     setQuery(saved.query);
@@ -199,10 +428,10 @@ export default function GlobalSearch() {
   }, [query, filters, doSearchWithParams]);
 
   const clearFilters = useCallback(() => {
-    setFilters({});
+    setFilters(routeGuildId ? { guildId: routeGuildId } : {});
     setOffset(0);
     setHasMore(false);
-  }, []);
+  }, [routeGuildId]);
 
   const loadMore = useCallback(() => {
     const nextOffset = offset + SEARCH_LIMIT;
@@ -214,10 +443,23 @@ export default function GlobalSearch() {
     if (e.key === 'Enter') doSearch();
   };
 
+  const activeGuildScope = filters.guildId ?? routeGuildId ?? null;
+  const hasDiscoveryResults = peopleResults.length > 0 || channelResults.length > 0 || fileResults.length > 0 || documentResults.length > 0 || forumResults.length > 0;
+
   const navigateToMessage = (result: SearchResult) => {
     if (result.guildId && result.channelId) {
       navigate(`/guild/${result.guildId}/channel/${result.channelId}`);
     }
+  };
+
+  const navigateToScopedSurface = (channelId?: string | null) => {
+    if (activeGuildScope && channelId) {
+      navigate(`/guild/${activeGuildScope}/channel/${channelId}`);
+    }
+  };
+
+  const navigateToPeople = () => {
+    navigate(activeGuildScope ? `/guild/${activeGuildScope}/members` : '/friends');
   };
 
   const toggleFilter = (key: keyof SearchFilters, value: string) => {
@@ -246,7 +488,7 @@ export default function GlobalSearch() {
       {/* Main content */}
       <div style={{ flex: 1, padding: 24, overflow: 'auto' }}>
         <h2 style={{ color: 'var(--text-primary)', margin: '0 0 16px', fontSize: 20, fontWeight: 700 }}>
-          {routeGuildId ? 'Search this community' : 'Search messages'}
+          {activeGuildScope ? 'Search this community' : 'Search messages'}
         </h2>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
@@ -254,7 +496,7 @@ export default function GlobalSearch() {
             <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input
               type="text"
-              placeholder="Search messages..."
+              placeholder={activeGuildScope ? 'Search messages, people, channels, docs, and forum threads...' : 'Search messages and people...'}
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -445,7 +687,7 @@ export default function GlobalSearch() {
       {!loading && !error && searched && results.length === 0 && (
         <EmptyState
           type="search"
-          title={routeGuildId ? 'No messages matched in this community' : 'No messages matched your search'}
+          title={activeGuildScope ? 'No messages matched in this community' : 'No messages matched your search'}
           description={
             hasActiveFilters
               ? 'Try broader keywords or clear one of the filters above to widen the search.'
@@ -459,13 +701,120 @@ export default function GlobalSearch() {
       {!loading && !error && !searched && (
         <EmptyState
           type="search"
-          title={routeGuildId ? 'Search within this community' : 'Search across your communities'}
+          title={activeGuildScope ? 'Search within this community' : 'Search across your communities'}
           description={
-            routeGuildId
-              ? 'Look for people, phrases, or topics in this community. Use filters if you want to narrow things down further.'
-              : 'Enter at least two characters to search your messages across every community you have joined.'
+            activeGuildScope
+              ? 'Look for people, channels, forum threads, documents, files, or message history in this community.'
+              : 'Enter at least two characters to search your messages and people across every community you have joined.'
           }
         />
+      )}
+
+      {!loading && !error && searched && (discoveryLoading || hasDiscoveryResults) && (
+        <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
+          {peopleResults.length > 0 && (
+            <SearchSurfaceSection
+              title="People"
+              icon={<Users size={15} />}
+              subtitle={activeGuildScope ? 'Jump into the member directory with the closest matches.' : 'People matching this search across your network.'}
+            >
+              {peopleResults.map(person => (
+                <button
+                  key={person.id}
+                  onClick={navigateToPeople}
+                  style={{ padding: '12px 14px', border: 'none', borderTop: '1px solid var(--stroke)', background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
+                >
+                  <div style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}>{person.displayName || person.username}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>@{person.username}</div>
+                </button>
+              ))}
+            </SearchSurfaceSection>
+          )}
+
+          {channelResults.length > 0 && (
+            <SearchSurfaceSection
+              title="Channels"
+              icon={<Hash size={15} />}
+              subtitle="Open the right room directly from search."
+            >
+              {channelResults.map(channel => (
+                <button
+                  key={channel.id}
+                  onClick={() => navigateToScopedSurface(channel.id)}
+                  style={{ padding: '12px 14px', border: 'none', borderTop: '1px solid var(--stroke)', background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
+                >
+                  <div style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}>#{channel.name}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>{channel.topic || channel.type.replace('GUILD_', '').replace('_', ' ').toLowerCase()}</div>
+                </button>
+              ))}
+            </SearchSurfaceSection>
+          )}
+
+          {documentResults.length > 0 && (
+            <SearchSurfaceSection
+              title="Documents"
+              icon={<FileText size={15} />}
+              subtitle="Knowledge base matches with enough context to jump in."
+            >
+              {documentResults.map(doc => (
+                <button
+                  key={doc.id}
+                  onClick={() => navigateToScopedSurface(doc.channelId)}
+                  style={{ padding: '12px 14px', border: 'none', borderTop: '1px solid var(--stroke)', background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
+                >
+                  <div style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}>{doc.title}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>#{doc.channelName}{doc.folder ? ` · ${doc.folder}` : ''}</div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, lineHeight: 1.45, marginTop: 4 }}>{doc.snippet}</div>
+                </button>
+              ))}
+            </SearchSurfaceSection>
+          )}
+
+          {forumResults.length > 0 && (
+            <SearchSurfaceSection
+              title="Forum threads"
+              icon={<LayoutGrid size={15} />}
+              subtitle="Threads worth opening before you dig through message history."
+            >
+              {forumResults.map(thread => (
+                <button
+                  key={thread.id}
+                  onClick={() => navigateToScopedSurface(thread.channelId)}
+                  style={{ padding: '12px 14px', border: 'none', borderTop: '1px solid var(--stroke)', background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
+                >
+                  <div style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}>{thread.title}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>#{thread.channelName}{thread.authorName ? ` · ${thread.authorName}` : ''}</div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: 12, lineHeight: 1.45, marginTop: 4 }}>{thread.preview}</div>
+                </button>
+              ))}
+            </SearchSurfaceSection>
+          )}
+
+          {fileResults.length > 0 && (
+            <SearchSurfaceSection
+              title="Files"
+              icon={<FolderOpen size={15} />}
+              subtitle="Attachments and uploads with direct channel context."
+            >
+              {fileResults.map(file => (
+                <button
+                  key={file.id}
+                  onClick={() => navigateToScopedSurface(file.channelId)}
+                  style={{ padding: '12px 14px', border: 'none', borderTop: '1px solid var(--stroke)', background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
+                >
+                  <div style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}>{file.filename}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>#{file.channelName || 'unknown'}{file.uploadedBy ? ` · ${file.uploadedBy}` : ''}{file.mimeType ? ` · ${file.mimeType}` : ''}</div>
+                </button>
+              ))}
+            </SearchSurfaceSection>
+          )}
+
+          {discoveryLoading && !hasDiscoveryResults && (
+            <div style={{ padding: '12px 14px', borderRadius: 10, border: '1px solid var(--stroke)', background: 'var(--bg-secondary)', color: 'var(--text-muted)', fontSize: 12 }}>
+              Expanding this search across people, channels, docs, forum threads, and files...
+            </div>
+          )}
+        </div>
       )}
 
         {!loading && results.map(r => (
