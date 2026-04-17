@@ -16,3 +16,5 @@ These paths are ignored so local production packaging does not pollute normal de
 - Production orchestration files in `deploy/`
 
 Some legacy generated files may still be tracked under `deploy/api`. Remove those in one intentional cleanup commit after confirming no release process still depends on them being present before `deploy/deploy.sh` runs. Do not mix that cleanup with feature work or emergency fixes.
+
+Do **not** treat `deploy/api/drizzle/` as disposable generated output unless and until migration ownership is explicitly moved elsewhere. If that directory still contains the canonical production migration history, it must be preserved while any generated package artifacts are cleaned up.

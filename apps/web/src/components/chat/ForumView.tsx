@@ -563,6 +563,7 @@ export default function ForumView({
                         </div>
                     )}
                     <input
+                        data-testid="forum-create-file-input"
                         ref={newFileInputRef}
                         type="file"
                         multiple
@@ -1083,6 +1084,7 @@ function ForumPostView({ thread, forumTags, channelId, channelName, attachmentBl
                     background: 'var(--bg-primary)', flexShrink: 0,
                 }}>
                     <input
+                        data-testid="forum-reply-file-input"
                         ref={replyFileInputRef}
                         type="file"
                         multiple

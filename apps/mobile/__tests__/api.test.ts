@@ -142,9 +142,78 @@ describe('Forum API', () => {
     const replies = await forum.getReplies('thread-1');
 
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.gratonite.chat/api/v1/threads/thread-1/messages',
+      'https://api.gratonite.chat/api/v1/threads/thread-1/messages?limit=100',
       expect.objectContaining({ headers: expect.any(Object) }),
     );
     expect(replies).toEqual([{ id: 'reply-1', channelId: 'forum-1', content: 'Reply', createdAt: '2026-04-17T12:05:00.000Z' }]);
+  });
+
+  it('keeps paging backward until it finds the original post for forum details', async () => {
+    mockJsonResponse({
+      id: 'thread-99',
+      channelId: 'forum-1',
+      name: 'Long-running thread',
+      creatorId: 'user-1',
+      creatorName: 'Ada',
+      messageCount: 101,
+      createdAt: '2026-04-17T12:00:00.000Z',
+      lastActivity: '2026-04-17T12:30:00.000Z',
+    });
+    mockJsonResponse(Array.from({ length: 100 }, (_, index) => ({
+      id: `msg-${101 - index}`,
+      channelId: 'forum-1',
+      content: `Message ${101 - index}`,
+      createdAt: `2026-04-17T12:${String(index).padStart(2, '0')}:00.000Z`,
+    })));
+    mockJsonResponse([
+      { id: 'msg-1', channelId: 'forum-1', content: 'Original post', createdAt: '2026-04-17T11:59:00.000Z' },
+    ]);
+
+    const post = await forum.getPost('thread-99');
+
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      2,
+      'https://api.gratonite.chat/api/v1/threads/thread-99/messages?limit=100',
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      3,
+      'https://api.gratonite.chat/api/v1/threads/thread-99/messages?before=msg-2&limit=100',
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+    expect(post).toEqual(expect.objectContaining({
+      id: 'thread-99',
+      title: 'Long-running thread',
+      content: 'Original post',
+      replyCount: 100,
+    }));
+  });
+
+  it('returns all replies for long forum threads instead of dropping the oldest page', async () => {
+    mockJsonResponse(Array.from({ length: 100 }, (_, index) => ({
+      id: `msg-${101 - index}`,
+      channelId: 'forum-1',
+      content: `Message ${101 - index}`,
+      createdAt: `2026-04-17T12:${String(index).padStart(2, '0')}:00.000Z`,
+    })));
+    mockJsonResponse([
+      { id: 'msg-1', channelId: 'forum-1', content: 'Original post', createdAt: '2026-04-17T11:59:00.000Z' },
+    ]);
+
+    const replies = await forum.getReplies('thread-99');
+
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      1,
+      'https://api.gratonite.chat/api/v1/threads/thread-99/messages?limit=100',
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      2,
+      'https://api.gratonite.chat/api/v1/threads/thread-99/messages?before=msg-2&limit=100',
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+    expect(replies).toHaveLength(100);
+    expect(replies[0]).toEqual(expect.objectContaining({ id: 'msg-2', content: 'Message 2' }));
+    expect(replies[99]).toEqual(expect.objectContaining({ id: 'msg-101', content: 'Message 101' }));
   });
 });

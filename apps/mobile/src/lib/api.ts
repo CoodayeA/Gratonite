@@ -1690,6 +1690,30 @@ function normalizeForumPost(raw: any, fallbackChannelId?: string): ForumPost {
   };
 }
 
+async function getAllThreadMessages(threadId: string, pageSize = 100): Promise<Message[]> {
+  const newestFirst: Message[] = [];
+  const seen = new Set<string>();
+  let before: string | undefined;
+
+  while (true) {
+    const page = await threads.getMessages(threadId, { limit: pageSize, before });
+    if (page.length === 0) break;
+
+    for (const message of page) {
+      if (!seen.has(message.id)) {
+        seen.add(message.id);
+        newestFirst.push(message);
+      }
+    }
+
+    const oldestLoaded = page[page.length - 1];
+    if (page.length < pageSize || !oldestLoaded?.id || oldestLoaded.id === before) break;
+    before = oldestLoaded.id;
+  }
+
+  return newestFirst.reverse();
+}
+
 export const forum = {
   async listPosts(channelId: string) {
     const data = await apiFetch<any[]>(`/channels/${channelId}/threads`);
@@ -1711,9 +1735,8 @@ export const forum = {
 
   async getPost(postId: string) {
     const thread = await threads.get(postId);
-    const messages = await threads.getMessages(postId, { limit: 100 }).catch(() => []);
-    const oldestFirst = [...messages].reverse();
-    const op = oldestFirst[0];
+    const messages = await getAllThreadMessages(postId).catch(() => []);
+    const op = messages[0];
     return normalizeForumPost({
       ...thread,
       content: op?.content ?? '',
@@ -1722,8 +1745,12 @@ export const forum = {
   },
 
   async getReplies(postId: string, params?: KeysetPaginationParams) {
-    const data = await threads.getMessages(postId, params);
-    const oldestFirst = [...data].reverse();
+    if (params?.before || params?.after || params?.around || params?.limit) {
+      const data = await threads.getMessages(postId, params);
+      return [...data].reverse();
+    }
+
+    const oldestFirst = await getAllThreadMessages(postId);
     return oldestFirst.slice(1);
   },
 };

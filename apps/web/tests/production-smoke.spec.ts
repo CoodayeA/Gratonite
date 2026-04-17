@@ -73,14 +73,14 @@ test.describe('authenticated production critical flows', () => {
         await page.goto(`/app/guild/${smokeGuildId}/channel/${smokeForumChannelId}`);
         await page.getByRole('button', { name: /new post/i }).click();
         await page.getByPlaceholder(/post title/i).fill(postTitle);
-        await page.locator('input[type="file"]').setInputFiles(imageUploadFile(`forum-${runId}.png`));
+        await page.getByTestId('forum-create-file-input').setInputFiles(imageUploadFile(`forum-${runId}.png`));
         await page.getByRole('button', { name: /^post$/i }).click();
         await expect(page.locator('body')).toContainText(postTitle, { timeout: 30000 });
         await expect(page.locator('img[alt*="forum-"], img[src*="/files/"], img[src*="/uploads/"]').first()).toBeVisible({ timeout: 30000 });
 
         const replyText = `${smokePrefix} image reply`;
         await page.getByPlaceholder(/write a reply/i).fill(replyText);
-        await page.locator('input[type="file"]').setInputFiles(imageUploadFile(`forum-reply-${runId}.png`));
+        await page.getByTestId('forum-reply-file-input').setInputFiles(imageUploadFile(`forum-reply-${runId}.png`));
         await page.getByRole('button', { name: /send reply/i }).click();
         await expect(page.locator('body')).toContainText(replyText, { timeout: 30000 });
 
