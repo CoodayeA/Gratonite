@@ -99,6 +99,20 @@ function toAuditType(action: string): string {
     case 'BOT_LISTING_DELISTED':
     case 'BOT_REVIEW_DELETED':
       return 'bot_rejected';
+    case 'REPORT_UNDER_REVIEW':
+    case 'REPORT_REOPENED':
+      return 'moderation_review';
+    case 'REPORT_RESOLVED':
+      return 'moderation_resolved';
+    case 'REPORT_DISMISSED':
+      return 'moderation_dismissed';
+    case 'REPORT_NOTE_ADDED':
+    case 'REPORT_UPDATED':
+      return 'moderation_note';
+    case 'BAN_APPEAL_APPROVED':
+      return 'appeal_approved';
+    case 'BAN_APPEAL_DENIED':
+      return 'appeal_denied';
     case 'TEAM_INVITE_SENT':
       return 'team_invited';
     default:
@@ -422,6 +436,17 @@ adminRouter.get('/audit-log', requireAuth, async (req: Request, res: Response): 
 
   const limit = Math.min(Number(req.query.limit) || 50, 500);
   const offset = Number(req.query.offset) || 0;
+  const targetType = typeof req.query.targetType === 'string' ? req.query.targetType.trim() : '';
+  const targetId = typeof req.query.targetId === 'string' ? req.query.targetId.trim() : '';
+  const actionPrefix = typeof req.query.actionPrefix === 'string' ? req.query.actionPrefix.trim() : '';
+  const conditions = [];
+  if (targetType) conditions.push(eq(adminAuditLog.targetType, targetType));
+  if (targetId) conditions.push(eq(adminAuditLog.targetId, targetId));
+  if (actionPrefix) {
+    const escapedPrefix = actionPrefix.replace(/[%_\\]/g, '\\$&');
+    conditions.push(ilike(adminAuditLog.action, `${escapedPrefix}%`));
+  }
+  const whereClause = conditions.length ? and(...conditions) : undefined;
 
   const rows = await db
     .select({
@@ -438,6 +463,7 @@ adminRouter.get('/audit-log', requireAuth, async (req: Request, res: Response): 
     })
     .from(adminAuditLog)
     .innerJoin(users, eq(users.id, adminAuditLog.actorId))
+    .where(whereClause)
     .orderBy(desc(adminAuditLog.createdAt))
     .limit(limit)
     .offset(offset);

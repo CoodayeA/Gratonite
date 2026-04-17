@@ -145,7 +145,7 @@ const Home = () => {
                             }}
                         >
                             <Plus size={16} />
-                            Create Portal
+                            Create Guild
                         </button>
                         <button
                             onClick={() => navigate('/discover')}
@@ -405,23 +405,23 @@ const Home = () => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '16px', width: '100%' }} role="list" aria-label="Quick actions">
                     {/* Action Cards */}
-                    <div className="action-card hover-lift" role="button" tabIndex={0} aria-label="Create a Portal — Start your own community" onClick={() => setActiveModal('createGuild')} onKeyDown={(e) => handleCardKeyDown(e, () => setActiveModal('createGuild'))} style={{ cursor: 'pointer' }}>
+                    <div className="action-card hover-lift" role="button" tabIndex={0} aria-label="Create a Guild — Start your own community" onClick={() => setActiveModal('createGuild')} onKeyDown={(e) => handleCardKeyDown(e, () => setActiveModal('createGuild'))} style={{ cursor: 'pointer' }}>
                         <div className="action-card-icon" aria-hidden="true">
                             <Hash size={24} />
                         </div>
                         <div className="action-card-text">
-                            <div className="action-title">Create a Portal</div>
+                            <div className="action-title">Create a Guild</div>
                             <div className="action-subtext">Start your own community</div>
                         </div>
                     </div>
 
-                    <div className="action-card hover-lift" role="button" tabIndex={0} aria-label="Discover Gratonite — Explore public portals" onClick={() => navigate('/discover')} onKeyDown={(e) => handleCardKeyDown(e, () => navigate('/discover'))} style={{ cursor: 'pointer' }}>
+                    <div className="action-card hover-lift" role="button" tabIndex={0} aria-label="Discover Gratonite — Explore public communities" onClick={() => navigate('/discover')} onKeyDown={(e) => handleCardKeyDown(e, () => navigate('/discover'))} style={{ cursor: 'pointer' }}>
                         <div className="action-card-icon" aria-hidden="true">
                             <Compass size={24} />
                         </div>
                         <div className="action-card-text">
                             <div className="action-title">Discover Gratonite</div>
-                            <div className="action-subtext">Explore public portals</div>
+                            <div className="action-subtext">Explore public communities</div>
                         </div>
                     </div>
 
@@ -475,13 +475,13 @@ const Home = () => {
                         </div>
                     </div>
 
-                    <div className="action-card hover-lift" role="button" tabIndex={0} aria-label="FAME Dashboard — Give FAME, view leaderboards, and rate servers" onClick={() => navigate('/fame')} onKeyDown={(e) => handleCardKeyDown(e, () => navigate('/fame'))} style={{ cursor: 'pointer', gridColumn: 'span 2', background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.04))', border: '1px solid rgba(245,158,11,0.2)' }}>
+                    <div className="action-card hover-lift" role="button" tabIndex={0} aria-label="FAME Dashboard — Give FAME, view leaderboards, and rate communities" onClick={() => navigate('/fame')} onKeyDown={(e) => handleCardKeyDown(e, () => navigate('/fame'))} style={{ cursor: 'pointer', gridColumn: 'span 2', background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.04))', border: '1px solid rgba(245,158,11,0.2)' }}>
                         <div className="action-card-icon" style={{ background: 'linear-gradient(135deg, var(--warning), #d97706)' }} aria-hidden="true">
                             <Star size={24} color="#111" fill="#111" />
                         </div>
                         <div className="action-card-text">
                             <div className="action-title" style={{ color: 'var(--warning)' }}>FAME Dashboard</div>
-                            <div className="action-subtext">Give FAME, view leaderboards, and rate servers · You have 5 FAME tokens to give today</div>
+                            <div className="action-subtext">Give FAME, view leaderboards, and rate communities · You have 5 FAME tokens to give today</div>
                         </div>
                     </div>
 
@@ -491,7 +491,7 @@ const Home = () => {
                         </div>
                         <div className="action-card-text">
                             <div className="action-title" style={{ color: '#818cf8' }}>Self-Host Gratonite</div>
-                            <div className="action-subtext">Run your own instance. Your server, your rules. 5 minutes to set up.</div>
+                            <div className="action-subtext">Run your own instance. Your community, your rules. 5 minutes to set up.</div>
                         </div>
                     </div>
                 </div>

@@ -118,7 +118,7 @@ export const NotFound = () => {
             <EmptyState
                 type="404"
                 title="Lost in the void"
-                description="The portal you're looking for doesn't exist, has been deleted, or is temporarily out of phase with our reality."
+                description="The community you're looking for doesn't exist, has been deleted, or is temporarily out of phase with our reality."
                 actionLabel="Return to Reality"
                 onAction={() => nav('/')}
             />

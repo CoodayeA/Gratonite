@@ -102,7 +102,7 @@ const themes = [
 type Tab = "portals" | "bots" | "themes";
 
 const tabs: { key: Tab; label: string }[] = [
-  { key: "portals", label: "Portals" },
+  { key: "portals", label: "Communities" },
   { key: "bots", label: "Bots" },
   { key: "themes", label: "Themes Shop" },
 ];
@@ -132,12 +132,12 @@ export function DiscoverContent() {
         </div>
       </ScrollReveal>
 
-      {/* Portals */}
+      {/* Communities */}
       {activeTab === "portals" && (
         <section className="mb-20">
           <div className="flex items-end justify-between mb-8 relative z-30">
             <div>
-              <h2 className="font-display text-3xl font-bold">Portals</h2>
+              <h2 className="font-display text-3xl font-bold">Communities</h2>
               <p className="text-foreground/50 mt-1">
                 Public communities where people actually talk to each other.
               </p>

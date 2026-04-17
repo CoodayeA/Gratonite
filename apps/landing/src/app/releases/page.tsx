@@ -20,6 +20,18 @@ export const metadata: Metadata = createPageMetadata({
 
 const releases = [
   {
+    version: "1.0.7",
+    date: "April 17, 2026",
+    summary: "Sharper Gratonite identity across landing, in-app help, and self-host docs.",
+    accent: "purple" as const,
+    changes: [
+      "Landing and deploy pages now describe Gratonite as community software with clearer guild and channel language",
+      "Download and discover surfaces now introduce guilds, channels, forums, and wikis more consistently",
+      "In-app help and navigation now favor guild and community wording over older portal phrasing on core surfaces",
+      "README, roadmap, and self-host guides now explain Gratonite's core terms in plain language",
+    ],
+  },
+  {
     version: "1.0.6",
     date: "April 17, 2026",
     summary: "Reliability foundations for forum safety, production smoke, mobile forum alignment, and deploy artifact hygiene.",

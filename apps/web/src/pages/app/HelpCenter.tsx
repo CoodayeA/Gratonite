@@ -19,7 +19,7 @@ const CATEGORIES: Category[] = [
   'All',
   'Getting Started',
   'Account & Security',
-  'Servers & Channels',
+  'Guilds & Channels',
   'Messaging & Chat',
   'Bots & Integrations',
   'Billing & Premium',
@@ -32,7 +32,7 @@ const CATEGORIES: Category[] = [
 const CATEGORY_ICONS: Record<Exclude<Category, 'All'>, typeof Book> = {
   'Getting Started': Sparkles,
   'Account & Security': Shield,
-  'Servers & Channels': Server,
+  'Guilds & Channels': Server,
   'Messaging & Chat': MessageCircle,
   'Bots & Integrations': Bot,
   'Billing & Premium': CreditCard,
@@ -45,7 +45,7 @@ const CATEGORY_ICONS: Record<Exclude<Category, 'All'>, typeof Book> = {
 const CATEGORY_COLORS: Record<Exclude<Category, 'All'>, string> = {
   'Getting Started': 'var(--accent-primary)',
   'Account & Security': 'var(--warning)',
-  'Servers & Channels': 'var(--success)',
+  'Guilds & Channels': 'var(--success)',
   'Messaging & Chat': '#60a5fa',
   'Bots & Integrations': '#a78bfa',
   'Billing & Premium': '#f472b6',

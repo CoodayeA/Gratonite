@@ -216,9 +216,9 @@ Log in with:
 
 ### First Things to Do
 
-1. **Create your first server** — Click the **+** button in the left sidebar to create a guild (server). Give it a name and icon.
-2. **Create channels** — Inside your server, create text channels for your community (e.g., #general, #introductions, #random).
-3. **Invite people** — Right-click your server name > **Create Invite** to generate a link you can share.
+1. **Create your first guild** — Click the **+** button in the left sidebar to create your first guild, which is Gratonite's in-app name for a community space. Give it a name and icon.
+2. **Add the right channels** — Inside your guild, start with a few basics: a chat channel like `#general`, a voice lounge, and any forum or wiki channels your community needs.
+3. **Invite people** — Right-click your guild name > **Create Invite** to generate a link you can share.
 4. **Customize your profile** — Click your avatar in the bottom-left > **Settings** to set your display name, bio, and avatar.
 5. **Explore admin settings** — Go to **Settings > Admin** to manage your instance (user management, moderation, etc.).
 

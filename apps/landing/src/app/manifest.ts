@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Gratonite Chat",
     short_name: "Gratonite",
     description:
-      "Gratonite Chat is open-source community software built for friend groups and communities.",
+      "Gratonite is open-source community software built for friend groups, guilds, clubs, and teams.",
     start_url: "/",
     display: "standalone",
     background_color: "#f6efe3",

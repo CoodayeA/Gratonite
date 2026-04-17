@@ -31,11 +31,12 @@ export function ServerSection() {
           Gratonite Server
         </p>
         <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight mb-2">
-          Create your portal
+          Create your community
         </h2>
         <p className="text-foreground/60 text-base mb-10 max-w-lg">
-          A portal is your own community space — entirely yours. Use ours for
-          free, or host it yourself.
+          Start with a Gratonite guild for your community, then add the channels
+          you need — chat, voice, forum, wiki, and more. Use ours for free, or
+          host it yourself.
         </p>
       </ScrollReveal>
 
@@ -58,8 +59,8 @@ export function ServerSection() {
             No setup needed. Just sign up and go.
           </p>
           <p className="text-foreground/70 text-sm leading-relaxed mb-6 max-w-xl">
-            Create a portal and invite your friends in under a minute. We handle
-            the servers, updates, and backups. You just chat.
+            Create a guild and invite your people in under a minute. We handle
+            hosting, updates, and backups. You get straight to the good part.
           </p>
 
           {/* App pills */}
@@ -97,8 +98,9 @@ export function ServerSection() {
       {/* ── Bridging text ───────────────────────────────────────── */}
       <ScrollReveal>
         <p className="text-center text-foreground/50 text-sm mb-10 max-w-md mx-auto">
-          When you use Gratonite above, your portals live on our servers. Below,
-          you can run your own copy of Gratonite so your portals live on hardware you control.
+          When you use hosted Gratonite, your community lives on our instance.
+          Below, you can run your own Gratonite instance so your guild and its
+          channels live on hardware you control.
         </p>
       </ScrollReveal>
 
@@ -126,8 +128,8 @@ export function ServerSection() {
               Run on Your Computer
             </h3>
             <p className="text-foreground/50 text-sm mb-5">
-              Perfect for trying self-hosting or running a portal for a small
-              group of friends on your own machine.
+              Perfect for trying self-hosting or running a small guild for a
+              friend group on your own machine.
             </p>
 
             {/* Keep in mind box */}
@@ -138,7 +140,7 @@ export function ServerSection() {
               <div className="flex items-start gap-2.5 text-sm text-foreground/60">
                 <ClockIcon size={16} className="text-amber-500 shrink-0 mt-0.5" />
                 <span>
-                  Your portal is only online while your computer is on and the
+                  Your guild is only online while your computer is on and the
                   app is running.
                 </span>
               </div>
@@ -192,8 +194,8 @@ export function ServerSection() {
               Always-On Server
             </h3>
             <p className="text-foreground/50 text-sm mb-5">
-              Deploy Gratonite to a cloud server so your portal is available
-              24/7. Recommended for communities and teams.
+              Deploy Gratonite to a cloud server so your community stays
+              available 24/7. Recommended for clubs, creators, and teams.
             </p>
 
             {/* Benefits box */}

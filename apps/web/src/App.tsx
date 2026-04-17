@@ -317,14 +317,14 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                     addToast({ title: `${guild.name} marked as read`, variant: 'info' });
                 }).catch(() => addToast({ title: 'Failed to mark as read', variant: 'error' }));
             }},
-            { id: 'mute', label: 'Mute Portal', icon: Volume1, onClick: () => {
+            { id: 'mute', label: 'Mute Community', icon: Volume1, onClick: () => {
                 api.channels.getGuildChannels(guild.id).then((channels: any[]) => {
                     channels.forEach((ch: any) => api.channels.setNotificationPrefs(ch.id, { level: 'none' }).catch(() => {}));
                     addToast({ title: `${guild.name} muted`, variant: 'info' });
-                }).catch(() => addToast({ title: 'Failed to mute portal', variant: 'error' }));
+                }).catch(() => addToast({ title: 'Failed to mute community', variant: 'error' }));
             }},
             { divider: true, id: 'div1', label: '' },
-            ...(isOwner ? [{ id: 'server-settings', label: 'Portal Settings', icon: Settings, onClick: () => { navigate(`/guild/${guild.id}`); onOpenGuildSettings(); } }] : []),
+            ...(isOwner ? [{ id: 'server-settings', label: 'Guild Settings', icon: Settings, onClick: () => { navigate(`/guild/${guild.id}`); onOpenGuildSettings(); } }] : []),
             { id: 'invite', label: 'Invite People', icon: Link2, onClick: () => {
                 api.invites.create(guild.id, {}).then((invite) => {
                     const link = `${window.location.origin}/app/invite/${invite.code}`;
@@ -333,19 +333,19 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                 }).catch(() => onOpenInvite());
             }},
             { id: 'notification-settings', label: 'Notification Settings', icon: Bell, onClick: () => setNotifPrefs({ type: 'guild', id: guild.id, name: guild.name }) },
-            { id: 'boost', label: 'Boost Portal', icon: Zap, onClick: () => {
+            { id: 'boost', label: 'Boost Guild', icon: Zap, onClick: () => {
                 api.guilds.boost(guild.id).then(() => {
                     addToast({ title: `Boosted ${guild.name}!`, variant: 'success' });
                 }).catch(() => addToast({ title: 'Failed to boost', variant: 'error' }));
             }},
-            { id: 'rate-portal', label: 'Rate Portal', icon: Star, onClick: () => {
+            { id: 'rate-portal', label: 'Rate Community', icon: Star, onClick: () => {
                 setRatingGuild({ id: guild.id, name: guild.name });
                 setRatingValue(0);
                 setRatingInfo(null);
                 api.guilds.getRating(guild.id).then((data) => {
                     setRatingInfo({ avg: data.averageRating, total: data.totalRatings });
                     if (data.userRating) setRatingValue(data.userRating);
-                }).catch(() => { addToast({ title: 'Failed to load portal rating', variant: 'error' }); });
+                }).catch(() => { addToast({ title: 'Failed to load community rating', variant: 'error' }); });
             }},
             { id: 'activity-toggle', label: activityEnabled ? 'Disable Activity Status' : 'Enable Activity Status', icon: Activity, onClick: () => {
                 const newOverrides = { ...overrides, [guild.id]: !activityEnabled };
@@ -353,9 +353,9 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                 addToast({ title: `Activity ${!activityEnabled ? 'enabled' : 'disabled'} for ${guild.name}`, variant: 'success' });
             }},
             { id: 'privacy-settings', label: 'Privacy Settings', icon: ShieldIcon, onClick: () => onOpenSettings() },
-            { id: 'guild-theme', label: 'Set Portal Theme', icon: Paintbrush, onClick: () => setThemePickerGuild({ id: guild.id, name: guild.name }) },
+            { id: 'guild-theme', label: 'Set Guild Theme', icon: Paintbrush, onClick: () => setThemePickerGuild({ id: guild.id, name: guild.name }) },
             { divider: true, id: 'div2', label: '' },
-            { id: 'copy-id', label: 'Copy Portal ID', icon: Copy, onClick: () => { copyToClipboard(guild.id); addToast({ title: 'Portal ID copied', variant: 'info' }); } },
+            { id: 'copy-id', label: 'Copy Guild ID', icon: Copy, onClick: () => { copyToClipboard(guild.id); addToast({ title: 'Guild ID copied', variant: 'info' }); } },
             { id: 'create-folder', label: 'Create Folder', icon: FolderIcon, onClick: () => {
                 const folderId = `folder-${Date.now()}`;
                 const newFolder = { id: folderId, name: 'New Folder', color: '#526df5', guildIds: [guild.id], collapsed: false };
@@ -365,7 +365,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
             }},
             ...(!isOwner ? [{
                 id: 'leave',
-                label: 'Leave Portal',
+                label: 'Leave Guild',
                 icon: LogOut,
                 color: 'var(--error)',
                 onClick: () => {
@@ -377,7 +377,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                         variant: 'undo' as const,
                         onUndo: () => { onGuildsRefresh?.(); },
                         onExpire: () => {
-                            api.guilds.leave(guildId).catch(() => { onGuildsRefresh?.(); addToast({ title: 'Failed to leave portal', variant: 'error' }); });
+                            api.guilds.leave(guildId).catch(() => { onGuildsRefresh?.(); addToast({ title: 'Failed to leave guild', variant: 'error' }); });
                         },
                     });
                 },
@@ -533,7 +533,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                 );
             })}
 
-            <Tooltip content="Create Portal" position="right">
+            <Tooltip content="Create Guild" position="right">
                 <div className="guild-icon" role="button" aria-label="Create guild" tabIndex={0} onClick={onOpenCreateGuild} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenCreateGuild(); } }} style={{ background: 'transparent', border: '1px dashed var(--stroke-light)', color: 'var(--text-muted)', cursor: 'pointer' }}>
                     <Plus size={24} />
                 </div>
@@ -574,7 +574,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>({ratingInfo.total} ratings)</span>
                             </div>
                         )}
-                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>How would you rate this portal?</p>
+                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>How would you rate this community?</p>
                         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
                             <StarRating value={ratingValue} onChange={setRatingValue} size={32} />
                         </div>
@@ -605,18 +605,18 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                         <div role="dialog" aria-modal="true" style={{ width: '440px', maxHeight: '80vh', background: 'var(--bg-elevated)', borderRadius: '16px', padding: '24px', border: '1px solid var(--stroke)', boxShadow: '0 24px 48px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                 <div>
-                                    <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Portal Theme</h3>
+                                    <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Guild Theme</h3>
                                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{themePickerGuild.name}</div>
                                 </div>
                                 <button onClick={() => setThemePickerGuild(null)} aria-label="Close theme picker" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}><X size={18} /></button>
                             </div>
-                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>Choose a theme that will be applied whenever you visit this portal.</p>
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>Choose a theme that will be applied whenever you visit this guild.</p>
                             <div style={{ overflowY: 'auto', flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                                 {/* Default option to clear override */}
                                 <button
                                     onClick={() => {
                                         removeGuildTheme(themePickerGuild.id);
-                                        addToast({ title: 'Portal theme removed', variant: 'success' });
+                                        addToast({ title: 'Guild theme removed', variant: 'success' });
                                         setThemePickerGuild(null);
                                     }}
                                     style={{

@@ -24,6 +24,32 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-04-17c',
+    date: 'April 17, 2026',
+    title: 'Product Identity & Messaging Cleanup',
+    tagline: 'Sharper Gratonite language across landing, help, release notes, and self-host docs so the product reads like one system.',
+    spotlight: [
+      {
+        emoji: '🧭',
+        title: 'Clearer Core Terms',
+        description: 'Major landing and help surfaces now introduce Gratonite as community software and explain guilds, channels, forums, and wikis more consistently.',
+        hint: 'Home, Help Center, and self-host docs',
+      },
+      {
+        emoji: '✨',
+        title: 'Less Fallback Framing',
+        description: 'Older portal-heavy and clone-like wording has been trimmed back so the product sounds more like Gratonite and less like a placeholder for something else.',
+        hint: 'Landing copy and release notes',
+      },
+    ],
+    entries: [
+      { type: 'improvement', text: 'Landing, deploy, discover, and self-host surfaces now use clearer community-first wording for Gratonite.' },
+      { type: 'improvement', text: 'Help Center now uses Guilds & Channels terminology and explains where forum and wiki channels fit.' },
+      { type: 'improvement', text: 'Core app labels now favor guild and community wording over older portal phrasing on the main navigation surfaces.' },
+      { type: 'improvement', text: 'Roadmap, release notes, README, and self-host guides now describe the product in plainer, more consistent language.' },
+    ],
+  },
+  {
     id: '2026-04-17b',
     date: 'April 17, 2026',
     title: 'Reliability Foundations for Forums and Production Smoke',

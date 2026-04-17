@@ -600,10 +600,13 @@ export const adminTeamApi = {
 };
 
 export const adminAuditApi = {
-  list: (params?: { limit?: number; offset?: number }) => {
+  list: (params?: { limit?: number; offset?: number; targetType?: string; targetId?: string; actionPrefix?: string }) => {
     const q = new URLSearchParams();
     if (params?.limit) q.set('limit', String(params.limit));
     if (params?.offset) q.set('offset', String(params.offset));
+    if (params?.targetType) q.set('targetType', params.targetType);
+    if (params?.targetId) q.set('targetId', params.targetId);
+    if (params?.actionPrefix) q.set('actionPrefix', params.actionPrefix);
     return apiFetch<{ items: Array<Record<string, unknown>> }>(`/admin/audit-log?${q}`);
   },
 };
@@ -836,7 +839,11 @@ export const referralsApi = {
 };
 
 export const banAppealsApi = {
-  list: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/bans/appeals`),
+  list: (guildId: string, params?: { status?: 'pending' | 'approved' | 'denied' | 'all' }) => {
+    const q = new URLSearchParams();
+    if (params?.status) q.set('status', params.status);
+    return apiFetch<any[]>(`/guilds/${guildId}/bans/appeals${q.toString() ? `?${q.toString()}` : ''}`);
+  },
   submit: (guildId: string, userId: string, text: string) =>
     apiFetch<any>(`/guilds/${guildId}/bans/${userId}/appeal`, { method: 'POST', body: JSON.stringify({ text }) }),
   review: (guildId: string, userId: string, status: 'approved' | 'denied') =>

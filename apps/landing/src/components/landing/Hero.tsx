@@ -71,9 +71,9 @@ export function Hero() {
               className="text-lg sm:text-xl text-foreground/60 max-w-lg mb-8 leading-relaxed"
               style={{ opacity: 0 }}
             >
-              Gratonite is where your group can chat, hop in voice, study, game,
-              trade goofy cosmetics, and just be online together without being
-              nudged, farmed, or boxed in.
+              Gratonite is where your people can chat, hop in voice, study, game,
+              and build a community that feels like theirs without being nudged,
+              farmed, or boxed in.
             </p>
 
             <div data-hero="buttons" className="flex flex-wrap gap-4 mb-12" style={{ opacity: 0 }}>

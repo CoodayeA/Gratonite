@@ -9,9 +9,9 @@ import { CTA } from "@/components/landing/CTA";
 import { SITE_URL, createPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Gratonite Chat | The Open-Source Hangout Platform",
+  title: "Gratonite | Open-Source Community Software",
   description:
-    "Chat, voice, video, self-hosting, and private DMs for communities that want their space to feel owned, not rented. Built by friends, for friends.",
+    "Chat, voice, video, self-hosting, and private DMs for groups that want a real home online. Built by friends, for friends.",
   path: "/",
   keywords: [
     "Gratonite",
@@ -21,7 +21,7 @@ export const metadata: Metadata = createPageMetadata({
     "chat app for friends",
     "gaming voice chat",
     "spatial voice chat",
-    "community platform",
+    "community software",
   ],
 });
 
@@ -32,7 +32,7 @@ const softwareJsonLd = {
   operatingSystem: "Windows, macOS, Linux, Web",
   applicationCategory: "CommunicationApplication",
   description:
-    "An open-source hangout platform with chat, voice, video, self-hosting, and community-made culture.",
+    "Open-source community software with chat, voice, video, self-hosting, and culture that belongs to the people using it.",
   offers: {
     "@type": "Offer",
     price: "0",

@@ -2,7 +2,7 @@ export type Category =
   | 'All'
   | 'Getting Started'
   | 'Account & Security'
-  | 'Servers & Channels'
+  | 'Guilds & Channels'
   | 'Bots & Integrations'
   | 'Billing & Premium'
   | 'Cosmetics & Shop'
@@ -28,22 +28,35 @@ export const ARTICLES: Article[] = [
     body: [
       'Download and install Gratonite from the official website or use the web app at app.gratonite.com.',
       'Create your account by providing a username, email, and password. Verify your email to unlock all features.',
-      'Explore the sidebar to find your servers, direct messages, and notifications panel.',
-      'Join an existing server using an invite link, or create your own server to get started with your community.',
+      'Explore the sidebar to find your guilds, direct messages, and notifications panel.',
+      'Join an existing community using an invite link, or create your own guild to get started.',
       'Customize your experience by visiting Settings to adjust themes, notifications, and privacy preferences.',
     ],
   },
   {
     id: 'creating-server',
-    title: 'Creating Your First Server',
-    description: 'Step-by-step guide to setting up a new server.',
+    title: 'Creating Your First Guild',
+    description: 'Step-by-step guide to setting up a new community guild.',
     category: 'Getting Started',
     body: [
-      'Click the "+" button at the bottom of the server sidebar to begin creating a new server.',
-      'Choose a server template (Community, Gaming, Study Group, or Blank) to pre-populate channels and roles.',
-      'Set your server name, upload a server icon, and optionally write a short description.',
-      'Configure default channels — most servers start with #general, #announcements, and a voice lounge.',
-      'Share your server invite link with friends or post it publicly to start building your community.',
+      'Click the "+" button at the bottom of the guild sidebar to create a new guild.',
+      'Choose a template (Community, Gaming, Study Group, or Blank) to pre-populate roles and starter channels.',
+      'Set your guild name, upload an icon, and add a short description if you want one.',
+      'Start with a few core channels — most guilds begin with #general, #announcements, and a voice lounge.',
+      'Invite people with your guild invite link and keep shaping the space as your community grows.',
+    ],
+  },
+  {
+    id: 'guilds-and-channel-types',
+    title: 'Understanding Guilds and Channel Types',
+    description: 'Learn how Gratonite communities are organized, from guilds to forums and wikis.',
+    category: 'Getting Started',
+    body: [
+      'In Gratonite, the main space for a community is called a guild.',
+      'Channels live inside a guild and keep conversation organized by purpose.',
+      'Chat channels are for day-to-day conversation, while voice channels are for live rooms and calls.',
+      'Forum channels are built for topic-based posts where each post gets its own thread.',
+      'Wiki channels are for living docs, guides, and reference pages your community wants to keep handy.',
     ],
   },
   {
@@ -74,22 +87,22 @@ export const ARTICLES: Article[] = [
   },
   {
     id: 'server-roles',
-    title: 'Managing Server Roles & Permissions',
-    description: 'Understand role hierarchy and permission management.',
-    category: 'Servers & Channels',
+    title: 'Managing Guild Roles & Permissions',
+    description: 'Understand guild role hierarchy and permission management.',
+    category: 'Guilds & Channels',
     body: [
-      'Open Server Settings > Roles to view, create, and manage roles for your server.',
+      'Open Guild Settings > Roles to view, create, and manage roles for your guild.',
       'Roles are ordered by hierarchy — higher roles can manage members with lower roles but not those above them.',
       'Create custom roles with specific permissions like Manage Channels, Kick Members, or Manage Messages.',
       'Assign roles to members by right-clicking their name and selecting "Manage Roles".',
-      'Use channel-specific permission overrides to grant or deny access to individual channels per role.',
+      'Use channel-specific permission overrides to grant or deny access to individual channels for each role.',
     ],
   },
   {
     id: 'voice-channels',
     title: 'Setting Up Voice Channels',
     description: 'Configure voice channels with quality and limit settings.',
-    category: 'Servers & Channels',
+    category: 'Guilds & Channels',
     body: [
       'Create a voice channel by clicking the "+" next to a channel category and selecting "Voice Channel".',
       'Set a user limit (2–99) to control how many people can join simultaneously, or leave unlimited.',
@@ -166,10 +179,10 @@ export const ARTICLES: Article[] = [
   {
     id: 'automod',
     title: 'AutoMod Configuration',
-    description: 'Set up automatic moderation rules for your server.',
-    category: 'Servers & Channels',
+    description: 'Set up automatic moderation rules for your guild.',
+    category: 'Guilds & Channels',
     body: [
-      'Enable AutoMod from Server Settings > Moderation > AutoMod to activate automated content filtering.',
+      'Enable AutoMod from Guild Settings > Moderation > AutoMod to activate automated content filtering.',
       'Configure keyword filters to automatically block or flag messages containing specific words or phrases.',
       'Set up spam detection rules to catch rapid message sending, excessive mentions, or repeated content.',
       'Choose actions for violations: warn the user, delete the message, timeout the member, or log to a mod channel.',
@@ -486,27 +499,27 @@ export const ARTICLES: Article[] = [
   },
   {
     id: 'server-discovery',
-    title: 'Server Discovery',
+    title: 'Community Discovery',
     description: 'Find and join new communities on Gratonite.',
-    category: 'Servers & Channels',
+    category: 'Guilds & Channels',
     body: [
-      'Open the Discover page from the sidebar to browse public servers across all categories.',
-      'Use search, category filters, and tags to narrow down servers that match your interests.',
-      'Featured servers are highlighted at the top of Discover — these are highly rated communities curated by ratings and activity.',
-      'Click any server card to see its description, member count, rating, and category before joining.',
-      'Join a server directly from Discover with one click. You can leave at any time by right-clicking the server icon.',
+      'Open Discover from the sidebar to browse public communities across every category.',
+      'Use search, category filters, and tags to narrow down communities that match your interests.',
+      'Featured communities are highlighted at the top of Discover — these are highly rated spaces curated by ratings and activity.',
+      'Click any community card to see its description, member count, rating, and category before joining.',
+      'Join a community directly from Discover with one click. You can leave at any time by right-clicking the guild icon.',
     ],
   },
   {
     id: 'server-ratings-reviews',
-    title: 'Server Ratings & Reviews',
-    description: 'Rate servers and help the community find great portals.',
-    category: 'Servers & Channels',
+    title: 'Community Ratings & Reviews',
+    description: 'Rate communities and help people find the right fit.',
+    category: 'Guilds & Channels',
     body: [
-      'Rate any server you\'ve joined by right-clicking its icon in the sidebar and selecting "Rate Portal".',
-      'Choose a star rating from 1 to 5 and confirm. Your rating is anonymous and contributes to the server\'s average score.',
-      'You can also rate servers from the FAME Dashboard\'s Server Ratings tab, which shows all discoverable servers.',
-      'Servers with consistently high ratings are prioritized in the Discover Featured section, helping great communities grow.',
+      'Rate any community you\'ve joined by right-clicking its icon in the sidebar and selecting "Rate Community".',
+      'Choose a star rating from 1 to 5 and confirm. Your rating is anonymous and contributes to the community\'s average score.',
+      'You can also rate communities from the FAME Dashboard\'s ratings view, which shows every discoverable community.',
+      'Communities with consistently high ratings are prioritized in the Discover Featured section, helping great spaces grow.',
       'Update your rating at any time — your latest rating replaces your previous one.',
     ],
   },
@@ -526,10 +539,10 @@ export const ARTICLES: Article[] = [
   {
     id: 'word-filters',
     title: 'Word Filters',
-    description: 'Configure automated word filtering for your server.',
-    category: 'Servers & Channels',
+    description: 'Configure automated word filtering for your guild.',
+    category: 'Guilds & Channels',
     body: [
-      'Open Server Settings > Moderation > Word Filters to set up content filtering rules.',
+      'Open Guild Settings > Moderation > Word Filters to set up content filtering rules.',
       'Add words or phrases to the filter list. Each filter can be configured with a specific action: block, delete, or warn.',
       'Block prevents the message from being sent entirely. Delete removes it after sending. Warn sends a private notice to the user.',
       'Use wildcards to catch variations of filtered words — for example, filtering "spam*" catches "spam", "spammer", and "spamming".',
@@ -564,15 +577,15 @@ export const ARTICLES: Article[] = [
   },
   {
     id: 'server-boosts',
-    title: 'Server Boosts',
-    description: 'Boost servers to unlock perks and support communities.',
-    category: 'Servers & Channels',
+    title: 'Guild Boosts',
+    description: 'Boost guilds to unlock perks and support communities.',
+    category: 'Guilds & Channels',
     body: [
-      'Boost a server by right-clicking its icon and selecting "Boost Portal". Each boost contributes to the server\'s boost level.',
-      'Server boost levels unlock perks: higher upload limits, more emoji slots, improved audio quality, and a special boost badge.',
-      'Boosters receive a unique badge next to their name in the boosted server and appear in the server\'s Boost tab.',
+      'Boost a guild by right-clicking its icon and selecting "Boost Guild". Each boost contributes to the guild\'s boost level.',
+      'Guild boost levels unlock perks: higher upload limits, more emoji slots, improved audio quality, and a special boost badge.',
+      'Boosters receive a unique badge next to their name in the boosted guild and appear in the guild\'s Boost tab.',
       'Boosting costs Gratonite currency, not real money — earn it through activity, FAME, and daily rewards.',
-      'View a server\'s current boost level, perks, and contributors in Server Settings > Boosts.',
+      'View a guild\'s current boost level, perks, and contributors in Guild Settings > Boosts.',
     ],
   },
   {
@@ -592,12 +605,12 @@ export const ARTICLES: Article[] = [
     id: 'federation',
     title: 'Federation & Self-Hosting',
     description: 'Understand how Gratonite instances connect and why people self-host.',
-    category: 'Servers & Channels',
+    category: 'Guilds & Channels',
     body: [
-      'Gratonite is federated — like email. Anyone can run their own instance, and all instances can talk to each other. You can use gratonite.chat, a school can run chat.school.edu, and a gaming group can run their own — but everyone can join the same servers.',
+      'Gratonite is federated — like email. Anyone can run their own instance, and all instances can talk to each other. You can use gratonite.chat, a school can run chat.school.edu, and a gaming group can run their own — but everyone can still join the same communities.',
       'Why self-host? You own your data (messages and files stay on your server), you set your own moderation rules (no platform ToS overriding you), and your community survives even if gratonite.chat goes down.',
-      'Federation is seamless for users. Browse federated servers from Discover > Federated tab. Join one just like a local server — click "Join" and it works automatically.',
-      'Messages in federated servers are relayed between instances in real-time. To you, it looks like everyone is in the same room.',
+      'Federation is seamless for users. Browse federated communities from Discover > Federated tab. Join one just like a local guild — click "Join" and it works automatically.',
+      'Messages in federated communities are relayed between instances in real time. To you, it still feels like everyone is in the same room.',
       'All instance-to-instance communication is encrypted and cryptographically signed. The relay network routes messages but never reads them.',
       'Want to self-host? Visit gratonite.chat/deploy — one command sets everything up, including federation. No coding required.',
     ],

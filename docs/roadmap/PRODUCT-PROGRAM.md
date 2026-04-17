@@ -123,6 +123,7 @@ Execution-focused tracker for initiatives that span **search, notifications, fed
 | Initiative | Status | Notes |
 |------------|--------|--------|
 | Landing + SPA | ✅ | Landing (`apps/landing`) + Vite app under `/app/` in production |
+| Product identity & messaging cleanup | ✅ | Landing, help center, release notes, and self-host docs now use consistent community / guild / channel framing — see *Recently shipped* in [`ROADMAP.md`](../../ROADMAP.md) |
 | Service worker / precache | ✅ | Precache manifest validated; invalid-URL guard added to `sw.js` registration — see *Recently shipped* in [`ROADMAP.md`](../../ROADMAP.md) |
 
 ---
