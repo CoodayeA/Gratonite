@@ -5,14 +5,16 @@ Use the `production-smoke` workflow as a post-deploy alarm for the live Gratonit
 ## What the workflow checks
 
 1. Public API health
-2. Public app shell
-3. Releases page
-4. Authenticated chat send
-5. Authenticated forum image post
-6. Authenticated forum image reply
-7. Search
-8. Notification inbox
-9. Server settings load
+2. Public landing page
+3. Public app shell
+4. Releases page
+5. Public service worker + manifest
+6. Authenticated chat send
+7. Authenticated forum image post
+8. Authenticated forum image reply
+9. Search
+10. Notification inbox
+11. Server settings load
 
 ## Required GitHub config
 
@@ -58,3 +60,4 @@ You can dispatch the workflow in two modes:
 - **Scheduled runs** should be authenticated.
 - **Manual runs** can be authenticated or public-only.
 - If authenticated config is missing, the workflow should fail immediately with a clear missing-config error instead of silently skipping the important checks.
+- Every run uploads the Playwright report/traces so deploy failures keep screenshots and browser evidence attached to the workflow.

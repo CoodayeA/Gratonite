@@ -2,7 +2,8 @@
   "name": "gratonite-release-gates",
   "private": true,
   "scripts": {
-    "verify:release:all": "npm --prefix apps/web run verify:prod && pnpm --dir apps/api run verify:release && npm --prefix apps/web run smoke:e2e",
+    "verify:deploy:artifacts": "node tools/check-deploy-artifact-hygiene.mjs",
+    "verify:release:all": "pnpm verify:deploy:artifacts && pnpm --filter gratonite-web run lint && pnpm --filter gratonite-web run guard:placeholders && pnpm --filter gratonite-web run build:vite && pnpm --filter gratonite-web run validate:sw-precache && pnpm --dir apps/landing run build && pnpm --dir apps/api run verify:release && npm --prefix apps/web run smoke:e2e",
     "verify:launch:super-gate": "node tools/verify-launch-super-gate.mjs",
     "install:workspace:no-desktop": "pnpm install --filter \"!gratonite-desktop\"",
     "i18n:check": "node tools/check-i18n-parity.mjs",

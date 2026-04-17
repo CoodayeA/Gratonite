@@ -73,3 +73,28 @@ For the 120-minute post-deploy watch window:
 - Trigger rollback assessment if any `critical` monitor fires.
 - Trigger immediate rollback if any `page` condition is sustained for 10 minutes.
 - Prefer feature kill switch mitigation before artifact rollback where safe.
+
+## Minimum Deploy Verification Evidence
+
+Do not close a deploy without evidence for:
+
+- `https://api.gratonite.chat/health`
+- `https://gratonite.chat/`
+- `https://gratonite.chat/app/`
+- `https://gratonite.chat/releases`
+- `https://gratonite.chat/app/sw.js`
+- `https://gratonite.chat/app/manifest.json`
+
+`deploy/deploy.sh` now checks those public surfaces after container restart. Keep the console output with the deploy record.
+
+## Failure Triage Signals
+
+If deploy verification fails, gather these before deciding rollback:
+
+1. `docker compose -f docker-compose.production.yml ps`
+2. `docker logs --tail 80 gratonite-api`
+3. `docker logs --tail 80 gratonite-web`
+4. `docker logs --tail 80 gratonite-caddy`
+5. Which public surface failed (API, landing, app shell, releases, service worker, or manifest)
+
+Use log tails plus the failing surface to decide whether a kill switch is enough or whether you need an artifact rollback.

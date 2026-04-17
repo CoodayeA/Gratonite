@@ -37,10 +37,15 @@ const webScripts = readScripts(path.join('apps', 'web', 'package.json'));
 const apiScripts = readScripts(path.join('apps', 'api', 'package.json'));
 
 const requiredChecks = [
-  { cmd: 'npm', args: ['--prefix', 'apps/web', 'run', 'verify:prod'], label: 'web verify:prod' },
+  { cmd: 'pnpm', args: ['run', 'verify:deploy:artifacts'], label: 'deploy artifact hygiene' },
+  { cmd: 'pnpm', args: ['--filter', 'gratonite-web', 'run', 'lint'], label: 'web lint' },
+  { cmd: 'pnpm', args: ['--filter', 'gratonite-web', 'run', 'guard:placeholders'], label: 'web guard:placeholders' },
+  { cmd: 'pnpm', args: ['--filter', 'gratonite-web', 'run', 'build:vite'], label: 'web build:vite' },
+  { cmd: 'pnpm', args: ['--filter', 'gratonite-web', 'run', 'validate:sw-precache'], label: 'web validate:sw-precache' },
+  { cmd: 'pnpm', args: ['--dir', 'apps/landing', 'run', 'build'], label: 'landing build' },
   { cmd: 'pnpm', args: ['--dir', 'apps/api', 'run', 'verify:release'], label: 'api verify:release' },
   { cmd: 'npm', args: ['--prefix', 'apps/web', 'run', 'smoke:e2e'], label: 'web smoke:e2e' },
-  { cmd: 'npm', args: ['run', 'verify:release:all'], label: 'root verify:release:all' },
+  { cmd: 'pnpm', args: ['run', 'verify:release:all'], label: 'root verify:release:all' },
 ];
 
 for (const check of requiredChecks) {

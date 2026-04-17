@@ -44,6 +44,8 @@ SERVER=178.156.253.237 USER=ferdinand SSH_KEY=~/.ssh/hetzner_key_new bash deploy
 7. Recreates `api`, `web`, `caddy`, and `livekit`.
 8. Runs database migrations.
 9. Polls the API health endpoint.
+10. Verifies landing, app shell, releases, service worker, and manifest URLs.
+11. Prints remote container diagnostics plus rollback guidance automatically if verification fails.
 
 ## Production Routing Reality
 
@@ -59,6 +61,10 @@ ssh -i ~/.ssh/hetzner_key_new ferdinand@178.156.253.237
 cd ~/gratonite-app
 docker compose -f docker-compose.production.yml ps
 curl -I https://api.gratonite.chat/health
+curl -I https://gratonite.chat/
+curl -I https://gratonite.chat/app/
+curl -I https://gratonite.chat/releases
+curl -I https://gratonite.chat/app/sw.js
 ```
 
 ## Rollback Reality

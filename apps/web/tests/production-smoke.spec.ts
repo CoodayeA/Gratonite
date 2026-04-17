@@ -154,6 +154,12 @@ function imageUploadFile(name: string) {
 test('public production surfaces are healthy', async ({ page, request }) => {
     const health = await request.get(apiHealthUrl);
     expect(health.ok(), `Expected ${apiHealthUrl} to return a 2xx response`).toBeTruthy();
+    const healthBody = await health.json();
+    expect(healthBody).toMatchObject({ status: 'ok' });
+
+    await page.goto('/');
+    await expect(page).toHaveTitle(/Gratonite Chat/i);
+    await expect(page.locator('body')).toContainText(/self-host|private DMs|Gratonite/i);
 
     await page.goto('/app/');
     await expect(page.locator('body')).not.toBeEmpty();
@@ -161,6 +167,16 @@ test('public production surfaces are healthy', async ({ page, request }) => {
 
     await page.goto('/releases');
     await expect(page.locator('body')).toContainText(/What's New|Release|Forum/i);
+
+    const serviceWorker = await request.get('/app/sw.js');
+    expect(serviceWorker.ok(), 'Expected the production service worker to be publicly reachable').toBeTruthy();
+    const serviceWorkerBody = await serviceWorker.text();
+    expect(serviceWorkerBody).toContain('STATIC_ASSETS');
+
+    const manifest = await request.get('/app/manifest.json');
+    expect(manifest.ok(), 'Expected the app manifest to be publicly reachable').toBeTruthy();
+    const manifestBody = await manifest.json();
+    expect(manifestBody).toMatchObject({ name: 'Gratonite', start_url: '/app/' });
 });
 
 test.describe('authenticated production critical flows', () => {

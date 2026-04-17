@@ -35,6 +35,9 @@ jobs:
       - name: E2E primitives — doc paths
         run: pnpm audit:e2e
 
+      - name: Deploy artifacts — ownership and ignore hygiene
+        run: pnpm verify:deploy:artifacts
+
       # API: typecheck + lint + placeholder guard (no live DB)
       - name: API — build, lint, guard
         run: |
@@ -57,3 +60,6 @@ jobs:
 
       - name: Web — SW precache integrity check
         run: pnpm --filter gratonite-web run validate:sw-precache
+
+      - name: Landing — static export build
+        run: pnpm --dir apps/landing run build

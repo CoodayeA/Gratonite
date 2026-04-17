@@ -24,14 +24,71 @@ fi
 SSH_KEY="${SSH_KEY}"
 REMOTE_DIR="${REMOTE_DIR:-/home/$USER/gratonite-app}"
 API_HEALTH_URL="${API_HEALTH_URL:-https://api.gratonite.chat/health}"
+LANDING_BASE_URL="${LANDING_BASE_URL:-https://gratonite.chat/}"
+APP_BASE_URL="${APP_BASE_URL:-https://gratonite.chat/app/}"
+RELEASES_URL="${RELEASES_URL:-https://gratonite.chat/releases}"
+SERVICE_WORKER_URL="${SERVICE_WORKER_URL:-https://gratonite.chat/app/sw.js}"
+WEB_MANIFEST_URL="${WEB_MANIFEST_URL:-https://gratonite.chat/app/manifest.json}"
+CURRENT_STEP="initial checks"
 
 if [[ ! -f "$SSH_KEY" ]]; then
   echo "❌ SSH key not found: $SSH_KEY"
   exit 1
 fi
 
+print_remote_diagnostics() {
+  echo ""
+  echo "📋 Remote diagnostics (best effort)"
+  ssh -i "$SSH_KEY" "$USER@$SERVER" "REMOTE_DIR='$REMOTE_DIR' bash -s" << 'ENDSSH' || true
+set -euo pipefail
+cd "$REMOTE_DIR"
+echo "--- docker compose ps ---"
+docker compose -f docker-compose.production.yml ps || true
+echo ""
+echo "--- gratonite-api (tail 80) ---"
+docker logs --tail 80 gratonite-api || true
+echo ""
+echo "--- gratonite-web (tail 80) ---"
+docker logs --tail 80 gratonite-web || true
+echo ""
+echo "--- gratonite-caddy (tail 80) ---"
+docker logs --tail 80 gratonite-caddy || true
+ENDSSH
+}
+
+print_rollback_guidance() {
+  cat <<EOF
+
+↩️  Rollback guidance
+1. Check the failing service in the diagnostics above (`docker compose ps`, API/web/Caddy logs).
+2. If user-facing surfaces are still broken, redeploy a known-good commit:
+   git checkout <known-good-commit>
+   SERVER=$SERVER USER=$USER SSH_KEY=$SSH_KEY bash deploy/deploy.sh
+3. Re-verify:
+   - $API_HEALTH_URL
+   - $LANDING_BASE_URL
+   - $APP_BASE_URL
+   - $RELEASES_URL
+4. Follow docs/launch/ROLLBACK_RUNBOOK.md and docs/DEPLOY-TO-OWN-SERVER.md for the full playbook.
+EOF
+}
+
+on_error() {
+  local exit_code=$?
+  echo ""
+  echo "❌ Deployment failed during: $CURRENT_STEP"
+  if [[ "$CURRENT_STEP" == remote* || "$CURRENT_STEP" == public* || "$CURRENT_STEP" == health* ]]; then
+    print_remote_diagnostics
+  fi
+  print_rollback_guidance
+  exit "$exit_code"
+}
+
+trap on_error ERR
+
 echo ""
 echo "📦 Step 1: Building application locally..."
+CURRENT_STEP="local build"
 cd "$(dirname "$0")/.."
 
 # Install from repo root with filters to avoid EPERM on the Electron binary in
@@ -60,6 +117,7 @@ echo "✅ Build complete!"
 
 echo ""
 echo "📤 Step 2: Creating deployment package..."
+CURRENT_STEP="local packaging"
 rm -rf deploy/api deploy/web/dist deploy/landing
 mkdir -p deploy/api deploy/web/dist deploy/landing
 
@@ -80,6 +138,7 @@ echo "✅ Package created!"
 
 echo ""
 echo "📡 Step 3: Uploading to server..."
+CURRENT_STEP="remote upload"
 ssh -i "$SSH_KEY" "$USER@$SERVER" "mkdir -p '$REMOTE_DIR'"
 
 # Protect server-only env files from deletion/overwrite.
@@ -95,6 +154,7 @@ echo "✅ Upload complete!"
 
 echo ""
 echo "🛡️  Step 4: Remote preflight checks..."
+CURRENT_STEP="remote preflight"
 ssh -i "$SSH_KEY" "$USER@$SERVER" "REMOTE_DIR='$REMOTE_DIR' bash -s" << 'ENDSSH'
 set -euo pipefail
 cd "$REMOTE_DIR"
@@ -102,7 +162,7 @@ cd "$REMOTE_DIR"
 set_env() {
   key="$1"
   value="$2"
-  tmp_file="$(mktemp)"
+  tmp_file=".env.update.$$"
   awk -v key="$key" -v value="$value" '
     BEGIN { done = 0 }
     index($0, key "=") == 1 {
@@ -201,6 +261,7 @@ ENDSSH
 
 echo ""
 echo "🐳 Step 5: Restarting containers on server..."
+CURRENT_STEP="remote restart"
 ssh -i "$SSH_KEY" "$USER@$SERVER" "REMOTE_DIR='$REMOTE_DIR' bash -s" << 'ENDSSH'
 set -euo pipefail
 cd "$REMOTE_DIR"
@@ -243,19 +304,33 @@ echo ""
 ENDSSH
 
 echo ""
-echo "🔍 Step 6: Health check..."
+echo "🔍 Step 6: Release verification..."
+CURRENT_STEP="health checks"
 for i in {1..20}; do
   code="$(curl -sS -m 10 -o /dev/null -w "%{http_code}" "$API_HEALTH_URL" || true)"
   if [[ "$code" == "200" ]]; then
     echo "✅ API health check passed: $API_HEALTH_URL"
-    echo ""
-    echo "🎉 Deployment successful!"
-    echo ""
-    exit 0
+    break
+  fi
+  if [[ "$i" == "20" ]]; then
+    echo "❌ API health check failed after deploy: $API_HEALTH_URL"
+    exit 1
   fi
   echo "  Waiting for API health... (attempt $i/20, status=${code:-n/a})"
   sleep 3
 done
 
-echo "❌ API health check failed after deploy: $API_HEALTH_URL"
-exit 1
+CURRENT_STEP="public release verification"
+API_HEALTH_URL="$API_HEALTH_URL" \
+LANDING_BASE_URL="$LANDING_BASE_URL" \
+APP_BASE_URL="$APP_BASE_URL" \
+RELEASES_URL="$RELEASES_URL" \
+SERVICE_WORKER_URL="$SERVICE_WORKER_URL" \
+WEB_MANIFEST_URL="$WEB_MANIFEST_URL" \
+node tools/verify-release-surfaces.mjs
+
+trap - ERR
+
+echo ""
+echo "🎉 Deployment successful!"
+echo ""

@@ -44,9 +44,19 @@ jobs:
           DEPLOY_SERVER: ${{ vars.DEPLOY_SERVER }}
           DEPLOY_USER: ${{ vars.DEPLOY_USER }}
           API_HEALTH_URL: ${{ vars.API_HEALTH_URL }}
+          LANDING_BASE_URL: ${{ vars.LANDING_BASE_URL }}
+          APP_BASE_URL: ${{ vars.APP_BASE_URL }}
+          RELEASES_URL: ${{ vars.RELEASES_URL }}
+          SERVICE_WORKER_URL: ${{ vars.SERVICE_WORKER_URL }}
+          WEB_MANIFEST_URL: ${{ vars.WEB_MANIFEST_URL }}
         run: |
           SERVER="${DEPLOY_SERVER:-178.156.253.237}" \
           USER="${DEPLOY_USER:-ferdinand}" \
           SSH_KEY="$HOME/.ssh/deploy_key" \
           API_HEALTH_URL="${API_HEALTH_URL:-https://api.gratonite.chat/health}" \
+          LANDING_BASE_URL="${LANDING_BASE_URL:-https://gratonite.chat/}" \
+          APP_BASE_URL="${APP_BASE_URL:-https://gratonite.chat/app/}" \
+          RELEASES_URL="${RELEASES_URL:-https://gratonite.chat/releases}" \
+          SERVICE_WORKER_URL="${SERVICE_WORKER_URL:-https://gratonite.chat/app/sw.js}" \
+          WEB_MANIFEST_URL="${WEB_MANIFEST_URL:-https://gratonite.chat/app/manifest.json}" \
           bash deploy/deploy.sh

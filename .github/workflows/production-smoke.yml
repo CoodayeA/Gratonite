@@ -83,3 +83,13 @@ jobs:
           SMOKE_PUBLIC_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.public_only || false }}
           SMOKE_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
         run: pnpm --filter gratonite-web run smoke:production
+
+      - name: Upload production smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-smoke-report-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          path: |
+            apps/web/playwright-report-production
+            apps/web/test-results

@@ -90,7 +90,7 @@ Execution-focused tracker for initiatives that span **search, notifications, fed
 | Web container nginx | ✅ | `deploy/web/nginx.conf` (SPA under `/app/` in the web image; front door often Caddy in `docker-compose.production.yml`) |
 | Extended infra metrics (disk, LiveKit, etc.) | ✅ | Memory, CPU load, BullMQ queues, Redis history, LiveKit room count — `apps/api/src/routes/metrics.ts` — see *Recently shipped* in [`ROADMAP.md`](../../ROADMAP.md) |
 
-**CI note:** `.github/workflows/release-gates.yml` runs i18n strict, E2E doc audit, API build/lint/guard, **OpenAPI validate**, web lint/guard/**Vite build**. Run root `pnpm verify:release:all` locally for the full release gate (includes API `verify:release` + web smoke) when you have DB/env — see root `package.json` and [`DEVELOPMENT.md`](../../DEVELOPMENT.md).
+**CI note:** `.github/workflows/release-gates.yml` runs i18n strict, E2E doc audit, deploy artifact hygiene, API build/lint/guard, **OpenAPI validate**, web lint/guard/**Vite build**, service worker validation, and the landing build. Run root `pnpm verify:release:all` locally for the full release gate (adds API `verify:release` + web smoke when you have DB/env) — see root `package.json` and [`DEVELOPMENT.md`](../../DEVELOPMENT.md).
 
 ---
 
