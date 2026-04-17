@@ -26,7 +26,7 @@ export default function SelfHostingDocs() {
               {[
                 { title: 'Own Your Data', desc: 'Messages and files live on your server. If gratonite.chat goes down, your community keeps running.' },
                 { title: 'Your Rules', desc: 'No platform-wide content policies overriding your moderation. Schools, companies, and communities set their own rules.' },
-                { title: 'Stay Connected', desc: 'Federation links all instances. Your users can join servers on gratonite.chat and vice versa.' },
+                { title: 'Stay Connected', desc: 'Federation links all instances. Your users can join communities on gratonite.chat and vice versa.' },
               ].map(item => (
                 <div key={item.title} className="p-4 rounded-lg bg-surface neo-border-2">
                   <p className="font-semibold mb-1">{item.title}</p>
@@ -125,7 +125,7 @@ export default function SelfHostingDocs() {
             <h2 className="font-display text-2xl font-bold mb-4">What You Get</h2>
             <div className="grid sm:grid-cols-2 gap-4">
               {[
-                { title: 'Federation', desc: 'Your instance joins the Gratonite network. Users can cross-join servers.' },
+                { title: 'Federation', desc: 'Your instance joins the Gratonite network. Users can cross-join communities.' },
                 { title: 'Relay Network', desc: 'Works behind NAT — no ports to open, no firewall rules.' },
                 { title: 'Voice & Video', desc: 'Optional LiveKit integration for voice channels and screen sharing.' },
                 { title: 'E2E Encryption', desc: 'All DMs are end-to-end encrypted. Relay traffic is encrypted too.' },
@@ -178,7 +178,7 @@ export default function SelfHostingDocs() {
               <p>docker compose restart api</p>
             </div>
             <p className="text-sm text-foreground/50">
-              Your public servers will appear on{' '}
+              Your public communities will appear on{' '}
               <a href="https://gratonite.chat/app/discover" className="text-purple hover:underline">Discover</a>{' '}
               within 48 hours. Learn more: <a href="/federation" className="text-purple hover:underline">How Federation Works &rarr;</a>
             </p>

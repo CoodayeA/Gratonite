@@ -20,7 +20,7 @@ export const metadata: Metadata = createPageMetadata({
 const included = [
   "Unlimited messages",
   "Voice and video hangouts",
-  "Servers, channels, and threads",
+  "Guilds, channels, and threads",
   "Community bots and themes",
   "Cosmetics, collectibles, and auction house",
   "Desktop and browser access",

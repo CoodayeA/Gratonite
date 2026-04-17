@@ -141,7 +141,7 @@ export default function FederationPage() {
             </div>
             <p className="text-sm text-gray-500 mt-4">
               The best part: it doesn&apos;t have to be one or the other. Federation means users on
-              gratonite.chat and users on your self-hosted instance can be in the same servers together.
+              gratonite.chat and users on your self-hosted instance can be in the same communities together.
             </p>
           </div>
         </ScrollReveal>

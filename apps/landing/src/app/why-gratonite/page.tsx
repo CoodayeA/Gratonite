@@ -66,7 +66,7 @@ const faqs = [
   {
     question: "Is Gratonite free for large communities?",
     answer:
-      "Yes. There are no user limits, no message limits, and no premium tiers required for larger servers.",
+      "Yes. There are no user limits, no message limits, and no premium tiers required for larger communities.",
   },
 ];
 

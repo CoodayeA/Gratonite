@@ -1,6 +1,6 @@
 # Gratonite Self-Hosting Guide
 
-Host your own Gratonite instance — a fully-featured community chat platform with real-time messaging, voice/video, guilds (servers), DMs, threads, moderation, and end-to-end encrypted private messages.
+Host your own Gratonite instance — a fully featured community system with real-time messaging, voice/video, guilds, channels, DMs, threads, moderation, and end-to-end encrypted private messages.
 
 Everything runs in Docker containers. You do **not** need Node.js, npm, or any build tools on your server.
 
@@ -283,7 +283,7 @@ Add this line (replace `/path/to/` with your actual paths):
 
 ## Federation: Connect to Other Instances
 
-Federation lets your Gratonite instance communicate with other Gratonite instances. Users on your instance can discover and visit servers hosted on other instances, and your public servers can appear on the [Gratonite Discover](https://gratonite.chat/app/discover) directory.
+Federation lets your Gratonite instance communicate with other Gratonite instances. Users on your instance can discover and join communities hosted on other instances, and your public communities can appear on the [Gratonite Discover](https://gratonite.chat/app/discover) directory.
 
 **Federation is enabled by default in the self-host templates.** You can disable it by setting `FEDERATION_ENABLED=false`.
 
@@ -315,30 +315,30 @@ curl https://your-domain.com/.well-known/gratonite
 
 You should see a JSON response containing your instance's public key and federation endpoints. If you see this, federation is working.
 
-### How to List Your Servers on Gratonite Discover
+### How to List Your Communities on Gratonite Discover
 
-Once federation is enabled, mark which of your servers should be publicly discoverable:
+Once federation is enabled, mark which of your communities should be publicly discoverable:
 
 1. Open your Gratonite instance in a browser and log in
-2. Go to a server you want to list publicly
-3. Open **Server Settings** (click the server name > Server Settings)
+2. Go to a guild you want to list publicly
+3. Open **Guild Settings** (click the guild name > Guild Settings)
 4. Go to **Overview**
-5. Enable the **"Listed in Server Discovery"** toggle
-6. Optionally add a description and tags to help people find your server
+5. Enable the discovery listing toggle
+6. Optionally add a description and tags to help people find your community
 
-Your discoverable servers sync automatically and appear in the **"Self-Hosted Servers"** section after trust checks.
+Your discoverable communities sync automatically and appear in the **"Self-Hosted Communities"** section after trust checks.
 
-### How to Verify Your Servers Appear on Discover
+### How to Verify Your Communities Appear on Discover
 
-After enabling federation and marking servers as discoverable, allow time for trust checks (typically ~48h with no abuse reports), then:
+After enabling federation and marking communities as discoverable, allow time for trust checks (typically ~48h with no abuse reports), then:
 
 1. Visit [gratonite.chat/app/discover](https://gratonite.chat/app/discover)
-2. Scroll to the **"Self-Hosted Servers"** section
-3. Your servers should appear with their name, description, and member count
+2. Scroll to the **"Self-Hosted Communities"** section
+3. Your communities should appear with their name, description, and member count
 
 If they don't appear after 30 minutes, check:
 - Federation is enabled: `curl https://your-domain.com/.well-known/gratonite` returns JSON
-- Your server is marked as discoverable in Server Settings
+- Your guild is marked as discoverable in Guild Settings
 - Check API logs: `docker compose -f deploy/self-host/docker-compose.yml logs api --tail 30`
 
 ### Federation Security
@@ -411,7 +411,7 @@ docker compose -f deploy/self-host/docker-compose.yml --profile voice up -d
 | `FEDERATION_ENABLED` | `true` (self-host template) | Master switch — enables all federation features |
 | `FEDERATION_ALLOW_INBOUND` | `true` | Accept requests from other Gratonite instances |
 | `FEDERATION_ALLOW_OUTBOUND` | `true` | Send requests to other Gratonite instances |
-| `FEDERATION_ALLOW_JOINS` | `true` | Allow users from other instances to join your servers |
+| `FEDERATION_ALLOW_JOINS` | `true` | Allow users from other instances to join your guilds |
 | `FEDERATION_ALLOW_REPLICATION` | `false` | Enable server replication for redundancy |
 | `FEDERATION_HUB_URL` | `https://gratonite.chat` | Hub URL for Discover registration (only change for private networks) |
 
@@ -457,7 +457,7 @@ All services communicate over a private Docker bridge network. **Only Caddy expo
 | **setup** | `ghcr.io/coodayea/gratonite-setup` | Runs once on first start: creates database tables, generates secrets, creates your admin account |
 | **api** | `ghcr.io/coodayea/gratonite-api` | The backend: handles all API requests, WebSocket connections, real-time messaging |
 | **web** | `ghcr.io/coodayea/gratonite-web` | The frontend: serves the React web app via nginx |
-| **postgres** | `postgres:16-alpine` | Database: stores all your data (users, messages, servers, etc.) |
+| **postgres** | `postgres:16-alpine` | Database: stores all your data (users, messages, guilds, etc.) |
 | **redis** | `redis:7-alpine` | Cache: rate limiting, session data, real-time pub/sub |
 | **caddy** | `caddy:2-alpine` | Reverse proxy: handles HTTPS certificates automatically via Let's Encrypt |
 
@@ -501,7 +501,7 @@ docker compose -f deploy/self-host/docker-compose.yml logs api --tail 50
 
 1. **Check it's enabled:** `curl https://your-domain.com/.well-known/gratonite` should return JSON with your public key.
 2. **Check logs:** `docker compose -f deploy/self-host/docker-compose.yml logs api --tail 30` — look for `[federation]` lines.
-3. **Servers not on Discover:** Make sure `FEDERATION_DISCOVER_REGISTRATION=true` is set, you restarted the API, and your servers are marked as discoverable in Server Settings. Wait up to 30 minutes for the sync.
+3. **Communities not on Discover:** Make sure `FEDERATION_DISCOVER_REGISTRATION=true` is set, you restarted the API, and your guilds are marked as discoverable in Guild Settings. Wait up to 30 minutes for the sync.
 
 ### Run migrations manually
 
@@ -540,7 +540,7 @@ For larger instances (1000+ users), increase RAM to 4 GB and consider dedicated 
 
 ## Migrating from Another Instance
 
-Gratonite supports account export and import. If you're migrating from another Gratonite instance, users can export their account (profile, settings, friend list, server memberships) and import it on your instance. See the [Federation Guide](federation-guide.md) for details.
+Gratonite supports account export and import. If you're migrating from another Gratonite instance, users can export their account (profile, settings, friend list, guild memberships) and import it on your instance. See the [Federation Guide](federation-guide.md) for details.
 
 ---
 

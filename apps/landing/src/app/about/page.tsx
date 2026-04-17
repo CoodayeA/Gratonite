@@ -27,7 +27,7 @@ const team = [
   {
     name: "Creators",
     role: "Cosmetics Builders",
-    bio: "Designers and artists building skins, effects, and collectibles that make every server feel unique.",
+    bio: "Designers and artists building skins, effects, and collectibles that make every guild feel unique.",
     color: "bg-blue-light",
   },
   {
