@@ -136,20 +136,18 @@ reportsRouter.get(
     const offset = Number(req.query.offset) || 0;
     const statusFilter = normalizeReportStatus(req.query.status as string | undefined);
     const targetTypeFilter = req.query.targetType as string | undefined;
+    const conditions = [];
+    if (statusFilter) conditions.push(eq(reports.status, statusFilter));
+    if (targetTypeFilter) conditions.push(eq(reports.targetType, targetTypeFilter));
+    const whereClause = conditions.length ? and(...conditions) : undefined;
 
-    let items = await db
+    const items = await db
       .select()
       .from(reports)
+      .where(whereClause)
       .orderBy(desc(reports.createdAt))
       .limit(limit)
       .offset(offset);
-
-    if (statusFilter) {
-      items = items.filter((r) => r.status === statusFilter);
-    }
-    if (targetTypeFilter) {
-      items = items.filter((r) => r.targetType === targetTypeFilter);
-    }
 
     if (items.length === 0) {
       res.json({ items: [] });

@@ -347,13 +347,13 @@ export default function AdminModerationWorkspace() {
     }
     setNoteDraft('');
     if (selectedReport.subjectGuildId && guilds.some((guild) => guild.id === selectedReport.subjectGuildId)) {
-      setSelectedGuildId(selectedReport.subjectGuildId);
+      setSelectedGuildId((current) => current === selectedReport.subjectGuildId ? current : selectedReport.subjectGuildId!);
       return;
     }
-    if (!selectedGuildId && guilds[0]?.id) {
-      setSelectedGuildId(guilds[0].id);
+    if (guilds[0]?.id) {
+      setSelectedGuildId((current) => current || guilds[0].id);
     }
-  }, [guilds, selectedGuildId, selectedReport]);
+  }, [guilds, selectedReport]);
 
   useEffect(() => {
     let cancelled = false;
