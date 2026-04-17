@@ -12,10 +12,10 @@ export const metadata: Metadata = createPageMetadata({
   path: "/why-gratonite/",
   keywords: [
     "why Gratonite",
-    "open source community platform",
+    "open source community software",
     "no ads chat app",
     "privacy-first community",
-    "federated community platform",
+    "federated community software",
   ],
 });
 
@@ -126,7 +126,7 @@ export default function WhyGratonitePage() {
               What you get with Gratonite
             </h2>
             <p className="text-foreground/60 mb-10 max-w-xl">
-              The stuff that matters, without the platform baggage.
+              The stuff that matters, without the ads, gates, and rented-space baggage.
             </p>
           </ScrollReveal>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -204,7 +204,7 @@ export default function WhyGratonitePage() {
               Ready to try?
             </h2>
             <p className="text-white/60 text-lg mb-8 max-w-xl mx-auto">
-              Join a community platform that treats people like people. No credit
+              Join a community app that treats people like people. No credit
               card, no phone number, no catch.
             </p>
             <div className="flex flex-wrap justify-center gap-4">

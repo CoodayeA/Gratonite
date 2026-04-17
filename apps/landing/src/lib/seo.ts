@@ -82,7 +82,7 @@ export function articleKeywords(postTitle: string, slug: string) {
   return [
     "Gratonite",
     "Gratonite Chat",
-    "open source hangout platform",
+    "open source community software",
     "open source chat app",
     "privacy-first chat app",
     "self-hosted chat",

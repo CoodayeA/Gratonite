@@ -236,7 +236,7 @@ export default function HelpCenter() {
             color: 'var(--text-secondary)',
           }}
         >
-          Find answers to common questions
+          Find answers about guilds, chats, privacy, and self-hosting
         </p>
 
         {/* Search */}

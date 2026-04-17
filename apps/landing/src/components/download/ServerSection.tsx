@@ -35,7 +35,7 @@ export function ServerSection() {
         </h2>
         <p className="text-foreground/60 text-base mb-10 max-w-lg">
           Start with a Gratonite guild for your community, then add the channels
-          you need — chat, voice, forum, wiki, and more. Use ours for free, or
+          you need — chat, voice, forum, documents, and more. Use ours for free, or
           host it yourself.
         </p>
       </ScrollReveal>

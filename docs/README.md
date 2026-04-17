@@ -1,6 +1,6 @@
 # Documentation index
 
-Start here if you want the practical docs instead of the full repo tour.
+Start here for the practical docs behind Gratonite — self-hosting, federation, operations, and local development.
 
 | Document | Purpose |
 |----------|---------|

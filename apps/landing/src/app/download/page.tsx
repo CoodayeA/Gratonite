@@ -7,14 +7,14 @@ import { MobileSection } from "@/components/download/MobileSection";
 import { ServerSection } from "@/components/download/ServerSection";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Download Gratonite | Desktop, Mobile, and Server",
+  title: "Download Gratonite | Desktop, Mobile, and Self-Hosting",
   description:
-    "Download Gratonite for macOS, Windows, Linux, iOS, or Android. Or host your own instance with one click. Free, open source, no ads.",
+    "Download Gratonite for macOS, Windows, Linux, iOS, or Android, or launch your own self-hosted community in minutes. Free, open source, no ads.",
   path: "/download/",
   keywords: [
     "Gratonite download",
     "chat app download",
-    "open source community platform download",
+    "open source community software download",
     "self-host chat",
     "open source chat app",
     "macOS chat app",

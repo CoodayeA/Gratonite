@@ -11,12 +11,12 @@ import { SITE_URL, createPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = createPageMetadata({
   title: "Gratonite | Open-Source Community Software",
   description:
-    "Chat, voice, video, self-hosting, and private DMs for groups that want a real home online. Built by friends, for friends.",
+    "Chat, voice, video, self-hosting, and private DMs for communities that want a real home online. Built by friends, for friends.",
   path: "/",
   keywords: [
     "Gratonite",
     "Gratonite Chat",
-    "open source community platform",
+    "open source community software",
     "free open source chat",
     "chat app for friends",
     "gaming voice chat",

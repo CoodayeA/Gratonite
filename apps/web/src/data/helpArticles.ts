@@ -49,14 +49,14 @@ export const ARTICLES: Article[] = [
   {
     id: 'guilds-and-channel-types',
     title: 'Understanding Guilds and Channel Types',
-    description: 'Learn how Gratonite communities are organized, from guilds to forums and wikis.',
+    description: 'Learn how Gratonite communities are organized, from guilds to forums and document channels.',
     category: 'Getting Started',
     body: [
       'In Gratonite, the main space for a community is called a guild.',
       'Channels live inside a guild and keep conversation organized by purpose.',
       'Chat channels are for day-to-day conversation, while voice channels are for live rooms and calls.',
       'Forum channels are built for topic-based posts where each post gets its own thread.',
-      'Wiki channels are for living docs, guides, and reference pages your community wants to keep handy.',
+      'Document channels are wiki-style spaces for living docs, guides, and reference pages your community wants to keep handy.',
     ],
   },
   {
@@ -608,7 +608,7 @@ export const ARTICLES: Article[] = [
     category: 'Guilds & Channels',
     body: [
       'Gratonite is federated — like email. Anyone can run their own instance, and all instances can talk to each other. You can use gratonite.chat, a school can run chat.school.edu, and a gaming group can run their own — but everyone can still join the same communities.',
-      'Why self-host? You own your data (messages and files stay on your server), you set your own moderation rules (no platform ToS overriding you), and your community survives even if gratonite.chat goes down.',
+      'Why self-host? You own your data (messages and files stay on your server), you set your own moderation rules (no hosted-service ToS overriding you), and your community survives even if gratonite.chat goes down.',
       'Federation is seamless for users. Browse federated communities from Discover > Federated tab. Join one just like a local guild — click "Join" and it works automatically.',
       'Messages in federated communities are relayed between instances in real time. To you, it still feels like everyone is in the same room.',
       'All instance-to-instance communication is encrypted and cryptographically signed. The relay network routes messages but never reads them.',

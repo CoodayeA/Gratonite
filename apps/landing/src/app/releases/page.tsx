@@ -7,14 +7,14 @@ import { createPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = createPageMetadata({
   title: "Release Notes & Roadmap | Gratonite",
   description:
-    "See what is new in Gratonite Chat: release notes, changelogs, and the next things we are building.",
+    "See what is new in Gratonite Chat: release notes, changelogs, and what we are building next.",
   path: "/releases/",
   keywords: [
     "Gratonite release notes",
     "Gratonite changelog",
     "Gratonite roadmap",
     "Gratonite updates",
-    "open source community platform updates",
+    "open source community software updates",
   ],
 });
 
@@ -26,7 +26,7 @@ const releases = [
     accent: "purple" as const,
     changes: [
       "Landing and deploy pages now describe Gratonite as community software with clearer guild and channel language",
-      "Download and discover surfaces now introduce guilds, channels, forums, and wikis more consistently",
+      "Download and discover surfaces now introduce guilds, channels, forums, and documents more consistently",
       "In-app help and navigation now favor guild and community wording over older portal phrasing on core surfaces",
       "README, roadmap, and self-host guides now explain Gratonite's core terms in plain language",
     ],

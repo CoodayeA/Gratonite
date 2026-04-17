@@ -72,7 +72,7 @@ export function Hero() {
               style={{ opacity: 0 }}
             >
               Gratonite is where your people can chat, hop in voice, study, game,
-              and build a community that feels like theirs without being nudged,
+              and build a community space that feels like theirs — not nudged,
               farmed, or boxed in.
             </p>
 

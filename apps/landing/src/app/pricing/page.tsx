@@ -12,7 +12,7 @@ export const metadata: Metadata = createPageMetadata({
   keywords: [
     "Gratonite pricing",
     "is Gratonite free",
-    "free community platform",
+    "free community software",
     "open source chat no ads",
   ],
 });

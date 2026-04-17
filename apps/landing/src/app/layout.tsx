@@ -36,11 +36,11 @@ export const metadata: Metadata = {
   keywords: [
     "Gratonite",
     "Gratonite Chat",
-    "open source community platform",
+    "open source community software",
     "free chat app",
     "spatial voice chat",
     "community chat app",
-    "gaming community platform",
+    "gaming community chat",
     "privacy-first chat app",
   ],
   category: "technology",

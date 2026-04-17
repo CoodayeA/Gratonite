@@ -12,7 +12,7 @@ export const metadata: Metadata = createPageMetadata({
   keywords: [
     "Gratonite federation",
     "decentralized chat",
-    "federated community platform",
+    "federated community software",
     "self-hosted chat federation",
     "open source federated messaging",
   ],

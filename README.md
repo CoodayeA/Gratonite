@@ -22,11 +22,11 @@ Chat, voice, video, self-hosting, end-to-end encrypted DMs, and federation — n
 
 Gratonite is community software for people who want chat to feel like hanging out again, not managing another work app. You can use [gratonite.chat](https://gratonite.chat), or run your own instance in one command. Either way, your community stays yours.
 
-In Gratonite, a community space is called a **guild**. Inside a guild you add **channels** for the kind of conversation you need: chat, voice, forum, wiki, Q&A, and more.
+In Gratonite, a community space is called a **guild**. Inside a guild you add **channels** for the kind of conversation you need: chat, voice, forum, documents, Q&A, and more.
 
 ## Why people switch to Gratonite
 
-- **It feels owned, not rented.** Self-host in minutes or use the hosted app without handing your community culture over to a platform.
+- **It feels owned, not rented.** Self-host in minutes or use the hosted app without handing your community culture over to someone else’s rules.
 - **DMs are end-to-end encrypted by default.** Private conversations stay private without toggles, setup, or silent fallback.
 - **Federation keeps you connected.** Independent instances can still message, host communities, and join voice together.
 - **Core features are included.** Chat, voice, video, moderation, threads, and community tools are not locked behind a subscription.

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ScrollReveal } from "@/components/effects/ScrollReveal";
 
-const servers = [
+const communities = [
   {
     name: "Arclight Guild",
     description: "Friends building games and tools together after work.",
@@ -60,7 +60,7 @@ const servers = [
 const bots = [
   {
     name: "Relay",
-    description: "Cross-server updates so your group never misses a thing.",
+    description: "Cross-community updates so your group never misses a thing.",
     author: "Lysia",
     uses: "3.1k",
   },
@@ -172,11 +172,11 @@ export function DiscoverContent() {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 relative z-0">
-            {servers.map((server, i) => (
-              <ScrollReveal key={server.name} delay={i * 0.08}>
-                <Card accent={server.accent} className="h-full">
+            {communities.map((community, i) => (
+              <ScrollReveal key={community.name} delay={i * 0.08}>
+                <Card accent={community.accent} className="h-full">
                   <div className="flex items-center justify-between mb-3">
-                    <Badge color={server.accent}>{server.tag}</Badge>
+                    <Badge color={community.accent}>{community.tag}</Badge>
                     <Button
                       variant="primary"
                       size="sm"
@@ -186,17 +186,17 @@ export function DiscoverContent() {
                     </Button>
                   </div>
                   <h3 className="font-display text-xl font-bold mb-1">
-                    {server.name}
+                    {community.name}
                   </h3>
                   <p className="text-foreground/60 text-sm mb-4">
-                    {server.description}
+                    {community.description}
                   </p>
                   <div className="flex items-center gap-3 text-xs font-bold text-foreground/40">
                     <span className="flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-green-500" />
-                      {server.online} online
+                      {community.online} online
                     </span>
-                    <span>{server.members} members</span>
+                    <span>{community.members} members</span>
                   </div>
                 </Card>
               </ScrollReveal>

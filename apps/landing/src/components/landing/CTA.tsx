@@ -55,8 +55,8 @@ export function CTA() {
           </h2>
           <p className="text-lg text-white/60 max-w-lg mx-auto mb-8 relative z-10">
             Bring your people somewhere that feels owned, not rented. Chat,
-            voice, collectibles, self-hosting, and room for a real community
-            culture.
+            voice, collectibles, self-hosting, and room for a community
+            culture that actually feels like yours.
           </p>
           <div className="flex flex-wrap justify-center gap-4 relative z-10">
             <Button variant="secondary" size="lg" href="/download">
