@@ -24,6 +24,40 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-04-17a',
+    date: 'April 17, 2026',
+    title: 'Forum Image Uploads, Replies, and Post Cards',
+    tagline: 'Forum channels now handle image posts and replies directly, with better previews, tags, and safer posting behavior.',
+    spotlight: [
+      {
+        emoji: '🖼️',
+        title: 'Forum Image Posts',
+        description: 'Create forum posts with a title plus images, files, or text. Uploads now belong to the forum post itself, so attachments no longer disappear into the hidden chat flow.',
+        hint: 'Forum channel → New Post → attach an image or file',
+      },
+      {
+        emoji: '💬',
+        title: 'Attachment Replies',
+        description: 'Replies inside a forum post support the same attachment flow, including paste, preview, remove, retry, and upload progress.',
+        hint: 'Open a forum post → attach a file in the reply composer',
+      },
+      {
+        emoji: '🏷️',
+        title: 'Better Forum Cards',
+        description: 'Forum post cards now keep selected tags, show reliable activity and reply counts, and use the first image from the original post as the thumbnail when available.',
+        hint: 'Any forum channel → browse post cards',
+      },
+    ],
+    entries: [
+      { type: 'fix', text: 'Forum channels no longer show the normal bottom chat composer. Posts and replies now go through the forum-native create and reply flows.' },
+      { type: 'feature', text: 'New forum posts can include attachments, pasted images, upload progress, previews, removal, retry handling, and clear error states. Title is still required; body text is optional when attachments are present.' },
+      { type: 'feature', text: 'Forum replies now support text, attachments, or both, and send through the parent channel with the correct thread id.' },
+      { type: 'improvement', text: 'Forum post detail now renders image attachments inline, video and audio with native controls, and other files with filename, size, and open/download links.' },
+      { type: 'improvement', text: 'Forum post cards preserve selected tags, map activity and message counts correctly, and use the original post image as the card thumbnail when one exists.' },
+      { type: 'improvement', text: 'Production deploys now install landing-page dependencies and protect server-owned API dependency folders during rsync, making app updates more reliable.' },
+    ],
+  },
+  {
     id: '2026-04-07b',
     date: 'April 7, 2026',
     title: 'Wiki Diff View, Form Live Preview, Styled Date Pickers',

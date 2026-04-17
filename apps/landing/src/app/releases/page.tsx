@@ -20,6 +20,20 @@ export const metadata: Metadata = createPageMetadata({
 
 const releases = [
   {
+    version: "1.0.5",
+    date: "April 17, 2026",
+    summary: "Forum image uploads, attachment replies, richer forum cards, and deploy reliability fixes.",
+    accent: "blue" as const,
+    changes: [
+      "Forum channels now create posts and replies through the forum-native flow",
+      "New forum posts support image/file selection, paste, previews, upload progress, remove, retry, and attachment-only bodies with a required title",
+      "Forum replies support text, attachments, or both, and send to the parent channel with the correct thread id",
+      "Forum post detail renders inline images, native video/audio controls, and downloadable file links",
+      "Forum cards keep selected tags, show reliable activity and message counts, and use the original post image as a thumbnail",
+      "Production deploy now installs landing dependencies and protects server-owned API dependency folders during rsync",
+    ],
+  },
+  {
     version: "1.0.4",
     date: "March 8, 2026",
     summary: "FAME dashboard, threads fix, server ratings, and enterprise polish.",
