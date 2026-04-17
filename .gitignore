@@ -41,10 +41,17 @@ Thumbs.db
 # Test output
 test-results/
 playwright-report/
+playwright-report-production/
 coverage/
 
 # Archive (old deploys)
 archive/
+
+# Generated deployment packages. deploy/deploy.sh recreates these from source
+# apps before rsyncing to production; do not commit local package output.
+/deploy/api/
+/deploy/web/dist/
+/deploy/landing/
 
 # Backup files
 *.bak

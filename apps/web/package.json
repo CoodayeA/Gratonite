@@ -12,6 +12,7 @@
     "lint:a11y:strict": "eslint . --max-warnings=0",
     "preview": "vite preview",
     "smoke:e2e": "playwright test tests/smoke.spec.ts",
+    "smoke:production": "playwright test --config=playwright.production.config.ts",
     "guard:placeholders": "node ../../tools/placeholder-guard.mjs",
     "validate:sw-precache": "node ../../tools/check-sw-precache.mjs",
     "verify:prod": "npm run build && npm run lint && npm run guard:placeholders"
