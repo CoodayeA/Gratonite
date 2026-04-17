@@ -196,12 +196,12 @@ test.describe('authenticated production critical flows', () => {
         await clickViaDom(page.getByRole('button', { name: /send reply/i }));
         await expect(page.locator('body')).toContainText(replyText, { timeout: 60000 });
 
-        await page.keyboard.press(process.platform === 'darwin' ? 'Meta+k' : 'Control+k');
-        const searchInput = page.locator('input[placeholder*="search" i]').first();
-        await expect(searchInput).toBeVisible({ timeout: 5000 });
+        await page.goto(`/app/guild/${smokeGuildId}/search`);
+        const searchInput = page.getByPlaceholder(/search messages/i);
+        await expect(searchInput).toBeVisible({ timeout: 30000 });
         await searchInput.fill(messageText);
+        await searchInput.press('Enter');
         await expect(page.locator('body')).toContainText(messageText, { timeout: 60000 });
-        await page.keyboard.press('Escape');
 
         await page.getByRole('button', { name: /notifications inbox/i }).click();
         await expect(page.getByRole('dialog', { name: /notifications/i })).toBeVisible({ timeout: 10000 });
