@@ -16,7 +16,7 @@ Gratonite works the same way. Each instance is fully independent — you own you
 | Care about privacy | You control who has access to your data. The answer is always "only you." |
 | Just want to try it | One command to install. Federation connects you to everyone else automatically. |
 
-**You don't have to choose one or the other.** Users on gratonite.chat and users on your self-hosted instance can be in the same servers together. Federation makes the network seamless.
+**You don't have to choose one or the other.** Users on gratonite.chat and users on your self-hosted instance can be in the same servers together. Federation keeps everyone in the same wider network.
 
 ### How does it work?
 

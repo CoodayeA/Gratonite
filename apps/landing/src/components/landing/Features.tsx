@@ -31,21 +31,21 @@ const features = [
     icon: "🧭",
     title: "Your own spaces",
     description:
-      "Make spaces for your game crew, your study group, your guild, your friend circle. Your rules.",
+      "Set things up for the crew you actually have. Your inside jokes, your norms, your pace.",
     accent: "yellow" as const,
   },
   {
     icon: "✨",
     title: "Cosmetics & collectibles",
     description:
-      "User-made cosmetics, collectible drops, and an auction house economy that gives communities their own flavor.",
+      "Let artists in your community make the stuff people flex, trade, and remember.",
     accent: "purple" as const,
   },
   {
     icon: "🛡️",
     title: "Built for people, not metrics",
     description:
-      "No ad feed. No engagement bait. No attention traps. Just your people, your conversations, and your community culture.",
+      "No feed tricks. No engagement loops. Just a place people actually want to come back to.",
     accent: "gold" as const,
   },
 ];
@@ -111,8 +111,8 @@ export function Features() {
               </span>
             </h2>
             <p className="text-lg text-foreground/60 max-w-lg">
-              Built for people who want to laugh, game, study, and keep their
-              corner of the internet feeling like home.
+              For people who want their corner of the internet to actually feel
+              like home.
             </p>
           </div>
         </ScrollReveal>

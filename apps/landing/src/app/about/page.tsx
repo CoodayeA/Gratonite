@@ -5,9 +5,9 @@ import { ScrollReveal } from "@/components/effects/ScrollReveal";
 import { createPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "About Gratonite | The Open-Source Community Platform",
+  title: "About Gratonite | Built by Friends, for Friends",
   description:
-    "Learn the story behind Gratonite Chat, the free and open-source community platform built by friends who wanted a better place to hang out online.",
+    "Why Gratonite exists, what we care about, and why community software should feel human again.",
   path: "/about/",
 });
 
@@ -40,24 +40,24 @@ const team = [
 
 const values = [
   {
-    title: "Your attention is not our business model",
+    title: "We're building for people, not retention charts",
     description:
       "No ad feed. No selling your data. We make product calls around better conversations, not better dashboard numbers.",
   },
   {
-    title: "Built by friends, for friends",
+    title: "Friend-first on purpose",
     description:
-      "This is a human project, not a growth machine. If it doesn't make hanging out better, it doesn't ship.",
+      "This is a human project, not a growth machine. If it does not make hanging out better, it does not ship.",
   },
   {
-    title: "Your community, your culture",
+    title: "Culture should come from the community",
     description:
-      "User-made cosmetics, collectibles, and auction-house trading let every community build its own identity.",
+      "User-made cosmetics, collectibles, and trading let every community build its own texture.",
   },
   {
-    title: "Open source and accountable",
+    title: "If we claim it, you can read it",
     description:
-      "The code is open. If we claim something, you can verify it.",
+      "The code is open. If we say something about Gratonite, you can check the source yourself.",
   },
 ];
 
@@ -129,7 +129,7 @@ export default function AboutPage() {
               The team
             </h2>
             <p className="text-foreground/50 mb-10">
-              Small, personal, and community-built.
+              Small, personal, and close to the people using it.
             </p>
           </ScrollReveal>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">

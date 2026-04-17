@@ -4,7 +4,7 @@ export const faqs = [
   {
     question: "Is Gratonite actually free?",
     answer:
-      "Yes. 100% free. No credit card, no catch, and no fake limits that force upgrades.",
+      "Yes. No credit card, no catch, and no fake ceiling that appears the second your community gets lively.",
   },
   {
     question: "Who is this for?",
@@ -14,12 +14,12 @@ export const faqs = [
   {
     question: "What makes it different?",
     answer:
-      "It feels like your own place. Chat and voice are the core, then your community adds cosmetics, collectibles, and auction-house culture on top.",
+      "It feels like your own place. Chat and voice are the foundation, then your community adds its own culture on top.",
   },
   {
     question: "Do I need to install anything?",
     answer:
-      "No. You can use it in the browser right now. Desktop apps are available, and native iOS + Android builds are in active rollout.",
+      "No. You can use it in the browser right now. Desktop apps are ready, and iOS + Android are in active rollout.",
   },
   {
     question: "Is this open source?",
@@ -37,10 +37,10 @@ export function FAQ() {
         <ScrollReveal>
           <div className="mb-12 relative">
             <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-4">
-              Questions, answered.
+              What people ask before they move in.
             </h2>
             <p className="text-lg text-foreground/60 max-w-2xl">
-              The real questions people ask before moving their community.
+              The practical stuff, answered plainly.
             </p>
           </div>
         </ScrollReveal>

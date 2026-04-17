@@ -7,7 +7,7 @@ import { createPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = createPageMetadata({
   title: "Release Notes & Roadmap | Gratonite",
   description:
-    "See what's new in Gratonite Chat. Release notes, changelogs, and upcoming features for the free, open-source community platform.",
+    "See what is new in Gratonite Chat: release notes, changelogs, and the next things we are building.",
   path: "/releases/",
   keywords: [
     "Gratonite release notes",

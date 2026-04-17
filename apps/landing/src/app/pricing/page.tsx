@@ -7,7 +7,7 @@ import { createPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = createPageMetadata({
   title: "Gratonite Pricing | Free Forever",
   description:
-    "See Gratonite pricing: 100% free forever with no ads, no tracking, and no paywalled core features. An open-source community platform that puts community over profit.",
+    "Gratonite is free forever: no ads, no tracking, and no paywalled core features. Built to feel good to use, not to squeeze your community.",
   path: "/pricing/",
   keywords: [
     "Gratonite pricing",

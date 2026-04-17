@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   applicationName: SITE_BRAND,
   title: {
-    default: "Gratonite Chat | Free, Open-Source Community Platform",
+    default: "Gratonite Chat | Built by Friends, for Friends",
     template: "%s | Gratonite Chat",
   },
   description: DEFAULT_DESCRIPTION,
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     telephone: false,
   },
   openGraph: {
-    title: "Gratonite Chat | Free, Open-Source Community Platform",
+    title: "Gratonite Chat | Built by Friends, for Friends",
     description: DEFAULT_DESCRIPTION,
     type: "website",
     locale: "en_US",
@@ -69,7 +69,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Gratonite Chat | Free, Open-Source Community Platform",
+    title: "Gratonite Chat | Built by Friends, for Friends",
     description: DEFAULT_DESCRIPTION,
     images: [DEFAULT_OG_IMAGE],
   },

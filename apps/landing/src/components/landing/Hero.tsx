@@ -42,7 +42,7 @@ export function Hero() {
           <div>
             <div data-hero="badge" style={{ opacity: 0 }}>
               <Badge color="gold" rotate className="mb-6">
-                The friend-first platform.
+                Friend-first software.
               </Badge>
             </div>
 
@@ -62,7 +62,7 @@ export function Hero() {
 
             <div data-hero="subtitle" className="mb-5" style={{ opacity: 0 }}>
               <p className="text-sm font-bold uppercase tracking-wider text-foreground/50">
-                Open source &middot; No tracking &middot; Player-made cosmetics
+                Open source &middot; No ads &middot; No phone-number gate
               </p>
             </div>
 
@@ -71,10 +71,9 @@ export function Hero() {
               className="text-lg sm:text-xl text-foreground/60 max-w-lg mb-8 leading-relaxed"
               style={{ opacity: 0 }}
             >
-              Gratonite was built for a better place to hang out with friends.
-              Chat, hop in voice, play games, study together, collect cool
-              cosmetics, and just exist online without being farmed for
-              engagement.
+              Gratonite is where your group can chat, hop in voice, study, game,
+              trade goofy cosmetics, and just be online together without being
+              nudged, farmed, or boxed in.
             </p>
 
             <div data-hero="buttons" className="flex flex-wrap gap-4 mb-12" style={{ opacity: 0 }}>

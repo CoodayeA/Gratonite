@@ -1,6 +1,6 @@
 # Self-Hosting Gratonite
 
-Run your own Gratonite instance in a few minutes.
+Run your own Gratonite instance without turning it into a weekend project.
 
 This guide covers the checked-in Docker Compose self-host stack under `deploy/self-host/`.
 If you want the guided installer instead, use:

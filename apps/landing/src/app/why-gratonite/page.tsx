@@ -6,9 +6,9 @@ import { ScrollReveal } from "@/components/effects/ScrollReveal";
 import { createPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Why Gratonite | Open-Source Community Platform",
+  title: "Why Gratonite | A Better Place to Hang Out Online",
   description:
-    "See what makes Gratonite different: open source, no ads, no tracking, no phone verification, spatial voice, and a community-created economy. Your space, your rules.",
+    "Why people switch to Gratonite: no phone-number gate, no ads, friend-first design, self-hosting, and communities that feel owned instead of rented.",
   path: "/why-gratonite/",
   keywords: [
     "why Gratonite",
@@ -21,23 +21,23 @@ export const metadata: Metadata = createPageMetadata({
 
 const differentiators = [
   {
-    title: "No phone verification required",
-    description: "Join communities without giving up your phone number. Your identity is yours to share on your own terms.",
+    title: "No phone-number gate",
+    description: "Join communities without handing over your number just to get through the door.",
     accent: "purple" as const,
   },
   {
-    title: "Your attention is not our product",
-    description: "No ads, no tracking, no engagement tricks. We build features that make conversations better, not stickier.",
+    title: "We build for people, not retention charts",
+    description: "No ads, no tracking, no engagement tricks. We build features that make hanging out better, not stickier.",
     accent: "yellow" as const,
   },
   {
-    title: "Community-created economy",
-    description: "Cosmetics, collectibles, and an auction house built by the community. Creators earn, collectors curate, everyone benefits.",
+    title: "Community-made culture",
+    description: "Creators make skins and collectibles. Communities trade them, show them off, and make the place feel like theirs.",
     accent: "blue" as const,
   },
   {
-    title: "Open source and transparent",
-    description: "Inspect the code, contribute, and verify our claims. No black boxes, no hidden agendas.",
+    title: "Read the source",
+    description: "Inspect the code, contribute, and keep us honest. Gratonite does not ask for blind trust.",
     accent: "gold" as const,
   },
 ];
@@ -46,17 +46,17 @@ const faqs = [
   {
     question: "What makes Gratonite different?",
     answer:
-      "Gratonite is fully open source, has no ads, requires no phone number, and gives your community actual ownership of their space. We also ship things most platforms don't — spatial voice, a cosmetics marketplace, and a built-in auction house.",
+      "Gratonite is open source, has no ads, asks for no phone number, and gives your community actual ownership of its space. It also ships things most platforms do not — spatial voice, community-made cosmetics, and a built-in marketplace.",
   },
   {
     question: "Can I use Gratonite without a phone number?",
     answer:
-      "Absolutely. We don\u2019t require phone verification to join or create communities. Your privacy matters.",
+      "Absolutely. We do not require phone verification to join or create communities.",
   },
   {
     question: "Is Gratonite open source?",
     answer:
-      "Yes. Our code is publicly available on GitHub. You can inspect it, contribute, and verify that we do what we say.",
+      "Yes. The code is public on GitHub, so you can inspect it, contribute to it, and verify what we claim.",
   },
   {
     question: "Does Gratonite work for gaming communities?",
@@ -112,10 +112,9 @@ export default function WhyGratonitePage() {
               </span>
             </h1>
             <p className="max-w-2xl text-lg text-foreground/60 leading-relaxed">
-              Gratonite is a free, open-source community platform with no ads, no
-              tracking, and no phone verification. Spatial voice, user-created
-              cosmetics, and a built-in auction house make it more than a chat
-              app.
+              Gratonite is for people who want their online space to feel owned,
+              not rented. No ads, no phone-number gate, self-hosting if you want
+              it, and room for a community to feel like itself.
             </p>
           </div>
         </ScrollReveal>
@@ -127,17 +126,17 @@ export default function WhyGratonitePage() {
               What you get with Gratonite
             </h2>
             <p className="text-foreground/60 mb-10 max-w-xl">
-              Everything you need to run a community — without the compromises.
+              The stuff that matters, without the platform baggage.
             </p>
           </ScrollReveal>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
               { label: "Free forever", detail: "No paywalled core features, ever." },
-              { label: "Open source", detail: "Full code on GitHub. Audit us." },
+               { label: "Open source", detail: "Full code on GitHub. Read it yourself." },
               { label: "No ads, no tracking", detail: "Your data is not our business model." },
               { label: "No phone number needed", detail: "Sign up without giving up your digits." },
               { label: "Spatial voice", detail: "Move around a room. Hear who's near you." },
-              { label: "Community economy", detail: "Cosmetics, collectibles, auction house." },
+               { label: "Community culture", detail: "Cosmetics, collectibles, marketplace." },
               { label: "Federated", detail: "Self-host. Connect instances. Own your data." },
               { label: "E2E encrypted DMs", detail: "Auto-on encryption. No setup needed." },
               { label: "Your rules", detail: "Your community, your moderation policies." },
@@ -205,8 +204,8 @@ export default function WhyGratonitePage() {
               Ready to try?
             </h2>
             <p className="text-white/60 text-lg mb-8 max-w-xl mx-auto">
-              Join a community that respects your privacy, your time, and your
-              creativity. No credit card, no phone number, no catch.
+              Join a community platform that treats people like people. No credit
+              card, no phone number, no catch.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Button variant="primary" size="lg" href="/download">

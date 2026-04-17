@@ -1,6 +1,6 @@
 ---
 title: "How End-to-End Encryption Works in Gratonite"
-description: "A detailed technical look at how Gratonite encrypts your DMs and group conversations — from key generation to message delivery."
+description: "A plain-English technical look at how Gratonite encrypts DMs and group conversations, from key generation to message delivery."
 date: "2026-03-09"
 author: "Gratonite Team"
 tag: "Engineering"
@@ -12,15 +12,15 @@ Privacy isn't a feature toggle — it's a design decision. When you send a priva
 
 This post explains exactly how it works — no hand-waving, no marketing abstractions. The client-side encryption code lives in `apps/web/src/lib/e2e.ts`.
 
-## The primitives
+## The pieces underneath it
 
-We use two well-established cryptographic building blocks, both provided by the **Web Crypto API** (built into every modern browser):
+We use two boring, trusted cryptographic building blocks, both provided by the **Web Crypto API** already built into modern browsers:
 
 1. **ECDH P-256** — Elliptic Curve Diffie-Hellman key agreement. Two parties each have a key pair. By combining one party's private key with the other's public key, both sides arrive at the same shared secret — without ever transmitting it.
 
 2. **AES-GCM 256-bit** — Authenticated symmetric encryption. Once both sides share a key, every message is encrypted with AES-GCM using a unique 12-byte random IV (initialization vector). AES-GCM also provides built-in integrity checking — if a single bit of the ciphertext is modified, decryption fails.
 
-We deliberately chose standard, proven primitives over novel constructions. ECDH P-256 and AES-GCM are NIST-approved, widely audited, and available in every browser's native crypto stack without any third-party dependencies.
+We picked standard crypto on purpose. ECDH P-256 and AES-GCM are widely audited, already available in the browser, and do not require pulling in extra crypto dependencies just to feel clever.
 
 ## How 1-to-1 DM encryption works
 
@@ -36,7 +36,7 @@ When you open a DM with another user, your client fetches their public key from 
 
 ### 3. Shared key derivation
 
-Your client performs the ECDH computation: your private key + their public key = a shared **AES-GCM 256-bit symmetric key**. The other user's client does the same computation (their private key + your public key) and arrives at the **exact same shared key**. This is the core mathematical property of Diffie-Hellman.
+Your client performs the ECDH computation: your private key + their public key = a shared **AES-GCM 256-bit symmetric key**. The other user's client does the same computation and arrives at the **exact same shared key**. That is the trick Diffie-Hellman gives you.
 
 The derived key is used directly for encryption and decryption. It's never exported or transmitted.
 
@@ -158,7 +158,7 @@ The Signal protocol (Double Ratchet + X3DH) is the gold standard for forward-sec
 
 3. **No third-party dependencies.** Our implementation uses only the Web Crypto API — zero external libraries. This minimizes supply chain risk and makes the code easy to audit.
 
-The current system provides strong confidentiality against server compromise and passive eavesdropping. It does not protect against an attacker who both compromises your private key and has recorded your ciphertext — that's the gap forward secrecy would close.
+The current system gives strong confidentiality against server compromise and passive eavesdropping. It does not protect against an attacker who both steals your private key and has recorded your ciphertext — that is the gap forward secrecy would close.
 
 ## Try it
 

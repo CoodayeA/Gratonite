@@ -72,7 +72,7 @@ export default function BlogPage() {
                     Featured
                   </Badge>
                   <h2 className="font-display text-2xl font-bold mb-2 group-hover:text-purple transition-colors">
-                    Why Gratonite? A Free, Open-Source Community Platform
+                    Why Gratonite? A Better Place to Hang Out Online
                   </h2>
                   <p className="text-white/60">
                     What sets Gratonite apart and answers to common questions about making the switch.

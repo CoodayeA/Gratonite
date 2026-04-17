@@ -54,8 +54,9 @@ export function CTA() {
             Your space. Your rules.
           </h2>
           <p className="text-lg text-white/60 max-w-lg mx-auto mb-8 relative z-10">
-            Bring your community home. Chat, voice, cosmetics, collectibles,
-            auction house, and a place that actually feels human.
+            Bring your people somewhere that feels owned, not rented. Chat,
+            voice, collectibles, self-hosting, and room for a real community
+            culture.
           </p>
           <div className="flex flex-wrap justify-center gap-4 relative z-10">
             <Button variant="secondary" size="lg" href="/download">

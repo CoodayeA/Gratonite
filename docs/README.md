@@ -1,5 +1,7 @@
 # Documentation index
 
+Start here if you want the practical docs instead of the full repo tour.
+
 | Document | Purpose |
 |----------|---------|
 | [`../ROADMAP.md`](../ROADMAP.md) | High-level direction, shipped features, Q2+ planning, ideas backlog |

@@ -11,21 +11,21 @@ gsap.registerPlugin(ScrollTrigger);
 
 const benefits = [
   {
-    title: "Total Privacy",
+    title: "Your data stays with you",
     description:
-      "Your data stays on your hardware. No analytics, no tracking, no third-party access. Ever.",
+      "Messages, files, and community data live on your hardware. No analytics tax. No quiet third-party handoff.",
     accent: "purple" as const,
   },
   {
-    title: "Federation",
+    title: "Your server, still connected",
     description:
-      "Federation is live — your instance connects to the relay automatically. Users can join servers on other instances and vice versa.",
+      "Self-host if you want control. Federation keeps you part of the wider Gratonite network.",
     accent: "gold" as const,
   },
   {
-    title: "Zero Lock-in",
+    title: "Leave whenever you want",
     description:
-      "Export everything. Move to another host. Fork it. It's open source and yours to keep.",
+      "Export your data, move hosts, fork the code. You're not signing your community away.",
     accent: "blue" as const,
   },
 ];
@@ -76,8 +76,8 @@ export function SelfHosting() {
               <span className="text-purple">YOUR RULES.</span>
             </h2>
             <p className="text-lg text-foreground/60 max-w-2xl mx-auto">
-              Run your own Gratonite instance in 5 minutes. Full control over
-              your data, your community, your way. No coding required.
+              Run your own Gratonite instance in a few minutes. Your moderation,
+              your data, your community, your call.
             </p>
           </div>
         </ScrollReveal>
@@ -110,8 +110,8 @@ export function SelfHosting() {
                 </p>
               </div>
               <p className="text-foreground/50 text-sm mb-6">
-                Works on any Linux machine, VPS, or even your home PC. Behind
-                NAT? Use the built-in relay network. No port forwarding needed.
+                Works on a Linux machine, VPS, or home PC. Behind NAT? Use the
+                built-in relay network and skip the port-forwarding ritual.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-4">
                 <Button variant="primary" size="lg" href="/deploy">
