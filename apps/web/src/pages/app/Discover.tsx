@@ -110,7 +110,7 @@ const PortalCheckinModal = ({ portal, onClose }: { portal: PortalInfo; onClose: 
             addToast({ title: `Joined ${portal.name}!`, description: 'Welcome to the community.', variant: 'success' });
             navigate(`/guild/${portal.id}`);
         } catch {
-            addToast({ title: 'Could not join', description: 'This portal may require an invite or no longer be available.', variant: 'error' });
+            addToast({ title: 'Could not join', description: 'This community may require an invite or no longer be available.', variant: 'error' });
         } finally {
             setJoining(false);
         }
@@ -203,14 +203,14 @@ const PortalCheckinModal = ({ portal, onClose }: { portal: PortalInfo; onClose: 
                                 ))}
                             </div>
                             <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                <strong style={{ color: 'var(--text-primary)' }}>{portal.mutualFriends.map(f => f.name).join(' and ')}</strong> {portal.mutualFriends.length === 1 ? 'is' : 'are'} already in this portal
+                                <strong style={{ color: 'var(--text-primary)' }}>{portal.mutualFriends.map(f => f.name).join(' and ')}</strong> {portal.mutualFriends.length === 1 ? 'is' : 'are'} already in this community
                             </span>
                         </div>
                     )}
 
                     {/* Public indicator */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>
-                        <Globe size={14} /> {portal.isPublic ? 'Public portal — anyone can join' : 'Limited visibility portal'}
+                        <Globe size={14} /> {portal.isPublic ? 'Public community — anyone can join' : 'Limited visibility community'}
                     </div>
 
                     <div style={{ display: 'flex', gap: '12px' }}>
@@ -351,7 +351,7 @@ const FederatedJoinModal = ({ portal, onClose }: { portal: FederatedPortalInfo; 
 
                     {/* Warning */}
                     <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '12px 16px', marginBottom: '24px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                        This server is hosted on <strong style={{ color: 'var(--text-primary)' }}>{instanceDomain}</strong>. You'll need an account there to join.
+                        This community is hosted on <strong style={{ color: 'var(--text-primary)' }}>{instanceDomain}</strong>. You'll need an account there to join.
                     </div>
 
                     <div style={{ display: 'flex', gap: '12px' }}>
@@ -559,7 +559,7 @@ const Discover = () => {
 
                 setPortals(mapped);
             } catch {
-                addToast({ title: 'Failed to load communities', description: 'Could not fetch discoverable portals.', variant: 'error' });
+                addToast({ title: 'Failed to load communities', description: 'Could not fetch discoverable communities.', variant: 'error' });
             } finally {
                 setIsLoading(false);
             }
@@ -579,7 +579,7 @@ const Discover = () => {
                     transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0
                 }}
             >
-                <Compass size={isMobile ? 14 : 18} /> Portals
+                <Compass size={isMobile ? 14 : 18} /> Communities
             </button>
             <button
                 onClick={() => setActiveTab('bots')}
@@ -635,11 +635,11 @@ const Discover = () => {
 
     const renderPortals = () => (
         <>
-            {/* Featured Portals hero section */}
+            {/* Featured communities hero section */}
             {featuredPortals.length > 0 && (
                 <div style={{ marginBottom: '28px' }}>
                     <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
-                        <Star size={18} color="#f59e0b" fill="#f59e0b" /> Featured Portals
+                        <Star size={18} color="#f59e0b" fill="#f59e0b" /> Featured Communities
                     </h2>
                     <div style={{
                         display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px',
@@ -834,11 +834,11 @@ const Discover = () => {
                 )}
             </div>
 
-            {/* Self-Hosted Servers from federated instances */}
+            {/* Self-hosted communities from federated instances */}
             {federatedPortals.length > 0 && (
                 <div style={{ marginBottom: '28px' }}>
                     <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
-                        <Globe size={18} color="var(--accent-primary)" /> Self-Hosted Servers
+                        <Globe size={18} color="var(--accent-primary)" /> Self-Hosted Communities
                     </h2>
                     <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
                         Communities running on independent Gratonite instances
@@ -1148,7 +1148,7 @@ const Discover = () => {
                             </p>
                         </div>
                         <div style={{ padding: '16px 20px', borderTop: '1px solid var(--stroke)', background: 'rgba(0,0,0,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>In {botPortalCounts[i]} Portals</span>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>In {botPortalCounts[i]} Communities</span>
                             <button onClick={() => navigate('/bot-store')} className="auth-button" style={{ marginTop: 0, padding: '6px 16px', height: 'auto', width: 'auto', fontSize: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'white' }}>
                                 View in Bot Store
                             </button>
