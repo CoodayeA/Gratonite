@@ -143,6 +143,7 @@ import ThemePreviewBanner from './components/ui/ThemePreviewBanner';
 import SeasonalOverlay from './components/ui/SeasonalOverlay';
 import LiveAnnouncer, { announce } from './components/ui/LiveAnnouncer';
 import { VoiceProvider, useVoice } from './contexts/VoiceContext';
+import VoiceBar from './components/ui/VoiceBar';
 import { useVoiceSounds } from './hooks/useVoiceSounds';
 import Avatar from './components/ui/Avatar';
 import { RemoteBadge } from './components/ui/RemoteBadge';
@@ -1054,14 +1055,14 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const previousVoiceChannelRef = useRef<string | null>(null);
     useEffect(() => {
         if (!enableVoiceSidebarSync) return;
-        const currentVoiceChannelId = voiceState.connected ? voiceState.channelId : null;
+        const currentVoiceChannelId = voiceState.connected && voiceState.activeCallType === 'guild' ? voiceState.channelId : null;
         const previousVoiceChannelId = previousVoiceChannelRef.current;
         previousVoiceChannelRef.current = currentVoiceChannelId;
 
         if (currentVoiceChannelId || !previousVoiceChannelId || !userProfile.id) return;
 
         setVoiceMembersByChannel((prev) => removeMemberFromAllChannels(prev, userProfile.id!));
-    }, [enableVoiceSidebarSync, voiceState.connected, voiceState.channelId, userProfile.id, removeMemberFromAllChannels]);
+    }, [enableVoiceSidebarSync, voiceState.connected, voiceState.activeCallType, voiceState.channelId, userProfile.id, removeMemberFromAllChannels]);
 
     useEffect(() => {
         setIsDmLoading(true);
@@ -2165,7 +2166,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         // Render the row — the outer div is the measurable absolutely-positioned slot
                         const renderChannelItem = (ch: typeof guildChannels[0]) => {
                             const isVoice = isVoiceChannelType(ch.type);
-                            const isConnectedChannel = isVoice && voiceState.connected && voiceState.channelId === ch.id;
+                            const isConnectedChannel = isVoice && voiceState.connected && voiceState.activeCallType === 'guild' && voiceState.channelId === ch.id;
                             const voiceMembers = voiceMembersByChannel[ch.id] || [];
                             const isDragging = dragChannelId === ch.id;
                             const isDropTarget = dragOverChannelId === ch.id && dragChannelId !== ch.id;
@@ -4208,6 +4209,7 @@ export const AppLayout = () => {
                             <MembersSidebar onOpenProfile={() => setActiveModal('userProfile')} isMobileOpen={isMemberDrawerOpen} onCloseMobile={() => setIsMemberDrawerOpen(false)} />
                         </ErrorBoundary>
                     )}
+                    <VoiceBar />
                 </main>
 
                 {/* Mobile Bottom Navigation (< 768px) — 5 tabs: Home, DMs, Search, Notifications, Settings */}
@@ -4268,7 +4270,13 @@ export const AppLayout = () => {
                 />
             </ModalWrapper>
             <ModalWrapper isOpen={activeModal === 'screenShare'}>
-                <ScreenShareModal isOpen={activeModal === 'screenShare'} onClose={() => setActiveModal(null)} />
+                <ScreenShareModal
+                    isOpen={activeModal === 'screenShare'}
+                    onClose={() => setActiveModal(null)}
+                    onStartScreenShare={voiceCtx.startScreenShare}
+                    onStopScreenShare={voiceCtx.stopScreenShare}
+                    isLiveKitScreenSharing={voiceCtx.screenSharing}
+                />
             </ModalWrapper>
             <ModalWrapper isOpen={activeModal === 'guildSettings'}>
                 <GuildSettingsModal onClose={() => setActiveModal(null)} guildId={location.pathname.match(/\/guild\/([^/]+)/)?.[1] || null} />

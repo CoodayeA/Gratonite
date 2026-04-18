@@ -11,6 +11,8 @@
     "lint": "eslint . --max-warnings=250",
     "lint:a11y:strict": "eslint . --max-warnings=0",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "smoke:e2e": "playwright test tests/smoke.spec.ts",
     "smoke:check-env": "node ../../tools/check-production-smoke-env.mjs",
     "smoke:production": "playwright test --config=playwright.production.config.ts",
@@ -45,6 +47,8 @@
     "@eslint/js": "^9.13.0",
     "@playwright/test": "^1.58.2",
     "@sentry/vite-plugin": "^5.1.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/dompurify": "^3.0.5",
     "@types/katex": "^0.16.8",
     "@types/react": "^18.3.12",
@@ -55,9 +59,11 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.14",
     "globals": "^15.11.0",
+    "jsdom": "^26.1.0",
     "react-grab": "^0.1.25",
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.11.0",
-    "vite": "^5.4.10"
+    "vite": "^5.4.10",
+    "vitest": "^2.1.9"
   }
 }
