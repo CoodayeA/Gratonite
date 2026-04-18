@@ -4,7 +4,7 @@ import gsap from 'gsap';
 import {
     Reply, Smile, Image as ImageIcon, Share2, FileText,
     Pause, MessageSquare, MoreHorizontal, Plus, Mic, Play,
-    ThumbsUp, Star, Edit2, Eye, Zap, Code, Globe
+    ThumbsUp, Star, Edit2, Eye, Zap, Code, Globe, FolderArchive, Download
 } from 'lucide-react';
 import { API_BASE } from '../../lib/api';
 import { api } from '../../lib/api';
@@ -724,6 +724,28 @@ export const MemoizedMessageItem = memo(({
                                     if (isCode) {
                                         return (
                                             <CodeFilePreview key={att.id} url={displayUrl} filename={displayName} sizeStr={sizeStr} />
+                                        );
+                                    }
+                                    const isArchive = displayMime === 'application/zip' || displayMime === 'application/x-zip-compressed' || /\.(zip|tar|gz|tar\.gz|tgz|rar|7z|bz2)$/i.test(displayName);
+                                    if (isArchive) {
+                                        return (
+                                            <a key={att.id} href={displayUrl} download={displayName} target="_blank" rel="noopener noreferrer" style={{
+                                                display: 'flex', alignItems: 'center', gap: '10px',
+                                                padding: '10px 14px',
+                                                background: 'color-mix(in srgb, var(--accent-primary) 8%, var(--bg-tertiary))',
+                                                border: '1px solid color-mix(in srgb, var(--accent-primary) 30%, var(--stroke))',
+                                                borderRadius: '8px', textDecoration: 'none', color: 'var(--text-primary)',
+                                                maxWidth: '320px', cursor: 'pointer', transition: 'background 0.15s',
+                                            }}>
+                                                <FolderArchive size={20} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                                                <div style={{ flex: 1, overflow: 'hidden' }}>
+                                                    <div style={{ fontSize: '14px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {displayName}
+                                                    </div>
+                                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{sizeStr} · Archive</div>
+                                                </div>
+                                                <Download size={15} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                                            </a>
                                         );
                                     }
                                     return (

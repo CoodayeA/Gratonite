@@ -140,6 +140,7 @@ const MAGIC_BYTES: Array<{ mime: string; bytes: number[]; offset?: number }> = [
   { mime: 'image/gif',  bytes: [0x47, 0x49, 0x46, 0x38] },           // GIF8
   { mime: 'image/webp', bytes: [0x57, 0x45, 0x42, 0x50], offset: 8 }, // WEBP at offset 8
   { mime: 'application/pdf', bytes: [0x25, 0x50, 0x44, 0x46] },      // %PDF
+  { mime: 'application/zip', bytes: [0x50, 0x4B, 0x03, 0x04] },      // PK♥♦ (ZIP local file header)
 ];
 
 /**

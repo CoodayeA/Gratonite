@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import JSZip from 'jszip';
 import {
     Send, Smile, Image as ImageIcon, Reply, X, Plus, Mic, BarChart2, Clock,
-    Edit2, Eye, Volume2, Square, Trash2, Hash, FileText, Scissors
+    Edit2, Eye, Volume2, Square, Trash2, Hash, FileText, Scissors, FolderArchive, Upload
 } from 'lucide-react';
 import Avatar from '../ui/Avatar';
 import EmojiPicker from './EmojiPicker';
@@ -28,7 +29,7 @@ interface MessageInputProps {
     editingMessage: { id: number; apiId: string; content: string } | null;
     editContent: string;
     replyingTo: { id: number; apiId?: string; author: string; content: string } | null;
-    chatAttachedFiles: { name: string; size: string; file: File; previewUrl?: string }[];
+    chatAttachedFiles: { name: string; size: string; file: File; previewUrl?: string; _placeholderId?: string }[];
     isRecording: boolean;
     recordingTime: number;
     voiceExpiry: number | null;
@@ -78,7 +79,7 @@ interface MessageInputProps {
     setEditContent: (v: string) => void;
     setEditingMessage: (v: { id: number; apiId: string; content: string } | null) => void;
     setReplyingTo: (v: { id: number; apiId?: string; author: string; content: string } | null) => void;
-    setChatAttachedFiles: React.Dispatch<React.SetStateAction<{ name: string; size: string; file: File; previewUrl?: string }[]>>;
+    setChatAttachedFiles: React.Dispatch<React.SetStateAction<{ name: string; size: string; file: File; previewUrl?: string; _placeholderId?: string }[]>>;
     setVoiceExpiry: (v: number | null) => void;
     setShowPreview: (v: boolean | ((p: boolean) => boolean)) => void;
     setShowFormattingToolbar: (v: boolean | ((p: boolean) => boolean)) => void;
@@ -241,6 +242,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
     const [editingFileIndex, setEditingFileIndex] = useState<number | null>(null);
     const [editingFileType, setEditingFileType] = useState<'image' | 'video' | null>(null);
     const [sentAnnouncement, setSentAnnouncement] = useState('');
+    const [showUploadMenu, setShowUploadMenu] = useState(false);
     const handleSendWithAnnounce = useCallback(() => {
         handleSendMessage();
         setSentAnnouncement('Message sent');
@@ -605,10 +607,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
                         <input id="channel-file-upload" type="file" multiple style={{ display: 'none' }} onChange={(e) => {
                             const files = e.target.files;
                             if (!files) return;
-                            const MAX_FILE_SIZE = 50 * 1024 * 1024;
+                            const MAX_FILE_SIZE = 25 * 1024 * 1024;
                             const newFiles = Array.from(files).filter(f => {
                                 if (f.size > MAX_FILE_SIZE) {
-                                    addToast({ title: `${f.name} is too large (max 50MB)`, variant: 'error' });
+                                    addToast({ title: `${f.name} is too large (max 25MB)`, variant: 'error' });
                                     return false;
                                 }
                                 return true;
@@ -621,9 +623,107 @@ const MessageInput: React.FC<MessageInputProps> = ({
                             setChatAttachedFiles(prev => [...prev, ...newFiles]);
                             e.target.value = '';
                         }} />
-                        <label htmlFor={channelAttachmentsEnabled ? "channel-file-upload" : undefined} className="input-icon-btn" title={channelAttachmentsEnabled ? "Upload Attachment" : "Attachments disabled in this channel"} aria-label="Upload attachment" role="button" style={channelAttachmentsEnabled ? { cursor: 'pointer' } : { opacity: 0.3, cursor: 'not-allowed' }}>
+                        {/* Hidden folder input — webkitdirectory lets the user pick a whole folder */}
+                        <input
+                            id="channel-folder-upload"
+                            type="file"
+                            // @ts-expect-error webkitdirectory is non-standard but widely supported
+                            webkitdirectory=""
+                            multiple
+                            style={{ display: 'none' }}
+                            onChange={async (e) => {
+                                const files = e.target.files;
+                                if (!files || files.length === 0) return;
+                                const MAX_ZIP_SIZE = 25 * 1024 * 1024;
+                                const totalSize = Array.from(files).reduce((acc, f) => acc + f.size, 0);
+                                if (totalSize > MAX_ZIP_SIZE) {
+                                    addToast({ title: `Folder is too large (max 25 MB uncompressed)`, variant: 'error' });
+                                    e.target.value = '';
+                                    return;
+                                }
+                                // Derive folder name from the first file's webkitRelativePath
+                                const firstPath = (files[0] as File & { webkitRelativePath: string }).webkitRelativePath;
+                                const folderName = firstPath.split('/')[0] || 'folder';
+                                // Show a placeholder while compressing
+                                const placeholderId = `zip-compressing-${Date.now()}`;
+                                setChatAttachedFiles(prev => [...prev, {
+                                    name: `${folderName}.zip`,
+                                    size: 'Compressing…',
+                                    file: null as unknown as File,
+                                    previewUrl: undefined,
+                                    _placeholderId: placeholderId,
+                                }]);
+                                try {
+                                    const zip = new JSZip();
+                                    for (const file of Array.from(files)) {
+                                        const relativePath = (file as File & { webkitRelativePath: string }).webkitRelativePath;
+                                        zip.file(relativePath, file);
+                                    }
+                                    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+                                    if (blob.size > MAX_ZIP_SIZE) {
+                                        addToast({ title: `Compressed zip is too large (max 25 MB)`, variant: 'error' });
+                                        setChatAttachedFiles(prev => prev.filter((f: { _placeholderId?: string }) => f._placeholderId !== placeholderId));
+                                        e.target.value = '';
+                                        return;
+                                    }
+                                    const zipFile = new File([blob], `${folderName}.zip`, { type: 'application/zip' });
+                                    const sizeStr = zipFile.size < 1048576 ? `${(zipFile.size / 1024).toFixed(1)} KB` : `${(zipFile.size / 1048576).toFixed(1)} MB`;
+                                    setChatAttachedFiles(prev => prev.map((f: { _placeholderId?: string; name: string; size: string; file: File; previewUrl?: string }) =>
+                                        f._placeholderId === placeholderId
+                                            ? { name: zipFile.name, size: sizeStr, file: zipFile, previewUrl: undefined }
+                                            : f
+                                    ));
+                                } catch {
+                                    addToast({ title: 'Failed to compress folder', variant: 'error' });
+                                    setChatAttachedFiles(prev => prev.filter((f: { _placeholderId?: string }) => f._placeholderId !== placeholderId));
+                                }
+                                e.target.value = '';
+                            }}
+                        />
+                        {/* Upload menu popover */}
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                        {showUploadMenu && channelAttachmentsEnabled && (
+                            <div
+                                style={{
+                                    position: 'absolute', bottom: '40px', left: '0',
+                                    background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+                                    borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+                                    overflow: 'hidden', zIndex: 100, minWidth: '200px',
+                                }}
+                                onMouseLeave={() => setShowUploadMenu(false)}
+                            >
+                                <label
+                                    htmlFor="channel-file-upload"
+                                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '14px', transition: 'background 0.1s' }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-overlay)')}
+                                    onMouseLeave={e => (e.currentTarget.style.background = '')}
+                                    onClick={() => setShowUploadMenu(false)}
+                                >
+                                    <Upload size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                                    Upload File(s)
+                                </label>
+                                <label
+                                    htmlFor="channel-folder-upload"
+                                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '14px', transition: 'background 0.1s', borderTop: '1px solid var(--stroke)' }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-overlay)')}
+                                    onMouseLeave={e => (e.currentTarget.style.background = '')}
+                                    onClick={() => setShowUploadMenu(false)}
+                                >
+                                    <FolderArchive size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                                    Upload Folder as Zip
+                                </label>
+                            </div>
+                        )}
+                        <button
+                            className="input-icon-btn"
+                            title={channelAttachmentsEnabled ? "Upload Attachment" : "Attachments disabled in this channel"}
+                            aria-label="Upload attachment"
+                            style={channelAttachmentsEnabled ? { cursor: 'pointer' } : { opacity: 0.3, cursor: 'not-allowed' }}
+                            onClick={() => { if (channelAttachmentsEnabled) setShowUploadMenu(v => !v); }}
+                        >
                             <Plus size={20} />
-                        </label>
+                        </button>
+                        </div>
                         {hasDraft && !editingMessage && (
                             <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 15%, transparent)', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0 }}>Draft</span>
                         )}

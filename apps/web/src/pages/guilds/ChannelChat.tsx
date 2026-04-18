@@ -242,7 +242,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
 
     // Chat File Attachment State
     const chatFileInputRef = useRef<HTMLInputElement>(null);
-    const [chatAttachedFiles, setChatAttachedFiles] = useState<{name: string, size: string, file: File, previewUrl?: string}[]>([]);
+    const [chatAttachedFiles, setChatAttachedFiles] = useState<{name: string, size: string, file: File, previewUrl?: string, _placeholderId?: string}[]>([]);
     const [isDragOver, setIsDragOver] = useState(false);
 
     // E2E Encryption state for guild channels
