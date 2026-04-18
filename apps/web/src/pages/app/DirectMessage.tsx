@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
+import { ConnectionState } from 'livekit-client';
 import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield, ArrowLeft, MessageSquare, Pin } from 'lucide-react';
 import { getOrCreateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported, generateGroupKey, encryptGroupKey, decryptGroupKey, computeSafetyNumber, encryptFile, decryptFile } from '../../lib/e2e';
 import { onGroupKeyRotationNeeded, onUserKeyChanged, onE2EStateChanged } from '../../lib/socket';
@@ -18,7 +19,7 @@ import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { api, ApiRequestError, RateLimitError, API_BASE, getAccessToken } from '../../lib/api';
-import { classifyCallErrorToast } from '../../lib/callErrors';
+import { classifyCallErrorToast, getConnectionErrorHint } from '../../lib/callErrors';
 import { markRead as markReadStore } from '../../store/unreadStore';
 import { getSocket, joinChannel as socketJoinChannel, leaveChannel as socketLeaveChannel } from '../../lib/socket';
 import { onTypingStart, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove, onMessageRead, onCallAnswer, onCallReject, onPresenceUpdate, onThreadCreate, type TypingStartPayload, type MessageCreatePayload, type MessageUpdatePayload, type MessageDeletePayload, type ReactionPayload, type MessageReadPayload, type PresenceUpdatePayload } from '../../lib/socket';
@@ -29,6 +30,8 @@ import Avatar from '../../components/ui/Avatar';
 import UserProfilePopover from '../../components/ui/UserProfilePopover';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { saveScrollPosition, getScrollPosition } from '../../store/scrollPositionStore';
+import { useVoice } from '../../contexts/VoiceContext';
+import { leaveVoiceSession } from '../../lib/voiceSession';
 
 type MediaType = 'image' | 'video';
 
@@ -83,6 +86,26 @@ type Message = {
     embeds?: any[];
     isPinned?: boolean;
 };
+
+function getPrimaryRemoteParticipant(participants: LiveKitParticipant[], expectedParticipantId?: string | null): LiveKitParticipant | null {
+    if (participants.length === 0) return null;
+
+    if (expectedParticipantId) {
+        const exactMatch = participants.find((participant) => participant.id === expectedParticipantId);
+        if (exactMatch) return exactMatch;
+    }
+
+    const screenSharer = participants.find((participant) => participant.isScreenSharing);
+    if (screenSharer) return screenSharer;
+
+    const cameraParticipant = participants.find((participant) => participant.isCameraOn || participant.videoTrack || participant.screenTrack);
+    if (cameraParticipant) return cameraParticipant;
+
+    const speakingParticipant = participants.find((participant) => participant.isSpeaking || participant.audioLevel > 0);
+    if (speakingParticipant) return speakingParticipant;
+
+    return participants[0] ?? null;
+}
 
 // Video element component for rendering participant video
 const ParticipantVideo = ({ track }: { track: any }) => {
@@ -163,7 +186,7 @@ const DirectMessage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { bgMedia, hasCustomBg, setBgMedia, userProfile } = useOutletContext<OutletContextType>();
+    const { bgMedia, hasCustomBg, setBgMedia, setActiveModal, userProfile } = useOutletContext<OutletContextType>();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const bgInputRef = useRef<HTMLInputElement>(null);
     const attachmentInputRef = useRef<HTMLInputElement>(null);
@@ -176,6 +199,7 @@ const DirectMessage = () => {
     const isMobile = useIsMobile();
     const { addToast } = useToast();
     const { openMenu } = useContextMenu();
+    const voiceCtx = useVoice();
 
     // Emoji picker state
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
@@ -360,6 +384,7 @@ const DirectMessage = () => {
         isConnected,
         isConnecting,
         connectionError,
+        connectionState,
         isMuted,
         isDeafened,
         isCameraOn,
@@ -401,6 +426,10 @@ const DirectMessage = () => {
         lastCallErrorRef.current = details.description;
         addToast({ title: details.title, description: details.description, variant: 'error' });
     }, [addToast]);
+
+    const clearCallErrorToastDedup = useCallback(() => {
+        lastCallErrorRef.current = null;
+    }, []);
 
     const handleUploadBg = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -1533,6 +1562,66 @@ const DirectMessage = () => {
         }
     }, [connectionError, showCallErrorToast]);
 
+    useEffect(() => {
+        if (!isConnected || !dmChannelId) return;
+        voiceCtx.joinCall({
+            type: 'dm',
+            channelId: dmChannelId,
+            channelName: userName || groupName || 'Direct Message Call',
+        });
+    }, [isConnected, dmChannelId, userName, groupName, voiceCtx]);
+
+    useEffect(() => {
+        if (!isConnected && !isConnecting && voiceCtx.activeCallType === 'dm' && voiceCtx.channelId === dmChannelId) {
+            voiceCtx.clearCallState();
+        }
+    }, [isConnected, isConnecting, dmChannelId, voiceCtx]);
+
+    useEffect(() => {
+        if (!isConnected) return;
+        voiceCtx.setParticipantCount((localParticipant ? 1 : 0) + participants.length);
+    }, [isConnected, localParticipant, participants.length, voiceCtx]);
+
+    useEffect(() => {
+        voiceCtx.registerMuteHandler(toggleMute);
+    }, [toggleMute, voiceCtx]);
+
+    useEffect(() => {
+        voiceCtx.registerDeafenHandler(toggleDeafen);
+    }, [toggleDeafen, voiceCtx]);
+
+    useEffect(() => {
+        voiceCtx.registerDisconnectHandler(disconnect);
+    }, [disconnect, voiceCtx]);
+
+    useEffect(() => {
+        voiceCtx.registerStartScreenShareHandler(startScreenShare);
+    }, [startScreenShare, voiceCtx]);
+
+    useEffect(() => {
+        voiceCtx.registerStopScreenShareHandler(stopScreenShare);
+    }, [stopScreenShare, voiceCtx]);
+
+    useEffect(() => {
+        voiceCtx.syncMuted(isMuted);
+    }, [isMuted, voiceCtx]);
+
+    useEffect(() => {
+        voiceCtx.syncDeafened(isDeafened);
+    }, [isDeafened, voiceCtx]);
+
+    useEffect(() => {
+        voiceCtx.syncScreenSharing(isScreenSharing);
+    }, [isScreenSharing, voiceCtx]);
+
+    useEffect(() => {
+        if (!localParticipant) return;
+        const q = localParticipant.connectionQuality;
+        const mapped: 'good' | 'fair' | 'poor' =
+            (q === 'excellent' || q === 'good') ? 'good' : q === 'poor' ? 'fair' : 'poor';
+        voiceCtx.syncConnectionQuality(mapped);
+    }, [localParticipant?.connectionQuality, voiceCtx]);
+
     const handleToggleCamera = useCallback(async () => {
         try {
             await toggleCamera();
@@ -1542,6 +1631,40 @@ const DirectMessage = () => {
             addToast({ title: 'Camera Error', description, variant: 'error' });
         }
     }, [toggleCamera, isCameraOn, addToast]);
+
+    const handleToggleScreenShare = useCallback(async () => {
+        try {
+            if (isScreenSharing) {
+                await stopScreenShare();
+                addToast({ title: 'Screen Share Stopped', variant: 'info' });
+                return;
+            }
+
+            if (window.gratoniteDesktop?.isDesktop && setActiveModal) {
+                setActiveModal('screenShare');
+                return;
+            }
+
+            await startScreenShare();
+            addToast({ title: 'Screen Sharing Started', variant: 'info' });
+        } catch (err) {
+            const description = err instanceof Error ? err.message : 'Could not toggle screen share.';
+            const lowerDescription = description.toLowerCase();
+            const wasCancelled =
+                lowerDescription.includes('cancel') ||
+                lowerDescription.includes('aborted') ||
+                lowerDescription.includes('aborterror') ||
+                lowerDescription.includes('notallowederror') ||
+                lowerDescription.includes('permission denied');
+
+            if (wasCancelled && !isScreenSharing) {
+                addToast({ title: 'Screen Share Cancelled', description: 'You did not choose a screen to share.', variant: 'info' });
+                return;
+            }
+
+            addToast({ title: 'Screen Share Error', description, variant: 'error' });
+        }
+    }, [isScreenSharing, startScreenShare, stopScreenShare, addToast, setActiveModal]);
 
     // Start call — send invite, wait for answer
     const handleStartCall = async (withVideo: boolean = false) => {
@@ -1589,7 +1712,7 @@ const DirectMessage = () => {
             setIsRinging(false);
             try {
                 await connect();
-                lastCallErrorRef.current = null;
+                clearCallErrorToastDedup();
                 addToast({ title: 'Call Connected', description: `${userName} answered the call.`, variant: 'success' });
             } catch (err) {
                 showCallErrorToast(err);
@@ -1601,7 +1724,7 @@ const DirectMessage = () => {
             addToast({ title: 'Call Declined', description: `${userName} declined the call.`, variant: 'info' });
         });
         return () => { unsubAnswer(); unsubReject(); };
-    }, [dmChannelId, userName, connect, addToast]);
+    }, [dmChannelId, userName, connect, addToast, clearCallErrorToastDedup, showCallErrorToast]);
 
     // Auto-start outgoing call when navigated with ?call=voice or ?call=video
     const autoCallHandled = useRef(false);
@@ -1664,7 +1787,8 @@ const DirectMessage = () => {
 
     // End call
     const handleEndCall = async () => {
-        await disconnect();
+        await leaveVoiceSession({ disconnectLiveKit: disconnect, clearVoiceState: voiceCtx.clearCallState });
+        clearCallErrorToastDedup();
         setShowVolumePanel(false);
         addToast({ title: 'Call Ended', description: 'You left the call.', variant: 'info' });
     };
@@ -1677,8 +1801,9 @@ const DirectMessage = () => {
 
     const handleOtherUserVolumeChange = (volume: number) => {
         setOtherUserVolume(volume);
-        if (participants.length > 0) {
-            setParticipantVolume(participants[0].id, volume);
+        const primaryParticipant = getPrimaryRemoteParticipant(participants, recipientId);
+        if (primaryParticipant) {
+            setParticipantVolume(primaryParticipant.id, volume);
         }
     };
 
@@ -2064,10 +2189,13 @@ const DirectMessage = () => {
         }
     };
 
-    // Get the other participant for display
-    const otherParticipant = participants[0];
+    // Prefer the intended DM peer, but fall back gracefully if more remotes are present.
+    const otherParticipant = getPrimaryRemoteParticipant(participants, recipientId);
     const localDisplayTrack = localParticipant?.screenTrack ?? localParticipant?.videoTrack;
     const remoteDisplayTrack = otherParticipant?.screenTrack ?? otherParticipant?.videoTrack;
+    const remoteParticipantCount = participants.length;
+    const additionalRemoteParticipants = Math.max(0, remoteParticipantCount - (otherParticipant ? 1 : 0));
+    const callErrorHint = connectionError ? getConnectionErrorHint(connectionError) : null;
 
     return (
         <main className={`main-view ${hasCustomBg ? 'has-custom-bg' : ''}`} style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'row' }}>
@@ -2291,6 +2419,15 @@ const DirectMessage = () => {
                 {/* Call Area / Chat Area */}
                 {isConnected || isConnecting ? (
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+                        {connectionState === ConnectionState.Reconnecting && (
+                            <div style={{ margin: '16px 24px 0', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'flex-start', gap: '10px', zIndex: 2 }}>
+                                <Loader2 size={16} style={{ color: 'var(--accent-primary)', animation: 'spin 1s linear infinite', flexShrink: 0, marginTop: '2px' }} />
+                                <div>
+                                    <div style={{ color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600 }}>Reconnecting call...</div>
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '12px', lineHeight: 1.5 }}>Trying to restore your DM call without hanging up.</div>
+                                </div>
+                            </div>
+                        )}
                         {isConnecting ? (
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
                                 <Loader2 size={48} style={{ color: 'var(--accent-primary)', animation: 'spin 1s linear infinite' }} />
@@ -2329,6 +2466,11 @@ const DirectMessage = () => {
                                     {!otherParticipant && (
                                         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', zIndex: 3 }}>
                                             <p>Waiting for {userName} to join...</p>
+                                        </div>
+                                    )}
+                                    {additionalRemoteParticipants > 0 && (
+                                        <div style={{ position: 'absolute', top: '16px', right: '16px', padding: '6px 10px', borderRadius: '999px', background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.12)', color: 'white', fontSize: '12px', fontWeight: 600, zIndex: 3 }}>
+                                            +{additionalRemoteParticipants} more in call
                                         </div>
                                     )}
                                     {otherParticipant?.isScreenSharing && (
@@ -2500,7 +2642,7 @@ const DirectMessage = () => {
                                 </div>
 
                                 <button
-                                    onClick={isScreenSharing ? stopScreenShare : startScreenShare}
+                                    onClick={() => { void handleToggleScreenShare(); }}
                                     style={{
                                         width: '48px', height: '48px', borderRadius: '50%',
                                         background: isScreenSharing ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
@@ -2555,6 +2697,44 @@ const DirectMessage = () => {
                                 </button>
                             </div>
                         )}
+                    </div>
+                ) : connectionError ? (
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', textAlign: 'center', maxWidth: '420px' }}>
+                            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--error-alpha)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <PhoneOff size={32} style={{ color: 'var(--error)' }} />
+                            </div>
+                            <p style={{ color: 'var(--text-primary)', fontSize: '18px', fontWeight: 600, margin: 0 }}>
+                                {classifyCallErrorToast(connectionError).title}
+                            </p>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.5, margin: 0 }}>{connectionError}</p>
+                            {callErrorHint && (
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px 14px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--stroke)', textAlign: 'left' }}>
+                                    <MessageSquare size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: '2px' }} />
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.5, margin: 0 }}>{callErrorHint}</p>
+                                </div>
+                            )}
+                            <button
+                                onClick={() => {
+                                    clearCallErrorToastDedup();
+                                    void connect().catch((err) => {
+                                        showCallErrorToast(err);
+                                    });
+                                }}
+                                style={{
+                                    padding: '12px 24px',
+                                    background: 'var(--accent-primary)',
+                                    border: 'none',
+                                    borderRadius: 'var(--radius-md)',
+                                    color: '#000',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Retry call
+                            </button>
+                        </div>
                     </div>
                 ) : (
                     <>

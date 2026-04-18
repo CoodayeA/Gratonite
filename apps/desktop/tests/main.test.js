@@ -439,3 +439,63 @@ describe('fullscreen', () => {
     expect(mocks.mockWebContents.send).toHaveBeenCalledWith('fullscreen-changed', false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Group H: Desktop Screen Capture
+// ---------------------------------------------------------------------------
+describe('desktop screen capture', () => {
+  test('get-screen-sources IPC maps desktopCapturer sources for renderer use', async () => {
+    const mocks = await loadMain();
+    const source = {
+      id: 'screen:1:0',
+      name: 'Display 1',
+      display_id: '69733248',
+      thumbnail: { toDataURL: vi.fn().mockReturnValue('data:image/png;base64,thumb') },
+      appIcon: { toDataURL: vi.fn().mockReturnValue('data:image/png;base64,icon') },
+    };
+    mocks.desktopCapturer.getSources.mockResolvedValue([source]);
+
+    const result = await mocks.ipcHandlers['get-screen-sources']();
+
+    expect(mocks.desktopCapturer.getSources).toHaveBeenCalledWith({
+      types: ['screen', 'window'],
+      thumbnailSize: { width: 320, height: 180 },
+      fetchWindowIcons: true,
+    });
+    expect(result).toEqual([
+      {
+        id: 'screen:1:0',
+        name: 'Display 1',
+        thumbnailDataUrl: 'data:image/png;base64,thumb',
+        displayId: '69733248',
+        appIconDataUrl: 'data:image/png;base64,icon',
+      },
+    ]);
+  });
+
+  test('get-screen-sources IPC returns empty array when desktopCapturer fails', async () => {
+    const mocks = await loadMain();
+    mocks.desktopCapturer.getSources.mockRejectedValue(new Error('capture failed'));
+
+    const result = await mocks.ipcHandlers['get-screen-sources']();
+
+    expect(result).toEqual([]);
+  });
+
+  test('permission handler allows media, display-capture, and screen permissions', async () => {
+    const mocks = await loadMain();
+    const permissionHandler = mocks.session.defaultSession.setPermissionRequestHandler.mock.calls[0][0];
+    const allowed = vi.fn();
+    const denied = vi.fn();
+
+    permissionHandler(null, 'media', allowed);
+    permissionHandler(null, 'display-capture', allowed);
+    permissionHandler(null, 'screen', allowed);
+    permissionHandler(null, 'notifications', denied);
+
+    expect(allowed).toHaveBeenNthCalledWith(1, true);
+    expect(allowed).toHaveBeenNthCalledWith(2, true);
+    expect(allowed).toHaveBeenNthCalledWith(3, true);
+    expect(denied).toHaveBeenCalledWith(false);
+  });
+});

@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Mic, Video, MonitorUp, Settings, Maximize, Minimize, MicOff, VideoOff, Loader2 } from 'lucide-react';
+import { X, MonitorUp, Maximize, Minimize, Loader2 } from 'lucide-react';
 import { useToast } from '../ui/ToastManager';
 
 interface ScreenShareModalProps {
     isOpen: boolean;
     onClose: () => void;
-    /** Optional — pass from parent's useLiveKit hook to use LiveKit screen share */
-    onStartScreenShare?: () => Promise<void>;
+    /** Optional — pass from active call context to start LiveKit screen share */
+    onStartScreenShare?: (sourceId?: string) => Promise<void>;
     /** Optional — pass from parent's useLiveKit hook to stop screen share */
     onStopScreenShare?: () => Promise<void>;
     /** Whether the LiveKit connection is actively screen sharing */
@@ -22,19 +22,12 @@ const ScreenShareModal = ({
 }: ScreenShareModalProps) => {
     const { addToast } = useToast();
     const [isFullScreen, setIsFullScreen] = useState(false);
-    const [isMuted, setIsMuted] = useState(false);
-    const [isVideoOn, setIsVideoOn] = useState(false);
     const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
-    const [showSettings, setShowSettings] = useState(false);
-    const [streamQuality, setStreamQuality] = useState<'720p' | '1080p'>('1080p');
-    const [frameRate, setFrameRate] = useState(30);
 
     // Screen share state
     const [isSharing, setIsSharing] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
     const [shareError, setShareError] = useState<string | null>(null);
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const streamRef = useRef<MediaStream | null>(null);
     const [elapsedTime, setElapsedTime] = useState(0);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -58,11 +51,14 @@ const ScreenShareModal = ({
             try {
                 const sources = await window.gratoniteDesktop!.getScreenSources!();
                 setDesktopSources(sources);
-                if (sources.length > 0 && !selectedSourceId) {
+                if (sources.length === 0) {
+                    setSelectedSourceId(null);
+                } else if (!selectedSourceId || !sources.some((source) => source.id === selectedSourceId)) {
                     setSelectedSourceId(sources[0].id);
                 }
             } catch {
                 setDesktopSources([]);
+                setSelectedSourceId(null);
             } finally {
                 setLoadingSources(false);
             }
@@ -88,73 +84,22 @@ const ScreenShareModal = ({
         return `${m}:${s}`;
     };
 
-    // Start screen share — native getDisplayMedia or Electron desktopCapturer
-    const startNativeScreenShare = useCallback(async (): Promise<boolean> => {
+    const handleStart = useCallback(async () => {
+        if (!onStartScreenShare) {
+            setShareError('Screen share is only available while connected to an active call.');
+            return;
+        }
+
+        if (isDesktop && !selectedSourceId) {
+            setShareError('Choose a screen or window to share.');
+            return;
+        }
+
         setIsStarting(true);
         setShareError(null);
         try {
-            const res = streamQuality === '1080p'
-                ? { width: 1920, height: 1080 }
-                : { width: 1280, height: 720 };
-
-            let stream: MediaStream;
-
-            // Electron desktop path: use selected source from desktopCapturer
-            if (isDesktop && selectedSourceId) {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    audio: false,
-                    video: {
-                        mandatory: {
-                            chromeMediaSource: 'desktop',
-                            chromeMediaSourceId: selectedSourceId,
-                            maxWidth: res.width,
-                            maxHeight: res.height,
-                            maxFrameRate: frameRate,
-                        },
-                    } as any,
-                });
-
-                // System / loopback audio: same chromeMediaSourceId as video (Windows loopback)
-                try {
-                    const audioStream = await navigator.mediaDevices.getUserMedia({
-                        audio: {
-                            mandatory: {
-                                chromeMediaSource: 'desktop',
-                                chromeMediaSourceId: selectedSourceId,
-                            },
-                        },
-                        video: false,
-                    } as MediaStreamConstraints);
-                    audioStream.getAudioTracks().forEach(track => stream.addTrack(track));
-                } catch {
-                    // Audio capture not available on all platforms (e.g. some macOS builds)
-                }
-            } else {
-                // Standard browser path
-                stream = await navigator.mediaDevices.getDisplayMedia({
-                    video: { ...res, frameRate: { ideal: frameRate } },
-                    audio: true,
-                });
-            }
-
-            streamRef.current = stream;
-
-            // Attach the video to the preview element
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
-
-            // Listen for the user stopping share via the browser chrome
-            const videoTrack = stream.getVideoTracks()[0];
-            if (videoTrack) {
-                videoTrack.addEventListener('ended', () => {
-                    handleStop();
-                });
-            }
-
+            await onStartScreenShare(selectedSourceId ?? undefined);
             setIsSharing(true);
-            setDesktopSources([]); // Clear source picker
-            return true;
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Failed to start screen share';
             if (msg.includes('Permission denied') || msg.includes('NotAllowedError')) {
@@ -163,49 +108,13 @@ const ScreenShareModal = ({
                 setShareError(msg);
                 addToast({ title: 'Screen Share Failed', description: msg, variant: 'error' });
             }
-            return false;
         } finally {
             setIsStarting(false);
         }
-    }, [streamQuality, frameRate, addToast, isDesktop, selectedSourceId]);
-
-    // Start screen share (LiveKit path or native fallback)
-    const handleStart = useCallback(async () => {
-        if (onStartScreenShare) {
-            setIsStarting(true);
-            try {
-                await onStartScreenShare();
-                setIsSharing(true);
-                addToast({ title: 'Screen Share Started', description: 'You are now sharing your screen via LiveKit.', variant: 'success' });
-            } catch {
-                // Fall back to native share — success toast only if native actually started
-                const nativeOk = await startNativeScreenShare();
-                if (nativeOk) {
-                    addToast({ title: 'Screen Share Started', description: 'You are now sharing your screen.', variant: 'success' });
-                }
-            } finally {
-                setIsStarting(false);
-            }
-        } else {
-            const ok = await startNativeScreenShare();
-            if (ok) {
-                addToast({ title: 'Screen Share Started', description: 'You are now sharing your screen.', variant: 'success' });
-            }
-        }
-    }, [onStartScreenShare, startNativeScreenShare, addToast]);
+    }, [addToast, isDesktop, onStartScreenShare, selectedSourceId]);
 
     // Stop screen share
     const handleStop = useCallback(async () => {
-        // Stop native stream
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(t => t.stop());
-            streamRef.current = null;
-        }
-        if (videoRef.current) {
-            videoRef.current.srcObject = null;
-        }
-
-        // Stop LiveKit screen share
         if (onStopScreenShare) {
             try { await onStopScreenShare(); } catch { /* noop */ }
         }
@@ -232,15 +141,6 @@ const ScreenShareModal = ({
             setIsSharing(isLiveKitScreenSharing);
         }
     }, [isLiveKitScreenSharing]);
-
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(t => t.stop());
-            }
-        };
-    }, []);
 
     if (!isOpen) return null;
 
@@ -313,24 +213,6 @@ const ScreenShareModal = ({
                         position: 'relative',
                         overflow: 'hidden'
                     }}>
-                        {/* Live video preview of the shared screen */}
-                        {isSharing && (
-                            <video
-                                ref={videoRef}
-                                autoPlay
-                                playsInline
-                                muted
-                                style={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'contain',
-                                    background: '#000',
-                                }}
-                            />
-                        )}
-
                         {/* Pre-share prompt */}
                         {!isSharing && !isStarting && (
                             <div style={{ textAlign: 'center', zIndex: 1, padding: '40px', width: '100%', maxHeight: '100%', overflowY: 'auto' }}>
@@ -339,7 +221,7 @@ const ScreenShareModal = ({
                                     Share Your Screen
                                 </h3>
                                 <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '32px', maxWidth: '360px', lineHeight: '1.5', margin: '0 auto 32px' }}>
-                                    {isDesktop ? 'Select a screen or window to share with others in this call.' : 'Choose a screen, window, or tab to share with others in this call.'}
+                                    {isDesktop ? 'Select a screen or window to share with others in this call.' : 'Choose what to share with others in this call.'}
                                 </p>
 
                                 {shareError && (
@@ -422,30 +304,6 @@ const ScreenShareModal = ({
                                     </div>
                                 )}
 
-                                {/* Quality presets */}
-                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '20px' }}>
-                                    {(['720p', '1080p'] as const).map(q => (
-                                        <button
-                                            key={q}
-                                            onClick={() => setStreamQuality(q)}
-                                            style={{
-                                                padding: '6px 16px',
-                                                borderRadius: '6px',
-                                                border: streamQuality === q ? '1px solid var(--accent-primary)' : '1px solid var(--stroke)',
-                                                background: streamQuality === q ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                                                color: streamQuality === q ? 'white' : 'var(--text-secondary)',
-                                                fontSize: '13px',
-                                                fontWeight: 600,
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s',
-                                            }}
-                                        >
-                                            {q}
-                                        </button>
-                                    ))}
-                                    <span style={{ display: 'flex', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>{frameRate} fps</span>
-                                </div>
-
                                 <button
                                     onClick={handleStart}
                                     disabled={isDesktop && !selectedSourceId}
@@ -480,13 +338,18 @@ const ScreenShareModal = ({
                             </div>
                         )}
 
-                        {/* Timer overlay when sharing */}
+                        {/* Sharing state */}
                         {isSharing && (
-                            <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', padding: '6px 12px', borderRadius: '9999px', fontSize: '12px', display: 'flex', gap: '12px', color: 'white', alignItems: 'center' }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }} />
-                                    {formatTime(elapsedTime)}
-                                </span>
+                            <div style={{ textAlign: 'center', zIndex: 1, padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                                <MonitorUp size={56} style={{ color: 'var(--accent-primary)' }} />
+                                <div style={{ fontSize: '18px', color: 'var(--text-primary)', fontWeight: 600 }}>Screen share is live</div>
+                                <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Others in the call can now see your shared screen.</div>
+                                <div style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', padding: '6px 12px', borderRadius: '9999px', fontSize: '12px', display: 'flex', gap: '12px', color: 'white', alignItems: 'center' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }} />
+                                        {formatTime(elapsedTime)}
+                                    </span>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -494,122 +357,7 @@ const ScreenShareModal = ({
 
                 {/* Bottom Controls — only show when sharing */}
                 {isSharing && (
-                    <div style={{ padding: '20px', display: 'flex', justifyContent: 'center', gap: '16px', background: 'rgba(0,0,0,0.6)', borderTop: '1px solid var(--stroke)' }}>
-                        <button
-                            onMouseEnter={() => setHoveredBtn('mic')}
-                            onMouseLeave={() => setHoveredBtn(null)}
-                            onClick={() => {
-                                setIsMuted(!isMuted);
-                                addToast({ title: isMuted ? 'Microphone Unmuted' : 'Microphone Muted', variant: 'info' });
-                            }}
-                            style={{
-                                width: '48px', height: '48px', borderRadius: '50%',
-                                background: isMuted ? 'var(--error)' : (hoveredBtn === 'mic' ? 'rgba(255,255,255,0.1)' : 'var(--bg-elevated)'),
-                                border: '1px solid var(--stroke)', color: 'white',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s'
-                            }}
-                        >
-                            {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
-                        </button>
-                        <button
-                            onMouseEnter={() => setHoveredBtn('video')}
-                            onMouseLeave={() => setHoveredBtn(null)}
-                            onClick={() => {
-                                setIsVideoOn(!isVideoOn);
-                                addToast({ title: isVideoOn ? 'Camera Disabled' : 'Camera Enabled', variant: 'info' });
-                            }}
-                            style={{
-                                width: '48px', height: '48px', borderRadius: '50%',
-                                background: isVideoOn ? 'var(--accent-primary)' : (hoveredBtn === 'video' ? 'rgba(255,255,255,0.1)' : 'var(--bg-elevated)'),
-                                border: '1px solid var(--stroke)', color: isVideoOn ? '#000' : 'white',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s'
-                            }}
-                        >
-                            {isVideoOn ? <Video size={20} /> : <VideoOff size={20} />}
-                        </button>
-                        <div style={{ position: 'relative' }}>
-                            <button
-                                onMouseEnter={() => setHoveredBtn('settings')}
-                                onMouseLeave={() => setHoveredBtn(null)}
-                                onClick={() => setShowSettings(prev => !prev)}
-                                style={{
-                                    width: '48px', height: '48px', borderRadius: '50%',
-                                    background: showSettings ? 'var(--accent-primary)' : (hoveredBtn === 'settings' ? 'rgba(255,255,255,0.1)' : 'var(--bg-elevated)'),
-                                    border: '1px solid var(--stroke)', color: 'white',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s'
-                                }}
-                            >
-                                <Settings size={20} />
-                            </button>
-
-                            {showSettings && (
-                                <div style={{
-                                    position: 'absolute',
-                                    bottom: '60px',
-                                    left: '50%',
-                                    transform: 'translateX(-50%)',
-                                    width: '260px',
-                                    background: 'var(--bg-elevated)',
-                                    border: '1px solid var(--stroke)',
-                                    borderRadius: '12px',
-                                    padding: '16px',
-                                    boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
-                                    zIndex: 30,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '16px',
-                                }}>
-                                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                        Stream Settings
-                                    </div>
-
-                                    {/* Frame Rate */}
-                                    <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Frame Rate</span>
-                                            <span style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: 700 }}>{frameRate} fps</span>
-                                        </div>
-                                        <input
-                                            type="range"
-                                            min={15}
-                                            max={60}
-                                            step={5}
-                                            value={frameRate}
-                                            onChange={e => setFrameRate(Number(e.target.value))}
-                                            style={{
-                                                width: '100%',
-                                                accentColor: 'var(--accent-primary)',
-                                                cursor: 'pointer',
-                                            }}
-                                        />
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                            <span>15</span>
-                                            <span>30</span>
-                                            <span>60</span>
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        onClick={() => {
-                                            addToast({ title: `Settings applied: ${streamQuality} at ${frameRate}fps.`, variant: 'success' });
-                                            setShowSettings(false);
-                                        }}
-                                        style={{
-                                            padding: '8px 0',
-                                            borderRadius: '6px',
-                                            border: 'none',
-                                            background: 'var(--accent-primary)',
-                                            color: 'white',
-                                            fontSize: '13px',
-                                            fontWeight: 600,
-                                            cursor: 'pointer',
-                                        }}
-                                    >
-                                        Apply
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                    <div style={{ padding: '20px', display: 'flex', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', borderTop: '1px solid var(--stroke)' }}>
                         <button
                             style={{
                                 height: '48px', padding: '0 24px', borderRadius: '24px',

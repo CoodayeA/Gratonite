@@ -102,7 +102,7 @@ export interface UseLiveKitReturn {
   toggleMute: () => Promise<void>;
   toggleDeafen: () => void;
   toggleCamera: () => Promise<void>;
-  startScreenShare: () => Promise<void>;
+  startScreenShare: (sourceId?: string) => Promise<void>;
   stopScreenShare: () => Promise<void>;
   setMasterVolume: (volume: number) => void;
   setParticipantVolume: (participantId: string, volume: number) => void;
@@ -126,6 +126,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
   const connectAttemptRef = useRef(0);
   // True when the user explicitly clicked disconnect (vs component unmounting due to navigation)
   const intentionalDisconnectRef = useRef(false);
+  const electronScreenShareTracksRef = useRef<{ video: MediaStreamTrack; audio?: MediaStreamTrack } | null>(null);
 
   // Connection state
   const [isConnected, setIsConnected] = useState(false);
@@ -301,6 +302,33 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     }
   }, [participantToInfo]);
 
+  const cleanupElectronScreenShareTracks = useCallback(() => {
+    const tracks = electronScreenShareTracksRef.current;
+    if (!tracks) return;
+    tracks.video.stop();
+    tracks.audio?.stop();
+    electronScreenShareTracksRef.current = null;
+  }, []);
+
+  const stopScreenShareInternal = useCallback(async (room: Room) => {
+    const screenPublication = room.localParticipant?.getTrackPublication(Track.Source.ScreenShare);
+    const screenAudioPublication = room.localParticipant?.getTrackPublication(Track.Source.ScreenShareAudio);
+    const tracks = electronScreenShareTracksRef.current;
+
+    if (tracks && screenPublication?.track && room.localParticipant) {
+      await room.localParticipant.unpublishTrack(screenPublication.track, true);
+      if (screenAudioPublication?.track) {
+        await room.localParticipant.unpublishTrack(screenAudioPublication.track, true);
+      }
+      cleanupElectronScreenShareTracks();
+    } else if (room.localParticipant) {
+      await room.localParticipant.setScreenShareEnabled(false);
+    }
+
+    setIsScreenSharing(false);
+    updateParticipants();
+  }, [cleanupElectronScreenShareTracks, updateParticipants]);
+
   // Connect to LiveKit room
   const connect = useCallback(async () => {
     if (roomRef.current?.state === ConnectionState.Connected ||
@@ -362,6 +390,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
       });
 
       room.on(RoomEvent.Disconnected, () => {
+        cleanupElectronScreenShareTracks();
         setIsConnected(false);
         setIsConnecting(false);
         setConnectionState(ConnectionState.Disconnected);
@@ -379,6 +408,18 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
 
       room.on(RoomEvent.Reconnected, () => {
         setConnectionState(ConnectionState.Connected);
+      });
+
+      room.on(RoomEvent.LocalTrackUnpublished, (_publication, participant) => {
+        if (participant.isLocal) {
+          const stillSharing = Boolean(participant.getTrackPublication(Track.Source.ScreenShare)?.track)
+            || Boolean(participant.getTrackPublication(Track.Source.ScreenShareAudio)?.track);
+          if (!stillSharing) {
+            cleanupElectronScreenShareTracks();
+            setIsScreenSharing(false);
+          }
+        }
+        updateParticipants();
       });
       
       room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
@@ -491,6 +532,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
       
     } catch (err) {
       captureCallErrorSentry(err, { voice_connect_failure: 'connect' });
+      cleanupElectronScreenShareTracks();
       const message = mapLiveKitConnectionError(err);
       setConnectionError(message);
       setIsConnecting(false);
@@ -522,6 +564,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     
     room.disconnect();
     roomRef.current = null;
+    cleanupElectronScreenShareTracks();
 
     setIsConnected(false);
     setIsConnecting(false);
@@ -669,7 +712,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
   }, [isCameraOn, updateParticipants, isDeviceNotFoundError, getFirstMediaDeviceId, streamQuality]);
 
   // Start screen share
-  const startScreenShare = useCallback(async () => {
+  const startScreenShare = useCallback(async (preferredSourceId?: string) => {
     const room = roomRef.current;
     if (!room?.localParticipant) return;
 
@@ -687,7 +730,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     // Electron: getDisplayMedia (used by LiveKit by default) is often broken or empty.
     // Use desktopCapturer-backed getUserMedia + publish screen + optional system audio.
     if (isGratoniteDesktopApp() && window.gratoniteDesktop?.getScreenSources) {
-      const sourceId = await pickDefaultElectronScreenSourceId();
+      const sourceId = preferredSourceId ?? await pickDefaultElectronScreenSourceId();
       if (!sourceId) {
         throw new Error('No screen capture sources available. Restart the app and try again.');
       }
@@ -698,6 +741,12 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
         maxFrameRate: preset?.maxFramerate ?? 30,
       };
       const { video, audio } = await captureElectronScreenTracks(sourceId, dims);
+      electronScreenShareTracksRef.current = { video, audio };
+
+      const handleEnded = () => {
+        void stopScreenShareInternal(room);
+      };
+      video.addEventListener('ended', handleEnded, { once: true });
       try {
         await room.localParticipant.publishTrack(video, {
           source: Track.Source.ScreenShare,
@@ -715,8 +764,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
         } catch {
           /* best-effort cleanup */
         }
-        video.stop();
-        audio?.stop();
+        cleanupElectronScreenShareTracks();
         throw pubErr;
       }
       setIsScreenSharing(true);
@@ -736,7 +784,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     }
     setIsScreenSharing(true);
     updateParticipants();
-  }, [updateParticipants, streamQuality]);
+  }, [cleanupElectronScreenShareTracks, stopScreenShareInternal, updateParticipants, streamQuality]);
 
   // Stop screen share
   const stopScreenShare = useCallback(async () => {
@@ -744,13 +792,11 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
     if (!room?.localParticipant) return;
 
     try {
-      await room.localParticipant.setScreenShareEnabled(false);
-      setIsScreenSharing(false);
-      updateParticipants();
+      await stopScreenShareInternal(room);
     } catch (err) {
       console.warn('Failed to stop screen share:', err);
     }
-  }, [updateParticipants]);
+  }, [stopScreenShareInternal]);
 
   // Re-apply encoding when streamQuality changes while actively publishing
   const prevQualityRef = useRef(streamQuality);
@@ -838,13 +884,14 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
         api.voice.leave().catch(() => {});
         const room = roomRef.current;
         if (room) {
+          cleanupElectronScreenShareTracks();
           room.disconnect();
           roomRef.current = null;
         }
         intentionalDisconnectRef.current = false;
       }
     };
-  }, []);
+  }, [cleanupElectronScreenShareTracks]);
 
   return {
     isConnected,

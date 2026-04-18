@@ -176,6 +176,8 @@ function createElectronMock() {
       globalShortcut,
       nativeImage,
       Menu,
+      desktopCapturer,
+      session,
     },
   };
 }

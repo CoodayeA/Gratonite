@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mic, MicOff, Headphones, HeadphoneOff, PhoneOff, Settings, Users, ExternalLink } from 'lucide-react';
 import { useVoice } from '../../contexts/VoiceContext';
-import { leaveVoiceSession } from '../../lib/voiceSession';
+import { buildDmRoute, buildGuildVoiceRoute } from '../../lib/routes';
 
 export default function VoiceBar() {
-  const { connected, channelName, guildName, guildId, channelId, muted, deafened, toggleMute, toggleDeafen, leaveVoice, participantCount, connectionQuality } = useVoice();
+  const { activeCallType, connected, channelName, guildName, guildId, channelId, muted, deafened, screenSharing, toggleMute, toggleDeafen, leaveVoice, participantCount, connectionQuality } = useVoice();
   const navigate = useNavigate();
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
+  const popoutRef = useRef<Window | null>(null);
 
   // PTT state
   const [pttMode, setPttMode] = useState(() => localStorage.getItem('gratonite_voice_mode') === 'push_to_talk');
@@ -43,16 +44,113 @@ export default function VoiceBar() {
     };
   }, []);
 
+  const getPopoutPayload = useCallback(() => ({
+    activeCallType,
+    connected,
+    channelId,
+    channelName,
+    guildId,
+    guildName,
+    muted,
+    deafened,
+    screenSharing,
+    participantCount,
+    connectionQuality,
+  }), [activeCallType, channelId, channelName, connected, connectionQuality, deafened, guildId, guildName, muted, participantCount, screenSharing]);
+
+  useEffect(() => {
+    const popout = popoutRef.current;
+    if (!popout || popout.closed) {
+      if (popout?.closed) popoutRef.current = null;
+      return;
+    }
+
+    popout.postMessage({
+      type: 'GRATONITE_VOICE_STATE',
+      payload: getPopoutPayload(),
+    }, window.location.origin);
+  }, [getPopoutPayload]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const { data } = event;
+      if (!data || typeof data !== 'object') return;
+
+      switch (data.type) {
+        case 'GRATONITE_VOICE_POPOUT_READY': {
+          const popout = popoutRef.current;
+          if (!popout || popout.closed || event.source !== popout) return;
+          popout.postMessage({
+            type: 'GRATONITE_VOICE_STATE',
+            payload: getPopoutPayload(),
+          }, window.location.origin);
+          break;
+        }
+        case 'GRATONITE_VOICE_ACTION': {
+          const popout = popoutRef.current;
+          if (!popout || popout.closed || event.source !== popout) return;
+          switch (data.action) {
+            case 'toggleMute':
+              void toggleMute();
+              break;
+            case 'toggleDeafen':
+              toggleDeafen();
+              break;
+            case 'disconnect':
+              leaveVoice();
+              break;
+            case 'returnToCall':
+              handleNavigate();
+              window.focus();
+              break;
+            default:
+              break;
+          }
+          break;
+        }
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [getPopoutPayload, leaveVoice, toggleDeafen, toggleMute]);
+
   if (!connected) return null;
 
   const handleNavigate = () => {
-    if (guildId && channelId) {
-      navigate(`/guild/${guildId}/voice/${channelId}`);
+    if (!channelId) return;
+    if (activeCallType === 'guild' && guildId) {
+      navigate(buildGuildVoiceRoute(guildId, channelId));
+      return;
+    }
+    if (activeCallType === 'dm') {
+      navigate(buildDmRoute(channelId));
     }
   };
 
   const handleDisconnect = async () => {
-    await leaveVoiceSession({ clearVoiceState: leaveVoice });
+    leaveVoice();
+  };
+
+  const handlePopout = () => {
+    const params = new URLSearchParams({
+      channelId: channelId ?? '',
+      guildId,
+      channelName,
+      callType: activeCallType || 'guild',
+    });
+    const popout = window.open(
+      `${window.location.origin}/voice-popout?${params.toString()}`,
+      'gratoniteVoicePopout',
+      'width=420,height=580,resizable=yes,scrollbars=no'
+    );
+
+    if (!popout) return;
+    popoutRef.current = popout;
+    popout.focus();
   };
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -69,6 +167,13 @@ export default function VoiceBar() {
     minWidth: '48px', // Ensure minimum touch target
     minHeight: '48px',
   };
+
+  const connectionLabel = activeCallType === 'dm'
+    ? `Call connected to ${channelName}. Press Enter to open conversation.`
+    : `Voice connected to ${channelName} in ${guildName}. Press Enter to open channel.`;
+  const secondaryLabel = activeCallType === 'dm'
+    ? channelName
+    : `${channelName} · ${guildName}`;
 
   return (
     <div
@@ -99,7 +204,7 @@ export default function VoiceBar() {
         className="hover-bg-white-4"
         role="button"
         tabIndex={0}
-        aria-label={`Voice connected to ${channelName} in ${guildName}. Press Enter to open channel.`}
+        aria-label={connectionLabel}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -148,7 +253,7 @@ export default function VoiceBar() {
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
             }}>
-              {channelName} &middot; {guildName}
+              {secondaryLabel}
             </span>
             {/* Participant count badge (I6) */}
             {participantCount > 0 && (
@@ -303,11 +408,7 @@ export default function VoiceBar() {
         {/* Pop out button */}
         <button
           type="button"
-          onClick={() => window.open(
-            window.location.origin + '/voice-popout?channelId=' + channelId + '&guildId=' + guildId + '&channelName=' + encodeURIComponent(channelName),
-            'gratoniteVoicePopout',
-            'width=420,height=580,resizable=yes,scrollbars=no'
-          )}
+          onClick={handlePopout}
           onMouseEnter={() => setHoveredBtn('popout')}
           onMouseLeave={() => setHoveredBtn(null)}
           title="Pop out call"
