@@ -1,4 +1,4 @@
-import { X, Search, Globe } from 'lucide-react';
+import { X, Search, Globe, Sparkles } from 'lucide-react';
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 import {
     GUILD_SETTINGS_MOBILE_TABS,
@@ -23,6 +23,8 @@ type Props = {
 const tabLabelMap = Object.fromEntries(
     GUILD_SETTINGS_TABS.map(entry => [entry.tab, entry.label]),
 ) as Record<GuildSettingsTabId, string>;
+
+const PREMIUM_TABS = new Set<GuildSettingsTabId>(['boosts', 'currency']);
 
 function compactTabLabel(tab: GuildSettingsTabId): string {
     switch (tab) {
@@ -57,6 +59,7 @@ function GuildSettingsNavigation({
         marginBottom: '2px',
         background: activeTab === tab ? 'var(--active-overlay)' : hoveredBtn === `tab-${tab}` ? 'var(--hover-overlay)' : 'transparent',
         color: activeTab === tab ? 'var(--text-primary)' : 'var(--text-secondary)',
+        ...(PREMIUM_TABS.has(tab) && activeTab === tab ? { boxShadow: 'inset 2px 0 0 var(--accent-primary)' } : {}),
     });
 
     const visibleMobileTabs = matchingTabs
@@ -92,7 +95,7 @@ function GuildSettingsNavigation({
                     .map(group => (
                         <div key={group.id}>
                             <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>
-                                {group.label}
+                                {group.id === 'premium' ? `⚡ ${group.label}` : group.label}
                             </div>
                             {group.tabs
                                 .filter(tab => !matchingTabs || matchingTabs.has(tab))
@@ -104,7 +107,11 @@ function GuildSettingsNavigation({
                                         onMouseLeave={() => setHoveredBtn(null)}
                                         style={tabStyle(tab)}
                                     >
-                                        {tab === 'federation' ? <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Globe size={13} />{tabLabelMap[tab]}</span> : tabLabelMap[tab]}
+                                        {tab === 'federation'
+                                            ? <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Globe size={13} />{tabLabelMap[tab]}</span>
+                                            : PREMIUM_TABS.has(tab)
+                                                ? <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>{tabLabelMap[tab]}<Sparkles size={12} color="var(--accent-primary)" /></span>
+                                                : tabLabelMap[tab]}
                                     </div>
                                 ))}
                         </div>
