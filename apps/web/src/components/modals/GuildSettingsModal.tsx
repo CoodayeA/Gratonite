@@ -13,6 +13,8 @@ import {
     GuildInsightsPanel, ImportWizard, GuildStickersPanel, GuildDiscoveryTagsPanel,
     SpamConfigPanel, ModQueuePanel, SoundboardPanel, BackupsPanel, HighlightsPanel,
     GuildSettingsNavigation, GUILD_SETTINGS_TABS,
+    GuildInvitesPanel, GuildBrandingPanel,
+    BoostsPanel, CurrencyPanel,
 } from './guild-settings';
 
 function hexToRelativeLuminance(hex: string): number {
@@ -131,205 +133,6 @@ const accentColors = [
 
 const VIEW_CHANNEL_BIT = 1n << 8n;
 
-function CurrencyPanel({ guildId, addToast }: { guildId: string; addToast: (t: { title: string; variant: 'success' | 'error' | 'info' | 'achievement' | 'undo' }) => void }) {
-    const [currencyEnabled, setCurrencyEnabled] = useState(false);
-    const [currencyName, setCurrencyName] = useState('');
-    const [currencyNameTouched, setCurrencyNameTouched] = useState(false);
-    const [currencyEmoji, setCurrencyEmoji] = useState('\u{1F4B0}');
-    const [currencyEarnMsg, setCurrencyEarnMsg] = useState(1);
-    const [currencyEarnReact, setCurrencyEarnReact] = useState(1);
-    const [currencyEarnVoice, setCurrencyEarnVoice] = useState(2);
-    const [currencySaving, setCurrencySaving] = useState(false);
-    const [currencyLeaderboard, setCurrencyLeaderboard] = useState<Array<{ userId: string; balance: number; lifetimeEarned: number }>>([]);
-
-    useEffect(() => {
-        api.get<any>(`/guilds/${guildId}/currency`).then((data: any) => {
-            if (data.enabled) {
-                setCurrencyEnabled(true);
-                setCurrencyName(data.currency?.name ?? '');
-                setCurrencyEmoji(data.currency?.emoji ?? '\u{1F4B0}');
-                setCurrencyEarnMsg(data.currency?.earnPerMessage ?? 1);
-                setCurrencyEarnReact(data.currency?.earnPerReaction ?? 1);
-                setCurrencyEarnVoice(data.currency?.earnPerVoiceMinute ?? 2);
-            } else {
-                setCurrencyEnabled(false);
-            }
-        }).catch(() => { addToast({ title: 'Failed to load currency settings', variant: 'error' }); });
-        api.get<any>(`/guilds/${guildId}/currency/leaderboard`).then((data: any) => {
-            if (Array.isArray(data)) setCurrencyLeaderboard(data);
-        }).catch(() => {});
-    }, [guildId]);
-
-    const saveCurrency = async () => {
-        if (!currencyName.trim()) {
-            addToast({ title: 'Currency name required', variant: 'error' });
-            return;
-        }
-        setCurrencySaving(true);
-        try {
-            await api.post(`/guilds/${guildId}/currency`, {
-                name: currencyName.trim(),
-                emoji: currencyEmoji,
-                earnPerMessage: currencyEarnMsg,
-                earnPerReaction: currencyEarnReact,
-                earnPerVoiceMinute: currencyEarnVoice,
-            });
-            setCurrencyEnabled(true);
-            addToast({ title: 'Server currency saved', variant: 'success' });
-        } catch {
-            addToast({ title: 'Failed to save currency', variant: 'error' });
-        } finally {
-            setCurrencySaving(false);
-        }
-    };
-
-    const deleteCurrency = async () => {
-        setCurrencySaving(true);
-        try {
-            await api.delete(`/guilds/${guildId}/currency`);
-            setCurrencyEnabled(false);
-            setCurrencyName('');
-            setCurrencyEmoji('\u{1F4B0}');
-            setCurrencyLeaderboard([]);
-            addToast({ title: 'Server currency disabled', variant: 'success' });
-        } catch {
-            addToast({ title: 'Failed to disable currency', variant: 'error' });
-        } finally {
-            setCurrencySaving(false);
-        }
-    };
-
-    return (
-        <>
-            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Currency</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
-                Create a custom currency for your server. Members earn it by participating and can compete on the leaderboard.
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
-                    <div style={{ flex: 1 }}>
-                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Currency Name</label>
-                        <input
-                            type="text"
-                            value={currencyName}
-                            onChange={e => setCurrencyName(e.target.value)}
-                            onBlur={() => setCurrencyNameTouched(true)}
-                            placeholder="e.g. Server Coins"
-                            maxLength={50}
-                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${currencyNameTouched && !currencyName.trim() ? 'var(--error)' : 'var(--stroke)'}`, background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
-                        />
-                        {currencyNameTouched && !currencyName.trim() && (
-                            <div style={{ fontSize: '12px', color: 'var(--error)', marginTop: '4px' }}>Currency name is required</div>
-                        )}
-                    </div>
-                    <div style={{ width: '80px' }}>
-                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Emoji</label>
-                        <input
-                            type="text"
-                            value={currencyEmoji}
-                            onChange={e => setCurrencyEmoji(e.target.value.slice(0, 4))}
-                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '18px', textAlign: 'center', outline: 'none' }}
-                        />
-                    </div>
-                </div>
-
-                <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', padding: '16px', border: '1px solid var(--stroke)' }}>
-                    <h4 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px', color: 'var(--text-primary)' }}>Earning Rules</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {[
-                            { label: 'Per Message', value: currencyEarnMsg, setter: setCurrencyEarnMsg },
-                            { label: 'Per Reaction', value: currencyEarnReact, setter: setCurrencyEarnReact },
-                            { label: 'Per Voice Minute', value: currencyEarnVoice, setter: setCurrencyEarnVoice },
-                        ].map(({ label, value, setter }) => (
-                            <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{label}</span>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <input
-                                        type="number"
-                                        min={0}
-                                        max={100}
-                                        value={value}
-                                        onChange={e => setter(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
-                                        style={{ width: '60px', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', textAlign: 'center', outline: 'none' }}
-                                    />
-                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{currencyEmoji}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                        onClick={saveCurrency}
-                        disabled={currencySaving || !currencyName.trim()}
-                        style={{
-                            flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
-                            background: 'var(--accent-primary)', color: '#000', fontWeight: 700,
-                            cursor: currencySaving ? 'wait' : 'pointer', opacity: !currencyName.trim() ? 0.5 : 1,
-                        }}
-                    >
-                        {currencySaving ? 'Saving...' : currencyEnabled ? 'Update Currency' : 'Enable Currency'}
-                    </button>
-                    {currencyEnabled && (
-                        <button
-                            onClick={deleteCurrency}
-                            disabled={currencySaving}
-                            style={{
-                                padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--error)',
-                                background: 'transparent', color: 'var(--error)', fontWeight: 600,
-                                cursor: currencySaving ? 'wait' : 'pointer',
-                            }}
-                        >
-                            Disable
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {currencyEnabled && currencyLeaderboard.length > 0 && (
-                <div style={{ marginTop: '24px' }}>
-                    <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '12px' }}>Leaderboard</h3>
-                    <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
-                        {currencyLeaderboard.map((entry, i) => (
-                            <div key={entry.userId} style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                padding: '10px 16px',
-                                borderBottom: i < currencyLeaderboard.length - 1 ? '1px solid var(--stroke)' : 'none',
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <span style={{
-                                        width: '24px', height: '24px', borderRadius: '50%',
-                                        background: i === 0 ? '#ffd700' : i === 1 ? '#c0c0c0' : i === 2 ? '#cd7f32' : 'var(--bg-primary)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        fontSize: '11px', fontWeight: 700, color: i < 3 ? '#111' : 'var(--text-muted)',
-                                    }}>
-                                        {i + 1}
-                                    </span>
-                                    <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>
-                                        {entry.userId.slice(0, 8)}...
-                                    </span>
-                                </div>
-                                <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-primary)' }}>
-                                    {entry.balance.toLocaleString()} {currencyEmoji}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {currencyEnabled && currencyLeaderboard.length === 0 && (
-                <div style={{ marginTop: '24px', textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                    <p style={{ fontWeight: 600, marginBottom: '4px' }}>No balances yet</p>
-                    <p style={{ fontSize: '13px' }}>Members will start earning {currencyEmoji} {currencyName} as they chat and participate.</p>
-                </div>
-            )}
-        </>
-    );
-}
-
 type SettingsTab =
     | 'overview' | 'channels' | 'roles' | 'members' | 'bans' | 'invites' | 'emojis' | 'automod' | 'audit' | 'branding'
     | 'webhooks' | 'bots' | 'templates' | 'insights' | 'onboarding' | 'wordfilter' | 'security' | 'import' | 'boosts'
@@ -403,10 +206,12 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             if (g.bannerHash) {
                 const url = `${API_BASE}/files/${g.bannerHash}`;
                 setBannerUrl(url);
+                setBannerHash(g.bannerHash);
                 const isVid = url.endsWith('.mp4') || url.endsWith('.webm');
                 setBannerIsVideo(isVid);
             } else {
                 setBannerUrl('');
+                setBannerHash('');
                 setBannerIsVideo(false);
             }
             if (g.accentColor) {
@@ -423,9 +228,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             if (g.systemMsgJoin != null) setSystemMsgJoin(g.systemMsgJoin);
             if (g.systemMsgBoost != null) setSystemMsgBoost(g.systemMsgBoost);
             if (g.memberScreeningEnabled) setMemberScreeningEnabled(true);
-            if (g.boostCount != null) setBoostCount(g.boostCount);
-            if (g.boostTier != null) setBoostTier(g.boostTier);
-        }).catch(() => { addToast({ title: 'Failed to load boost stats', variant: 'error' }); });
+        }).catch(() => { addToast({ title: 'Failed to load guild settings', variant: 'error' }); });
     }, [guildId]);
 
     useEffect(() => {
@@ -831,7 +634,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         if (activeTab === 'members') { fetchMembers(); setSelectedMemberIds(new Set()); }
         if (activeTab === 'overview' && roles.length === 0) fetchRoles();
         if (activeTab === 'overview' && members.length === 0) fetchMembers();
-        if (activeTab === 'invites') fetchInvites();
+        if (activeTab === 'invites') { /* handled by InvitesPanel */ }
         if (activeTab === 'wordfilter' && guildId) {
             if (roles.length === 0) fetchRoles();
             api.get<any>(`/guilds/${guildId}/word-filter`).then((data: any) => {
@@ -941,46 +744,6 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [newTemplateDesc, setNewTemplateDesc] = useState('');
     const [templateCreating, setTemplateCreating] = useState(false);
 
-    // Invite management state
-    const [invites, setInvites] = useState<Array<{ code: string; inviterName: string; uses: number; maxUses: number | null; expiresAt: string | null; createdAt: string }>>([]);
-    const [invitesLoading, setInvitesLoading] = useState(false);
-    const [inviteRevoking, setInviteRevoking] = useState<string | null>(null);
-
-    // Fetch invites from API
-    const fetchInvites = async () => {
-        if (!guildId) return;
-        setInvitesLoading(true);
-        try {
-            const apiInvites = await api.invites.list(guildId) as any[];
-            const mapped = (Array.isArray(apiInvites) ? apiInvites : []).map((inv: any) => ({
-                code: inv.code,
-                inviterName: inv.inviter?.displayName || inv.inviter?.username || 'Unknown',
-                uses: inv.uses ?? 0,
-                maxUses: inv.maxUses ?? null,
-                expiresAt: inv.expiresAt ?? null,
-                createdAt: inv.createdAt ?? '',
-            }));
-            setInvites(mapped);
-        } catch {
-            addToast({ title: 'Failed to load invites', variant: 'error' });
-        } finally {
-            setInvitesLoading(false);
-        }
-    };
-
-    const handleRevokeInvite = async (code: string) => {
-        setInviteRevoking(code);
-        try {
-            await api.invites.delete(code);
-            setInvites(prev => prev.filter(i => i.code !== code));
-            addToast({ title: 'Invite revoked', variant: 'success' });
-        } catch {
-            addToast({ title: 'Failed to revoke invite', variant: 'error' });
-        } finally {
-            setInviteRevoking(null);
-        }
-    };
-
     // Fetch real server emojis and categories
     useEffect(() => {
         if (!guildId) return;
@@ -1086,8 +849,6 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [defaultMemberNotificationLevel, setDefaultMemberNotificationLevel] = useState<'all' | 'mentions' | 'nothing' | null>(null);
     const [defaultNotifSaving, setDefaultNotifSaving] = useState(false);
     const [memberScreeningEnabled, setMemberScreeningEnabled] = useState(false);
-    const [boostCount, setBoostCount] = useState(0);
-    const [boostTier, setBoostTier] = useState(0);
 
     // Welcome screen builder state
     type WelcomeBlockType = 'message' | 'channels' | 'rules' | 'links';
@@ -1166,6 +927,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const bannerInputRef = useRef<HTMLInputElement>(null);
     const avatarInputRef = useRef<HTMLInputElement>(null);
     const emojiInputRef = useRef<HTMLInputElement>(null);
+    const [bannerHash, setBannerHash] = useState('');
     const [bannerUrl, setBannerUrl] = useState('');
     const [bannerIsVideo, setBannerIsVideo] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState('');
@@ -3742,72 +3504,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     )}
 
                     {/* ===================== INVITES ===================== */}
-                    {activeTab === 'invites' && (
-                        <>
-                            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Invites</h2>
-                            <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Manage active invite links for this server.</p>
-
-                            {invitesLoading ? (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 0', color: 'var(--text-muted)', fontSize: '14px' }}>
-                                    <RefreshCw size={16} style={{ marginRight: '8px', animation: 'spin 1s linear infinite' }} />
-                                    Loading invites...
-                                </div>
-                            ) : invites.length === 0 ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
-                                    <Link2 size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
-                                    <span style={{ fontSize: '14px', fontWeight: 500 }}>No active invites</span>
-                                    <span style={{ fontSize: '12px', marginTop: '4px' }}>Create an invite from a channel to get started.</span>
-                                </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    {/* Header row */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 100px 140px 140px 80px', gap: '12px', padding: '8px 12px', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', borderBottom: '1px solid var(--stroke)' }}>
-                                        <span>Invite Code</span>
-                                        <span>Created By</span>
-                                        <span>Uses</span>
-                                        <span>Expires</span>
-                                        <span>Created</span>
-                                        <span></span>
-                                    </div>
-                                    {invites.map(inv => (
-                                        <div key={inv.code}
-                                            onMouseEnter={() => setHoveredBtn(`invite-${inv.code}`)}
-                                            onMouseLeave={() => setHoveredBtn(null)}
-                                            style={{
-                                                display: 'grid', gridTemplateColumns: '1fr 120px 100px 140px 140px 80px', gap: '12px', padding: '10px 12px', alignItems: 'center',
-                                                borderRadius: '6px', fontSize: '13px',
-                                                background: hoveredBtn === `invite-${inv.code}` ? 'var(--hover-overlay)' : 'transparent',
-                                            }}
-                                        >
-                                            <span style={{ fontFamily: 'monospace', color: 'var(--accent-primary)', fontWeight: 600, fontSize: '13px' }}>{inv.code}</span>
-                                            <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.inviterName}</span>
-                                            <span style={{ color: 'var(--text-secondary)' }}>{inv.uses}{inv.maxUses != null ? ` / ${inv.maxUses}` : ''}</span>
-                                            <span style={{ color: inv.expiresAt ? 'var(--text-secondary)' : 'var(--text-muted)', fontSize: '12px' }}>
-                                                {inv.expiresAt ? new Date(inv.expiresAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Never'}
-                                            </span>
-                                            <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                                                {inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
-                                            </span>
-                                            <button
-                                                onClick={() => handleRevokeInvite(inv.code)}
-                                                disabled={inviteRevoking === inv.code}
-                                                onMouseEnter={() => setHoveredBtn(`revoke-${inv.code}`)}
-                                                onMouseLeave={() => setHoveredBtn(`invite-${inv.code}`)}
-                                                style={{
-                                                    background: hoveredBtn === `revoke-${inv.code}` ? 'rgba(239,68,68,0.15)' : 'transparent',
-                                                    border: '1px solid var(--stroke)', borderRadius: '4px', padding: '4px 10px',
-                                                    color: 'var(--error)', cursor: inviteRevoking === inv.code ? 'not-allowed' : 'pointer',
-                                                    fontSize: '12px', fontWeight: 600, opacity: inviteRevoking === inv.code ? 0.5 : 1,
-                                                    transition: 'background 0.15s',
-                                                }}
-                                            >
-                                                {inviteRevoking === inv.code ? '...' : 'Revoke'}
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </>
+                    {activeTab === 'invites' && guildId && (
+                        <GuildInvitesPanel guildId={guildId} addToast={addToast} />
                     )}
 
                     {/* ===================== TEMPLATES ===================== */}
@@ -3929,55 +3627,22 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     )}
 
                     {/* ===================== BRANDING ===================== */}
-                    {activeTab === 'branding' && (
-                        <>
-                            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Brand Identity</h2>
-                            <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Customize the visual appearance of your Guild.</p>
-
-                            <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Guild Banner Background</h3>
-                            <div style={{ display: 'flex', gap: '24px', marginBottom: '40px' }}>
-                                <div style={{ width: '280px', height: '120px', background: !bannerUrl ? 'linear-gradient(135deg, rgba(82, 109, 245, 0.2), rgba(0,0,0,0.5))' : 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)', flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
-                                    {bannerUrl ? (
-                                        bannerIsVideo ? (
-                                            <video src={bannerUrl} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
-                                        ) : (
-                                            <img src={bannerUrl} alt="Banner preview" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
-                                        )
-                                    ) : (
-                                        <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Banner Preview</span>
-                                    )}
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '8px', flex: 1 }}>
-                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>We recommend an image of at least 960x540. You can upload a PNG, JPG, animated GIF, or MP4 video under 10MB.</p>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        <button onMouseEnter={() => setHoveredBtn('upload-banner')} onMouseLeave={() => setHoveredBtn(null)}
-                                            onClick={() => bannerInputRef.current?.click()}
-                                            style={{ background: hoveredBtn === 'upload-banner' ? 'var(--accent-primary)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '8px 24px', borderRadius: '6px', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}
-                                        >Upload Banner</button>
-                                        {bannerUrl && (
-                                            <button onClick={handleGuildBannerRemove} style={{ background: 'transparent', border: '1px solid var(--stroke)', padding: '8px 16px', borderRadius: '6px', color: 'var(--error)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Remove</button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Guild Accent Color</h3>
-                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>This color will be used for buttons, links, and highlights throughout your Guild.</p>
-                            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '32px' }}>
-                                {accentColors.map(accent => (
-                                    <div key={accent.name} onClick={() => setSelectedAccentColor(accent.color)} title={accent.name}
-                                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: accent.color, border: selectedAccentColor === accent.color ? '3px solid white' : '3px solid transparent', boxShadow: selectedAccentColor === accent.color ? `0 0 0 2px ${accent.color}` : 'none', transition: 'all 0.15s' }} />
-                                        <span style={{ fontSize: '10px', color: selectedAccentColor === accent.color ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: 600, textAlign: 'center' }}>{accent.name}</span>
-                                    </div>
-                                ))}
-                            </div>
-                            <button onClick={applyBranding}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 24px', borderRadius: '8px', background: savedIndicator ? '#10b981' : 'var(--accent-primary)', border: 'none', color: savedIndicator ? 'white' : '#000', fontWeight: 700, fontSize: '14px', cursor: 'pointer', transition: 'background 0.3s' }}
-                            >
-                                {savedIndicator ? <><Check size={16} /> Saved!</> : <><Save size={16} /> Apply Branding</>}
-                            </button>
-                        </>
+                    {activeTab === 'branding' && guildId && (
+                        <GuildBrandingPanel
+                            guildId={guildId}
+                            guild={{ bannerHash, accentColor: selectedAccentColor }}
+                            addToast={addToast}
+                            onGuildUpdate={(partial) => {
+                                if (partial.bannerHash !== undefined) {
+                                    const hash = partial.bannerHash as string;
+                                    setBannerHash(hash);
+                                    setBannerUrl(hash ? `${API_BASE}/files/${hash}` : '');
+                                }
+                                if (partial.accentColor !== undefined) {
+                                    setSelectedAccentColor(partial.accentColor as string);
+                                }
+                            }}
+                        />
                     )}
 
                     {activeTab === 'insights' && guildId && (
@@ -4066,99 +3731,13 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                         </>
                     )}
 
-                    {activeTab === 'boosts' && (() => {
-                        const TIERS = [
-                            { tier: 0, name: 'No Tier', min: 0, color: '#72767d', perks: ['Base server features'] },
-                            { tier: 1, name: 'Tier 1', min: 2, color: '#ff73fa', perks: ['50 emoji slots', '128 Kbps audio', 'Custom server invite background', 'Animated server icon'] },
-                            { tier: 2, name: 'Tier 2', min: 7, color: '#ff73fa', perks: ['100 emoji slots', '256 Kbps audio', '50 MB upload limit', 'Server banner', 'Custom role icons'] },
-                            { tier: 3, name: 'Tier 3', min: 14, color: '#ffd700', perks: ['250 emoji slots', '384 Kbps audio', '100 MB upload limit', 'Vanity invite URL', 'Animated server banner', 'Custom sticker slots'] },
-                        ];
-                        const currentTierData = TIERS[boostTier] || TIERS[0];
-                        const nextTierData = boostTier < 3 ? TIERS[boostTier + 1] : null;
-                        const progressToNext = nextTierData ? Math.min((boostCount / nextTierData.min) * 100, 100) : 100;
-                        return (
-                            <>
-                                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Boosts</h2>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
-                                    Boost your server to unlock perks and features for everyone.
-                                </p>
+                    {activeTab === 'boosts' && guildId && (
+                        <BoostsPanel guildId={guildId} addToast={addToast} />
+                    )}
 
-                                {/* Current Status */}
-                                <div style={{ background: `linear-gradient(135deg, ${currentTierData.color}22, var(--bg-tertiary))`, padding: '24px', borderRadius: '12px', border: `1px solid ${currentTierData.color}44`, marginBottom: '20px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                                        <div>
-                                            <div style={{ fontSize: '28px', fontWeight: 800, color: currentTierData.color }}>{currentTierData.name}</div>
-                                            <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '4px' }}>{boostCount} boost{boostCount !== 1 ? 's' : ''} active</div>
-                                        </div>
-                                        <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: `${currentTierData.color}20`, border: `2px solid ${currentTierData.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
-                                            {boostTier === 0 ? '\u26A1' : boostTier === 1 ? '\u26A1' : boostTier === 2 ? '\u26A1\u26A1' : '\u26A1\u26A1\u26A1'}
-                                        </div>
-                                    </div>
-
-                                    {nextTierData && (
-                                        <div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                                                <span>{boostCount} / {nextTierData.min} boosts</span>
-                                                <span>{nextTierData.name}</span>
-                                            </div>
-                                            <div style={{ height: '8px', borderRadius: '4px', background: 'var(--bg-primary)', overflow: 'hidden' }}>
-                                                <div style={{ height: '100%', borderRadius: '4px', background: `linear-gradient(90deg, ${currentTierData.color}, ${nextTierData.color})`, width: `${progressToNext}%`, transition: 'width 0.5s ease' }} />
-                                            </div>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                                {nextTierData.min - boostCount} more boost{nextTierData.min - boostCount !== 1 ? 's' : ''} needed for {nextTierData.name}
-                                            </div>
-                                        </div>
-                                    )}
-                                    {!nextTierData && (
-                                        <div style={{ fontSize: '13px', color: currentTierData.color, fontWeight: 600 }}>
-                                            Maximum tier reached!
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Tier Cards */}
-                                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>Tier Perks</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                    {TIERS.filter(t => t.tier > 0).map(t => {
-                                        const isUnlocked = boostTier >= t.tier;
-                                        const isCurrent = boostTier === t.tier;
-                                        return (
-                                            <div key={t.tier} style={{
-                                                padding: '16px', borderRadius: '10px',
-                                                background: isCurrent ? `${t.color}10` : 'var(--bg-tertiary)',
-                                                border: isCurrent ? `1px solid ${t.color}55` : '1px solid var(--stroke)',
-                                                opacity: isUnlocked ? 1 : 0.6,
-                                            }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <span style={{ fontWeight: 700, fontSize: '14px', color: isUnlocked ? t.color : 'var(--text-muted)' }}>{t.name}</span>
-                                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-primary)', padding: '2px 6px', borderRadius: '4px' }}>{t.min} boosts</span>
-                                                    </div>
-                                                    {isUnlocked && (
-                                                        <span style={{ fontSize: '11px', fontWeight: 600, color: t.color, background: `${t.color}15`, padding: '3px 8px', borderRadius: '6px' }}>
-                                                            {isCurrent ? 'Current' : 'Unlocked'}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                                    {t.perks.map((perk, i) => (
-                                                        <span key={i} style={{
-                                                            fontSize: '12px', color: isUnlocked ? 'var(--text-secondary)' : 'var(--text-muted)',
-                                                            background: 'var(--bg-primary)', padding: '3px 8px', borderRadius: '6px',
-                                                        }}>
-                                                            {isUnlocked ? '\u2713' : '\u2022'} {perk}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </>
-                        );
-                    })()}
-
-                    {activeTab === 'currency' && guildId && <CurrencyPanel guildId={guildId} addToast={addToast} />}
+                    {activeTab === 'currency' && guildId && (
+                        <CurrencyPanel guildId={guildId} addToast={addToast} />
+                    )}
 
                     {activeTab === 'welcome' && (() => {
                         const BLOCK_META: Record<WelcomeBlockType, { label: string; icon: React.ReactNode; desc: string }> = {

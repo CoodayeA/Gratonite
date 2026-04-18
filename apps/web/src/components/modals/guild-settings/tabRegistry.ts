@@ -43,8 +43,8 @@ export const GUILD_SETTINGS_TABS: readonly GuildSettingsTabEntry[] = [
   { tab: 'branding', label: 'Brand Identity', keywords: ['branding', 'brand', 'accent color', 'server color', 'identity'] },
   { tab: 'webhooks', label: 'Webhooks', keywords: ['webhooks', 'webhook', 'integrations', 'incoming webhook', 'webhook url'] },
   { tab: 'bots', label: 'Installed Bots', keywords: ['bots', 'installed bots', 'bot management', 'slash commands', 'bot prefix'] },
-  { tab: 'boosts', label: 'Server Boosts', keywords: ['boosts', 'boost', 'server boosts', 'nitro', 'boost tier', 'perks'] },
-  { tab: 'currency', label: 'Server Currency', keywords: ['currency', 'server currency', 'coins', 'economy', 'balance'] },
+  { tab: 'boosts', label: 'Server Boosts', keywords: ['boosts', 'boost', 'server boosts', 'nitro', 'boost tier', 'perks', 'boost server', 'tier', 'tier 1', 'tier 2', 'tier 3', 'boost perks', 'server tier'] },
+  { tab: 'currency', label: 'Server Currency', keywords: ['currency', 'server currency', 'coins', 'economy', 'balance', 'earn coins', 'reward', 'points', 'leaderboard', 'server economy'] },
   { tab: 'backups', label: 'Backups', keywords: ['backups', 'server backup', 'export', 'restore', 'backup download', 'backup verify'] },
   { tab: 'templates', label: 'Templates', keywords: ['templates', 'server template', 'template code', 'clone server'] },
   { tab: 'import', label: 'Import', keywords: ['import', 'server import', 'discord import', 'slack import', 'migrate'] },
@@ -59,7 +59,7 @@ export const GUILD_SETTINGS_TAB_GROUPS: readonly GuildSettingsTabGroup[] = [
   { id: 'analytics', label: 'Analytics', tabs: ['insights'] },
   { id: 'customization', label: 'Customization', tabs: ['emojis', 'stickers', 'branding'] },
   { id: 'integrations', label: 'Integrations', tabs: ['webhooks', 'bots'] },
-  { id: 'premium', label: 'Premium', tabs: ['boosts', 'currency'] },
+  { id: 'premium', label: 'Premium & Economy', tabs: ['boosts', 'currency'] },
   { id: 'advanced', label: 'Advanced', tabs: ['backups', 'templates', 'import', 'federation'] },
 ];
 
