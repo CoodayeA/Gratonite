@@ -20,6 +20,18 @@ export const metadata: Metadata = createPageMetadata({
 
 const releases = [
   {
+    version: "1.0.8",
+    date: "April 18, 2026",
+    summary: "Android beta APK now available for sideloading.",
+    accent: "gold" as const,
+    changes: [
+      "Android app (v1.0.1) is now available as a sideloadable APK — no Play Store required",
+      "Download directly from the download page and install in minutes",
+      "Supports Android 8 and later; full feature parity with the iOS beta",
+      "iOS & Android roadmap item marked as shipped",
+    ],
+  },
+  {
     version: "1.0.7",
     date: "April 17, 2026",
     summary: "Sharper Gratonite identity across landing, in-app help, and self-host docs.",
@@ -150,8 +162,8 @@ const releases = [
 const roadmap = [
   {
     feature: "iOS & Android apps",
-    status: "in-progress" as const,
-    description: "Native mobile apps for iPhone, iPad, and Android devices.",
+    status: "done" as const,
+    description: "Native mobile apps for iPhone and iPad (TestFlight beta) and Android (sideload APK). Both available now.",
   },
   {
     feature: "End-to-end encryption for DMs",

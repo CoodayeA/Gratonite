@@ -43,42 +43,53 @@ export function MobileSection() {
 
         {/* Android */}
         <ScrollReveal delay={0.08}>
-          <Card className="h-full flex flex-col opacity-60">
-            <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-500/10 flex items-center justify-center mb-4">
-              <AndroidIcon size={24} className="text-gray-400" />
+          <Card accent="gold" className="h-full flex flex-col">
+            <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-500/10 flex items-center justify-center mb-4">
+              <AndroidIcon size={24} className="text-green-500" />
             </div>
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-display text-xl font-bold">Android</h3>
-              <Badge color="charcoal" className="text-[10px] px-2 py-0">COMING SOON</Badge>
+              <Badge color="gold" className="text-xs !px-2 !py-0.5">
+                BETA
+              </Badge>
             </div>
-            <p className="text-foreground/50 text-sm mb-5 flex-1">
-              In the meantime, use the web app at{" "}
-              <a
-                href="https://gratonite.chat/app"
-                className="text-purple font-bold hover:underline"
-              >
-                gratonite.chat/app
-              </a>{" "}
-              on any browser.
+            <p className="text-foreground/50 text-sm mb-4 flex-1">
+              Sideload the APK on any Android device running Android 8 or later.
+              No Play Store required.
             </p>
-            <div className="relative group w-full">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled
-                aria-disabled="true"
-                className="w-full"
-              >
-                Notify Me
-              </Button>
-              <span className="absolute -top-9 left-1/2 -translate-x-1/2 bg-charcoal text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                Android is not available yet
-              </span>
+            <Button
+              variant="primary"
+              size="sm"
+              href="https://expo.dev/artifacts/eas/p97vU3SSEvGtQQDU5w1wC8.apk"
+              className="w-full mb-4"
+            >
+              Download APK (v1.0.1)
+            </Button>
+            {/* Sideloading instructions */}
+            <div className="border border-foreground/10 rounded-xl p-3 bg-foreground/[0.03]">
+              <p className="text-xs font-semibold text-foreground/60 uppercase tracking-wide mb-2">
+                How to install
+              </p>
+              <ol className="space-y-1.5">
+                <li className="text-xs text-foreground/55 flex gap-2">
+                  <span className="text-gold font-bold shrink-0">1.</span>
+                  Download the APK above to your Android device.
+                </li>
+                <li className="text-xs text-foreground/55 flex gap-2">
+                  <span className="text-gold font-bold shrink-0">2.</span>
+                  Go to <strong>Settings → Security</strong> and enable{" "}
+                  <em>Install unknown apps</em> for your browser or file manager.
+                </li>
+                <li className="text-xs text-foreground/55 flex gap-2">
+                  <span className="text-gold font-bold shrink-0">3.</span>
+                  Open the downloaded file and tap <strong>Install</strong>.
+                </li>
+                <li className="text-xs text-foreground/55 flex gap-2">
+                  <span className="text-gold font-bold shrink-0">4.</span>
+                  Launch Gratonite and sign in. That&apos;s it.
+                </li>
+              </ol>
             </div>
-            <p className="text-foreground/40 text-xs mt-3 leading-snug">
-              Android is in active development. We will announce availability on
-              our blog and in the community.
-            </p>
           </Card>
         </ScrollReveal>
       </div>
