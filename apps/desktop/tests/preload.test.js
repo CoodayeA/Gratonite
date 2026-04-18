@@ -69,6 +69,11 @@ describe('preload.js', () => {
     expect(mockIpcRenderer.send).toHaveBeenCalledWith('set-badge-count', 5);
   });
 
+  test('getScreenSources() → ipcRenderer.invoke("get-screen-sources")', async () => {
+    await capturedApi.api.getScreenSources();
+    expect(mockIpcRenderer.invoke).toHaveBeenCalledWith('get-screen-sources');
+  });
+
   test('getMuteState() → ipcRenderer.invoke("get-mute-state")', async () => {
     await capturedApi.api.getMuteState();
     expect(mockIpcRenderer.invoke).toHaveBeenCalledWith('get-mute-state');

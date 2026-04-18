@@ -93,6 +93,7 @@ const ParticipantVideo = ({ track, showPiP }: { track: any; showPiP?: boolean })
 
 const VoiceChannel = () => {
     const { hasCustomBg, userProfile } = useOutletContext<OutletContextType>();
+    const { setActiveModal } = useOutletContext<OutletContextType>();
     const { channelId, guildId } = useParams<{ channelId: string; guildId: string }>();
     const { addToast } = useToast();
     const voiceCtx = useVoice();
@@ -588,8 +589,10 @@ const VoiceChannel = () => {
     useEffect(() => {
         if (isConnected && channelId && guildId) {
             voiceCtx.joinVoice(channelId, channelName, '', guildId);
+        } else if (!isConnected && !isConnecting && voiceCtx.activeCallType === 'guild' && voiceCtx.channelId === channelId) {
+            voiceCtx.clearCallState();
         }
-    }, [isConnected, channelId, guildId, channelName]);
+    }, [isConnected, isConnecting, channelId, guildId, channelName, voiceCtx]);
 
     // Sync participant count to VoiceContext
     useEffect(() => {
@@ -603,8 +606,11 @@ const VoiceChannel = () => {
     // Register the real LiveKit toggleMute with VoiceContext so VoiceBar delegates to it
     useEffect(() => {
         voiceCtx.registerMuteHandler(toggleMute);
-        return () => voiceCtx.registerMuteHandler(null);
     }, [toggleMute]);
+
+    useEffect(() => {
+        voiceCtx.registerDeafenHandler(toggleDeafen);
+    }, [toggleDeafen]);
 
     // Register the real LiveKit disconnect with VoiceContext so VoiceBar can tear
     // down the room even when VoiceChannel is not mounted (user navigated away).
@@ -614,10 +620,26 @@ const VoiceChannel = () => {
         voiceCtx.registerDisconnectHandler(disconnect);
     }, [disconnect]);
 
+    useEffect(() => {
+        voiceCtx.registerStartScreenShareHandler(startScreenShare);
+    }, [startScreenShare]);
+
+    useEffect(() => {
+        voiceCtx.registerStopScreenShareHandler(stopScreenShare);
+    }, [stopScreenShare]);
+
     // Sync LiveKit isMuted to VoiceContext so VoiceBar icon stays accurate
     useEffect(() => {
         voiceCtx.syncMuted(isMuted);
     }, [isMuted]);
+
+    useEffect(() => {
+        voiceCtx.syncDeafened(isDeafened);
+    }, [isDeafened]);
+
+    useEffect(() => {
+        voiceCtx.syncScreenSharing(isScreenSharing);
+    }, [isScreenSharing]);
 
     // Sync local participant connection quality to VoiceContext
     useEffect(() => {
@@ -764,6 +786,10 @@ const VoiceChannel = () => {
                 await stopScreenShare();
                 addToast({ title: 'Screen Share Stopped', variant: 'info' });
             } else {
+                if (window.gratoniteDesktop?.isDesktop) {
+                    setActiveModal('screenShare');
+                    return;
+                }
                 await startScreenShare();
                 addToast({ title: 'Screen Sharing Started', variant: 'info' });
             }
@@ -771,10 +797,10 @@ const VoiceChannel = () => {
             const description = err instanceof Error ? err.message : 'Could not toggle screen share.';
             addToast({ title: 'Screen Share Error', description, variant: 'error' });
         }
-    }, [isScreenSharing, startScreenShare, stopScreenShare, addToast]);
+    }, [isScreenSharing, startScreenShare, stopScreenShare, addToast, setActiveModal]);
 
     const handleDisconnect = useCallback(async () => {
-        await leaveVoiceSession({ disconnectLiveKit: disconnect, clearVoiceState: voiceCtx.leaveVoice });
+        await leaveVoiceSession({ disconnectLiveKit: disconnect, clearVoiceState: voiceCtx.clearCallState });
         setManuallyDisconnected(true);
         addToast({ title: 'Disconnected', description: 'Left the voice channel.', variant: 'info' });
     }, [disconnect, addToast, voiceCtx]);
