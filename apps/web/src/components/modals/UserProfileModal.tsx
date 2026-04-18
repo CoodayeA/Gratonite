@@ -293,8 +293,8 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
     // Merge fetched data with prop data
     const displayName = profile?.displayName || userProfile?.name || 'User';
     const username = profile?.username || userProfile?.handle || 'user';
-    const avatarHash = profile?.avatarHash ?? userProfile?.avatarHash;
-    const bannerHash = profile?.bannerHash ?? null;
+    const avatarHash = profile ? (profile.avatarHash ?? null) : (userProfile?.avatarHash ?? null);
+    const bannerHash = profile ? (profile.bannerHash ?? null) : (userProfile?.bannerHash ?? null);
     const bio = profile?.bio ?? userProfile?.bio ?? null;
     const pronouns = profile?.pronouns ?? null;
     const customStatus = profile?.customStatus ?? userProfile?.customStatus ?? null;

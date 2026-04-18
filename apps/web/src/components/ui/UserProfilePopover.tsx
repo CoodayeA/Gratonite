@@ -234,7 +234,7 @@ const UserProfilePopover = ({
     // Use fetched profile data when available, fall back to input props
     const displayName = profile?.displayName || user.name;
     const handle = profile?.username || user.handle;
-    const avatarHash = profile?.avatarHash ?? user.avatarHash;
+    const avatarHash = profile ? (profile.avatarHash ?? null) : (user.avatarHash ?? null);
     const bio = profile?.bio;
     const pronouns = profile?.pronouns;
     const statusColor = STATUS_COLORS[user.status || 'online'];

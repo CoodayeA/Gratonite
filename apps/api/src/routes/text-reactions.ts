@@ -5,11 +5,66 @@ import { db } from '../db/index';
 import { textReactions, textReactionStats } from '../db/schema/text-reactions';
 import { messages } from '../db/schema/messages';
 import { channels } from '../db/schema/channels';
+import { polls } from '../db/schema/polls';
 import { users } from '../db/schema/users';
 import { requireAuth } from '../middleware/auth';
 
 export const textReactionsRouter = Router({ mergeParams: true });
 export const textReactionPopularRouter = Router({ mergeParams: true });
+
+const POLL_MESSAGE_PREFIX = 'poll:';
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function normalizeReactionTargetId(messageId: string): { id: string; isPoll: boolean } | null {
+  const isPoll = messageId.startsWith(POLL_MESSAGE_PREFIX);
+  const normalizedId = isPoll ? messageId.slice(POLL_MESSAGE_PREFIX.length) : messageId;
+
+  if (!UUID_PATTERN.test(normalizedId)) {
+    return null;
+  }
+
+  return { id: normalizedId, isPoll };
+}
+
+async function ensureReactionTarget(channelId: string, target: { id: string; isPoll: boolean }): Promise<boolean> {
+  if (!target.isPoll) {
+    const [msg] = await db.select({ id: messages.id })
+      .from(messages)
+      .where(and(eq(messages.id, target.id), eq(messages.channelId, channelId)))
+      .limit(1);
+
+    if (msg) {
+      return true;
+    }
+  }
+
+  const [poll] = await db.select({
+    id: polls.id,
+    channelId: polls.channelId,
+    creatorId: polls.creatorId,
+    question: polls.question,
+    createdAt: polls.createdAt,
+  })
+    .from(polls)
+    .where(and(eq(polls.id, target.id), eq(polls.channelId, channelId)))
+    .limit(1);
+
+  if (!poll) {
+    return false;
+  }
+
+  await db.insert(messages).values({
+    id: poll.id,
+    channelId: poll.channelId,
+    authorId: poll.creatorId,
+    content: null,
+    // Hide synthetic poll carrier rows from standard channel history queries.
+    threadId: poll.id,
+    createdAt: poll.createdAt,
+  }).onConflictDoNothing();
+
+  return true;
+}
 
 /** POST /channels/:channelId/messages/:messageId/text-reactions — add text reaction */
 textReactionsRouter.post('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
@@ -17,6 +72,12 @@ textReactionsRouter.post('/', requireAuth, async (req: Request, res: Response): 
     const userId = req.userId!;
     const { channelId, messageId } = req.params as Record<string, string>;
     const { text } = req.body as { text: string };
+    const target = normalizeReactionTargetId(messageId);
+
+    if (!target) {
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'Invalid message id'  });
+      return;
+    }
 
     if (!text || text.length > 20) {
       res.status(400).json({ code: 'BAD_REQUEST', message: 'text is required and must be 20 characters or fewer'  });
@@ -29,20 +90,14 @@ textReactionsRouter.post('/', requireAuth, async (req: Request, res: Response): 
       return;
     }
 
-    // Verify message exists in this channel
-    const [msg] = await db.select({ id: messages.id })
-      .from(messages)
-      .where(and(eq(messages.id, messageId), eq(messages.channelId, channelId)))
-      .limit(1);
-
-    if (!msg) {
+    if (!(await ensureReactionTarget(channelId, target))) {
       res.status(404).json({ code: 'NOT_FOUND', message: 'Message not found'  });
       return;
     }
 
     // Insert text reaction
     const [reaction] = await db.insert(textReactions).values({
-      messageId,
+      messageId: target.id,
       userId,
       textContent: trimmed,
     }).onConflictDoNothing().returning();
@@ -81,12 +136,18 @@ textReactionsRouter.delete('/:text', requireAuth, async (req: Request, res: Resp
   try {
     const userId = req.userId!;
     const { messageId, text: reactionText } = req.params as Record<string, string>;
+    const target = normalizeReactionTargetId(messageId);
+
+    if (!target) {
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'Invalid message id'  });
+      return;
+    }
 
     const decoded = decodeURIComponent(reactionText);
 
     const [deleted] = await db.delete(textReactions)
       .where(and(
-        eq(textReactions.messageId, messageId),
+        eq(textReactions.messageId, target.id),
         eq(textReactions.userId, userId),
         eq(textReactions.textContent, decoded),
       ))
@@ -108,6 +169,12 @@ textReactionsRouter.delete('/:text', requireAuth, async (req: Request, res: Resp
 textReactionsRouter.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { messageId } = req.params as Record<string, string>;
+    const target = normalizeReactionTargetId(messageId);
+
+    if (!target) {
+      res.status(400).json({ code: 'BAD_REQUEST', message: 'Invalid message id'  });
+      return;
+    }
 
     const rows = await db.select({
       textContent: textReactions.textContent,
@@ -117,7 +184,7 @@ textReactionsRouter.get('/', requireAuth, async (req: Request, res: Response): P
     })
       .from(textReactions)
       .innerJoin(users, eq(users.id, textReactions.userId))
-      .where(eq(textReactions.messageId, messageId));
+      .where(eq(textReactions.messageId, target.id));
 
     // Group by text
     const grouped: Record<string, { text: string; count: number; users: Array<{ id: string; username: string; displayName: string }> }> = {};

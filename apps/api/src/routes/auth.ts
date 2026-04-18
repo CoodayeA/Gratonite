@@ -45,6 +45,7 @@ import { userDevices } from '../db/schema/user-devices';
 import { ServiceError } from '../services/guild.service';
 import * as authService from '../services/auth.service';
 import { handleAppError } from '../lib/errors';
+import { clearRefreshCookies, readRefreshCookie, REFRESH_COOKIE } from '../lib/authCookies';
 
 export const authRouter = Router();
 
@@ -70,8 +71,6 @@ const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => P
  * Name of the httpOnly cookie used to store the refresh token JWT.
  * Must match everywhere the cookie is set, read, or cleared.
  */
-const REFRESH_COOKIE = 'gratonite_refresh';
-
 /**
  * Refresh token lifetime: 30 days expressed in milliseconds.
  * Used to calculate both the cookie maxAge and the DB expiresAt timestamp.
@@ -606,7 +605,7 @@ authRouter.post('/login', authRateLimit, asyncHandler(async (req: Request, res: 
  * the JWT hasn't expired yet.
  */
 authRouter.post('/refresh', asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const rawToken: string | undefined = req.cookies[REFRESH_COOKIE];
+  const rawToken = readRefreshCookie(req.cookies);
 
   if (!rawToken) {
     res.status(401).json({ code: 'UNAUTHORIZED', message: 'No refresh token provided' });
@@ -618,7 +617,7 @@ authRouter.post('/refresh', asyncHandler(async (req: Request, res: Response): Pr
     res.status(200).json({ accessToken: result.accessToken });
   } catch (err) {
     if (err instanceof ServiceError) {
-      res.clearCookie(REFRESH_COOKIE, { path: '/' });
+      clearRefreshCookies(res);
       res.status(401).json({ code: 'UNAUTHORIZED', message: err.message });
       return;
     }
@@ -642,12 +641,12 @@ authRouter.post('/refresh', asyncHandler(async (req: Request, res: Response): Pr
  * client with errors it can't recover from.
  */
 authRouter.post('/logout', asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const rawToken: string | undefined = req.cookies[REFRESH_COOKIE];
+  const rawToken = readRefreshCookie(req.cookies);
 
   await authService.logout(rawToken);
 
   // Always clear the cookie, regardless of whether a token was found.
-  res.clearCookie(REFRESH_COOKIE, { path: '/' });
+  clearRefreshCookies(res);
   res.status(200).json({ message: 'Logged out' });
 }));
 
@@ -674,7 +673,7 @@ authRouter.get('/sessions', requireAuth, asyncHandler(async (req: Request, res: 
       .from(refreshTokens)
       .where(eq(refreshTokens.userId, req.userId!));
 
-    const rawToken: string | undefined = req.cookies[REFRESH_COOKIE]
+    const rawToken: string | undefined = readRefreshCookie(req.cookies)
       || (req.headers['x-refresh-token'] as string | undefined);
     const currentHash = rawToken ? hashToken(rawToken) : null;
 
@@ -711,7 +710,7 @@ authRouter.delete('/sessions/:id', requireAuth, asyncHandler(async (req: Request
       return;
     }
 
-    const rawToken: string | undefined = req.cookies[REFRESH_COOKIE]
+    const rawToken: string | undefined = readRefreshCookie(req.cookies)
       || (req.headers['x-refresh-token'] as string | undefined);
     if (rawToken && hashToken(rawToken) === row.tokenHash) {
       res.status(400).json({ code: 'CANNOT_REVOKE_CURRENT', message: 'Use /logout to end the current session' });
@@ -730,7 +729,7 @@ authRouter.delete('/sessions/:id', requireAuth, asyncHandler(async (req: Request
  */
 authRouter.delete('/sessions', requireAuth, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   try {
-    const rawToken: string | undefined = req.cookies[REFRESH_COOKIE]
+    const rawToken: string | undefined = readRefreshCookie(req.cookies)
       || (req.headers['x-refresh-token'] as string | undefined);
     const currentHash = rawToken ? hashToken(rawToken) : null;
 
@@ -1367,7 +1366,7 @@ authRouter.get('/federated/callback', asyncHandler(async (req: Request, res: Res
     });
 
     // Set refresh token cookie
-    res.cookie('gratonite_refresh_token', refreshToken, {
+    res.cookie(REFRESH_COOKIE, refreshToken, {
       httpOnly: true,
       secure: true,
       sameSite: 'lax',

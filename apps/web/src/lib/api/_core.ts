@@ -498,8 +498,8 @@ export async function refreshAccessToken(): Promise<string | null> {
       }
       return data.accessToken;
     } catch {
-      setAccessToken(null);
       if (isAuthGuardEnabled()) {
+        setAuthRuntimeState(accessToken ? 'active' : 'expired');
         emitClientTelemetry({
           event: 'auth_refresh_result',
           statusClass: 'network',
@@ -527,6 +527,12 @@ export async function apiFetch<T = any>(
   _5xxRetry = 0,
 ): Promise<T> {
   if (isAuthRuntimeExpired() && !shouldBypassAuthGate(path)) {
+    if (!retried) {
+      const recoveredToken = await refreshAccessToken();
+      if (recoveredToken) {
+        return apiFetch<T>(path, options, true, _5xxRetry);
+      }
+    }
     emitClientTelemetry({
       event: 'auth_request_short_circuit',
       route: typeof window !== 'undefined' ? window.location.pathname : null,

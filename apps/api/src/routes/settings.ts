@@ -10,6 +10,7 @@ import { redis } from '../lib/redis';
 import { safeJsonParse } from '../lib/safe-json.js';
 import { DEFAULT_EMAIL_NOTIFICATIONS, mergeEmailNotificationsJson } from '../lib/emailNotificationPrefs';
 import { mergeNotificationQuietHoursJson } from '../lib/notificationQuietHours';
+import { buildUserSettingsResponse, sanitizePersistedSettingsPatch } from '../lib/user-settings';
 
 export const settingsRouter = Router();
 
@@ -92,36 +93,7 @@ settingsRouter.get('/', requireAuth, async (req: Request, res: Response): Promis
       .where(eq(userSettings.userId, req.userId!))
       .limit(1);
 
-    if (!settings) {
-      // Return defaults
-      res.json({
-        theme: 'midnight',
-        colorMode: 'dark',
-        fontFamily: 'Inter',
-        fontSize: 14,
-        glassMode: 'full',
-        buttonShape: 'rounded',
-        soundMuted: false,
-        soundVolume: 50,
-        soundPack: 'default',
-        reducedMotion: false,
-        lowPower: false,
-        highContrast: false,
-        compactMode: false,
-        accentColor: null,
-        customThemeId: null,
-        themePreferences: null,
-        emailNotifications: { ...DEFAULT_EMAIL_NOTIFICATIONS },
-        notificationQuietHours: null,
-      });
-      return;
-    }
-
-    const { id, userId, createdAt, updatedAt, ...rest } = settings;
-    res.json({
-      ...rest,
-      emailNotifications: mergeEmailNotificationsJson(rest.emailNotifications),
-    });
+    res.json(buildUserSettingsResponse(settings));
   } catch (err) {
     logger.error('[settings] GET / error:', err);
     res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Internal server error' });
@@ -135,20 +107,17 @@ settingsRouter.patch(
   validate(patchSettingsSchema),
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const data = { ...(req.body as z.infer<typeof patchSettingsSchema>) };
+      const body = req.body as z.infer<typeof patchSettingsSchema>;
+      const data = sanitizePersistedSettingsPatch(body as Record<string, unknown>);
 
       // Upsert
       const [existing] = await db
-        .select({
-          id: userSettings.id,
-          emailNotifications: userSettings.emailNotifications,
-          notificationQuietHours: userSettings.notificationQuietHours,
-        })
+        .select()
         .from(userSettings)
         .where(eq(userSettings.userId, req.userId!))
         .limit(1);
 
-      const incomingEmail = (req.body as z.infer<typeof patchSettingsSchema>).emailNotifications;
+      const incomingEmail = body.emailNotifications;
       if (incomingEmail !== undefined) {
         data.emailNotifications = {
           ...mergeEmailNotificationsJson(existing?.emailNotifications),
@@ -156,12 +125,17 @@ settingsRouter.patch(
         };
       }
 
-      const incomingQh = (req.body as z.infer<typeof patchSettingsSchema>).notificationQuietHours;
+      const incomingQh = body.notificationQuietHours;
       if (incomingQh !== undefined) {
         data.notificationQuietHours = mergeNotificationQuietHoursJson(
           existing?.notificationQuietHours,
           incomingQh,
         );
+      }
+
+      if (Object.keys(data).length === 0) {
+        res.json(buildUserSettingsResponse(existing));
+        return;
       }
 
       if (existing) {
@@ -170,11 +144,7 @@ settingsRouter.patch(
           .set({ ...data, updatedAt: new Date() })
           .where(eq(userSettings.userId, req.userId!))
           .returning();
-        const { id, userId, createdAt, updatedAt, ...rest } = updated;
-        res.json({
-          ...rest,
-          emailNotifications: mergeEmailNotificationsJson(rest.emailNotifications),
-        });
+        res.json(buildUserSettingsResponse(updated));
       } else {
         const insertPayload = { ...data };
         if (insertPayload.emailNotifications !== undefined) {
@@ -189,11 +159,7 @@ settingsRouter.patch(
           .insert(userSettings)
           .values({ userId: req.userId!, ...insertPayload })
           .returning();
-        const { id, userId, createdAt, updatedAt, ...rest } = created;
-        res.json({
-          ...rest,
-          emailNotifications: mergeEmailNotificationsJson(rest.emailNotifications),
-        });
+        res.json(buildUserSettingsResponse(created));
       }
     } catch (err) {
       logger.error('[settings] PATCH / error:', err);

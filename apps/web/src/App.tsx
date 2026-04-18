@@ -3350,8 +3350,17 @@ export const AppLayout = () => {
                 }
             }),
             onGuildUpdate((data) => {
+                const hasIconHash = Object.prototype.hasOwnProperty.call(data, 'iconHash');
                 setGuilds(prev => prev.map(g =>
-                    g.id === data.guildId ? { ...g, name: data.name ?? g.name, iconHash: data.iconHash ?? g.iconHash, description: data.description ?? g.description, memberCount: data.memberCount ?? g.memberCount } : g
+                    g.id === data.guildId
+                        ? {
+                            ...g,
+                            name: data.name ?? g.name,
+                            iconHash: hasIconHash ? (data.iconHash ?? null) : g.iconHash,
+                            description: data.description ?? g.description,
+                            memberCount: data.memberCount ?? g.memberCount,
+                        }
+                        : g
                 ));
             }),
             onGuildDelete((data) => {
@@ -3474,9 +3483,9 @@ export const AppLayout = () => {
     useEffect(() => {
         const handler = (e: Event) => {
             const detail = (e as CustomEvent).detail;
-            if (detail?.guildId && detail?.iconHash) {
+            if (detail?.guildId && Object.prototype.hasOwnProperty.call(detail, 'iconHash')) {
                 setGuilds(prev => prev.map(g =>
-                    g.id === detail.guildId ? { ...g, iconHash: detail.iconHash } : g
+                    g.id === detail.guildId ? { ...g, iconHash: detail.iconHash ?? null } : g
                 ));
             }
             invalidateGuilds();
@@ -3660,10 +3669,11 @@ export const AppLayout = () => {
             api.users.getMe()
                 .then((me: any) => {
                     setUserProfile((prev) => {
+                        const hasProfile = !!me?.profile && typeof me.profile === 'object';
                         const nextName = me?.profile?.displayName || me?.username || prev.name;
                         const nextHandle = me?.username || prev.handle;
-                        const nextAvatarHash = me?.profile?.avatarHash ?? prev.avatarHash;
-                        const nextBannerHash = me?.profile?.bannerHash ?? prev.bannerHash;
+                        const nextAvatarHash = hasProfile ? (me.profile.avatarHash ?? null) : prev.avatarHash;
+                        const nextBannerHash = hasProfile ? (me.profile.bannerHash ?? null) : prev.bannerHash;
                         if (
                             prev.name === nextName &&
                             prev.handle === nextHandle &&
