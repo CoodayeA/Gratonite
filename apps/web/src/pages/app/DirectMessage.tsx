@@ -787,6 +787,8 @@ const DirectMessage = () => {
     const messageListRef = useRef<HTMLDivElement>(null);
     const [showScrollButton, setShowScrollButton] = useState(false);
     const [newDmMsgCount, setNewDmMsgCount] = useState(0);
+    const [hasDraft, setHasDraft] = useState(false);
+    const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const convertApiMessage = (m: any): Message => {
         const authorInfo = userCacheRef.current.get(m.authorId);
@@ -870,6 +872,24 @@ const DirectMessage = () => {
     }, [dmChannelId]);
 
     useEffect(() => { fetchDmMessages(); }, [fetchDmMessages]);
+
+    // Load draft when DM channel changes
+    useEffect(() => {
+        if (!dmChannelId) return;
+        if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+        // Fast-path: load from localStorage immediately
+        try {
+            const localDraft = localStorage.getItem(`gratonite:draft:${dmChannelId}`);
+            if (localDraft) { setInputValue(localDraft); setHasDraft(true); }
+            else { setInputValue(''); setHasDraft(false); }
+        } catch { setInputValue(''); setHasDraft(false); }
+        // Server draft overrides localStorage
+        fetch(`${API_BASE}/channels/${dmChannelId}/draft`, {
+            headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
+        }).then(r => r.ok ? r.json() : null).then(draft => {
+            if (draft?.content) { setInputValue(draft.content); setHasDraft(true); }
+        }).catch(() => {});
+    }, [dmChannelId]);
 
     // Handle ?messageId= search param for notification click-through
     useEffect(() => {
@@ -1913,6 +1933,30 @@ const DirectMessage = () => {
         setInputValue(val);
         if (val.trim().length > 0) sendTypingIndicator();
 
+        // Auto-save draft (debounced 500ms)
+        if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+        if (dmChannelId) {
+            const draftKey = `gratonite:draft:${dmChannelId}`;
+            if (val.trim().length > 0) {
+                setHasDraft(true);
+                try { localStorage.setItem(draftKey, val); } catch { /* ignore */ }
+                draftSaveTimerRef.current = setTimeout(() => {
+                    fetch(`${API_BASE}/channels/${dmChannelId}/draft`, {
+                        method: 'PUT',
+                        headers: { Authorization: `Bearer ${getAccessToken() ?? ''}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: val }),
+                    }).catch(() => {});
+                }, 500);
+            } else {
+                setHasDraft(false);
+                try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
+                fetch(`${API_BASE}/channels/${dmChannelId}/draft`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
+                }).catch(() => {});
+            }
+        }
+
         if (isGroupDm) {
             const beforeCursor = val.slice(0, cursor);
             const mentionMatch = beforeCursor.match(/@([a-zA-Z0-9_]*)$/);
@@ -2191,6 +2235,15 @@ const DirectMessage = () => {
             // Cleanup preview URLs
             dmAttachedFiles.forEach(f => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl); });
             setInputValue('');
+            setHasDraft(false);
+            if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+            if (dmChannelId) {
+                try { localStorage.removeItem(`gratonite:draft:${dmChannelId}`); } catch { /* ignore */ }
+                fetch(`${API_BASE}/channels/${dmChannelId}/draft`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
+                }).catch(() => {});
+            }
             dmMentionsMapRef.current.clear();
             setDmAttachedFiles([]);
             setDmUploadProgress({});
@@ -3555,6 +3608,9 @@ const DirectMessage = () => {
                                         <Plus size={20} />
                                     </button>
                                 </div>
+                                {hasDraft && !editingMessage && (
+                                    <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 15%, transparent)', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0 }}>Draft</span>
+                                )}
                                 <textarea
                                     className="chat-input"
                                     rows={1}
