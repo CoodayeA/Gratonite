@@ -868,6 +868,10 @@ const DirectMessage = () => {
     const [newDmMsgCount, setNewDmMsgCount] = useState(0);
     const [hasDraft, setHasDraft] = useState(false);
     const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+    const [scheduleDate, setScheduleDate] = useState('');
+    const [scheduleTime, setScheduleTime] = useState('');
+    const [scheduledMessages, setScheduledMessages] = useState<Array<{ id: string; content: string; scheduledAt: string }>>([]);
 
     const convertApiMessage = (m: any): Message => {
         const authorInfo = userCacheRef.current.get(m.authorId);
@@ -967,6 +971,12 @@ const DirectMessage = () => {
             headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
         }).then(r => r.ok ? r.json() : null).then(draft => {
             if (draft?.content) { setInputValue(draft.content); setHasDraft(true); }
+        }).catch(() => {});
+        // Load scheduled messages
+        fetch(`${API_BASE}/channels/${dmChannelId}/messages/scheduled`, {
+            headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
+        }).then(r => r.ok ? r.json() : []).then(data => {
+            setScheduledMessages(Array.isArray(data) ? data : []);
         }).catch(() => {});
     }, [dmChannelId]);
 
@@ -3480,6 +3490,65 @@ const DirectMessage = () => {
 
                         {/* Input Area */}
                         <div className="input-area" style={{ position: 'relative' }}>
+                            {/* Scheduled messages list */}
+                            {scheduledMessages.length > 0 && (
+                                <div style={{ padding: '6px 16px', background: 'var(--bg-secondary)', borderTop: '1px solid var(--stroke)', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', fontWeight: 600, color: 'var(--accent-primary)' }}>
+                                        <Clock size={12} /> {scheduledMessages.length} scheduled
+                                    </span>
+                                    {scheduledMessages.map(sm => (
+                                        <div key={sm.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '3px 0', borderBottom: '1px solid var(--stroke)' }}>
+                                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                &ldquo;{sm.content.slice(0, 60)}&rdquo; — {new Date(sm.scheduledAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                            <button onClick={() => {
+                                                fetch(`${API_BASE}/channels/${dmChannelId}/messages/scheduled/${sm.id}`, {
+                                                    method: 'DELETE',
+                                                    headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
+                                                }).then(() => setScheduledMessages(prev => prev.filter(m => m.id !== sm.id))).catch(() => {});
+                                            }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}>
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {/* Schedule message popover */}
+                            {isScheduleOpen && (
+                                <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', right: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-md)', padding: '16px', width: '280px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', zIndex: 50 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                        <span style={{ fontWeight: 600, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}><Clock size={14} /> Schedule Message</span>
+                                        <button onClick={() => setIsScheduleOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} /></button>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Date</label>
+                                            <input type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'white', padding: '8px', borderRadius: '6px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Time</label>
+                                            <input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'white', padding: '8px', borderRadius: '6px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+                                        </div>
+                                    </div>
+                                    <button className="auth-button" style={{ margin: '12px 0 0', padding: '8px 0', height: 'auto', fontSize: '13px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', width: '100%' }} onClick={() => {
+                                        if (!dmChannelId || !scheduleDate || !scheduleTime) { addToast({ title: 'Pick a date and time', variant: 'error' }); return; }
+                                        const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
+                                        fetch(`${API_BASE}/channels/${dmChannelId}/messages`, {
+                                            method: 'POST',
+                                            headers: { Authorization: `Bearer ${getAccessToken() ?? ''}`, 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ content: inputValue || ' ', scheduledAt }),
+                                        }).then(r => {
+                                            if (r.ok) { r.json().then(sm => { setScheduledMessages(prev => [...prev, sm]); addToast({ title: 'Message scheduled', variant: 'success' }); }); }
+                                            else { addToast({ title: 'Failed to schedule', variant: 'error' }); }
+                                        }).catch(() => addToast({ title: 'Failed to schedule', variant: 'error' }));
+                                        setIsScheduleOpen(false);
+                                        setInputValue('');
+                                        setHasDraft(false);
+                                        setScheduleDate('');
+                                        setScheduleTime('');
+                                    }}>Schedule Send</button>
+                                </div>
+                            )}
                             {editingMessage && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 16px', fontSize: '12px', color: 'var(--accent-primary)', background: 'var(--bg-tertiary)', borderBottom: '1px solid var(--stroke)' }}>
                                     <Pencil size={12} />
@@ -3750,6 +3819,11 @@ const DirectMessage = () => {
                                 <button className={`input-icon-btn ${isEmojiPickerOpen ? 'primary' : ''}`} title="Select Emoji" onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}>
                                     <Smile size={20} />
                                 </button>
+                                {!editingMessage && (
+                                    <button className={`input-icon-btn ${isScheduleOpen ? 'primary' : ''}`} title="Schedule Message" onClick={() => setIsScheduleOpen(!isScheduleOpen)}>
+                                        <Clock size={18} />
+                                    </button>
+                                )}
                                 <button
                                     className={`input-icon-btn ${inputValue.trim().length > 0 ? 'primary' : ''}`}
                                     aria-label={rateLimitRemaining > 0 ? `Rate limited, wait ${rateLimitRemaining}s` : 'Send message'}
