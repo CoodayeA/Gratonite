@@ -243,8 +243,10 @@ const Inventory = () => {
     const rarityBorderStyle = (item: ApiInventoryItem, equipped: boolean): React.CSSProperties => {
         const r = rarityOf(item.rarity);
         return {
-            border: equipped ? `2px solid ${r.color}` : `2px solid var(--border-structural)`,
-            boxShadow: equipped ? `0 0 16px ${r.glow}, inset 0 0 8px ${r.glow}` : 'var(--shadow-panel)',
+            border: equipped ? `2px solid ${r.color}` : `1px solid ${r.color}25`,
+            boxShadow: equipped
+                ? `0 0 20px ${r.glow}, 0 0 40px ${r.glow}60, inset 0 0 8px ${r.glow}`
+                : `0 4px 12px ${r.glow}20`,
         };
     };
 
@@ -264,9 +266,14 @@ const Inventory = () => {
 
             {/* ---- Top Bar ---- */}
             <header className="top-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Archive size={24} style={{ color: 'var(--accent-primary)' }} />
-                    <h2>Cosmetics Inventory & Loadout</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, var(--accent-primary), #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(168,85,247,0.25)' }}>
+                        <Archive size={18} color="white" />
+                    </div>
+                    <div>
+                        <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>Inventory & Loadout</h2>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '1px' }}>Manage your cosmetics and active look</p>
+                    </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                     <RippleWrapper>
@@ -277,6 +284,7 @@ const Inventory = () => {
                                 background: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
                                 border: '1px solid var(--stroke)', padding: '8px 14px',
                                 borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+                                transition: 'background 0.15s',
                             }}
                         >
                             <ShoppingBag size={15} /> Shop
@@ -290,6 +298,7 @@ const Inventory = () => {
                                 background: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
                                 border: '1px solid var(--stroke)', padding: '8px 14px',
                                 borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+                                transition: 'background 0.15s',
                             }}
                         >
                             <Store size={15} /> Marketplace
@@ -427,30 +436,40 @@ const Inventory = () => {
 
                     {/* -- Loadout Summary Rows -- */}
                     <div className="glass-panel" style={{
-                        padding: '16px',
+                        padding: '14px',
                         borderRadius: '12px',
                         border: '1px solid var(--stroke)',
-                        display: 'flex', flexDirection: 'column', gap: '8px',
+                        display: 'flex', flexDirection: 'column', gap: '6px',
                     }}>
+                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '1px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Crown size={12} style={{ color: 'var(--accent-primary)' }} /> Active Loadout
+                        </div>
                         {([
-                            { label: 'Frame',     item: activeFrame },
-                            { label: 'Effect',    item: activeEffect },
-                            { label: 'Theme',     item: activeTheme },
-                            { label: 'Canvas',    item: activeCanvas },
-                            { label: 'Nameplate', item: activeNameplate },
-                        ] as { label: string; item: ApiInventoryItem | undefined }[]).map(({ label, item }) => (
+                            { label: 'Frame',     item: activeFrame,     dot: '#3b82f6' },
+                            { label: 'Effect',    item: activeEffect,    dot: '#a855f7' },
+                            { label: 'Theme',     item: activeTheme,     dot: '#f59e0b' },
+                            { label: 'Canvas',    item: activeCanvas,    dot: '#10b981' },
+                            { label: 'Nameplate', item: activeNameplate, dot: '#ec4899' },
+                        ] as { label: string; item: ApiInventoryItem | undefined; dot: string }[]).map(({ label, item, dot }) => (
                             <div key={label} style={{
                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                background: 'var(--bg-tertiary)', padding: '10px 12px', borderRadius: '8px',
+                                background: item ? `${dot}08` : 'var(--bg-tertiary)',
+                                padding: '9px 12px', borderRadius: '8px',
+                                border: item ? `1px solid ${dot}25` : '1px solid transparent',
+                                transition: 'background 0.2s, border-color 0.2s',
                             }}>
-                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>
-                                    {label}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: item ? dot : 'var(--text-muted)', opacity: item ? 1 : 0.4, flexShrink: 0 }} />
+                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>
+                                        {label}
+                                    </span>
+                                </div>
                                 <span style={{
-                                    fontSize: '12px', fontWeight: 600,
+                                    fontSize: '12px', fontWeight: 700,
                                     color: item ? rarityOf(item.rarity).color : 'var(--text-muted)',
+                                    maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                 }}>
-                                    {item?.name || 'None'}
+                                    {item?.name || '—'}
                                 </span>
                             </div>
                         ))}

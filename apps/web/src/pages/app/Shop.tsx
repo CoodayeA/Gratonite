@@ -308,31 +308,55 @@ const Shop = () => {
                         <p style={{ color: 'var(--text-secondary)', fontSize: isMobile ? '13px' : undefined }}>Spend your Gratonite gems on exclusive profile customizations.</p>
                     </div>
 
-                    <div style={{ background: 'var(--bg-tertiary)', padding: isMobile ? '10px 16px' : '12px 24px', borderRadius: '12px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03))', padding: isMobile ? '10px 16px' : '12px 24px', borderRadius: '14px', border: '1px solid rgba(16,185,129,0.25)', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 0 20px rgba(16,185,129,0.08)' }}>
                         <Gem size={20} color="#10b981" />
-                        <span style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{gratoniteBalance.toLocaleString()}</span>
-                        <MagneticButton onClick={() => navigate('/gratonite')} style={{ background: 'var(--accent-primary)', border: 'none', padding: '6px 12px', borderRadius: '6px', color: 'white', fontWeight: 600, marginLeft: 'auto', cursor: 'pointer', zIndex: 10, whiteSpace: 'nowrap' }}>Get More</MagneticButton>
+                        <span style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#10b981' }}>{gratoniteBalance.toLocaleString()}</span>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginRight: '4px' }}>G</span>
+                        <MagneticButton onClick={() => navigate('/gratonite')} style={{ background: 'var(--accent-primary)', border: 'none', padding: '6px 14px', borderRadius: '8px', color: 'white', fontWeight: 700, marginLeft: 'auto', cursor: 'pointer', zIndex: 10, whiteSpace: 'nowrap', fontSize: '13px' }}>+ Get More</MagneticButton>
                     </div>
                 </header>
 
                 {/* Featured Section */}
-                <div style={{ background: 'linear-gradient(135deg, rgba(82, 109, 245, 0.1), rgba(217, 70, 239, 0.1))', padding: isMobile ? '20px' : '32px', borderRadius: '16px', border: '1px solid var(--accent-primary)', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between', marginBottom: isMobile ? '24px' : '48px', gap: isMobile ? '20px' : undefined }}>
-                    <div>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'var(--accent-primary)', color: 'white', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', marginBottom: '12px' }}>
-                            <Sparkles size={14} /> New Arrival
+                <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, rgba(82,109,245,0.12), rgba(217,70,239,0.12), rgba(245,158,11,0.06))', padding: isMobile ? '20px' : '36px', borderRadius: '20px', border: '1px solid rgba(217,70,239,0.3)', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between', marginBottom: isMobile ? '24px' : '48px', gap: isMobile ? '20px' : '32px' }}>
+                    {/* Ambient glow blobs */}
+                    <div style={{ position: 'absolute', top: '-40px', right: isMobile ? '-20px' : '80px', width: '180px', height: '180px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(217,70,239,0.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
+                    <div style={{ position: 'absolute', bottom: '-30px', right: isMobile ? 'auto' : '240px', left: isMobile ? '-20px' : 'auto', width: '140px', height: '140px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(82,109,245,0.14) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+                    <div style={{ position: 'relative', zIndex: 1 }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #a855f7, #6366f1)', color: 'white', padding: '5px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '14px', boxShadow: '0 4px 12px rgba(168,85,247,0.35)' }}>
+                            <Sparkles size={12} /> Featured Bundle
                         </div>
-                        <h2 style={{ fontSize: isMobile ? '22px' : '32px', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: '8px' }}>Astral Projection Bundle</h2>
-                        <p style={{ color: 'var(--text-secondary)', maxWidth: '400px', marginBottom: isMobile ? '16px' : '24px', fontSize: isMobile ? '13px' : undefined }}>Includes Prismatic Arc frame, Aurora Borealis effect, Cherry Blossom decoration, and Liquid Chrome profile effect.</p>
-                        <MagneticButton className="auth-button" onClick={() => {
-                            setShowBundleItems(prev => !prev);
-                            if (!showBundleItems) {
-                                setTimeout(() => bundleItemsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
-                            }
-                        }} style={{ marginTop: 0, width: 'fit-content', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
-                            {showBundleItems ? 'Hide Bundle' : 'View Bundle'} <ArrowRight size={18} style={{ transform: showBundleItems ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
-                        </MagneticButton>
+                        <h2 style={{ fontSize: isMobile ? '22px' : '34px', fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: '10px', lineHeight: 1.15 }}>Cosmic Ascendance Bundle</h2>
+                        <p style={{ color: 'var(--text-secondary)', maxWidth: '420px', marginBottom: isMobile ? '16px' : '24px', fontSize: isMobile ? '13px' : '15px', lineHeight: 1.6 }}>Four premium cosmetics — Prismatic Arc frame, Aurora Borealis effect, Cherry Blossom decoration, and Liquid Chrome nameplate. Stack the savings.</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: isMobile ? 0 : '4px' }}>
+                            <MagneticButton className="auth-button" onClick={() => {
+                                setShowBundleItems(prev => !prev);
+                                if (!showBundleItems) {
+                                    setTimeout(() => bundleItemsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+                                }
+                            }} style={{ marginTop: 0, width: 'fit-content', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
+                                {showBundleItems ? 'Hide Items' : 'View Bundle'} <ArrowRight size={18} style={{ transform: showBundleItems ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+                            </MagneticButton>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                                <Gem size={14} color="#10b981" />
+                                <span style={{ textDecoration: 'line-through', color: 'var(--text-muted)' }}>3,760</span>
+                                <span style={{ fontWeight: 800, color: '#10b981', fontSize: '15px' }}>3,200 G</span>
+                                <span style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '8px' }}>Save 15%</span>
+                            </div>
+                        </div>
                     </div>
-                    {!isMobile && <div style={{ width: '200px', height: '200px', borderRadius: '50%', background: 'linear-gradient(45deg, #6366f1, #d946ef)', border: '8px solid var(--bg-elevated)', boxShadow: '0 0 40px rgba(217, 70, 239, 0.4)' }}></div>}
+
+                    {!isMobile && (
+                        <div style={{ position: 'relative', flexShrink: 0, width: '200px', height: '200px', zIndex: 1 }}>
+                            {/* Outer ring */}
+                            <div style={{ position: 'absolute', inset: '-12px', borderRadius: '50%', border: '2px solid rgba(168,85,247,0.3)', animation: 'shop-pulse-glow 3s ease-in-out infinite' }} />
+                            {/* Main orb */}
+                            <div style={{ width: '200px', height: '200px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #d946ef, #a855f7)', boxShadow: '0 0 60px rgba(168,85,247,0.4), 0 0 120px rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '6px' }}>
+                                <Sparkles size={40} color="rgba(255,255,255,0.9)" />
+                                <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>4 Items</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Bundle Items Panel */}
@@ -365,33 +389,44 @@ const Shop = () => {
                 )}
 
                 {/* Category Tabs */}
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '32px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '0', marginBottom: '32px', borderBottom: '1px solid var(--stroke)' }}>
                     {tabs.map(tab => (
-                        <RippleWrapper key={tab.key}>
-                            <button
-                                onClick={() => setView(tab.key)}
-                                style={{
-                                    background: view === tab.key ? 'var(--text-primary)' : 'var(--bg-tertiary)',
-                                    color: view === tab.key ? 'var(--bg-app)' : 'var(--text-primary)',
-                                    border: 'var(--border-structural)',
-                                    padding: '8px 16px',
-                                    borderRadius: 'var(--radius-sm)',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    transition: 'all 0.2s',
-                                    fontSize: '14px',
-                                }}>
-                                {tab.icon}
-                                {tab.label}
-                            </button>
-                        </RippleWrapper>
+                        <button
+                            key={tab.key}
+                            onClick={() => setView(tab.key)}
+                            style={{
+                                background: 'none',
+                                color: view === tab.key ? 'var(--text-primary)' : 'var(--text-muted)',
+                                border: 'none',
+                                borderBottom: view === tab.key ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                                marginBottom: '-1px',
+                                padding: '10px 20px',
+                                fontWeight: view === tab.key ? 700 : 500,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '7px',
+                                transition: 'color 0.15s, border-color 0.15s',
+                                fontSize: '14px',
+                                whiteSpace: 'nowrap',
+                            }}>
+                            {tab.icon}
+                            {tab.label}
+                        </button>
                     ))}
                 </div>
 
                 {/* Category Description */}
+                {view === 'frames' && (
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px', padding: '12px 16px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+                        🖼️ Avatar Frames appear as a decorative ring around your profile picture — neon glows, gold rings, animated pulses, and more.
+                    </p>
+                )}
+                {view === 'effects' && (
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px', padding: '12px 16px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
+                        ✦ Profile Effects add animated backgrounds and atmospheric overlays behind your avatar in the chat and profile views.
+                    </p>
+                )}
                 {view === 'decorations' && (
                     <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px', padding: '12px 16px', background: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
                         ✨ Avatar Decorations appear as overlays around your profile picture — crowns, wings, halos, and more.
@@ -415,7 +450,7 @@ const Shop = () => {
                     ) : view === 'nameplates' ? (
                         filteredItems.map(item => (
                             <TiltCard key={item.id} maxTilt={10} scale={1.03}>
-                                <div className="hover-lift" style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '24px', border: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', overflow: 'hidden', boxShadow: 'var(--shadow-panel)' }}>
+                                <div className="hover-lift" style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '24px', border: `1px solid ${rarityColor[item.rarity]}40`, display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', overflow: 'hidden', boxShadow: `0 4px 24px ${rarityColor[item.rarity]}15, var(--shadow-panel)` }}>
                                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: rarityColor[item.rarity] }} />
                                     <ItemBadge item={item} />
 
@@ -461,7 +496,7 @@ const Shop = () => {
                     ) : view === 'decorations' ? (
                         filteredItems.map(item => (
                             <TiltCard key={item.id} maxTilt={12} scale={1.03}>
-                                <div className="hover-lift" style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '24px', border: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', position: 'relative', overflow: 'hidden', boxShadow: 'var(--shadow-panel)' }}>
+                                <div className="hover-lift" style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '24px', border: `1px solid ${rarityColor[item.rarity]}40`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', position: 'relative', overflow: 'hidden', boxShadow: `0 4px 24px ${rarityColor[item.rarity]}15, var(--shadow-panel)` }}>
                                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: rarityColor[item.rarity] }} />
                                     <ItemBadge item={item} />
 
@@ -519,7 +554,7 @@ const Shop = () => {
 
                             return (
                             <TiltCard key={item.id} maxTilt={12} scale={1.03}>
-                                <div className="hover-lift" style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '24px', border: 'var(--border-structural)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', position: 'relative', overflow: 'hidden', height: '100%', boxShadow: 'var(--shadow-panel)' }}>
+                                <div className="hover-lift" style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '24px', border: `1px solid ${rarityColor[item.rarity]}40`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', position: 'relative', overflow: 'hidden', height: '100%', boxShadow: `0 4px 24px ${rarityColor[item.rarity]}15, var(--shadow-panel)` }}>
                                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '80px', background: 'linear-gradient(180deg, var(--bg-tertiary) 0%, transparent 100%)', zIndex: 0 }}></div>
                                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: rarityColor[item.rarity] }} />
                                     <ItemBadge item={item} />

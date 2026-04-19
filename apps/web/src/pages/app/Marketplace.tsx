@@ -699,28 +699,31 @@ const Marketplace = () => {
             <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
                 <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
                     <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--accent-primary)', marginBottom: '8px' }}>
-                            <Users size={28} />
-                            <h1 style={{ fontSize: '28px', fontWeight: 700, fontFamily: 'var(--font-display)' }}>Community Marketplace</h1>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, var(--accent-purple), #6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(139,92,246,0.3)' }}>
+                                <Users size={20} color="white" />
+                            </div>
+                            <h1 style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>Community Marketplace</h1>
                         </div>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>Support creators or bid on rare peer-to-peer items in the Auction House.</p>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '480px', lineHeight: 1.6 }}>Buy directly from creators, or bid on rare cosmetics in the peer-to-peer Auction House.</p>
                     </div>
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                         <button
                             onClick={() => setActiveTab('auctions')}
-                            style={{ background: 'var(--accent-purple)', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 700, padding: '9px 14px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                            style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', border: 'none', borderRadius: '10px', color: '#fff', fontWeight: 700, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', boxShadow: '0 4px 12px rgba(139,92,246,0.3)' }}
                         >
-                            <Gavel size={16} /> Live Auction
+                            <Gavel size={15} /> Live Auction
                         </button>
                         <button
                             onClick={() => { setActiveTab('creators'); setShowCreateItem(true); }}
-                            style={{ background: 'var(--accent-primary)', border: 'none', borderRadius: '8px', color: '#000', fontWeight: 700, padding: '9px 14px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                            style={{ background: 'var(--accent-primary)', border: 'none', borderRadius: '10px', color: '#000', fontWeight: 700, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}
                         >
-                            <Upload size={16} /> List Item
+                            <Upload size={15} /> List Item
                         </button>
-                        <div style={{ background: 'var(--bg-tertiary)', padding: '10px 20px', borderRadius: '10px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Gem size={18} color="#10b981" />
-                            <span style={{ fontSize: '18px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{(gratoniteBalance ?? 0).toLocaleString()}</span>
+                        <div style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03))', padding: '10px 18px', borderRadius: '12px', border: '1px solid rgba(16,185,129,0.25)', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 0 16px rgba(16,185,129,0.08)' }}>
+                            <Gem size={16} color="#10b981" />
+                            <span style={{ fontSize: '16px', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#10b981' }}>{(gratoniteBalance ?? 0).toLocaleString()}</span>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>G</span>
                         </div>
                     </div>
                 </header>
@@ -810,16 +813,22 @@ const Marketplace = () => {
                                             onMouseEnter={() => setHoveredCard(String(item.id))} onMouseLeave={() => setHoveredCard(null)}
                                             style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', transform: hoveredCard === String(item.id) ? 'translateY(-4px)' : 'translateY(0)', boxShadow: hoveredCard === String(item.id) ? '0 12px 32px rgba(0,0,0,0.3)' : 'none' }}>
                                             {/* Creator banner preview */}
-                                            <div style={{ height: '80px', background: item.creatorBanner, position: 'relative' }}>
-                                                <div style={{ position: 'absolute', bottom: -20, left: 16, width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-purple))', border: '2px solid var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 700 }}>
+                                            <div style={{ height: '90px', background: item.creatorBanner, position: 'relative', overflow: 'hidden' }}>
+                                                {/* Subtle shimmer overlay */}
+                                                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 60%)', pointerEvents: 'none' }} />
+                                                <div style={{ position: 'absolute', bottom: -22, left: 16, width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-purple))', border: '3px solid var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', fontWeight: 700, boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>
                                                     {item.creatorAvatar}
                                                 </div>
-                                                <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.6)', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', backdropFilter: 'blur(4px)' }}>
-                                                    <Star size={11} color="#f59e0b" /> {item.sales.toLocaleString()} sold
+                                                <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.65)', padding: '4px 9px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', backdropFilter: 'blur(8px)' }}>
+                                                    <Star size={11} color="#f59e0b" fill="#f59e0b" /> {item.sales.toLocaleString()} sold
                                                 </div>
-                                                {item.isBundle && (
-                                                    <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'var(--accent-purple)', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, color: 'white' }}>
-                                                        <Package size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />BUNDLE
+                                                {item.isBundle ? (
+                                                    <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'var(--accent-purple)', padding: '3px 9px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, color: 'white', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <Package size={11} />BUNDLE
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(0,0,0,0.55)', padding: '3px 9px', borderRadius: '8px', fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(6px)', textTransform: 'capitalize' }}>
+                                                        {item.type.replace(/_/g, ' ')}
                                                     </div>
                                                 )}
                                             </div>
@@ -910,8 +919,13 @@ const Marketplace = () => {
                                     return (
                                         <div key={auction.id}
                                             onMouseEnter={() => setHoveredCard(auction.id)} onMouseLeave={() => setHoveredCard(null)}
-                                            style={{ background: 'var(--bg-elevated)', border: `1px solid ${isUrgent ? 'var(--error)' : 'var(--stroke)'}`, borderRadius: '12px', padding: '20px', display: 'grid', gridTemplateColumns: '80px 2fr 1fr 1fr auto', alignItems: 'center', gap: '20px', transition: 'background 0.2s', cursor: 'pointer', backgroundColor: hoveredCard === auction.id ? 'var(--hover-overlay)' : 'var(--bg-elevated)' }}>
-                                            <div style={{ width: '80px', height: '80px', borderRadius: '12px', background: auction.imageUrl ?? 'linear-gradient(135deg, #8b5cf6, #ec4899)', border: '2px solid var(--stroke)' }} />
+                                            style={{ background: hoveredCard === auction.id ? 'var(--bg-tertiary)' : 'var(--bg-elevated)', border: `1px solid ${isUrgent ? 'var(--error)' : 'var(--stroke)'}`, borderRadius: '14px', padding: '20px', display: 'grid', gridTemplateColumns: '80px 2fr 1fr 1fr auto', alignItems: 'center', gap: '20px', transition: 'background 0.15s, box-shadow 0.15s', cursor: 'pointer', boxShadow: hoveredCard === auction.id ? '0 8px 24px rgba(0,0,0,0.2)' : 'none' }}>
+                                            <div style={{ position: 'relative', width: '80px', height: '80px' }}>
+                                                <div style={{ width: '80px', height: '80px', borderRadius: '12px', background: auction.imageUrl ?? 'linear-gradient(135deg, #8b5cf6, #ec4899)', border: '2px solid var(--stroke)' }} />
+                                                {auction.bidCount > 0 && (
+                                                    <div style={{ position: 'absolute', top: '-6px', right: '-6px', width: '14px', height: '14px', borderRadius: '50%', background: '#10b981', border: '2px solid var(--bg-elevated)', animation: 'shop-pulse-glow 1.5s ease-in-out infinite' }} title="Active bids" />
+                                                )}
+                                            </div>
 
                                             <div>
                                                 <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>{auction.cosmeticName}</h3>
