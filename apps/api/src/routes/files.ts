@@ -55,6 +55,10 @@ const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
   'text/plain',
   'application/zip',
+  'application/x-zip-compressed',  // Windows/Chrome zip alias
+  'application/x-zip',
+  'application/x-compressed',
+  'multipart/x-zip',
   'application/json',
   /** E2E clients upload ciphertext as opaque binary (see web encryptFile → encrypted.bin). */
   'application/octet-stream',
@@ -101,6 +105,7 @@ const EXT_MIME_MAP: Record<string, string[]> = {
   '.pdf': ['application/pdf'],
   '.txt': ['text/plain'],
   '.bin': ['application/octet-stream'],
+  '.zip': ['application/zip', 'application/x-zip-compressed', 'application/x-zip', 'application/x-compressed', 'multipart/x-zip'],
 };
 
 /**
