@@ -868,6 +868,7 @@ const DirectMessage = () => {
     const [newDmMsgCount, setNewDmMsgCount] = useState(0);
     const [hasDraft, setHasDraft] = useState(false);
     const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const undoBufferRef = useRef<string[]>([]);
     const [isScheduleOpen, setIsScheduleOpen] = useState(false);
     const [scheduleDate, setScheduleDate] = useState('');
     const [scheduleTime, setScheduleTime] = useState('');
@@ -2019,6 +2020,7 @@ const DirectMessage = () => {
         const val = e.target.value;
         const cursor = e.target.selectionStart ?? val.length;
         dmCursorPosRef.current = cursor;
+        undoBufferRef.current = [...undoBufferRef.current.slice(-49), val];
         setInputValue(val);
         if (val.trim().length > 0) sendTypingIndicator();
 
@@ -2108,6 +2110,14 @@ const DirectMessage = () => {
         }
         if (e.key === 'Escape' && editingMessage) { setEditingMessage(null); setInputValue(''); return; }
         if (e.key === 'Escape' && replyingTo) { setReplyingTo(null); return; }
+        // Ctrl+Z / Cmd+Z: restore previous input from undo buffer
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && undoBufferRef.current.length > 0) {
+            e.preventDefault();
+            const prev = undoBufferRef.current[undoBufferRef.current.length - 1];
+            undoBufferRef.current = undoBufferRef.current.slice(0, -1);
+            setInputValue(prev);
+            return;
+        }
         // ↑ arrow in empty input: start editing your last sent message
         if (e.key === 'ArrowUp' && !inputValue.trim() && !editingMessage) {
             const lastOwn = [...messages].reverse().find(m => m.authorId === currentUserId && !m.system && m.apiId);

@@ -4159,6 +4159,11 @@ img[loading="lazy"][src] {
   border-radius: 4px;
 }
 
+.search-result-message {
+  border-left: 3px solid rgba(250, 204, 21, 0.7);
+  background: rgba(250, 204, 21, 0.05);
+}
+
 /* ── Search result text mark highlight ── */
 .search-match-text {
   background: rgba(250, 204, 21, 0.35);
