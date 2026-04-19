@@ -4184,6 +4184,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                         >
                             {replyingTo.content || '(click to view)'}
                         </span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>Esc to cancel</span>
                         <button onClick={() => setReplyingTo(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0 }} title="Cancel reply">
                             <X size={14} />
                         </button>
