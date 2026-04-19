@@ -3168,7 +3168,25 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 </div>
 
                 <Hash size={24} className="desktop-hash-icon" style={{ color: 'var(--text-muted)' }} />
-                <h2>{channelName}</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
+                    <h2 style={{ margin: 0, lineHeight: 1.2 }}>{channelName}</h2>
+                    {channelTopic && (
+                        <span
+                            title={channelTopic}
+                            style={{
+                                fontSize: '11px',
+                                color: 'var(--text-muted)',
+                                lineHeight: 1.3,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                maxWidth: '280px',
+                            }}
+                        >
+                            {channelTopic.length > 60 ? channelTopic.slice(0, 60) + '…' : channelTopic}
+                        </span>
+                    )}
+                </div>
                 {channelIsEncrypted && (
                     <span title="End-to-end encrypted" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '8px', padding: '2px 8px', borderRadius: '10px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)', fontSize: '11px', fontWeight: 600, color: '#22c55e' }}>
                         <Lock size={12} /> Encrypted

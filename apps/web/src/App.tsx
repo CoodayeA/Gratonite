@@ -551,7 +551,12 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                 const guildHasUnread = hasGuildUnread(guild.id) && activeGuildId !== guild.id;
                 const guildMentions = activeGuildId !== guild.id ? getGuildMentionCount(guild.id) : 0;
                 return (
-                <Tooltip key={guild.id} content={guild.name} position="right">
+                <Tooltip key={guild.id} content={
+                        <div>
+                            <div style={{ fontWeight: 600 }}>{guild.name}</div>
+                            {guild.description && <div style={{ fontSize: '11px', opacity: 0.75, marginTop: '2px', maxWidth: '180px' }}>{guild.description}</div>}
+                        </div>
+                    } position="right">
                     <Link to={`/guild/${guild.id}`} style={{ textDecoration: 'none', position: 'relative' }} onContextMenu={(e) => handleGuildContext(e, guild)}>
                         <div className={`guild-icon ${activeGuildId === guild.id ? 'active' : ''}`}
                              style={{ background: getDeterministicGradient(guild.name), color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>
@@ -565,7 +570,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                             )}
                         </div>
                         {guildHasUnread && guildMentions === 0 && (
-                            <span style={{
+                            <span className="guild-unread-dot" style={{
                                 position: 'absolute', left: '-4px', top: '50%', transform: 'translateY(-50%)',
                                 width: '8px', height: '8px', borderRadius: '50%', background: 'var(--text-primary)',
                             }} />

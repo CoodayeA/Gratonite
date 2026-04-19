@@ -4137,6 +4137,15 @@ img[loading="lazy"][src] {
   backface-visibility: hidden;
 }
 
+/* ── Guild rail unread dot pulse animation ── */
+@keyframes guild-unread-pulse {
+  0%, 100% { transform: translateY(-50%) scale(1); opacity: 1; }
+  50% { transform: translateY(-50%) scale(1.5); opacity: 0.6; }
+}
+.guild-unread-dot {
+  animation: guild-unread-pulse 2s ease-in-out infinite;
+}
+
 /* ── Focus Mode — Ctrl+Shift+F hides sidebars for distraction-free reading ── */
 .focus-mode .channel-sidebar,
 .focus-mode .guild-rail {
