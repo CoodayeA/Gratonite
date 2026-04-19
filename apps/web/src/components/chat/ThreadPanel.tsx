@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
-import { X, MessageSquare, Send, Smile, Filter, Clock, Archive, Search, ArrowLeft, ArrowUpRight } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { X, MessageSquare, Send, Smile, Filter, Clock, Archive, Search, ArrowLeft, ArrowUpRight, Pencil, Trash2, Check } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { api } from '../../lib/api';
-import { onThreadCreate } from '../../lib/socket';
+import { onThreadCreate, onMessageCreate, onMessageUpdate, onMessageDelete, onReactionAdd, onReactionRemove } from '../../lib/socket';
 import Avatar from '../ui/Avatar';
 import { useToast } from '../ui/ToastManager';
 import { SkeletonMessageList } from '../ui/SkeletonLoader';
@@ -54,9 +54,11 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
     const [inputValue, setInputValue] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [threadId, setThreadId] = useState<string | null>(null);
+    const [threadName, setThreadName] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSending, setIsSending] = useState(false);
     const endRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [archiveAfter, setArchiveAfter] = useState(1440);
     const [showThreadList, setShowThreadList] = useState(false);
     const [threadList, setThreadList] = useState<ThreadListItem[]>([]);
@@ -65,18 +67,40 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
     const [threadSort, setThreadSort] = useState<ThreadSortOption>('recent');
     const [threadSearchQuery, setThreadSearchQuery] = useState('');
     const [reactionHoverId, setReactionHoverId] = useState<number | string | null>(null);
+    const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
+    const [editingContent, setEditingContent] = useState('');
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+    // For navigating to a different thread from the list
+    const [overrideThreadId, setOverrideThreadId] = useState<string | null>(null);
+    const [overrideThreadName, setOverrideThreadName] = useState<string | null>(null);
 
     const EMOJI_LIST = ['😄','😂','❤️','🔥','👍','👎','😮','🎉','💀','🚀','✨','💯','👀','😢','🤔','😡'];
 
     const { user: ctxUser } = useUser();
     const currentUserName = ctxUser.name || ctxUser.handle || 'You';
 
+    // Effective thread ID — may be overridden by list navigation
+    const activeThreadId = overrideThreadId ?? threadId;
+    const activeThreadName = overrideThreadName ?? threadName;
+
+    // Auto-grow textarea
+    const growTextarea = useCallback(() => {
+        const el = textareaRef.current;
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    }, []);
+
+    useEffect(() => {
+        growTextarea();
+    }, [inputValue, growTextarea]);
+
     const handleReaction = async (reply: Message, emoji: string) => {
-        if (!reply.apiId || !threadId) return;
+        if (!reply.apiId || !activeThreadId) return;
         const existing = reply.reactions?.find(r => r.emoji === emoji);
         try {
             if (existing?.me) {
-                await api.messages.removeReaction(threadId, reply.apiId, emoji);
+                await api.messages.removeReaction(activeThreadId, reply.apiId, emoji);
                 setReplies(prev => prev.map(r => r.id === reply.id ? {
                     ...r,
                     reactions: (r.reactions ?? []).map(rx => rx.emoji === emoji
@@ -85,7 +109,7 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
                     ).filter(rx => rx.count > 0),
                 } : r));
             } else {
-                await api.messages.addReaction(threadId, reply.apiId, emoji);
+                await api.messages.addReaction(activeThreadId, reply.apiId, emoji);
                 setReplies(prev => prev.map(r => r.id === reply.id ? {
                     ...r,
                     reactions: existing
@@ -101,6 +125,7 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
     const handleEmojiClick = (emoji: string) => {
         setInputValue(prev => prev + emoji);
         setShowEmojiPicker(false);
+        textareaRef.current?.focus();
     };
 
     const scrollToBottom = () => {
@@ -111,8 +136,34 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
         scrollToBottom();
     }, [replies]);
 
-    // Load existing thread replies on mount
+    // Load replies for a specific thread id
+    const loadThreadReplies = useCallback(async (tid: string) => {
+        setIsLoading(true);
+        setReplies([]);
+        try {
+            const msgs = await api.threads.listMessages(tid);
+            const converted: Message[] = (msgs as any[]).map((m: any, i: number) => ({
+                id: i + 1,
+                apiId: m.id,
+                author: m.author?.displayName || m.author?.username || 'Unknown',
+                avatar: (m.author?.displayName || m.author?.username || '?').charAt(0).toUpperCase(),
+                time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                content: m.content || '',
+                createdAt: m.createdAt,
+                authorId: m.authorId,
+                authorAvatarHash: m.author?.avatarHash ?? null,
+            }));
+            setReplies(converted);
+        } catch {
+            // thread may have no messages
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    // Load existing thread replies on mount / when originalMessage changes
     useEffect(() => {
+        if (overrideThreadId) return; // using override thread, don't re-init
         if (!originalMessage?.apiId || !channelId) {
             setIsLoading(false);
             return;
@@ -120,6 +171,7 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
         setIsLoading(true);
         setReplies([]);
         setThreadId(null);
+        setThreadName(null);
 
         api.threads.list(channelId)
             .then(async (threads: any[]) => {
@@ -128,24 +180,109 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
                 );
                 if (existing) {
                     setThreadId(existing.id);
-                    const msgs = await api.threads.listMessages(existing.id);
-                    const converted: Message[] = (msgs as any[]).map((m: any, i: number) => ({
-                        id: i + 1,
-                        apiId: m.id,
-                        author: m.author?.displayName || m.author?.username || 'Unknown',
-                        avatar: (m.author?.displayName || m.author?.username || '?').charAt(0).toUpperCase(),
-                        time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                        content: m.content || '',
-                        createdAt: m.createdAt,
-                        authorId: m.authorId,
-                        authorAvatarHash: m.author?.avatarHash ?? null,
-                    }));
-                    setReplies(converted);
+                    setThreadName(existing.name || null);
+                    await loadThreadReplies(existing.id);
+                } else {
+                    setIsLoading(false);
                 }
             })
-            .catch(() => { /* thread may not exist yet */ })
-            .finally(() => setIsLoading(false));
-    }, [originalMessage?.apiId, channelId]);
+            .catch(() => setIsLoading(false));
+    }, [originalMessage?.apiId, channelId, overrideThreadId, loadThreadReplies]);
+
+    // When override thread changes, load its messages
+    useEffect(() => {
+        if (!overrideThreadId) return;
+        loadThreadReplies(overrideThreadId);
+    }, [overrideThreadId, loadThreadReplies]);
+
+    // Real-time: new thread message
+    useEffect(() => {
+        if (!activeThreadId || !channelId) return;
+        const unsub = onMessageCreate((data) => {
+            if (data.channelId !== channelId) return;
+            if (data.threadId !== activeThreadId) return;
+            setReplies(prev => {
+                if (prev.some(r => r.apiId === data.id)) return prev;
+                const newReply: Message = {
+                    id: Date.now(),
+                    apiId: data.id,
+                    author: data.author?.displayName || data.author?.username || 'Unknown',
+                    avatar: (data.author?.displayName || data.author?.username || '?').charAt(0).toUpperCase(),
+                    time: new Date(data.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    content: data.content || '',
+                    createdAt: data.createdAt,
+                    authorId: data.authorId,
+                    authorAvatarHash: data.author?.avatarHash ?? null,
+                };
+                return [...prev, newReply];
+            });
+        });
+        return unsub;
+    }, [activeThreadId, channelId]);
+
+    // Real-time: edited message
+    useEffect(() => {
+        if (!activeThreadId || !channelId) return;
+        const unsub = onMessageUpdate((data) => {
+            if (data.channelId !== channelId) return;
+            if (data.threadId !== activeThreadId) return;
+            setReplies(prev => prev.map(r =>
+                r.apiId === data.id ? { ...r, content: data.content || r.content } : r
+            ));
+        });
+        return unsub;
+    }, [activeThreadId, channelId]);
+
+    // Real-time: deleted message
+    useEffect(() => {
+        if (!activeThreadId || !channelId) return;
+        const unsub = onMessageDelete((data) => {
+            if (data.channelId !== channelId) return;
+            setReplies(prev => prev.filter(r => r.apiId !== data.id));
+        });
+        return unsub;
+    }, [activeThreadId, channelId]);
+
+    // Real-time: reaction add
+    useEffect(() => {
+        if (!channelId) return;
+        const unsub = onReactionAdd((data) => {
+            if (data.channelId !== channelId) return;
+            setReplies(prev => prev.map(r => {
+                if (r.apiId !== data.messageId) return r;
+                const existing = r.reactions?.find(rx => rx.emoji === data.emoji);
+                const isMe = data.userId === ctxUser.id;
+                return {
+                    ...r,
+                    reactions: existing
+                        ? (r.reactions ?? []).map(rx => rx.emoji === data.emoji ? { ...rx, count: rx.count + 1, me: rx.me || isMe } : rx)
+                        : [...(r.reactions ?? []), { emoji: data.emoji, count: 1, me: isMe }],
+                };
+            }));
+        });
+        return unsub;
+    }, [channelId, ctxUser.id]);
+
+    // Real-time: reaction remove
+    useEffect(() => {
+        if (!channelId) return;
+        const unsub = onReactionRemove((data) => {
+            if (data.channelId !== channelId) return;
+            setReplies(prev => prev.map(r => {
+                if (r.apiId !== data.messageId) return r;
+                const isMe = data.userId === ctxUser.id;
+                return {
+                    ...r,
+                    reactions: (r.reactions ?? []).map(rx =>
+                        rx.emoji === data.emoji
+                            ? { ...rx, count: Math.max(0, rx.count - 1), me: isMe ? false : rx.me }
+                            : rx
+                    ).filter(rx => rx.count > 0),
+                };
+            }));
+        });
+        return unsub;
+    }, [channelId, ctxUser.id]);
 
     // Fetch thread list when thread list view is toggled
     useEffect(() => {
@@ -207,14 +344,14 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
             return 0;
         });
 
-    // Escape key to close (but not when emoji picker is open)
+    // Escape key to close (but not when emoji picker or edit mode is open)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && !showEmojiPicker) onClose();
+            if (e.key === 'Escape' && !showEmojiPicker && !editingReplyId) onClose();
         };
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [onClose, showEmojiPicker]);
+    }, [onClose, showEmojiPicker, editingReplyId]);
 
     if (!originalMessage) return null;
 
@@ -224,7 +361,7 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
         setIsSending(true);
 
         try {
-            let currentThreadId = threadId;
+            let currentThreadId = activeThreadId;
 
             // Create thread on first reply if none exists
             if (!currentThreadId) {
@@ -235,6 +372,7 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
                 });
                 currentThreadId = (thread as any).id;
                 setThreadId(currentThreadId);
+                setThreadName((thread as any).name || null);
             }
 
             const content = inputValue.trim();
@@ -243,6 +381,7 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
                 threadId: currentThreadId!,
             });
 
+            // Optimistic — socket will also deliver; dedup guard in onMessageCreate handles it
             const newReply: Message = {
                 id: Date.now(),
                 apiId: (msg as any).id,
@@ -254,11 +393,13 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
                 authorId: ctxUser.id,
                 authorAvatarHash: ctxUser.avatarHash,
             };
-            setReplies(prev => [...prev, newReply]);
+            setReplies(prev => {
+                if (prev.some(r => r.apiId === (msg as any).id)) return prev;
+                return [...prev, newReply];
+            });
             setInputValue('');
             setShowEmojiPicker(false);
         } catch (err: any) {
-            // Surface the error to the user
             const detail = err?.message || err?.code || 'Unknown error';
             addToast({ title: 'Failed to send thread reply', description: detail, variant: 'error' });
         } finally {
@@ -266,35 +407,88 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
         }
     };
 
+    const handleEditSave = async (reply: Message) => {
+        if (!reply.apiId || !editingContent.trim()) return;
+        try {
+            await api.messages.edit(channelId, reply.apiId, { content: editingContent.trim() });
+            setReplies(prev => prev.map(r => r.apiId === reply.apiId ? { ...r, content: editingContent.trim() } : r));
+            setEditingReplyId(null);
+        } catch {
+            addToast({ title: 'Failed to edit message', variant: 'error' });
+        }
+    };
+
+    const handleDelete = async (reply: Message) => {
+        if (!reply.apiId) return;
+        try {
+            await api.messages.delete(channelId, reply.apiId);
+            setReplies(prev => prev.filter(r => r.apiId !== reply.apiId));
+        } catch {
+            addToast({ title: 'Failed to delete message', variant: 'error' });
+        } finally {
+            setConfirmDeleteId(null);
+        }
+    };
+
+    const handleThreadListClick = (t: ThreadListItem) => {
+        setOverrideThreadId(t.id);
+        setOverrideThreadName(t.name);
+        setShowThreadList(false);
+    };
+
+    const handleBackToOriginal = () => {
+        setOverrideThreadId(null);
+        setOverrideThreadName(null);
+        setReplies([]);
+        if (threadId) loadThreadReplies(threadId);
+    };
+
     return (
         <div className="thread-panel">
             <div className="thread-header" style={{ flexDirection: 'column', alignItems: 'stretch', height: 'auto', padding: '8px 12px 0', gap: 0 }}>
-                {/* Breadcrumb: Return to channel */}
-                <button
-                    onClick={onClose}
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: '6px',
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: 'var(--text-muted)', fontSize: '11px', fontWeight: 600,
-                        padding: '4px 0 6px', textTransform: 'uppercase', letterSpacing: '0.05em',
-                    }}
-                    title="Return to channel"
-                >
-                    <ArrowLeft size={12} />
-                    Return to channel
-                </button>
+                {/* Breadcrumb */}
+                {overrideThreadId ? (
+                    <button
+                        onClick={handleBackToOriginal}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: 'var(--text-muted)', fontSize: '11px', fontWeight: 600,
+                            padding: '4px 0 6px', textTransform: 'uppercase', letterSpacing: '0.05em',
+                        }}
+                    >
+                        <ArrowLeft size={12} />
+                        Back to original thread
+                    </button>
+                ) : (
+                    <button
+                        onClick={onClose}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: 'var(--text-muted)', fontSize: '11px', fontWeight: 600,
+                            padding: '4px 0 6px', textTransform: 'uppercase', letterSpacing: '0.05em',
+                        }}
+                        title="Return to channel"
+                    >
+                        <ArrowLeft size={12} />
+                        Return to channel
+                    </button>
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px solid var(--stroke)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <MessageSquare size={18} color="var(--accent-primary)" />
-                        <h3 style={{ fontSize: '15px', fontWeight: 600 }}>Thread</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                        <MessageSquare size={18} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
+                        <h3 style={{ fontSize: '15px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {activeThreadName || 'Thread'}
+                        </h3>
                         {replies.length > 0 && (
-                            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '1px 7px', borderRadius: '10px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '1px 7px', borderRadius: '10px', flexShrink: 0 }}>
                                 {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
                             </span>
                         )}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        {onJumpToParent && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                        {!overrideThreadId && onJumpToParent && (
                             <button
                                 onClick={onJumpToParent}
                                 className="message-action-btn"
@@ -368,11 +562,21 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
                     ) : (
                         <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             {filteredThreads.map(t => (
-                                <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-tertiary)', fontSize: '12px' }}>
-                                    {t.archived ? <Archive size={12} color="var(--text-muted)" /> : <MessageSquare size={12} color="var(--accent-primary)" />}
+                                <button
+                                    key={t.id}
+                                    onClick={() => handleThreadListClick(t)}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '8px',
+                                        padding: '6px 8px', borderRadius: '6px',
+                                        background: t.id === activeThreadId ? 'rgba(var(--accent-primary-rgb,99,102,241),0.15)' : 'var(--bg-tertiary)',
+                                        border: t.id === activeThreadId ? '1px solid var(--accent-primary)' : '1px solid transparent',
+                                        fontSize: '12px', cursor: 'pointer', textAlign: 'left', width: '100%',
+                                    }}
+                                >
+                                    {t.archived ? <Archive size={12} color="var(--text-muted)" style={{ flexShrink: 0 }} /> : <MessageSquare size={12} color="var(--accent-primary)" style={{ flexShrink: 0 }} />}
                                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{t.name}</span>
                                     <span style={{ color: 'var(--text-muted)', fontSize: '10px', flexShrink: 0 }}>{t.messageCount} replies</span>
-                                </div>
+                                </button>
                             ))}
                         </div>
                     )}
@@ -380,24 +584,26 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
             )}
 
             <div className="thread-content">
-                {/* Original Message */}
-                <div className="message" style={{ padding: '16px', borderBottom: '1px solid var(--stroke)', background: 'rgba(0,0,0,0.2)' }}>
-                    <Avatar
-                        userId={originalMessage.authorId || String(originalMessage.id)}
-                        displayName={originalMessage.author}
-                        avatarHash={(originalMessage as any).authorAvatarHash}
-                        size={40}
-                    />
-                    <div className="msg-content">
-                        <div className="msg-header">
-                            <span className="msg-author">{originalMessage.author}</span>
-                            <span className="msg-timestamp">{originalMessage.time}</span>
-                        </div>
-                        <div className="msg-body">
-                            {originalMessage.content}
+                {/* Original Message (hidden when browsing override thread) */}
+                {!overrideThreadId && (
+                    <div className="message" style={{ padding: '16px', borderBottom: '1px solid var(--stroke)', background: 'rgba(0,0,0,0.2)' }}>
+                        <Avatar
+                            userId={originalMessage.authorId || String(originalMessage.id)}
+                            displayName={originalMessage.author}
+                            avatarHash={(originalMessage as any).authorAvatarHash}
+                            size={40}
+                        />
+                        <div className="msg-content">
+                            <div className="msg-header">
+                                <span className="msg-author">{originalMessage.author}</span>
+                                <span className="msg-timestamp">{originalMessage.time}</span>
+                            </div>
+                            <div className="msg-body">
+                                {originalMessage.content}
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {isLoading ? (
                     <SkeletonMessageList count={4} />
@@ -415,9 +621,12 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
                         {/* Replies */}
                         <div style={{ flex: 1, overflowY: 'auto' }}>
                             {replies.map(reply => (
-                                <div key={reply.apiId || reply.id} className="message" style={{ padding: '8px 16px' }}
+                                <div
+                                    key={reply.apiId || reply.id}
+                                    className="message"
+                                    style={{ padding: '8px 16px' }}
                                     onMouseEnter={() => setReactionHoverId(reply.apiId ?? reply.id)}
-                                    onMouseLeave={() => setReactionHoverId(null)}
+                                    onMouseLeave={() => { setReactionHoverId(null); setConfirmDeleteId(null); }}
                                 >
                                     <Avatar
                                         userId={reply.authorId || String(reply.id)}
@@ -429,10 +638,11 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
                                         <div className="msg-header" style={{ fontSize: '13px' }}>
                                             <span className="msg-author">{reply.author}</span>
                                             <span className="msg-timestamp" title={reply.createdAt ? new Date(typeof reply.createdAt === 'string' ? reply.createdAt : reply.createdAt).toLocaleString() : reply.time}>
-                                                {reply.createdAt ? formatRelative(typeof reply.createdAt === "string" ? new Date(reply.createdAt).getTime() : reply.createdAt) : reply.time}
+                                                {reply.createdAt ? formatRelative(typeof reply.createdAt === "string" ? new Date(reply.createdAt).getTime() : reply.createdAt as number) : reply.time}
                                             </span>
+                                            {/* Hover actions */}
                                             {reactionHoverId === (reply.apiId ?? reply.id) && (
-                                                <div style={{ display: 'flex', gap: '2px', marginLeft: 'auto' }}>
+                                                <div style={{ display: 'flex', gap: '2px', marginLeft: 'auto', alignItems: 'center' }}>
                                                     {['👍','❤️','😂','🔥','😮'].map(emoji => (
                                                         <button key={emoji}
                                                             onClick={() => handleReaction(reply, emoji)}
@@ -440,12 +650,72 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
                                                             title={`React with ${emoji}`}
                                                         >{emoji}</button>
                                                     ))}
+                                                    {reply.authorId === ctxUser.id && editingReplyId !== reply.apiId && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => { setEditingReplyId(reply.apiId!); setEditingContent(reply.content); }}
+                                                                className="message-action-btn"
+                                                                style={{ width: '24px', height: '24px' }}
+                                                                title="Edit message"
+                                                            >
+                                                                <Pencil size={12} />
+                                                            </button>
+                                                            {confirmDeleteId === reply.apiId ? (
+                                                                <button
+                                                                    onClick={() => handleDelete(reply)}
+                                                                    style={{ background: 'var(--error,#ef4444)', border: 'none', cursor: 'pointer', color: '#fff', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', fontWeight: 600 }}
+                                                                    title="Confirm delete"
+                                                                >
+                                                                    Delete?
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => setConfirmDeleteId(reply.apiId!)}
+                                                                    className="message-action-btn"
+                                                                    style={{ width: '24px', height: '24px', color: 'var(--error,#ef4444)' }}
+                                                                    title="Delete message"
+                                                                >
+                                                                    <Trash2 size={12} />
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="msg-body" style={{ fontSize: '13px' }}>
-                                            {reply.content}
-                                        </div>
+
+                                        {/* Inline edit */}
+                                        {editingReplyId === reply.apiId ? (
+                                            <div style={{ display: 'flex', gap: '6px', marginTop: '4px', alignItems: 'flex-end' }}>
+                                                <textarea
+                                                    value={editingContent}
+                                                    onChange={e => setEditingContent(e.target.value)}
+                                                    onKeyDown={e => {
+                                                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditSave(reply); }
+                                                        if (e.key === 'Escape') setEditingReplyId(null);
+                                                    }}
+                                                    autoFocus
+                                                    style={{
+                                                        flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--accent-primary)',
+                                                        borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px',
+                                                        padding: '4px 8px', resize: 'none', minHeight: '32px', lineHeight: '1.4',
+                                                        fontFamily: 'inherit',
+                                                    }}
+                                                    rows={1}
+                                                />
+                                                <button onClick={() => handleEditSave(reply)} className="message-action-btn" style={{ width: '24px', height: '24px', color: 'var(--accent-primary)' }} title="Save (Enter)">
+                                                    <Check size={14} />
+                                                </button>
+                                                <button onClick={() => setEditingReplyId(null)} className="message-action-btn" style={{ width: '24px', height: '24px' }} title="Cancel (Esc)">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="msg-body" style={{ fontSize: '13px' }}>
+                                                {reply.content}
+                                            </div>
+                                        )}
+
                                         {(reply.reactions ?? []).filter(r => r.count > 0).length > 0 && (
                                             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
                                                 {(reply.reactions ?? []).filter(r => r.count > 0).map(r => (
@@ -469,7 +739,7 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
             </div>
 
             {/* Archive timer selector (shown when thread hasn't been created yet) */}
-            {!threadId && (
+            {!activeThreadId && !overrideThreadId && (
                 <div style={{ padding: '6px 16px', borderTop: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.1)' }}>
                     <Clock size={13} color="var(--text-muted)" />
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>Auto-archive after:</span>
@@ -529,26 +799,32 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
                     </div>
                 )}
 
-                <div className="chat-input-wrapper" style={{ minHeight: '40px', padding: '0 8px' }}>
-                    <input
-                        type="text"
+                <div className="chat-input-wrapper" style={{ minHeight: '40px', padding: '0 8px', alignItems: 'flex-end' }}>
+                    <textarea
+                        ref={textareaRef}
                         className="chat-input"
                         placeholder="Reply in thread..."
-                        style={{ fontSize: '13px' }}
+                        style={{ fontSize: '13px', resize: 'none', minHeight: '20px', maxHeight: '120px', lineHeight: '1.5', padding: '10px 0', overflowY: 'auto', fontFamily: 'inherit' }}
                         value={inputValue}
+                        rows={1}
                         onChange={e => setInputValue(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                        onKeyDown={e => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSend();
+                            }
+                        }}
                     />
                     <button
                         className="input-icon-btn"
-                        style={{ width: '28px', height: '28px', color: showEmojiPicker ? 'var(--accent-primary)' : undefined }}
+                        style={{ width: '28px', height: '28px', color: showEmojiPicker ? 'var(--accent-primary)' : undefined, marginBottom: '6px' }}
                         onClick={() => setShowEmojiPicker(prev => !prev)}
                     >
                         <Smile size={16} />
                     </button>
                     <button
                         className={`input-icon-btn ${inputValue.trim() ? 'primary' : ''}`}
-                        style={{ width: '28px', height: '28px', opacity: isSending ? 0.3 : inputValue.trim() ? 1 : 0.5 }}
+                        style={{ width: '28px', height: '28px', opacity: isSending ? 0.3 : inputValue.trim() ? 1 : 0.5, marginBottom: '6px' }}
                         onClick={handleSend}
                         disabled={isSending}
                     >

@@ -40,6 +40,7 @@ export interface MessageCreatePayload {
   createdAt: string;
   expiresAt?: string | null;
   isSystem?: boolean;
+  threadId?: string | null;
   author: {
     id: string;
     username: string;

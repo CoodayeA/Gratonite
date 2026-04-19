@@ -210,6 +210,7 @@ function formatMessage(
     components: msg.components ?? [],
     expiresAt: msg.expiresAt ?? null,
     replyToId: msg.replyToId ?? null,
+    threadId: msg.threadId ?? null,
     isEncrypted: msg.isEncrypted ?? false,
     encryptedContent: msg.encryptedContent ?? null,
     keyVersion: msg.keyVersion ?? null,
