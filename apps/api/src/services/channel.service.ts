@@ -65,9 +65,9 @@ export async function getChannels(guildId: string, userId: string) {
     .innerJoin(roles, eq(roles.id, memberRoles.roleId))
     .where(and(eq(memberRoles.userId, userId), eq(memberRoles.guildId, guildId)));
 
-  let basePerms = everyoneRole?.permissions ?? 0n;
+  let basePerms = BigInt(everyoneRole?.permissions ?? 0n);
   for (const r of userRoles) {
-    basePerms |= r.permissions;
+    basePerms |= BigInt(r.permissions);
   }
 
   if (basePerms & Permissions.ADMINISTRATOR) {
@@ -100,16 +100,16 @@ export async function getChannels(guildId: string, userId: string) {
     if (everyoneRole) {
       const everyoneOverride = overrideMap.get(everyoneRole.id);
       if (everyoneOverride) {
-        roleAllow |= everyoneOverride.allow;
-        roleDeny |= everyoneOverride.deny;
+        roleAllow |= BigInt(everyoneOverride.allow);
+        roleDeny |= BigInt(everyoneOverride.deny);
       }
     }
 
     for (const r of userRoles) {
       const override = overrideMap.get(r.id);
       if (override) {
-        roleAllow |= override.allow;
-        roleDeny |= override.deny;
+        roleAllow |= BigInt(override.allow);
+        roleDeny |= BigInt(override.deny);
       }
     }
 
@@ -117,7 +117,7 @@ export async function getChannels(guildId: string, userId: string) {
 
     const memberOverride = overrideMap.get(userId);
     if (memberOverride) {
-      perms = (perms & ~memberOverride.deny) | memberOverride.allow;
+      perms = (perms & ~BigInt(memberOverride.deny)) | BigInt(memberOverride.allow);
     }
 
     return (perms & Permissions.VIEW_CHANNEL) !== 0n;

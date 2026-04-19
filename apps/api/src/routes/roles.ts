@@ -33,9 +33,9 @@ async function hasPermission(userId: string, guildId: string, permission: bigint
     .where(and(eq(roles.guildId, guildId), eq(roles.name, '@everyone')))
     .limit(1);
 
-  let effectivePerms = everyoneRole?.permissions ?? 0n;
+  let effectivePerms = BigInt(everyoneRole?.permissions ?? 0n);
   for (const r of userRoles) {
-    effectivePerms |= r.permissions;
+    effectivePerms |= BigInt(r.permissions);
   }
 
   if (effectivePerms & Permissions.ADMINISTRATOR) return true;
@@ -76,9 +76,9 @@ async function computeChannelPermissions(userId: string, guildId: string, channe
     .where(and(eq(memberRoles.userId, userId), eq(memberRoles.guildId, guildId)));
 
   // Step 1: base permissions = OR of @everyone + assigned roles
-  let basePerms = everyoneRole?.permissions ?? 0n;
+  let basePerms = BigInt(everyoneRole?.permissions ?? 0n);
   for (const r of userRoles) {
-    basePerms |= r.permissions;
+    basePerms |= BigInt(r.permissions);
   }
 
   // Step 2: ADMINISTRATOR short-circuit
@@ -102,8 +102,8 @@ async function computeChannelPermissions(userId: string, guildId: string, channe
   if (everyoneRole) {
     const everyoneOverride = overrideMap.get(everyoneRole.id);
     if (everyoneOverride) {
-      roleAllow |= everyoneOverride.allow;
-      roleDeny |= everyoneOverride.deny;
+      roleAllow |= BigInt(everyoneOverride.allow);
+      roleDeny |= BigInt(everyoneOverride.deny);
     }
   }
 
@@ -111,8 +111,8 @@ async function computeChannelPermissions(userId: string, guildId: string, channe
   for (const r of userRoles) {
     const override = overrideMap.get(r.id);
     if (override) {
-      roleAllow |= override.allow;
-      roleDeny |= override.deny;
+      roleAllow |= BigInt(override.allow);
+      roleDeny |= BigInt(override.deny);
     }
   }
 
@@ -121,7 +121,7 @@ async function computeChannelPermissions(userId: string, guildId: string, channe
   // Step 4: Apply member-specific override
   const memberOverride = overrideMap.get(userId);
   if (memberOverride) {
-    permissions = (permissions & ~memberOverride.deny) | memberOverride.allow;
+    permissions = (permissions & ~BigInt(memberOverride.deny)) | BigInt(memberOverride.allow);
   }
 
   return permissions;

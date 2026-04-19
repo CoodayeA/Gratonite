@@ -528,4 +528,16 @@ async function gracefulShutdown(signal: string) {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
+// Prevent unhandled rejections / exceptions from crashing the process silently.
+// Log them so we can diagnose and keep the server alive for in-flight requests.
+process.on('unhandledRejection', (reason) => {
+  logger.error('[process] Unhandled promise rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  logger.error('[process] Uncaught exception:', err);
+  // Give in-flight requests a moment to complete, then exit so the process
+  // manager (pm2 / Docker / nodemon) can restart cleanly.
+  setTimeout(() => process.exit(1), 1_000).unref();
+});
+
 export { io };
