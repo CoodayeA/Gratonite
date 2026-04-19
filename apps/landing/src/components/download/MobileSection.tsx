@@ -60,7 +60,7 @@ export function MobileSection() {
             <Button
               variant="primary"
               size="sm"
-              href="https://expo.dev/artifacts/eas/p97vU3SSEvGtQQDU5w1wC8.apk"
+              href="https://expo.dev/artifacts/eas/fypmer17dKz6HbCcYxSceZ.apk"
               className="w-full mb-4"
             >
               Download APK (v1.0.1)
