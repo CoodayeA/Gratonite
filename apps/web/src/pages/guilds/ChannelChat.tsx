@@ -378,6 +378,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     const [currentUserAvatarHash, setCurrentUserAvatarHash] = useState<string | null>(null);
     const [channelName, setChannelName] = useState('general');
     const [channelTopic, setChannelTopic] = useState<string | null>(null);
+    const [topicExpanded, setTopicExpanded] = useState(false);
     const [rateLimitPerUser, setRateLimitPerUser] = useState(0);
     const [lastSentAt, setLastSentAt] = useState<number | null>(null);
     const [slowRemaining, setSlowRemaining] = useState(0);
@@ -3183,7 +3184,11 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     <h2 style={{ margin: 0, lineHeight: 1.2 }}>{channelName}</h2>
                     {channelTopic && (
                         <span
-                            title={channelTopic}
+                            title={channelTopic.length > 60 ? undefined : channelTopic}
+                            role={channelTopic.length > 60 ? 'button' : undefined}
+                            tabIndex={channelTopic.length > 60 ? 0 : undefined}
+                            onClick={channelTopic.length > 60 ? () => setTopicExpanded(p => !p) : undefined}
+                            onKeyDown={channelTopic.length > 60 ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTopicExpanded(p => !p); } } : undefined}
                             style={{
                                 fontSize: '11px',
                                 color: 'var(--text-muted)',
@@ -3192,10 +3197,36 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 maxWidth: '280px',
+                                ...(channelTopic.length > 60 ? { cursor: 'pointer', textDecoration: 'none' } : {}),
                             }}
                         >
                             {channelTopic.length > 60 ? channelTopic.slice(0, 60) + '…' : channelTopic}
                         </span>
+                    )}
+                    {topicExpanded && channelTopic && channelTopic.length > 60 && (
+                        <div
+                            onClick={() => setTopicExpanded(false)}
+                            style={{
+                                position: 'fixed', inset: 0, zIndex: 200,
+                            }}
+                        >
+                            <div
+                                onClick={e => e.stopPropagation()}
+                                style={{
+                                    position: 'absolute', top: '56px', left: '0', right: '0',
+                                    background: 'var(--bg-secondary)',
+                                    borderBottom: '1px solid var(--stroke)',
+                                    padding: '10px 20px',
+                                    fontSize: '13px',
+                                    color: 'var(--text-secondary)',
+                                    lineHeight: 1.5,
+                                    zIndex: 201,
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                                }}
+                            >
+                                {channelTopic}
+                            </div>
+                        </div>
                     )}
                 </div>
                 {channelIsEncrypted && (

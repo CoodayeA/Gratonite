@@ -213,6 +213,9 @@ export const MemoizedMessageItem = memo(({
     const [showReactionPicker, setShowReactionPicker] = useState(false);
     const reactionPickerRef = useRef<HTMLDivElement>(null);
     const avatarRef = useRef<HTMLDivElement>(null);
+    const [threadPreview, setThreadPreview] = useState<{ replies: Array<{ author: string; content: string; avatarHash?: string | null }>; loading: boolean } | null>(null);
+    const threadPreviewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const threadPreviewCacheRef = useRef<Map<string, Array<{ author: string; content: string; avatarHash?: string | null }>>>(new Map());
     const [translatedText, setTranslatedText] = useState<string | null>(null);
     const [translatedLang, setTranslatedLang] = useState<string | null>(null);
     const [translating, setTranslating] = useState(false);
@@ -233,6 +236,35 @@ export const MemoizedMessageItem = memo(({
 
     useEffect(() => {
         return () => { if (fameSparkleTimerRef.current) clearTimeout(fameSparkleTimerRef.current); };
+    }, []);
+
+    const handleThreadBadgeMouseEnter = useCallback(() => {
+        if (!msg.apiId || !msgChannelId) return;
+        const cached = threadPreviewCacheRef.current.get(msg.apiId);
+        if (cached) { setThreadPreview({ replies: cached, loading: false }); return; }
+        setThreadPreview({ replies: [], loading: true });
+        threadPreviewTimerRef.current = setTimeout(async () => {
+            try {
+                const threads = await api.threads.list(msgChannelId);
+                const thread = (threads as any[]).find((t: any) => t.originMessageId === msg.apiId);
+                if (!thread) { setThreadPreview(null); return; }
+                const msgs = await api.threads.listMessages(thread.id, 3);
+                const replies = (msgs as any[]).slice(0, 3).map((m: any) => ({
+                    author: m.author?.displayName || m.author?.username || 'Someone',
+                    content: (m.content || '').slice(0, 90),
+                    avatarHash: m.author?.avatarHash ?? null,
+                }));
+                threadPreviewCacheRef.current.set(msg.apiId, replies);
+                setThreadPreview({ replies, loading: false });
+            } catch {
+                setThreadPreview(null);
+            }
+        }, 400);
+    }, [msg.apiId, msgChannelId]);
+
+    const handleThreadBadgeMouseLeave = useCallback(() => {
+        if (threadPreviewTimerRef.current) { clearTimeout(threadPreviewTimerRef.current); threadPreviewTimerRef.current = null; }
+        setThreadPreview(null);
     }, []);
 
     // Auto-focus and auto-resize inline edit textarea
@@ -880,24 +912,67 @@ export const MemoizedMessageItem = memo(({
                         )}
                         {/* Thread reply count — auto-collapse at 3+ */}
                         {(msg.threadReplyCount ?? 0) > 0 && (
-                            <div
-                                style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                    marginTop: '4px', cursor: 'pointer', color: 'var(--accent-primary)',
-                                    fontSize: '12px', fontWeight: 600,
-                                    padding: '4px 8px',
-                                    background: (msg.threadReplyCount ?? 0) >= 3 ? 'rgba(var(--accent-primary-rgb, 99,102,241), 0.08)' : 'transparent',
-                                    borderRadius: '6px',
-                                    transition: 'background 0.15s',
-                                }}
-                                onClick={() => setActiveThreadMessage?.(msg)}
-                                className="thread-reply-btn"
+                            <div style={{ position: 'relative', display: 'inline-block' }}
+                                onMouseEnter={handleThreadBadgeMouseEnter}
+                                onMouseLeave={handleThreadBadgeMouseLeave}
                             >
-                                <MessageSquare size={12} />
-                                {(msg.threadReplyCount ?? 0) >= 3
-                                    ? `View ${msg.threadReplyCount} replies`
-                                    : `${msg.threadReplyCount} ${msg.threadReplyCount === 1 ? 'reply' : 'replies'}`
-                                }
+                                <div
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                        marginTop: '4px', cursor: 'pointer', color: 'var(--accent-primary)',
+                                        fontSize: '12px', fontWeight: 600,
+                                        padding: '4px 8px',
+                                        background: (msg.threadReplyCount ?? 0) >= 3 ? 'rgba(var(--accent-primary-rgb, 99,102,241), 0.08)' : 'transparent',
+                                        borderRadius: '6px',
+                                        transition: 'background 0.15s',
+                                    }}
+                                    onClick={() => setActiveThreadMessage?.(msg)}
+                                    className="thread-reply-btn"
+                                >
+                                    <MessageSquare size={12} />
+                                    {(msg.threadReplyCount ?? 0) >= 3
+                                        ? `View ${msg.threadReplyCount} replies`
+                                        : `${msg.threadReplyCount} ${msg.threadReplyCount === 1 ? 'reply' : 'replies'}`
+                                    }
+                                </div>
+                                {threadPreview && (
+                                    <div style={{
+                                        position: 'absolute', bottom: 'calc(100% + 4px)', left: 0,
+                                        background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+                                        borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+                                        padding: '8px', minWidth: '240px', maxWidth: '320px',
+                                        zIndex: 50, pointerEvents: 'none',
+                                    }}>
+                                        {threadPreview.loading ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '12px', padding: '4px 8px' }}>
+                                                <MessageSquare size={12} />
+                                                Loading preview…
+                                            </div>
+                                        ) : threadPreview.replies.length > 0 ? (
+                                            <>
+                                                {threadPreview.replies.map((r, i) => (
+                                                    <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', padding: '4px 6px', borderRadius: '6px' }}>
+                                                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--accent-primary)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, color: '#fff', overflow: 'hidden' }}>
+                                                            {r.avatarHash
+                                                                ? <img src={`${API_BASE}/files/${r.avatarHash}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                                                : r.author.charAt(0).toUpperCase()
+                                                            }
+                                                        </div>
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)' }}>{r.author}</span>
+                                                            <p style={{ margin: '1px 0 0', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.content || <em style={{ opacity: 0.5 }}>attachment</em>}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {(msg.threadReplyCount ?? 0) > 3 && (
+                                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '2px 8px 0', borderTop: '1px solid var(--stroke)', marginTop: '4px' }}>
+                                                        +{(msg.threadReplyCount ?? 0) - 3} more — click to view all
+                                                    </div>
+                                                )}
+                                            </>
+                                        ) : null}
+                                    </div>
+                                )}
                             </div>
                         )}
                         {/* "Thread continues here" indicator when this message's thread is open */}
