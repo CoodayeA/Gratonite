@@ -300,6 +300,26 @@ export const MemoizedMessageItem = memo(({
         msg.createdAt && prevMsg.createdAt &&
         new Date(msg.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() < 5 * 60 * 1000);
 
+    // Date separator: show when this message is on a different calendar day than the previous one
+    const isNewDay = msg.createdAt ? (() => {
+        const msgDate = new Date(msg.createdAt);
+        if (!prevMsg?.createdAt) return true;
+        const prevDate = new Date(prevMsg.createdAt);
+        return msgDate.getFullYear() !== prevDate.getFullYear() ||
+            msgDate.getMonth() !== prevDate.getMonth() ||
+            msgDate.getDate() !== prevDate.getDate();
+    })() : false;
+    const dateSeparatorLabel = isNewDay && msg.createdAt ? (() => {
+        const d = new Date(msg.createdAt);
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const yesterday = new Date(today.getTime() - 86400000);
+        const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        if (msgDay.getTime() === today.getTime()) return 'Today';
+        if (msgDay.getTime() === yesterday.getTime()) return 'Yesterday';
+        return d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+    })() : null;
+
     // Feature 3 + Item 87: Mention highlight detection (personal + @everyone/@here/@channel/@online)
     const isMentioned = Boolean(
         msg.content && (
@@ -350,6 +370,19 @@ export const MemoizedMessageItem = memo(({
 
     return (
         <React.Fragment>
+            {dateSeparatorLabel && (
+                <div style={{
+                    display: 'flex', alignItems: 'center', margin: '20px 16px 4px', gap: '12px',
+                }}>
+                    <div style={{ flex: 1, height: '1px', background: 'var(--stroke)' }} />
+                    <span style={{
+                        fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)',
+                        letterSpacing: '0.04em', flexShrink: 0, whiteSpace: 'nowrap',
+                        background: 'var(--bg-primary)', padding: '0 4px',
+                    }}>{dateSeparatorLabel}</span>
+                    <div style={{ flex: 1, height: '1px', background: 'var(--stroke)' }} />
+                </div>
+            )}
             {isNewMessageDivider && (
                 <div className="new-messages-divider" style={{
                     display: 'flex', alignItems: 'center', margin: '17px 0 4px', padding: '0 16px', position: 'relative',
