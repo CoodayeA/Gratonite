@@ -2506,17 +2506,26 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                 {row.kind === 'category' && (() => {
                                     const { cat, defaultType } = row;
                                     const isCatCollapsed = !!collapsed[cat.id];
+                                    const catChildIds = guildChannels.filter(c => c.parentId === cat.id).map(c => c.id);
+                                    const catMentions = isCatCollapsed ? catChildIds.reduce((sum, id) => sum + (unreadMap.get(id)?.mentionCount ?? 0), 0) : 0;
+                                    const catHasUnread = isCatCollapsed && catMentions === 0 && catChildIds.some(id => !!unreadMap.get(id)?.hasUnread);
                                     return (
                                         <div key={cat.id} className="channel-category" style={{ marginTop: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                            onContextMenu={(e) => handleCategoryContext(e, cat, guildChannels.filter(c => c.parentId === cat.id).map(c => c.id))}>
-                                            <div onClick={() => toggleCategory(cat.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
-                                                <span style={{ transition: 'transform 0.15s ease', transform: isCatCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex' }}>
+                                            onContextMenu={(e) => handleCategoryContext(e, cat, catChildIds)}>
+                                            <div onClick={() => toggleCategory(cat.id)} style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
+                                                <span style={{ transition: 'transform 0.15s ease', transform: isCatCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', display: 'inline-flex', flexShrink: 0 }}>
                                                     <ChevronDown size={14} />
                                                 </span>
-                                                {cat.name.toUpperCase()}
+                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name.toUpperCase()}</span>
+                                                {catMentions > 0 && (
+                                                    <span style={{ background: 'var(--error, #ed4245)', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '10px', minWidth: '14px', textAlign: 'center', fontWeight: 700, lineHeight: '14px', flexShrink: 0 }}>{catMentions}</span>
+                                                )}
+                                                {catHasUnread && (
+                                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--text-primary)', flexShrink: 0, display: 'inline-block' }} />
+                                                )}
                                             </div>
                                             {canManageChannels && (
-                                                <Plus size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)', opacity: 0.7 }} aria-label={`Add channel to ${cat.name}`}
+                                                <Plus size={14} style={{ cursor: 'pointer', color: 'var(--text-muted)', opacity: 0.7, flexShrink: 0 }} aria-label={`Add channel to ${cat.name}`}
                                                     onClick={(e) => { e.stopPropagation(); setShowCreateChannel({ type: defaultType, parentId: cat.id }); setNewChannelName(''); }}
                                                 />
                                             )}
