@@ -4002,6 +4002,24 @@ export const AppLayout = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTheme, colorMode, fontFamily, fontSize, accentColor, buttonShape, glassMode, highContrast, compactMode, reducedEffectsVal]);
 
+    // Write sound volume back to server when it changes (SoundManager uses localStorage directly)
+    useEffect(() => {
+        if (!ctxUser.id || settingsHydratingRef.current) return;
+        let volumeTimer: ReturnType<typeof setTimeout> | null = null;
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key === 'gratonite_notification_volume' || e.key === 'gratonite_sound_volume') {
+                if (volumeTimer) clearTimeout(volumeTimer);
+                volumeTimer = setTimeout(() => {
+                    const vol = parseFloat(e.newValue || '0.7');
+                    if (!isNaN(vol)) api.users.updateSettings({ soundVolume: vol }).catch(() => {});
+                }, 500);
+            }
+        };
+        window.addEventListener('storage', handleStorage);
+        return () => { window.removeEventListener('storage', handleStorage); if (volumeTimer) clearTimeout(volumeTimer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ctxUser.id]);
+
     const [userTheme, setUserTheme] = useState({
         accentColor: '#38bdf8',
         glassMode: 'full',
