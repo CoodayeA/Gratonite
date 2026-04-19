@@ -785,6 +785,8 @@ const DirectMessage = () => {
     const [isLoadingOlder, setIsLoadingOlder] = useState(false);
     const oldestMessageIdRef = useRef<string | null>(null);
     const messageListRef = useRef<HTMLDivElement>(null);
+    const [showScrollButton, setShowScrollButton] = useState(false);
+    const [newDmMsgCount, setNewDmMsgCount] = useState(0);
 
     const convertApiMessage = (m: any): Message => {
         const authorInfo = userCacheRef.current.get(m.authorId);
@@ -837,6 +839,8 @@ const DirectMessage = () => {
             // API returns newest-first; reverse so oldest is at index 0 (top of chat)
             const converted = apiMessages.map(convertApiMessage).reverse();
             setMessages(converted);
+            setShowScrollButton(false);
+            setNewDmMsgCount(0);
             if (apiMessages.length > 0) {
                 // Last element in API response (newest-first) is the oldest
                 oldestMessageIdRef.current = apiMessages[apiMessages.length - 1].id;
@@ -953,6 +957,10 @@ const DirectMessage = () => {
             if (el.scrollTop < 200 && hasMoreMessages && !isLoadingOlder) {
                 loadOlderMessages();
             }
+            const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+            const nearBottom = distFromBottom < 200;
+            setShowScrollButton(!nearBottom);
+            if (nearBottom) setNewDmMsgCount(0);
             if (dmChannelId) {
                 if (dmScrollSaveTimer.current) clearTimeout(dmScrollSaveTimer.current);
                 dmScrollSaveTimer.current = setTimeout(() => saveScrollPosition(dmChannelId, el.scrollTop), 150);
@@ -1007,6 +1015,13 @@ const DirectMessage = () => {
                 attachments: (data as any).attachments ?? undefined,
                 embeds: Array.isArray((data as any).embeds) && (data as any).embeds.length > 0 ? (data as any).embeds : undefined,
             }]);
+            // Increment new-message counter if user is scrolled up
+            const el = messageListRef.current;
+            if (el) {
+                const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+                if (distFromBottom > 200) setNewDmMsgCount(n => n + 1);
+                else el.scrollTop = el.scrollHeight;
+            }
             // Auto-mark read when message arrives and window is focused/visible
             if (!document.hidden && document.hasFocus()) {
                 api.messages.markRead(dmChannelId, data.id).catch(() => {});
@@ -3255,6 +3270,52 @@ const DirectMessage = () => {
                             })}
                             <div ref={messagesEndRef} />
                         </div>
+
+                        {/* Jump to bottom button */}
+                        {showScrollButton && (
+                            <button
+                                onClick={() => {
+                                    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                                    setNewDmMsgCount(0);
+                                    setShowScrollButton(false);
+                                }}
+                                style={{
+                                    position: 'absolute',
+                                    bottom: '80px',
+                                    right: '24px',
+                                    zIndex: 10,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: newDmMsgCount > 0 ? '6px 12px 6px 10px' : '8px',
+                                    background: 'var(--bg-elevated)',
+                                    border: '1px solid var(--stroke)',
+                                    borderRadius: '20px',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '13px',
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                    transition: 'all 0.15s ease',
+                                }}
+                                title="Jump to bottom"
+                            >
+                                {newDmMsgCount > 0 && (
+                                    <span style={{
+                                        background: 'var(--accent-primary)',
+                                        color: '#000',
+                                        borderRadius: '10px',
+                                        padding: '1px 7px',
+                                        fontSize: '12px',
+                                        fontWeight: 700,
+                                        lineHeight: '18px',
+                                    }}>
+                                        {newDmMsgCount > 99 ? '99+' : newDmMsgCount}
+                                    </span>
+                                )}
+                                <ChevronDown size={16} />
+                            </button>
+                        )}
 
                         {/* Input Area */}
                         <div className="input-area" style={{ position: 'relative' }}>
