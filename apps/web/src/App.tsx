@@ -8,7 +8,7 @@ import gsap from 'gsap';
 import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar, Compass, User, Columns, Paintbrush, PenLine, FileText, LayoutGrid } from 'lucide-react';
 import './components/chat.css';
 import CommandPalette from './components/ui/CommandPalette';
-import { playSound, setSoundVolume } from './utils/SoundManager';
+import { playSound, setSoundVolume, setSoundMuted, setSoundPack, isSoundMuted, getSoundPack } from './utils/SoundManager';
 import { copyToClipboard } from './utils/clipboard';
 
 import AuthLayout from './layouts/AuthLayout';
@@ -3297,7 +3297,7 @@ export const AppLayout = () => {
     const [isMemberDrawerOpen, setIsMemberDrawerOpen] = useState(false);
     const mainContentRef = useRef<HTMLDivElement>(null);
     const { user: ctxUser, loading: userLoading, gratoniteBalance, setGratoniteBalance } = useUser();
-    const { theme: activeTheme, colorMode, fontFamily, fontSize, accentColor, buttonShape, glassMode, highContrast, compactMode, reducedEffects: reducedEffectsVal, linkUnderlines, setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects, setLinkUnderlines, reducedEffects, screenReaderMode, setScreenReaderMode, focusIndicatorSize, setFocusIndicatorSize, colorBlindMode, setColorBlindMode } = useTheme();
+    const { theme: activeTheme, colorMode, fontFamily, fontSize, accentColor, buttonShape, glassMode, highContrast, compactMode, reducedEffects: reducedEffectsVal, linkUnderlines, setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects, setLinkUnderlines, reducedEffects, screenReaderMode, setScreenReaderMode, focusIndicatorSize, setFocusIndicatorSize, colorBlindMode, setColorBlindMode, lowPower, setLowPower } = useTheme();
     const settingsHydratingRef = useRef(false);
     const routeAnnouncerRef = useRef<HTMLDivElement>(null);
     const [guilds, setGuilds] = useState<Array<{ id: string; name: string; ownerId: string; iconHash: string | null; description: string | null; memberCount: number; boostTier?: number }>>([]);
@@ -3975,6 +3975,9 @@ export const AppLayout = () => {
                 if (s.focusIndicatorSize) setFocusIndicatorSize(s.focusIndicatorSize);
                 if (s.colorBlindMode) setColorBlindMode(s.colorBlindMode);
                 if (s.soundVolume != null) setSoundVolume(s.soundVolume);
+                if (s.soundMuted != null) setSoundMuted(s.soundMuted);
+                if (s.soundPack) setSoundPack(s.soundPack);
+                if (s.lowPower != null) setLowPower(s.lowPower);
             }).catch(() => {/* silently ignore — localStorage fallback still applies */}).finally(() => {
                 // Short delay so hydration state updates settle before the
                 // write-back effect starts watching for user-initiated changes.
@@ -4004,16 +4007,18 @@ export const AppLayout = () => {
                 screenReaderMode,
                 focusIndicatorSize,
                 colorBlindMode,
+                lowPower,
             }).catch(() => {});
         }, 300);
         return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTheme, colorMode, fontFamily, fontSize, accentColor, buttonShape, glassMode, highContrast, compactMode, reducedEffectsVal, linkUnderlines, screenReaderMode, focusIndicatorSize, colorBlindMode]);
+    }, [activeTheme, colorMode, fontFamily, fontSize, accentColor, buttonShape, glassMode, highContrast, compactMode, reducedEffectsVal, linkUnderlines, screenReaderMode, focusIndicatorSize, colorBlindMode, lowPower]);
 
     // Write sound volume back to server when it changes (SoundManager uses localStorage directly)
     useEffect(() => {
         if (!ctxUser.id || settingsHydratingRef.current) return;
         let volumeTimer: ReturnType<typeof setTimeout> | null = null;
+        let soundTimer: ReturnType<typeof setTimeout> | null = null;
         const handleStorage = (e: StorageEvent) => {
             if (e.key === 'gratonite_notification_volume' || e.key === 'gratonite_sound_volume') {
                 if (volumeTimer) clearTimeout(volumeTimer);
@@ -4022,9 +4027,18 @@ export const AppLayout = () => {
                     if (!isNaN(vol)) api.users.updateSettings({ soundVolume: vol }).catch(() => {});
                 }, 500);
             }
+            if (e.key === 'gratonite_sound_muted' || e.key === 'gratonite_sound_pack') {
+                if (soundTimer) clearTimeout(soundTimer);
+                soundTimer = setTimeout(() => {
+                    api.users.updateSettings({
+                        soundMuted: isSoundMuted(),
+                        soundPack: getSoundPack(),
+                    }).catch(() => {});
+                }, 500);
+            }
         };
         window.addEventListener('storage', handleStorage);
-        return () => { window.removeEventListener('storage', handleStorage); if (volumeTimer) clearTimeout(volumeTimer); };
+        return () => { window.removeEventListener('storage', handleStorage); if (volumeTimer) clearTimeout(volumeTimer); if (soundTimer) clearTimeout(soundTimer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ctxUser.id]);
 
