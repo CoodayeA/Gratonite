@@ -8,6 +8,7 @@ export type ContextMenuItem = {
     color?: string; // e.g. for destructive actions like delete
     onClick?: () => void;
     divider?: boolean; // If true, rendering a divider below this item
+    submenu?: ContextMenuItem[]; // Nested items shown on hover
 };
 
 type ContextMenuState = {
@@ -31,6 +32,95 @@ export const useContextMenu = () => {
     if (!ctx) throw new Error("useContextMenu must be used within ContextMenuProvider");
     return ctx;
 };
+
+// Flyout submenu item — shows nested items to the right on hover
+function SubMenuItem({ item, idx, isTouchDevice, focusedIndex, setFocusedIndex, closeMenu }: {
+    item: ContextMenuItem; idx: number; isTouchDevice: boolean;
+    focusedIndex: number; setFocusedIndex: (i: number) => void; closeMenu: () => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+    const [flyoutLeft, setFlyoutLeft] = useState(true); // true = open to right
+
+    const handleMouseEnter = () => {
+        setFocusedIndex(idx);
+        setOpen(true);
+        if (ref.current) {
+            const rect = ref.current.getBoundingClientRect();
+            setFlyoutLeft(rect.right + 200 < window.innerWidth);
+        }
+    };
+
+    return (
+        <div ref={ref} style={{ position: 'relative' }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={() => setOpen(false)}
+        >
+            <button
+                role="menuitem"
+                aria-haspopup="true"
+                aria-expanded={open}
+                aria-label={item.label}
+                className="context-menu-item"
+                style={{
+                    padding: isTouchDevice ? '12px 16px' : '8px 12px',
+                    minHeight: isTouchDevice ? '48px' : undefined,
+                    color: item.color || 'var(--text-primary)',
+                    fontSize: isTouchDevice ? '16px' : '14px',
+                    width: '100%',
+                    outline: focusedIndex === idx ? '2px solid var(--accent-primary)' : 'none',
+                    outlineOffset: '-2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '8px',
+                }}
+                onClick={() => setOpen(o => !o)}
+            >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {item.icon && <item.icon size={isTouchDevice ? 20 : 16} />}
+                    {item.label}
+                </span>
+                <span style={{ fontSize: '10px', opacity: 0.5 }}>▸</span>
+            </button>
+            {open && item.submenu && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    [flyoutLeft ? 'left' : 'right']: 'calc(100% + 4px)',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--stroke)',
+                    borderRadius: 'var(--radius-md)',
+                    boxShadow: '0 16px 32px rgba(0,0,0,0.6)',
+                    padding: '8px',
+                    minWidth: '180px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2px',
+                    zIndex: 2101,
+                    animation: 'popIn 0.12s cubic-bezier(0.16, 1, 0.3, 1)',
+                    backdropFilter: 'blur(20px)',
+                }} role="menu">
+                    {item.submenu.map(sub => (
+                        <React.Fragment key={sub.id}>
+                            <button
+                                role="menuitem"
+                                aria-label={sub.label}
+                                className="context-menu-item"
+                                style={{ padding: '8px 12px', color: sub.color || 'var(--text-primary)', fontSize: '14px' }}
+                                onClick={() => { sub.onClick?.(); closeMenu(); }}
+                            >
+                                {sub.icon && <sub.icon size={16} />}
+                                {sub.label}
+                            </button>
+                            {sub.divider && <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />}
+                        </React.Fragment>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
     const [state, setState] = useState<ContextMenuState>({
@@ -179,6 +269,9 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
                     )}
                     {state.items.map((item, idx) => (
                         <React.Fragment key={item.id}>
+                            {item.submenu ? (
+                                <SubMenuItem item={item} idx={idx} isTouchDevice={isTouchDevice} focusedIndex={state.focusedIndex} setFocusedIndex={(i) => setState(prev => ({ ...prev, focusedIndex: i }))} closeMenu={closeMenu} />
+                            ) : (
                             <button
                                 role="menuitem"
                                 aria-label={item.label}
@@ -211,6 +304,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
                                 {item.icon && <item.icon size={isTouchDevice ? 20 : 16} />}
                                 {item.label}
                             </button>
+                            )}
                             {item.divider && <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />}
                         </React.Fragment>
                     ))}

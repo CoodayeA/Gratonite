@@ -1299,11 +1299,13 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     addToast({ title: `Added #${channel.name} to favorites`, variant: 'success' });
                 }
             }},
-            { id: 'mute', label: 'Mute Channel', icon: Volume1, onClick: () => {
-                api.channels.setNotificationPrefs(channel.id, { level: 'none' }).then(() => {
-                    addToast({ title: 'Channel Muted', variant: 'info' });
-                }).catch(() => addToast({ title: 'Failed to mute channel', variant: 'error' }));
-            }},
+            { id: 'mute', label: 'Mute Channel', icon: BellOff, submenu: [
+                { id: 'mute-15m', label: 'For 15 minutes', icon: BellOff, onClick: () => { const u = new Date(Date.now() + 15*60000).toISOString(); api.channels.setNotificationPrefs(channel.id, { level: 'none', mutedUntil: u }).then(() => { setMutedChannelIds(prev => new Set(prev).add(channel.id)); addToast({ title: '#' + channel.name + ' muted for 15 min', variant: 'info' }); }).catch(() => addToast({ title: 'Failed', variant: 'error' })); } },
+                { id: 'mute-1h', label: 'For 1 hour', icon: BellOff, onClick: () => { const u = new Date(Date.now() + 3600000).toISOString(); api.channels.setNotificationPrefs(channel.id, { level: 'none', mutedUntil: u }).then(() => { setMutedChannelIds(prev => new Set(prev).add(channel.id)); addToast({ title: '#' + channel.name + ' muted for 1 hour', variant: 'info' }); }).catch(() => addToast({ title: 'Failed', variant: 'error' })); } },
+                { id: 'mute-8h', label: 'For 8 hours', icon: BellOff, onClick: () => { const u = new Date(Date.now() + 28800000).toISOString(); api.channels.setNotificationPrefs(channel.id, { level: 'none', mutedUntil: u }).then(() => { setMutedChannelIds(prev => new Set(prev).add(channel.id)); addToast({ title: '#' + channel.name + ' muted for 8 hours', variant: 'info' }); }).catch(() => addToast({ title: 'Failed', variant: 'error' })); } },
+                { id: 'mute-24h', label: 'For 24 hours', icon: BellOff, onClick: () => { const u = new Date(Date.now() + 86400000).toISOString(); api.channels.setNotificationPrefs(channel.id, { level: 'none', mutedUntil: u }).then(() => { setMutedChannelIds(prev => new Set(prev).add(channel.id)); addToast({ title: '#' + channel.name + ' muted for 24 hours', variant: 'info' }); }).catch(() => addToast({ title: 'Failed', variant: 'error' })); } },
+                { id: 'mute-forever', label: 'Until I turn it back on', icon: BellOff, onClick: () => { api.channels.setNotificationPrefs(channel.id, { level: 'none' }).then(() => { setMutedChannelIds(prev => new Set(prev).add(channel.id)); addToast({ title: '#' + channel.name + ' muted', variant: 'info' }); }).catch(() => addToast({ title: 'Failed', variant: 'error' })); } },
+            ]},
             { divider: true, id: 'div1', label: '' },
             { id: 'edit', label: 'Edit Channel', icon: Settings, onClick: () => {
                 api.channels.get(channel.id).then((ch: any) => {
