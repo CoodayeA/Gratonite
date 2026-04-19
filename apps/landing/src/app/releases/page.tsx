@@ -20,6 +20,21 @@ export const metadata: Metadata = createPageMetadata({
 
 const releases = [
   {
+    version: "1.0.9",
+    date: "April 18, 2026",
+    summary: "DM notifications you actually notice — popups, sidebar badges, sounds, and zip uploads.",
+    accent: "gold" as const,
+    changes: [
+      "Rich DM notification toasts slide in from the bottom-right with the sender's avatar, name, and message preview",
+      "Discord-style sender avatars appear in the sidebar rail below the Home button until you read the message",
+      "Browser/OS notifications fire for DMs when the tab is hidden or out of focus",
+      "Notification sound plays on every incoming DM",
+      "Zip file uploads now supported in DMs and server channels via the + button",
+      "DM notifications suppress automatically for the conversation you are currently viewing",
+      "Sidebar DM badge clears the moment you open that conversation",
+    ],
+  },
+  {
     version: "1.0.8",
     date: "April 18, 2026",
     summary: "Android beta APK now available for sideloading.",

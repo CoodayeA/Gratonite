@@ -24,6 +24,48 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-04-18',
+    date: 'April 18, 2026',
+    title: 'DM Notifications & Android App',
+    tagline: 'Direct messages are now impossible to miss — rich popups, sidebar badges, sounds, and a sideloadable Android APK.',
+    spotlight: [
+      {
+        emoji: '📲',
+        title: 'Android App (Beta)',
+        description: 'A sideloadable APK is now available on the Download page. Install Gratonite on your Android device without waiting for an app store.',
+        hint: 'Download page → Android',
+      },
+      {
+        emoji: '🔔',
+        title: 'DM Notification Popups',
+        description: 'When a direct message arrives, a rich toast slides in from the bottom-right — avatar, name, message preview. Click it to jump straight into the conversation.',
+        hint: 'Works in both DMs and Group DMs',
+      },
+      {
+        emoji: '👤',
+        title: 'Sidebar Unread Badges',
+        description: "Unread DM senders appear as avatar icons below the Home button in the left rail, just like Discord. A red dot shows there's something waiting. Click to open and clear.",
+        hint: 'Stacks up to 5 senders',
+      },
+      {
+        emoji: '📁',
+        title: 'Zip Folder Uploads',
+        description: 'You can now upload entire zip archives — hit the + button in any DM or server channel and select a .zip file.',
+        hint: 'Max 100 MB per upload',
+      },
+    ],
+    entries: [
+      { type: 'feature', text: 'Android APK now available for sideloading on the Download page with step-by-step install instructions.' },
+      { type: 'feature', text: 'Rich DM notification toast — slides in from bottom-right with sender avatar, display name, and message preview. Auto-dismisses after 6 seconds, stacks up to 3.' },
+      { type: 'feature', text: 'Discord-style DM unread indicators in the sidebar rail: sender avatars appear below the Home icon with a red dot until you read the message.' },
+      { type: 'feature', text: 'Browser/OS notifications now fire for DMs when the tab is hidden or unfocused.' },
+      { type: 'feature', text: 'Notification sound plays on incoming DMs.' },
+      { type: 'feature', text: 'Zip file uploads now supported in both DM and server channels via the + button.' },
+      { type: 'improvement', text: 'DM notifications are suppressed for the conversation you are currently viewing so you are never double-notified.' },
+      { type: 'improvement', text: 'Sidebar DM badge auto-clears the moment you navigate to that conversation.' },
+    ],
+  },
+  {
     id: '2026-04-17d',
     date: 'April 17, 2026',
     title: 'Help Center & Docs Catch-Up',
