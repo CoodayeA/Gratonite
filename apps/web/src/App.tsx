@@ -2054,8 +2054,10 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                             {isDmLoading ? (
                                 <SkeletonDmList count={4} />
                             ) : dmChannels.length === 0 ? (
-                                <div style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                                    No conversations yet
+                                <div style={{ padding: '20px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '24px' }}>💬</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>No conversations yet</span>
+                                    <span style={{ fontSize: '12px', lineHeight: 1.4 }}>Add some friends and start chatting!</span>
                                 </div>
                             ) : (
                                 dmChannels.map((dm: any) => {
@@ -2187,7 +2189,11 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                                     </div>
                                                     <div style={{ minWidth: 0, flex: 1 }}>
                                                         <span style={{ fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: dmUnreadFlag ? 600 : undefined, color: dmUnreadFlag ? 'var(--text-primary)' : undefined, display: 'flex', alignItems: 'center' }}>{displayName}{(recipient as any)?.isFederated && <RemoteBadge address={(recipient as any)?.federationAddress} size={11} />}</span>
-                                                        {dm.lastMessage?.content && (
+                                                        {channelTyping.has(dm.id) ? (
+                                                            <span style={{ fontSize: '11px', color: 'var(--accent-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', fontStyle: 'italic' }}>
+                                                                typing...
+                                                            </span>
+                                                        ) : dm.lastMessage?.content && (
                                                             <span style={{ fontSize: '11px', color: dmUnreadFlag ? 'var(--text-secondary)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', fontWeight: dmUnreadFlag ? 500 : undefined }}>
                                                                 {(dm.lastMessage.content as string).replace(/!\[.*?\]\(.*?\)/g, '📎 Attachment').replace(/```[\s\S]*?```/g, '📝 Code').substring(0, 45)}{(dm.lastMessage.content as string).length > 45 ? '…' : ''}
                                                             </span>
@@ -2237,7 +2243,10 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 title="Drag to resize sidebar"
             />
             <header className="sidebar-header" style={{ cursor: 'pointer' }}>
-                <Link to={activeGuildId ? `/guild/${activeGuildId}` : '/guild'} style={{ color: 'inherit', textDecoration: 'none' }}>{guildInfo?.name || 'Loading...'}</Link>
+                <Link to={activeGuildId ? `/guild/${activeGuildId}` : '/guild'} style={{ color: 'inherit', textDecoration: 'none', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{guildInfo?.name || 'Loading...'}</span>
+                    {guildInfo?.memberCount ? <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--text-muted)', letterSpacing: '0.01em' }}>{guildInfo.memberCount.toLocaleString()} members</span> : null}
+                </Link>
             </header>
 
             <div style={{ padding: '16px 16px 0 16px' }}>
@@ -2945,7 +2954,14 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile, isMobileOpen, onCloseMo
         <>
         {isMobileOpen && <div className={`members-sidebar-backdrop ${isMobileOpen ? 'visible' : ''}`} onClick={onCloseMobile} />}
         <aside className={`members-sidebar glass-panel ${isMobileOpen ? 'open' : ''}`} aria-label="Members">
-            <div style={{ padding: '10px 12px 8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {members.length > 0 && (
+                <div style={{ padding: '10px 12px 4px', display: 'flex', gap: '8px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                    <span style={{ color: '#3ba55d' }}>● {onlineMembers.length} Online</span>
+                    <span style={{ opacity: 0.5 }}>·</span>
+                    <span>{members.length} Members</span>
+                </div>
+            )}
+            <div style={{ padding: '4px 12px 8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
