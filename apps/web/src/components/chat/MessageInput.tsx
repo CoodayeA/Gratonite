@@ -312,6 +312,26 @@ const MessageInput: React.FC<MessageInputProps> = ({
     }, [handleInputChange, detectEmojiShortcode]);
 
     const handleInputKeyDownWithEmoji = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        // Ctrl/Cmd + B/I/U — wrap selected text with markdown
+        if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+            const wrappers: Record<string, string> = { b: '**', i: '_', u: '~~' };
+            const wrap = wrappers[e.key.toLowerCase()];
+            if (wrap) {
+                e.preventDefault();
+                const ta = e.target as HTMLTextAreaElement;
+                const start = ta.selectionStart ?? 0;
+                const end = ta.selectionEnd ?? 0;
+                const selected = inputValue.slice(start, end);
+                const newValue = `${inputValue.slice(0, start)}${wrap}${selected}${wrap}${inputValue.slice(end)}`;
+                setInputValue(newValue);
+                // Restore selection inside the wrappers on next tick
+                requestAnimationFrame(() => {
+                    ta.selectionStart = start + wrap.length;
+                    ta.selectionEnd = end + wrap.length;
+                });
+                return;
+            }
+        }
         if (emojiSuggestions.length > 0 && emojiQuery) {
             if (e.key === 'ArrowUp') {
                 e.preventDefault();
@@ -336,7 +356,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             }
         }
         handleInputKeyDown(e);
-    }, [emojiSuggestions, emojiQuery, emojiSuggestionIndex, insertEmojiShortcode, handleInputKeyDown]);
+    }, [emojiSuggestions, emojiQuery, emojiSuggestionIndex, insertEmojiShortcode, handleInputKeyDown, inputValue, setInputValue]);
 
     const handleSendWithAnnounce = useCallback(() => {
         handleSendMessage();
