@@ -353,14 +353,18 @@ export const MemoizedMessageItem = memo(({
                 <div className="new-messages-divider" style={{
                     display: 'flex', alignItems: 'center', margin: '17px 0 4px', padding: '0 16px', position: 'relative',
                 }}>
-                    <div style={{ flex: 1, height: '1px', background: '#ed4245' }}></div>
+                    <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, transparent, #ed4245)' }}></div>
                     <span style={{
-                        color: '#ed4245', fontSize: '11px', fontWeight: 700,
-                        textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1,
-                        padding: '0 0 0 4px', flexShrink: 0,
+                        color: '#ed4245', fontSize: '10px', fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1,
+                        padding: '0 8px', flexShrink: 0, background: 'var(--bg-primary)',
+                        border: '1px solid rgba(237,66,69,0.4)', borderRadius: '10px',
+                        display: 'flex', alignItems: 'center', gap: '4px',
                     }}>
-                        NEW
+                        <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#ed4245' }} />
+                        New Messages
                     </span>
+                    <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, #ed4245, transparent)' }}></div>
                 </div>
             )}
             <motion.div
@@ -896,10 +900,22 @@ export const MemoizedMessageItem = memo(({
                         position: 'absolute', top: isGrouped ? '6px' : '10px', right: '16px',
                         background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
                         borderRadius: 'var(--radius-sm)', padding: '4px',
-                        display: 'flex', gap: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                        display: 'flex', gap: '2px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
                         zIndex: 20
                     }}>
-                        <Tooltip content="Add Reaction" position="top">
+                        {/* Inline quick-react strip — 1-click reactions */}
+                        {!msg.system && msg.apiId && ['👍', '❤️', '😂', '🔥', '🎉'].map(qEmoji => (
+                            <Tooltip key={qEmoji} content={qEmoji} position="top">
+                                <button
+                                    className="message-action-btn"
+                                    onClick={(e) => { e.stopPropagation(); onReaction?.(msg.apiId!, qEmoji, (msg.reactions || []).some((r: any) => r.emoji === qEmoji && r.me)); }}
+                                    style={{ fontSize: '15px', padding: '3px 5px', lineHeight: 1 }}
+                                >
+                                    {qEmoji}
+                                </button>
+                            </Tooltip>
+                        ))}
+                        <Tooltip content="More reactions" position="top">
                             <button className="message-action-btn" onClick={(e) => { e.stopPropagation(); setShowReactionPicker(!showReactionPicker); }}>
                                 <Smile size={16} />
                             </button>
