@@ -3297,7 +3297,7 @@ export const AppLayout = () => {
     const [isMemberDrawerOpen, setIsMemberDrawerOpen] = useState(false);
     const mainContentRef = useRef<HTMLDivElement>(null);
     const { user: ctxUser, loading: userLoading, gratoniteBalance, setGratoniteBalance } = useUser();
-    const { theme: activeTheme, colorMode, fontFamily, fontSize, accentColor, buttonShape, glassMode, highContrast, compactMode, reducedEffects: reducedEffectsVal, linkUnderlines, setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects, setLinkUnderlines, reducedEffects, screenReaderMode } = useTheme();
+    const { theme: activeTheme, colorMode, fontFamily, fontSize, accentColor, buttonShape, glassMode, highContrast, compactMode, reducedEffects: reducedEffectsVal, linkUnderlines, setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects, setLinkUnderlines, reducedEffects, screenReaderMode, setScreenReaderMode, focusIndicatorSize, setFocusIndicatorSize, colorBlindMode, setColorBlindMode } = useTheme();
     const settingsHydratingRef = useRef(false);
     const routeAnnouncerRef = useRef<HTMLDivElement>(null);
     const [guilds, setGuilds] = useState<Array<{ id: string; name: string; ownerId: string; iconHash: string | null; description: string | null; memberCount: number; boostTier?: number }>>([]);
@@ -3971,6 +3971,9 @@ export const AppLayout = () => {
                 if (s.compactMode != null) setCompactMode(s.compactMode);
                 if (s.reducedMotion != null) setReducedEffects(s.reducedMotion);
                 if (s.linkUnderlines != null) setLinkUnderlines(s.linkUnderlines);
+                if (s.screenReaderMode != null) setScreenReaderMode(s.screenReaderMode);
+                if (s.focusIndicatorSize) setFocusIndicatorSize(s.focusIndicatorSize);
+                if (s.colorBlindMode) setColorBlindMode(s.colorBlindMode);
                 if (s.soundVolume != null) setSoundVolume(s.soundVolume);
             }).catch(() => {/* silently ignore — localStorage fallback still applies */}).finally(() => {
                 // Short delay so hydration state updates settle before the
@@ -3998,11 +4001,14 @@ export const AppLayout = () => {
                 compactMode,
                 reducedMotion: reducedEffectsVal,
                 linkUnderlines,
+                screenReaderMode,
+                focusIndicatorSize,
+                colorBlindMode,
             }).catch(() => {});
         }, 300);
         return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTheme, colorMode, fontFamily, fontSize, accentColor, buttonShape, glassMode, highContrast, compactMode, reducedEffectsVal, linkUnderlines]);
+    }, [activeTheme, colorMode, fontFamily, fontSize, accentColor, buttonShape, glassMode, highContrast, compactMode, reducedEffectsVal, linkUnderlines, screenReaderMode, focusIndicatorSize, colorBlindMode]);
 
     // Write sound volume back to server when it changes (SoundManager uses localStorage directly)
     useEffect(() => {
