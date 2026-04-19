@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import { ConnectionState } from 'livekit-client';
-import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield, ArrowLeft, MessageSquare, Pin, Link2, FolderArchive, Upload } from 'lucide-react';
+import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, ChevronUp, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield, ArrowLeft, MessageSquare, Pin, Link2, FolderArchive, Upload, Search } from 'lucide-react';
 import JSZip from 'jszip';
 import { getOrCreateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported, generateGroupKey, encryptGroupKey, decryptGroupKey, computeSafetyNumber, encryptFile, decryptFile } from '../../lib/e2e';
 import { onGroupKeyRotationNeeded, onUserKeyChanged, onE2EStateChanged } from '../../lib/socket';
@@ -319,6 +319,78 @@ const DirectMessage = () => {
         if (showPinnedPanel) loadPinnedMessages();
     }, [showPinnedPanel, loadPinnedMessages]);
 
+    const performDmSearch = useCallback((query: string) => {
+        if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+        if (!query.trim() || !dmChannelId) {
+            setSearchResults([]);
+            setCurrentSearchIndex(0);
+            setIsSearching(false);
+            return;
+        }
+        setIsSearching(true);
+        searchDebounceRef.current = setTimeout(async () => {
+            try {
+                const res = await api.search.messages({ query: query.trim(), channelId: dmChannelId, limit: 50 });
+                setSearchResults(res.results || []);
+                setCurrentSearchIndex(0);
+                if (res.results && res.results.length > 0) {
+                    const firstId = res.results[0].id;
+                    const el = document.querySelector(`[data-message-id="${firstId}"]`);
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        setHighlightedMsgId(parseInt(firstId, 36) || 0);
+                        setTimeout(() => setHighlightedMsgId(null), 2500);
+                    }
+                }
+            } catch {
+                addToast({ title: 'Search failed', variant: 'error' });
+                setSearchResults([]);
+            } finally {
+                setIsSearching(false);
+            }
+        }, 300);
+    }, [dmChannelId, addToast]);
+
+    const navigateDmSearchResult = useCallback((direction: 'up' | 'down') => {
+        if (searchResults.length === 0) return;
+        const newIndex = direction === 'down'
+            ? (currentSearchIndex + 1) % searchResults.length
+            : (currentSearchIndex - 1 + searchResults.length) % searchResults.length;
+        setCurrentSearchIndex(newIndex);
+        const resultId = searchResults[newIndex].id;
+        const el = document.querySelector(`[data-message-id="${resultId}"]`);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setHighlightedMsgId(parseInt(resultId, 36) || 0);
+            setTimeout(() => setHighlightedMsgId(null), 2500);
+        }
+    }, [searchResults, currentSearchIndex]);
+
+    const closeDmSearch = useCallback(() => {
+        setShowSearchBar(false);
+        setSearchQuery('');
+        setSearchResults([]);
+        setCurrentSearchIndex(0);
+        setIsSearching(false);
+        if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    }, []);
+
+    // Ctrl+F opens search bar
+    useEffect(() => {
+        const handleGlobalKey = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                setShowSearchBar(true);
+                setTimeout(() => searchInputRef.current?.focus(), 50);
+            }
+            if (e.key === 'Escape' && showSearchBar) {
+                closeDmSearch();
+            }
+        };
+        window.addEventListener('keydown', handleGlobalKey);
+        return () => window.removeEventListener('keydown', handleGlobalKey);
+    }, [showSearchBar, closeDmSearch]);
+
     useEffect(() => {
         let cancelled = false;
         const run = async () => {
@@ -368,6 +440,13 @@ const DirectMessage = () => {
     // Reaction state
     const [hoveredMessageId, setHoveredMessageId] = useState<number | null>(null);
     const [highlightedMsgId, setHighlightedMsgId] = useState<number | null>(null);
+    const [showSearchBar, setShowSearchBar] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<Array<{ id: string }>>([]);
+    const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
+    const [isSearching, setIsSearching] = useState(false);
+    const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
     const [reactionPickerMessageId, setReactionPickerMessageId] = useState<number | null>(null);
     const reactionPickerRef = useRef<HTMLDivElement>(null);
     const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
@@ -2436,6 +2515,7 @@ const DirectMessage = () => {
                             )}
                         </div>
                         {/* E2E lock toggle is next to username, not here */}
+                        <Search size={20} className="hover-text-primary-inactive" data-active={showSearchBar ? "true" : undefined} style={{ cursor: 'pointer', transition: 'color 0.2s', color: showSearchBar ? 'var(--accent-primary)' : 'var(--text-secondary)' }} title="Search messages (Ctrl+F)" onClick={() => { if (showSearchBar) { closeDmSearch(); } else { setShowSearchBar(true); setTimeout(() => searchInputRef.current?.focus(), 50); } }} />
                         <Info size={20} className="hover-text-primary-inactive" data-active={infoPanelOpen ? "true" : undefined} style={{ cursor: 'pointer', transition: 'color 0.2s', color: infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }} onClick={() => { setInfoPanelOpen(!infoPanelOpen); if (isGroupDm) setMemberPanelOpen(false); }} />
                     </div>
                 </header>
@@ -2834,6 +2914,34 @@ const DirectMessage = () => {
                     </div>
                 ) : (
                     <>
+                        {/* Search bar */}
+                        {showSearchBar && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--stroke)', zIndex: 3, position: 'relative', flexShrink: 0 }}>
+                                <Search size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                <input
+                                    ref={searchInputRef}
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => { setSearchQuery(e.target.value); performDmSearch(e.target.value); }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Escape') { closeDmSearch(); return; }
+                                        if (e.key === 'Enter') {
+                                            if (e.shiftKey) navigateDmSearchResult('up');
+                                            else navigateDmSearchResult('down');
+                                            e.preventDefault();
+                                        }
+                                    }}
+                                    placeholder="Search messages..."
+                                    style={{ flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', fontSize: '13px', color: 'var(--text-primary)', outline: 'none' }}
+                                />
+                                <span style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0, minWidth: '60px', textAlign: 'center' }}>
+                                    {isSearching ? 'Searching…' : searchQuery.trim() ? searchResults.length > 0 ? `${currentSearchIndex + 1} / ${searchResults.length}` : 'No results' : ''}
+                                </span>
+                                <button onClick={() => navigateDmSearchResult('up')} disabled={searchResults.length === 0} style={{ background: 'transparent', border: 'none', cursor: searchResults.length > 0 ? 'pointer' : 'default', color: searchResults.length > 0 ? 'var(--text-secondary)' : 'var(--text-muted)', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', opacity: searchResults.length > 0 ? 1 : 0.4 }} title="Previous (Shift+Enter)"><ChevronUp size={16} /></button>
+                                <button onClick={() => navigateDmSearchResult('down')} disabled={searchResults.length === 0} style={{ background: 'transparent', border: 'none', cursor: searchResults.length > 0 ? 'pointer' : 'default', color: searchResults.length > 0 ? 'var(--text-secondary)' : 'var(--text-muted)', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', opacity: searchResults.length > 0 ? 1 : 0.4 }} title="Next (Enter)"><ChevronDown size={16} /></button>
+                                <button onClick={closeDmSearch} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center' }} title="Close search (Esc)"><X size={16} /></button>
+                            </div>
+                        )}
                         <div ref={messageListRef} className="message-area" role="log" aria-label={`Direct messages with ${userName}`} aria-live="polite" style={{ overflowY: 'auto', position: 'relative' }}
                             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true); }}
                             onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); }}
@@ -3028,7 +3136,7 @@ const DirectMessage = () => {
                                 )}
                                 <div
                                     data-message-id={msg.apiId}
-                                    className={`message${isGrouped ? ' grouped message-grouped' : ' message-standalone'}${highlightedMsgId === msg.id ? ' highlighted-message' : ''}`}
+                                    className={`message${isGrouped ? ' grouped message-grouped' : ' message-standalone'}${highlightedMsgId === msg.id ? ' highlighted-message' : ''}${showSearchBar && searchQuery.trim() && searchResults.some((r) => r.id === msg.apiId) ? ' search-result-message' : ''}`}
                                     style={{ margin: 0, marginTop: isGrouped ? '1px' : '12px', padding: isGrouped ? '1px 16px' : '4px 16px', display: 'flex', gap: '12px', position: 'relative' }}
                                     onMouseEnter={() => setHoveredMessageId(msg.id)}
                                     onMouseLeave={() => { setHoveredMessageId(null); }}
