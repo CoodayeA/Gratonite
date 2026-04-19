@@ -28,6 +28,7 @@ import { copyToClipboard } from '../../utils/clipboard';
 import { useLiveKit, type LiveKitParticipant } from '../../lib/useLiveKit';
 import Avatar from '../../components/ui/Avatar';
 import UserProfilePopover from '../../components/ui/UserProfilePopover';
+import FriendshipStreak from '../../components/chat/FriendshipStreak';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { saveScrollPosition, getScrollPosition } from '../../store/scrollPositionStore';
 import { useVoice } from '../../contexts/VoiceContext';
@@ -2278,6 +2279,9 @@ const DirectMessage = () => {
                                 {isGroupDm ? `${groupParticipants.length} members` : userStatus}
                             </div>
                         </div>
+                        {!isGroupDm && recipientId && (
+                            <FriendshipStreak friendId={recipientId} compact />
+                        )}
                     </div>
 
                     <div style={{ flex: 1 }}></div>

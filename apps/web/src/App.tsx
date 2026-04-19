@@ -2102,15 +2102,26 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                                         </div>
                                                         <div style={{ overflow: 'hidden', flex: 1 }}>
                                                             <span style={{ fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', fontWeight: gdmHasUnread ? 600 : undefined, color: gdmHasUnread ? 'var(--text-primary)' : undefined }}>{groupLabel}</span>
-                                                            {memberCount > 0 && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{memberCount} members</span>}
+                                                            {dm.lastMessage?.content ? (
+                                                                <span style={{ fontSize: '11px', color: gdmHasUnread ? 'var(--text-secondary)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', fontWeight: gdmHasUnread ? 500 : undefined }}>
+                                                                    {(dm.lastMessage.content as string).replace(/!\[.*?\]\(.*?\)/g, '📎 Attachment').replace(/```[\s\S]*?```/g, '📝 Code').substring(0, 45)}{(dm.lastMessage.content as string).length > 45 ? '…' : ''}
+                                                                </span>
+                                                            ) : memberCount > 0 ? (
+                                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{memberCount} members</span>
+                                                            ) : null}
                                                         </div>
                                                     </div>
-                                                    {gdmMentions > 0 && !gdmActive && (
-                                                        <span style={{ background: 'var(--error, #ed4245)', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>{gdmMentions}</span>
-                                                    )}
-                                                    {gdmHasUnread && gdmMentions === 0 && (
-                                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)', flexShrink: 0 }} />
-                                                    )}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
+                                                        {dm.lastMessage?.createdAt && (
+                                                            <span style={{ fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{formatDmTime(dm.lastMessage.createdAt as string)}</span>
+                                                        )}
+                                                        {gdmMentions > 0 && !gdmActive && (
+                                                            <span style={{ background: 'var(--error, #ed4245)', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px' }}>{gdmMentions}</span>
+                                                        )}
+                                                        {gdmHasUnread && gdmMentions === 0 && (
+                                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)' }} />
+                                                        )}
+                                                    </div>
                                                 </div>
                                                     );
                                                 })()}
@@ -2174,14 +2185,26 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                                             );
                                                         })()}
                                                     </div>
-                                                    <span style={{ fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: dmUnreadFlag ? 600 : undefined, color: dmUnreadFlag ? 'var(--text-primary)' : undefined, display: 'flex', alignItems: 'center' }}>{displayName}{(recipient as any)?.isFederated && <RemoteBadge address={(recipient as any)?.federationAddress} size={11} />}</span>
+                                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                                        <span style={{ fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: dmUnreadFlag ? 600 : undefined, color: dmUnreadFlag ? 'var(--text-primary)' : undefined, display: 'flex', alignItems: 'center' }}>{displayName}{(recipient as any)?.isFederated && <RemoteBadge address={(recipient as any)?.federationAddress} size={11} />}</span>
+                                                        {dm.lastMessage?.content && (
+                                                            <span style={{ fontSize: '11px', color: dmUnreadFlag ? 'var(--text-secondary)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', fontWeight: dmUnreadFlag ? 500 : undefined }}>
+                                                                {(dm.lastMessage.content as string).replace(/!\[.*?\]\(.*?\)/g, '📎 Attachment').replace(/```[\s\S]*?```/g, '📝 Code').substring(0, 45)}{(dm.lastMessage.content as string).length > 45 ? '…' : ''}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                {dmMentionCount > 0 && !dmActive && (
-                                                    <span style={{ background: 'var(--error, #ed4245)', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px', flexShrink: 0 }}>{dmMentionCount}</span>
-                                                )}
-                                                {dmUnreadFlag && dmMentionCount === 0 && (
-                                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)', flexShrink: 0 }} />
-                                                )}
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
+                                                    {dm.lastMessage?.createdAt && (
+                                                        <span style={{ fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{formatDmTime(dm.lastMessage.createdAt as string)}</span>
+                                                    )}
+                                                    {dmMentionCount > 0 && !dmActive && (
+                                                        <span style={{ background: 'var(--error, #ed4245)', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px' }}>{dmMentionCount}</span>
+                                                    )}
+                                                    {dmUnreadFlag && dmMentionCount === 0 && (
+                                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)' }} />
+                                                    )}
+                                                </div>
                                             </div>
                                                 );
                                             })()}
@@ -4578,6 +4601,22 @@ const appRouter = createBrowserRouter(
     ),
     { basename: '/app' }
 );
+
+function formatDmTime(iso: string | null | undefined): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'now';
+    if (diffMin < 60) return `${diffMin}m`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h`;
+    const diffDay = Math.floor(diffHr / 24);
+    if (diffDay === 1) return 'Yesterday';
+    if (diffDay < 7) return `${diffDay}d`;
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
 
 function App() {
     return (
