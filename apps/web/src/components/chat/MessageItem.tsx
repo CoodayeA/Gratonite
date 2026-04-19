@@ -201,6 +201,7 @@ export const MemoizedMessageItem = memo(({
     setEditContent,
     onEditSubmit,
     onEditCancel,
+    isSearchResult,
 }: any) => {
     const isBeingEdited = editingMessageApiId === msg.apiId;
     const inlineEditRef = useRef<HTMLTextAreaElement>(null);
@@ -383,6 +384,7 @@ export const MemoizedMessageItem = memo(({
                     paddingBottom: isGrouped ? '2px' : (compactMode ? '2px' : '16px'),
                     ...(isPersonalMention ? { borderLeft: '3px solid var(--accent-primary)', background: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)' }
                       : isEveryoneMention ? { borderLeft: '3px solid #f59e0b', background: 'rgba(245, 158, 11, 0.06)' }
+                      : isSearchResult ? { borderLeft: '3px solid rgba(250, 204, 21, 0.7)', background: 'rgba(250, 204, 21, 0.05)' }
                       : {}),
                 }}
                 onMouseEnter={() => setIsHovered(true)}

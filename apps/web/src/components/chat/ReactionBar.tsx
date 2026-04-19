@@ -5,6 +5,7 @@ import { ReactionSummaryPopover } from './ReactionSummaryPopover';
 
 export const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApiId, channelId, onReaction }: { emoji: string; emojiUrl?: string; isCustom?: boolean; count: number; me: boolean; messageApiId?: string; channelId?: string; onReaction?: (apiId: string, emoji: string, me: boolean) => void }) => {
     const [tooltip, setTooltip] = useState<{ users: Array<{ id?: string; displayName?: string; username: string; avatarHash?: string | null }>; total: number } | null>(null);
+    const [bouncing, setBouncing] = useState(false);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -29,6 +30,8 @@ export const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApi
     // Debounce rapid reaction toggles to prevent duplicate API calls
     const handleClick = useCallback(() => {
         if (!messageApiId) return;
+        setBouncing(true);
+        setTimeout(() => setBouncing(false), 350);
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
             onReaction?.(messageApiId, emoji, me);
@@ -43,6 +46,7 @@ export const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApi
                 onClick={handleClick}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
+                className={bouncing ? 'reaction-bounce' : undefined}
                 style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '12px', background: me ? 'rgba(var(--accent-primary-rgb, 139,92,246), 0.15)' : 'var(--bg-tertiary)', border: `1px solid ${me ? 'var(--accent-primary)' : 'var(--stroke)'}`, cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'all 0.15s', position: 'relative' }}
             >
                 {isCustom && emojiUrl ? <img src={emojiUrl} width={16} height={16} alt={emoji} style={{ verticalAlign: 'middle' }} /> : <span>{emoji}</span>} <span style={{ fontSize: '11px', fontWeight: 600 }}>{count}</span>

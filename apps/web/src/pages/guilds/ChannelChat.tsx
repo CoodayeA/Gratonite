@@ -3704,6 +3704,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                         setEditContent={setEditContent}
                                         onEditSubmit={handleEditSubmit}
                                         onEditCancel={() => { setEditingMessage(null); setEditContent(''); }}
+                                        isSearchResult={showSearchBar && searchQuery.trim().length > 0 && searchResults.some((r: any) => r.id === msg.apiId)}
                                     />
                                     </SwipeableMessage>
                                     {/* Feature 12: Read Receipt Dots */}
