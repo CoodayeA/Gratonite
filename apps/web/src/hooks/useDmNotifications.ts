@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { onMessageCreate } from '../lib/socket';
 import { sendDesktopNotification } from '../lib/notificationService';
 import { pushDmNotif } from '../store/dmNotifStore';
+import { addDmUnread } from '../store/dmUnreadStore';
 import { playSound } from '../utils/SoundManager';
 
 type DmChannel = {
@@ -80,6 +81,16 @@ export function useDmNotifications({ dmChannels, currentUserId }: Props) {
         attachmentCount: msg.attachments?.length ?? 0,
         channelName,
         isGroup,
+      });
+
+      // 1b. Rail unread indicator (Discord-style avatar in sidebar)
+      addDmUnread({
+        channelId: msg.channelId,
+        authorId: msg.authorId,
+        authorName,
+        authorAvatarHash,
+        isGroup,
+        groupName: channelName,
       });
 
       // 2. Browser/OS notification — only when tab is hidden or not focused

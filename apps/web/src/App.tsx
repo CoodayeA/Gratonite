@@ -153,6 +153,7 @@ import UserProfilePopover from './components/ui/UserProfilePopover';
 import { useGuildSession, type GuildSessionErrorCode, type GuildSessionInfo, type GuildSessionChannel } from './hooks/useGuildSession';
 import { isAuthRuntimeExpired } from './lib/authRuntime';
 import { useUnreadStore, setChannelHasUnread, incrementUnread, markRead as markReadStore, registerChannelGuild, hasGuildUnread, getGuildMentionCount } from './store/unreadStore';
+import { useDmUnreadStore, clearDmUnread } from './store/dmUnreadStore';
 
 type MediaType = 'video' | 'image' | null;
 type ModalType = 'settings' | 'userProfile' | 'createGuild' | 'screenShare' | 'guildSettings' | 'memberOptions' | 'invite' | 'globalSearch' | 'dmSearch' | 'notifications' | 'shortcuts' | 'bugReport' | 'onboarding' | 'createGroupDm' | null;
@@ -270,6 +271,13 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
     const [guildFolders, setGuildFolders] = useState<Array<{ id: string; name: string; color: string; guildIds: string[]; collapsed: boolean }>>([]);
     const [notifCount, setNotifCount] = useState(0);
     useUnreadStore(); // subscribe to re-render on unread changes
+    const dmUnreads = useDmUnreadStore();
+
+    // Auto-clear rail indicator when user navigates to that DM
+    useEffect(() => {
+        const dmMatch = location.pathname.match(/\/dm\/([^/]+)/);
+        if (dmMatch?.[1]) clearDmUnread(dmMatch[1]);
+    }, [location.pathname]);
 
     // Listen for new notifications to update unread badge
     useEffect(() => {
@@ -429,6 +437,75 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                     <Home size={24} />
                 </div>
             </Link>
+
+            {/* DM unread indicators — sender avatars appear below Home, Discord-style */}
+            {dmUnreads.length > 0 && (
+                <>
+                    <div style={{ width: '32px', height: '1px', background: 'var(--stroke)', margin: '2px 0' }} />
+                    {dmUnreads.slice(-5).map((entry) => (
+                        <Tooltip key={entry.channelId} content={entry.isGroup ? (entry.groupName || 'Group DM') : entry.authorName} position="right">
+                            <Link
+                                to={`/dm/${entry.channelId}`}
+                                style={{ textDecoration: 'none', position: 'relative', display: 'block' }}
+                            >
+                                <div
+                                    className="guild-icon"
+                                    style={{
+                                        padding: 0,
+                                        overflow: 'hidden',
+                                        width: '40px',
+                                        height: '40px',
+                                        minWidth: '40px',
+                                        minHeight: '40px',
+                                        border: '2px solid var(--accent-primary)',
+                                        boxSizing: 'border-box',
+                                    }}
+                                >
+                                    <Avatar
+                                        userId={entry.authorId}
+                                        avatarHash={entry.authorAvatarHash}
+                                        displayName={entry.authorName}
+                                        size={36}
+                                        style={{ borderRadius: 'inherit', width: '100%', height: '100%' }}
+                                    />
+                                </div>
+                                {/* Unread dot */}
+                                <span style={{
+                                    position: 'absolute',
+                                    bottom: 0,
+                                    right: 0,
+                                    width: '12px',
+                                    height: '12px',
+                                    borderRadius: '50%',
+                                    background: 'var(--error, #ed4245)',
+                                    border: '2px solid var(--bg-primary)',
+                                    boxSizing: 'border-box',
+                                }} />
+                            </Link>
+                        </Tooltip>
+                    ))}
+                    {dmUnreads.length > 5 && (
+                        <Tooltip content={`${dmUnreads.length - 5} more unread DMs`} position="right">
+                            <Link to="/" style={{ textDecoration: 'none' }}>
+                                <div className="guild-icon" style={{
+                                    background: 'var(--bg-secondary)',
+                                    border: '1px solid var(--stroke)',
+                                    color: 'var(--text-secondary)',
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    width: '40px',
+                                    height: '40px',
+                                    minWidth: '40px',
+                                    minHeight: '40px',
+                                }}>
+                                    +{dmUnreads.length - 5}
+                                </div>
+                            </Link>
+                        </Tooltip>
+                    )}
+                    <div style={{ width: '32px', height: '1px', background: 'var(--stroke)', margin: '2px 0' }} />
+                </>
+            )}
 
             <Tooltip content="Profile" position="right">
                 <div className="guild-icon" role="button" aria-label="Open your profile" tabIndex={0} onClick={onOpenProfile} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenProfile(); } }} style={{ cursor: 'pointer', overflow: 'hidden', padding: 0 }}>
