@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import { ConnectionState } from 'livekit-client';
-import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield, ArrowLeft, MessageSquare, Pin } from 'lucide-react';
+import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield, ArrowLeft, MessageSquare, Pin, Link2 } from 'lucide-react';
 import { getOrCreateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported, generateGroupKey, encryptGroupKey, decryptGroupKey, computeSafetyNumber, encryptFile, decryptFile } from '../../lib/e2e';
 import { onGroupKeyRotationNeeded, onUserKeyChanged, onE2EStateChanged } from '../../lib/socket';
 import type { GroupKeyRotationNeededPayload, UserKeyChangedPayload, E2EStateChangedPayload } from '../../lib/socket';
@@ -1946,6 +1946,16 @@ const DirectMessage = () => {
         }
         if (e.key === 'Escape' && editingMessage) { setEditingMessage(null); setInputValue(''); return; }
         if (e.key === 'Escape' && replyingTo) { setReplyingTo(null); return; }
+        // ↑ arrow in empty input: start editing your last sent message
+        if (e.key === 'ArrowUp' && !inputValue.trim() && !editingMessage) {
+            const lastOwn = [...messages].reverse().find(m => m.authorId === currentUserId && !m.system && m.apiId);
+            if (lastOwn) {
+                e.preventDefault();
+                setEditingMessage({ id: lastOwn.id, apiId: lastOwn.apiId!, content: lastOwn.content });
+                setInputValue(lastOwn.content);
+                return;
+            }
+        }
     };
 
     // Safety number computation
@@ -2966,6 +2976,13 @@ const DirectMessage = () => {
                                                     addToast({ title: 'Copied to clipboard', variant: 'info' });
                                                 }
                                             },
+                                            ...(msg.apiId ? [{
+                                                id: 'copy-link', label: 'Copy Message Link', icon: Link2, onClick: () => {
+                                                    const link = `${window.location.origin}/dm/${dmChannelId}?msg=${msg.apiId}`;
+                                                    copyToClipboard(link);
+                                                    addToast({ title: 'Message link copied', variant: 'info' });
+                                                }
+                                            }] : []),
                                             ...(msg.apiId ? [{
                                                 id: 'bookmark', label: 'Bookmark Message', icon: Star, onClick: () => {
                                                     fetch(`${API_BASE}/users/@me/bookmarks`, {

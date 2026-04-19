@@ -2900,6 +2900,17 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             return;
         }
 
+        // ↑ arrow in empty input: start editing your last message (Discord standard)
+        if (e.key === 'ArrowUp' && !inputValue.trim() && !editingMessage) {
+            const lastOwn = [...messages].reverse().find(m => m.authorId === currentUserId && !m.system && m.apiId);
+            if (lastOwn) {
+                e.preventDefault();
+                setEditingMessage({ id: lastOwn.id, apiId: lastOwn.apiId!, content: lastOwn.content });
+                setEditContent(lastOwn.content);
+                return;
+            }
+        }
+
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             // If the group mention confirmation is visible, don't call handleSendMessage
