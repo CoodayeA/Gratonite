@@ -1854,7 +1854,13 @@ const DirectMessage = () => {
         return `${file.size}:${file.type}:${file.lastModified}`;
     }, []);
 
-    const enqueueDmFiles = useCallback((files: File[]) => {
+    const enqueueDmFiles = useCallback((rawFiles: File[]) => {
+        if (!rawFiles.length) return;
+        const MAX_FILE_SIZE = 25 * 1024 * 1024;
+        rawFiles.filter(f => f.size > MAX_FILE_SIZE).forEach(f =>
+            addToast({ title: `${f.name} is too large (max 25 MB)`, variant: 'error' })
+        );
+        const files = rawFiles.filter(f => f.size <= MAX_FILE_SIZE);
         if (!files.length) return;
         const now = Date.now();
         const recent = recentDmAttachmentFingerprintsRef.current;
@@ -1883,7 +1889,7 @@ const DirectMessage = () => {
             }
             return next;
         });
-    }, [fingerprintDmFile, formatAttachmentSize]);
+    }, [fingerprintDmFile, formatAttachmentSize, addToast]);
 
     const handleDmInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = e.target.value;
