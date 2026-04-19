@@ -3297,7 +3297,8 @@ export const AppLayout = () => {
     const [isMemberDrawerOpen, setIsMemberDrawerOpen] = useState(false);
     const mainContentRef = useRef<HTMLDivElement>(null);
     const { user: ctxUser, loading: userLoading, gratoniteBalance, setGratoniteBalance } = useUser();
-    const { setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects, reducedEffects, screenReaderMode } = useTheme();
+    const { theme: activeTheme, setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects, reducedEffects, screenReaderMode } = useTheme();
+    const settingsHydratingRef = useRef(false);
     const routeAnnouncerRef = useRef<HTMLDivElement>(null);
     const [guilds, setGuilds] = useState<Array<{ id: string; name: string; ownerId: string; iconHash: string | null; description: string | null; memberCount: number; boostTier?: number }>>([]);
     const [dmChannels, setDmChannels] = useState<Array<{ id: string; recipientIds?: string[]; recipients?: Array<{ id: string; username: string; displayName: string; avatarHash: string | null }> }>>([]);
@@ -3956,6 +3957,7 @@ export const AppLayout = () => {
     // so that theme persists even after localStorage is cleared.
     useEffect(() => {
         if (!userLoading && ctxUser.id) {
+            settingsHydratingRef.current = true;
             api.users.getSettings().then((s: any) => {
                 if (!s) return;
                 if (s.theme) setTheme(s.theme);
@@ -3969,9 +3971,25 @@ export const AppLayout = () => {
                 if (s.compactMode != null) setCompactMode(s.compactMode);
                 if (s.reducedMotion != null) setReducedEffects(s.reducedMotion);
                 if (s.soundVolume != null) setSoundVolume(s.soundVolume);
-            }).catch(() => {/* silently ignore — localStorage fallback still applies */});
+            }).catch(() => {/* silently ignore — localStorage fallback still applies */}).finally(() => {
+                // Short delay so hydration state updates settle before the
+                // write-back effect starts watching for user-initiated changes.
+                setTimeout(() => { settingsHydratingRef.current = false; }, 500);
+            });
         }
     }, [userLoading, ctxUser.id]);
+
+    // Write theme changes back to the server so they survive localStorage clears
+    // and sync across devices. The hydrating guard prevents echoing server data
+    // straight back on login.
+    useEffect(() => {
+        if (!ctxUser.id || settingsHydratingRef.current) return;
+        const timer = setTimeout(() => {
+            api.users.updateSettings({ theme: activeTheme }).catch(() => {});
+        }, 300);
+        return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTheme]);
 
     const [userTheme, setUserTheme] = useState({
         accentColor: '#38bdf8',
