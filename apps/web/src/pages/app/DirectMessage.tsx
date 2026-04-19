@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import { ConnectionState } from 'livekit-client';
-import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield, ArrowLeft, MessageSquare, Pin, Link2 } from 'lucide-react';
+import { Plus, Smile, Send, Phone, Video, Info, Image as ImageIcon, X, PhoneOff, MicOff, Mic, VideoOff, Settings, MonitorUp, Headphones, HeadphoneOff, Volume2, Loader2, Share2, Reply, Copy, Trash2, Download, FileIcon, ChevronDown, Check, CheckCheck, Users, UserPlus, UserMinus, Pencil, LogOut, Clock, Lock, Star, Shield, ArrowLeft, MessageSquare, Pin, Link2, FolderArchive, Upload } from 'lucide-react';
+import JSZip from 'jszip';
 import { getOrCreateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encrypt, decrypt, isE2ESupported, generateGroupKey, encryptGroupKey, decryptGroupKey, computeSafetyNumber, encryptFile, decryptFile } from '../../lib/e2e';
 import { onGroupKeyRotationNeeded, onUserKeyChanged, onE2EStateChanged } from '../../lib/socket';
 import type { GroupKeyRotationNeededPayload, UserKeyChangedPayload, E2EStateChangedPayload } from '../../lib/socket';
@@ -196,6 +197,8 @@ const DirectMessage = () => {
     const [dmUploadProgress, setDmUploadProgress] = useState<Record<string, number>>({});
     const recentDmAttachmentFingerprintsRef = useRef<Map<string, number>>(new Map());
     const [isDragOver, setIsDragOver] = useState(false);
+    const [showDmUploadMenu, setShowDmUploadMenu] = useState(false);
+    const dmFolderInputRef = useRef<HTMLInputElement>(null);
     const [infoPanelOpen, setInfoPanelOpen] = useState(false);
     const isMobile = useIsMobile();
     const { addToast } = useToast();
@@ -3287,6 +3290,60 @@ const DirectMessage = () => {
                                     e.target.value = '';
                                 }}
                             />
+                            {/* Hidden folder input for zip upload */}
+                            <input
+                                id="dm-folder-upload"
+                                ref={dmFolderInputRef}
+                                type="file"
+                                // @ts-expect-error webkitdirectory is non-standard but widely supported
+                                webkitdirectory=""
+                                multiple
+                                style={{ display: 'none' }}
+                                onChange={async (e) => {
+                                    const files = e.target.files;
+                                    if (!files || files.length === 0) return;
+                                    const MAX_ZIP_SIZE = 25 * 1024 * 1024;
+                                    const totalSize = Array.from(files).reduce((acc, f) => acc + f.size, 0);
+                                    if (totalSize > MAX_ZIP_SIZE) {
+                                        addToast({ title: `Folder is too large (max 25 MB uncompressed)`, variant: 'error' });
+                                        e.target.value = '';
+                                        return;
+                                    }
+                                    const firstPath = (files[0] as File & { webkitRelativePath: string }).webkitRelativePath;
+                                    const folderName = firstPath.split('/')[0] || 'folder';
+                                    setDmAttachedFiles(prev => [...prev, {
+                                        name: `${folderName}.zip`,
+                                        size: 'Compressing…',
+                                        file: null as unknown as File,
+                                        previewUrl: undefined,
+                                    }]);
+                                    try {
+                                        const zip = new JSZip();
+                                        for (const file of Array.from(files)) {
+                                            const relativePath = (file as File & { webkitRelativePath: string }).webkitRelativePath;
+                                            zip.file(relativePath, file);
+                                        }
+                                        const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+                                        if (blob.size > MAX_ZIP_SIZE) {
+                                            addToast({ title: `Compressed zip is too large (max 25 MB)`, variant: 'error' });
+                                            setDmAttachedFiles(prev => prev.filter(f => f.name !== `${folderName}.zip`));
+                                            e.target.value = '';
+                                            return;
+                                        }
+                                        const zipFile = new File([blob], `${folderName}.zip`, { type: 'application/zip' });
+                                        const sizeStr = zipFile.size < 1048576 ? `${(zipFile.size / 1024).toFixed(1)} KB` : `${(zipFile.size / 1048576).toFixed(1)} MB`;
+                                        setDmAttachedFiles(prev => prev.map(f =>
+                                            f.name === `${folderName}.zip` && f.size === 'Compressing…'
+                                                ? { name: zipFile.name, size: sizeStr, file: zipFile, previewUrl: undefined }
+                                                : f
+                                        ));
+                                    } catch {
+                                        addToast({ title: 'Failed to compress folder', variant: 'error' });
+                                        setDmAttachedFiles(prev => prev.filter(f => !(f.name === `${folderName}.zip` && f.size === 'Compressing…')));
+                                    }
+                                    e.target.value = '';
+                                }}
+                            />
                             {isEmojiPickerOpen && (
                                 <EmojiPicker
                                     onSelectEmoji={(emoji: string) => {
@@ -3325,6 +3382,7 @@ const DirectMessage = () => {
                                     <button onClick={() => setReplyingTo(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0 }} title="Cancel reply">
                                         <X size={14} />
                                     </button>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>Esc to cancel</span>
                                 </div>
                             )}
                             {/* Attached file chips */}
@@ -3387,9 +3445,49 @@ const DirectMessage = () => {
                                         ))}
                                     </div>
                                 )}
-                                <label htmlFor="dm-file-upload" className="input-icon-btn" title="Upload Attachment" aria-label="Upload attachment" role="button" style={{ cursor: 'pointer' }}>
-                                    <Plus size={20} />
-                                </label>
+                                <div style={{ position: 'relative', flexShrink: 0 }}>
+                                    {showDmUploadMenu && (
+                                        <div
+                                            style={{
+                                                position: 'absolute', bottom: '40px', left: '0',
+                                                background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+                                                borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+                                                overflow: 'hidden', zIndex: 100, minWidth: '200px',
+                                            }}
+                                            onMouseLeave={() => setShowDmUploadMenu(false)}
+                                        >
+                                            <label
+                                                htmlFor="dm-file-upload"
+                                                style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '14px', transition: 'background 0.1s' }}
+                                                onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-overlay)')}
+                                                onMouseLeave={e => (e.currentTarget.style.background = '')}
+                                                onClick={() => setShowDmUploadMenu(false)}
+                                            >
+                                                <Upload size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                                                Upload File(s)
+                                            </label>
+                                            <label
+                                                htmlFor="dm-folder-upload"
+                                                style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '14px', transition: 'background 0.1s', borderTop: '1px solid var(--stroke)' }}
+                                                onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-overlay)')}
+                                                onMouseLeave={e => (e.currentTarget.style.background = '')}
+                                                onClick={() => setShowDmUploadMenu(false)}
+                                            >
+                                                <FolderArchive size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                                                Upload Folder as Zip
+                                            </label>
+                                        </div>
+                                    )}
+                                    <button
+                                        className="input-icon-btn"
+                                        title="Upload Attachment"
+                                        aria-label="Upload attachment"
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() => setShowDmUploadMenu(v => !v)}
+                                    >
+                                        <Plus size={20} />
+                                    </button>
+                                </div>
                                 <textarea
                                     className="chat-input"
                                     rows={1}
