@@ -555,6 +555,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                         <div>
                             <div style={{ fontWeight: 600 }}>{guild.name}</div>
                             {guild.description && <div style={{ fontSize: '11px', opacity: 0.75, marginTop: '2px', maxWidth: '180px' }}>{guild.description}</div>}
+                            {guild.memberCount > 0 && <div style={{ fontSize: '11px', opacity: 0.6, marginTop: '2px' }}>{guild.memberCount.toLocaleString()} members</div>}
                         </div>
                     } position="right">
                     <Link to={`/guild/${guild.id}`} style={{ textDecoration: 'none', position: 'relative' }} onContextMenu={(e) => handleGuildContext(e, guild)}>
@@ -771,6 +772,8 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
     const [favoriteChannelIds, setFavoriteChannelIds] = useState<Set<string>>(new Set());
     const [channelTyping, setChannelTyping] = useState<Map<string, string[]>>(new Map());
     const [dmPresenceMap, setDmPresenceMap] = useState<Record<string, string>>({});
+    const [dmFilter, setDmFilter] = useState('');
+    const [hoveredDmId, setHoveredDmId] = useState<string | null>(null);
     const prefetchTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
     // Sidebar resize handle
@@ -2007,6 +2010,30 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
 
                     {!collapsed['dm'] && (
                         <>
+                            {/* DM filter input */}
+                            {dmChannels.length >= 3 && (
+                                <div style={{ padding: '4px 8px 6px' }}>
+                                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                        <Search size={11} style={{ position: 'absolute', left: '8px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                                        <input
+                                            type="text"
+                                            placeholder="Filter conversations…"
+                                            value={dmFilter}
+                                            onChange={e => setDmFilter(e.target.value)}
+                                            style={{
+                                                width: '100%', background: 'var(--bg-primary)', border: '1px solid var(--stroke)',
+                                                borderRadius: '6px', padding: '5px 8px 5px 24px', fontSize: '12px',
+                                                color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
+                                            }}
+                                        />
+                                        {dmFilter && (
+                                            <button type="button" onClick={() => setDmFilter('')} style={{ position: 'absolute', right: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 0, lineHeight: 1 }}>
+                                                <X size={11} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                             {/* Message Requests folder */}
                             {messageRequests.length > 0 && (
                                 <Link to="/message-requests" style={{ textDecoration: 'none' }}>
@@ -2060,7 +2087,16 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                     <span style={{ fontSize: '12px', lineHeight: 1.4 }}>Add some friends and start chatting!</span>
                                 </div>
                             ) : (
-                                dmChannels.map((dm: any) => {
+                                dmChannels.filter((dm: any) => {
+                                    if (!dmFilter.trim()) return true;
+                                    const q = dmFilter.toLowerCase();
+                                    if (dm.isGroup || dm.type === 'GROUP_DM') {
+                                        return (dm.groupName || 'Group DM').toLowerCase().includes(q);
+                                    }
+                                    const r = dm.otherUser || dm.recipients?.[0];
+                                    const name = r?.displayName || r?.username || '';
+                                    return name.toLowerCase().includes(q);
+                                }).map((dm: any) => {
                                     const isGroupDm = dm.isGroup || dm.type === 'GROUP_DM';
                                     if (isGroupDm) {
                                         const groupLabel = dm.groupName || 'Group DM';
@@ -2068,6 +2104,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                         return (
                                             <Link key={dm.id} to={`/dm/${dm.id}`} style={{ textDecoration: 'none' }}
                                                 onMouseEnter={() => {
+                                                    setHoveredDmId(dm.id);
                                                     const timer = setTimeout(() => {
                                                         queryClient.prefetchQuery({
                                                             queryKey: messagesQueryKey(dm.id),
@@ -2078,6 +2115,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                                     prefetchTimers.current.set(dm.id, timer);
                                                 }}
                                                 onMouseLeave={() => {
+                                                    setHoveredDmId(null);
                                                     const timer = prefetchTimers.current.get(dm.id);
                                                     if (timer) { clearTimeout(timer); prefetchTimers.current.delete(dm.id); }
                                                 }}
@@ -2114,14 +2152,22 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                                         </div>
                                                     </div>
                                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
-                                                        {dm.lastMessage?.createdAt && (
-                                                            <span style={{ fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{formatDmTime(dm.lastMessage.createdAt as string)}</span>
-                                                        )}
-                                                        {gdmMentions > 0 && !gdmActive && (
-                                                            <span style={{ background: 'var(--error, #ed4245)', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px' }}>{gdmMentions}</span>
-                                                        )}
-                                                        {gdmHasUnread && gdmMentions === 0 && (
-                                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)' }} />
+                                                        {hoveredDmId === dm.id ? (
+                                                            <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDmChannels((prev: any[]) => prev.filter((d: any) => d.id !== dm.id)); addToast({ title: 'Conversation closed', variant: 'info' }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '1px', borderRadius: '4px', lineHeight: 1 }} title="Close DM">
+                                                                <X size={14} />
+                                                            </button>
+                                                        ) : (
+                                                            <>
+                                                                {dm.lastMessage?.createdAt && (
+                                                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{formatDmTime(dm.lastMessage.createdAt as string)}</span>
+                                                                )}
+                                                                {gdmMentions > 0 && !gdmActive && (
+                                                                    <span style={{ background: 'var(--error, #ed4245)', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px' }}>{gdmMentions}</span>
+                                                                )}
+                                                                {gdmHasUnread && gdmMentions === 0 && (
+                                                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)' }} />
+                                                                )}
+                                                            </>
                                                         )}
                                                     </div>
                                                 </div>
@@ -2135,6 +2181,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                     return (
                                         <Link key={dm.id} to={`/dm/${dm.id}`} style={{ textDecoration: 'none' }}
                                             onMouseEnter={() => {
+                                                setHoveredDmId(dm.id);
                                                 const timer = setTimeout(() => {
                                                     queryClient.prefetchQuery({
                                                         queryKey: messagesQueryKey(dm.id),
@@ -2145,6 +2192,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                                 prefetchTimers.current.set(dm.id, timer);
                                             }}
                                             onMouseLeave={() => {
+                                                setHoveredDmId(null);
                                                 const timer = prefetchTimers.current.get(dm.id);
                                                 if (timer) { clearTimeout(timer); prefetchTimers.current.delete(dm.id); }
                                             }}
@@ -2201,14 +2249,22 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                                                     </div>
                                                 </div>
                                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
-                                                    {dm.lastMessage?.createdAt && (
-                                                        <span style={{ fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{formatDmTime(dm.lastMessage.createdAt as string)}</span>
-                                                    )}
-                                                    {dmMentionCount > 0 && !dmActive && (
-                                                        <span style={{ background: 'var(--error, #ed4245)', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px' }}>{dmMentionCount}</span>
-                                                    )}
-                                                    {dmUnreadFlag && dmMentionCount === 0 && (
-                                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)' }} />
+                                                    {hoveredDmId === dm.id ? (
+                                                        <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDmChannels((prev: any[]) => prev.filter((d: any) => d.id !== dm.id)); addToast({ title: 'Conversation closed', variant: 'info' }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '1px', borderRadius: '4px', lineHeight: 1 }} title="Close DM">
+                                                            <X size={14} />
+                                                        </button>
+                                                    ) : (
+                                                        <>
+                                                            {dm.lastMessage?.createdAt && (
+                                                                <span style={{ fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{formatDmTime(dm.lastMessage.createdAt as string)}</span>
+                                                            )}
+                                                            {dmMentionCount > 0 && !dmActive && (
+                                                                <span style={{ background: 'var(--error, #ed4245)', color: 'white', borderRadius: '999px', padding: '0 5px', fontSize: '11px', minWidth: '16px', textAlign: 'center', fontWeight: 700, lineHeight: '16px' }}>{dmMentionCount}</span>
+                                                            )}
+                                                            {dmUnreadFlag && dmMentionCount === 0 && (
+                                                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)' }} />
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
                                             </div>

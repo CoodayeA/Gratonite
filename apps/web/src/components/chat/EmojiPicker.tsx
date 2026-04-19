@@ -136,6 +136,39 @@ function toggleFavoriteEmoji(emoji: string): string[] {
     return favs;
 }
 
+// ─── Skin Tone (localStorage) ─────────────────────────────────────────────────
+const SKIN_TONE_KEY = 'gratonite-emoji-skin-tone';
+const SKIN_TONES = [
+    { key: 'default', label: 'Default', modifier: '', emoji: '✋' },
+    { key: 'light', label: 'Light', modifier: '\u{1F3FB}', emoji: '✋🏻' },
+    { key: 'medium-light', label: 'Medium-Light', modifier: '\u{1F3FC}', emoji: '✋🏼' },
+    { key: 'medium', label: 'Medium', modifier: '\u{1F3FD}', emoji: '✋🏽' },
+    { key: 'medium-dark', label: 'Medium-Dark', modifier: '\u{1F3FE}', emoji: '✋🏾' },
+    { key: 'dark', label: 'Dark', modifier: '\u{1F3FF}', emoji: '✋🏿' },
+] as const;
+type SkinToneKey = typeof SKIN_TONES[number]['key'];
+
+function getSkinTone(): SkinToneKey {
+    try { return (localStorage.getItem(SKIN_TONE_KEY) as SkinToneKey) || 'default'; } catch { return 'default'; }
+}
+function setSkinTonePref(key: SkinToneKey) {
+    try { localStorage.setItem(SKIN_TONE_KEY, key); } catch {}
+}
+// Emojis that support skin tone modifiers
+const SKIN_TONE_SUPPORTED = /^[\u{1F466}-\u{1F469}\u{1F46B}-\u{1F46D}\u{1F46F}\u{1F470}-\u{1F478}\u{1F47C}\u{1F481}-\u{1F483}\u{1F485}-\u{1F487}\u{1F48F}\u{1F491}\u{1F575}\u{1F57A}\u{1F590}\u{1F595}-\u{1F596}\u{1F645}-\u{1F647}\u{1F64B}-\u{1F64F}\u{1F6A3}\u{1F6B4}-\u{1F6B6}\u{1F6C0}\u{1F6CC}\u{1F90F}\u{1F91D}-\u{1F91F}\u{1F926}\u{1F930}-\u{1F939}\u{1F93C}-\u{1F93E}\u{1F9B5}-\u{1F9B6}\u{1F9B8}-\u{1F9B9}\u{1F9BB}\u{1F9CD}-\u{1F9CF}\u{1F9D1}-\u{1F9DD}\u{261D}\u{26F9}\u{270A}-\u{270D}\u{1F3CB}-\u{1F3CC}]/u;
+function applySkintone(emoji: string, modifier: string): string {
+    if (!modifier) return emoji;
+    // Only apply to single-code-point emojis that support skin tones
+    const points = [...emoji];
+    if (points.length === 1 && SKIN_TONE_SUPPORTED.test(emoji)) {
+        return emoji + modifier;
+    }
+    // For hand emojis like 👋, ✋, etc.
+    const HANDS = ['👋','🤚','🖐','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','💪','🤳','✍️','💅','🤲','🙌','👐','🫱','🫲','🫳','🫴','🫵','🤝','🙏','🫶','👏'];
+    if (HANDS.includes(emoji)) return emoji + modifier;
+    return emoji;
+}
+
 // ─── Frequently Used Emojis (localStorage) ────────────────────────────────────
 const FREQ_KEY = 'emojiUsage';
 const MAX_FREQUENT = 16;
@@ -246,6 +279,8 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
     const [stickers, setStickers] = useState<Sticker[]>([]);
     const [stickersLoading, setStickersLoading] = useState(false);
     const [recentEmojis, setRecentEmojis] = useState<string[]>(getRecentEmojis());
+    const [skinToneKey, setSkinToneKey] = useState<SkinToneKey>(getSkinTone);
+    const [skinToneMenuOpen, setSkinToneMenuOpen] = useState(false);
     const [frequentEmojis, setFrequentEmojis] = useState<string[]>(getFrequentEmojis());
     const [favoriteEmojis, setFavoriteEmojis] = useState<string[]>(getFavoriteEmojis());
     const [favoritesCollapsed, setFavoritesCollapsed] = useState(false);
@@ -299,11 +334,13 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
     }, []);
 
     const handleSelectEmoji = (emoji: string) => {
-        addRecentEmoji(emoji);
-        trackEmojiUsage(emoji);
+        const tone = SKIN_TONES.find(t => t.key === skinToneKey);
+        const finalEmoji = tone ? applySkintone(emoji, tone.modifier) : emoji;
+        addRecentEmoji(finalEmoji);
+        trackEmojiUsage(finalEmoji);
         setRecentEmojis(getRecentEmojis());
         setFrequentEmojis(getFrequentEmojis());
-        onSelectEmoji(emoji);
+        onSelectEmoji(finalEmoji);
     };
 
     const handleSelectCustomEmoji = (name: string) => {
@@ -407,17 +444,46 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
 
             {/* Search */}
             <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--stroke)' }}>
-                <div style={{ position: 'relative' }}>
-                    <Search size={15} style={{ position: 'absolute', left: 10, top: 9, color: 'var(--text-muted)' }} />
-                    <input
-                        ref={searchRef}
-                        type="text"
-                        placeholder={activeTab === 'emoji' ? "Search emojis..." : "Search Tenor GIFs..."}
-                        value={activeTab === 'emoji' ? search : gifSearch}
-                        onChange={e => activeTab === 'emoji' ? setSearch(e.target.value) : setGifSearch(e.target.value)}
-                        onKeyDown={handleKeyboardNav}
-                        style={{ width: '100%', height: '34px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', paddingLeft: '32px', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
-                    />
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                        <Search size={15} style={{ position: 'absolute', left: 10, top: 9, color: 'var(--text-muted)' }} />
+                        <input
+                            ref={searchRef}
+                            type="text"
+                            placeholder={activeTab === 'emoji' ? "Search emojis..." : "Search Tenor GIFs..."}
+                            value={activeTab === 'emoji' ? search : gifSearch}
+                            onChange={e => activeTab === 'emoji' ? setSearch(e.target.value) : setGifSearch(e.target.value)}
+                            onKeyDown={handleKeyboardNav}
+                            style={{ width: '100%', height: '34px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', paddingLeft: '32px', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
+                        />
+                    </div>
+                    {activeTab === 'emoji' && (
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                            <button
+                                type="button"
+                                onClick={() => setSkinToneMenuOpen(o => !o)}
+                                title={`Skin tone: ${SKIN_TONES.find(t => t.key === skinToneKey)?.label}`}
+                                style={{ background: skinToneMenuOpen ? 'var(--bg-elevated)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                            >
+                                {SKIN_TONES.find(t => t.key === skinToneKey)?.emoji}
+                            </button>
+                            {skinToneMenuOpen && (
+                                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '4px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '10px', padding: '6px', display: 'flex', gap: '4px', zIndex: 9999, boxShadow: '0 4px 16px rgba(0,0,0,0.2)' }}>
+                                    {SKIN_TONES.map(tone => (
+                                        <button
+                                            key={tone.key}
+                                            type="button"
+                                            onClick={() => { setSkinToneKey(tone.key); setSkinTonePref(tone.key); setSkinToneMenuOpen(false); }}
+                                            title={tone.label}
+                                            style={{ background: skinToneKey === tone.key ? 'var(--accent-primary)' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '18px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                                        >
+                                            {tone.emoji}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
 
