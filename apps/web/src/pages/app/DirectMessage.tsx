@@ -662,17 +662,17 @@ const DirectMessage = () => {
 
     // Fetch DM channel info and recipient
     const [userName, setUserName] = useState('');
+    const [userColor, setUserColor] = useState('linear-gradient(135deg, var(--accent-blue), var(--accent-purple))');
+    const [initial, setInitial] = useState('?');
+    const [recipientId, setRecipientId] = useState<string>('');
+    const [recipientAvatarHash, setRecipientAvatarHash] = useState<string | null>(null);
+    const [presenceMap, setPresenceMap] = useState<Record<string, string>>({});
     const userStatus = useMemo(() => {
         if (!recipientId || isGroupDm) return '';
         const raw = presenceMap[recipientId] || 'offline';
         const map: Record<string, string> = { online: 'Online', idle: 'Away', dnd: 'Do Not Disturb', invisible: 'Invisible', offline: 'Offline' };
         return map[raw] ?? 'Offline';
     }, [presenceMap, recipientId, isGroupDm]);
-    const [userColor, setUserColor] = useState('linear-gradient(135deg, var(--accent-blue), var(--accent-purple))');
-    const [initial, setInitial] = useState('?');
-    const [recipientId, setRecipientId] = useState<string>('');
-    const [recipientAvatarHash, setRecipientAvatarHash] = useState<string | null>(null);
-    const [presenceMap, setPresenceMap] = useState<Record<string, string>>({});
     const [profileData, setProfileData] = useState<{
         displayName: string;
         username: string;
