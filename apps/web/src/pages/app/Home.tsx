@@ -374,14 +374,13 @@ const Home = () => {
                 <div style={{
                     position: 'relative',
                     borderRadius: '28px',
-                    overflow: 'hidden',
                     background: 'linear-gradient(135deg, var(--accent-primary) 0%, #7c3aed 55%, #db2777 100%)',
                     padding: 'clamp(28px, 5vw, 44px) clamp(24px, 4vw, 40px)',
                     boxShadow: '0 20px 60px rgba(88,101,242,0.35)',
                 }}>
                     {/* Animated blobs */}
                     <div style={{
-                        position: 'absolute', inset: 0, pointerEvents: 'none',
+                        position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', borderRadius: '28px',
                     }}>
                         <div style={{ position: 'absolute', width: '340px', height: '340px', borderRadius: '50%', background: 'rgba(255,255,255,0.12)', animation: 'homeHeroShimmer 8s ease-in-out infinite', top: '-60px', left: '-60px' }} />
                         <div style={{ position: 'absolute', width: '280px', height: '280px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)', animation: 'homeHeroShimmer2 11s ease-in-out infinite', bottom: '-40px', right: '-40px' }} />
