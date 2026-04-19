@@ -3297,7 +3297,7 @@ export const AppLayout = () => {
     const [isMemberDrawerOpen, setIsMemberDrawerOpen] = useState(false);
     const mainContentRef = useRef<HTMLDivElement>(null);
     const { user: ctxUser, loading: userLoading, gratoniteBalance, setGratoniteBalance } = useUser();
-    const { theme: activeTheme, setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects, reducedEffects, screenReaderMode } = useTheme();
+    const { theme: activeTheme, colorMode, fontFamily, fontSize, accentColor, buttonShape, glassMode, highContrast, compactMode, reducedEffects: reducedEffectsVal, setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects, reducedEffects, screenReaderMode } = useTheme();
     const settingsHydratingRef = useRef(false);
     const routeAnnouncerRef = useRef<HTMLDivElement>(null);
     const [guilds, setGuilds] = useState<Array<{ id: string; name: string; ownerId: string; iconHash: string | null; description: string | null; memberCount: number; boostTier?: number }>>([]);
@@ -3985,11 +3985,22 @@ export const AppLayout = () => {
     useEffect(() => {
         if (!ctxUser.id || settingsHydratingRef.current) return;
         const timer = setTimeout(() => {
-            api.users.updateSettings({ theme: activeTheme }).catch(() => {});
+            api.users.updateSettings({
+                theme: activeTheme,
+                colorMode,
+                fontFamily,
+                fontSize,
+                accentColor,
+                buttonShape,
+                glassMode,
+                highContrast,
+                compactMode,
+                reducedMotion: reducedEffectsVal,
+            }).catch(() => {});
         }, 300);
         return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTheme]);
+    }, [activeTheme, colorMode, fontFamily, fontSize, accentColor, buttonShape, glassMode, highContrast, compactMode, reducedEffectsVal]);
 
     const [userTheme, setUserTheme] = useState({
         accentColor: '#38bdf8',
