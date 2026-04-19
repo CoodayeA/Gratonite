@@ -28,23 +28,35 @@ function ReferralCard() {
     if (!refData) return null;
 
     return (
-        <div style={{ background: 'var(--bg-tertiary)', borderRadius: 8, padding: 16, marginBottom: 16, border: '1px solid var(--stroke)' }}>
-            <h3 style={{ color: 'var(--text-primary)', margin: '0 0 8px', fontSize: '15px', fontWeight: 600 }}>Invite Friends</h3>
-            <p style={{ color: 'var(--text-muted)', margin: '0 0 12px', fontSize: 13 }}>
-                Share your personal invite link and earn rewards for every friend who joins!
-                {refData.count > 0 && ` You've referred ${refData.count} friend${refData.count > 1 ? 's' : ''} so far.`}
-            </p>
+        <div style={{
+            background: 'linear-gradient(135deg, rgba(82, 109, 245, 0.1) 0%, rgba(139, 92, 246, 0.07) 100%)',
+            borderRadius: 12, padding: 20, marginBottom: 20,
+            border: '1px solid rgba(82, 109, 245, 0.22)',
+            position: 'relative', overflow: 'hidden',
+        }}>
+            <div style={{ position: 'absolute', top: -16, right: -16, width: 96, height: 96, borderRadius: '50%', background: 'rgba(82, 109, 245, 0.07)', pointerEvents: 'none' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(82, 109, 245, 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <UserPlus size={18} style={{ color: 'var(--accent-primary)' }} />
+                </div>
+                <div>
+                    <h3 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '14px', fontWeight: 700 }}>Invite Friends</h3>
+                    <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '12px', lineHeight: 1.4 }}>
+                        {refData.count > 0 ? `${refData.count} friend${refData.count > 1 ? 's' : ''} joined via your link` : 'Earn rewards for every friend who joins'}
+                    </p>
+                </div>
+            </div>
             <div style={{ display: 'flex', gap: 8 }}>
                 <input
                     readOnly
                     value={refData.referralLink}
-                    style={{ flex: 1, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: 4, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 13 }}
+                    style={{ flex: 1, background: 'var(--bg-elevated)', border: '1px solid rgba(82,109,245,0.2)', borderRadius: 6, padding: '7px 10px', color: 'var(--text-primary)', fontSize: 13 }}
                 />
                 <button
                     onClick={() => { copyToClipboard(refData.referralLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                    style={{ background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: 4, padding: '6px 14px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+                    style={{ background: copied ? 'var(--success)' : 'var(--accent-primary)', color: copied ? '#fff' : '#000', border: 'none', borderRadius: 6, padding: '7px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13, transition: 'all 0.2s', flexShrink: 0 }}
                 >
-                    {copied ? 'Copied!' : 'Copy'}
+                    {copied ? '✓ Copied!' : 'Copy'}
                 </button>
             </div>
         </div>
@@ -616,26 +628,35 @@ const Friends = () => {
                     onClick={(e) => handleFriendRowClick(friend, e)}
                     style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '12px 16px', borderRadius: '8px', cursor: 'pointer',
-                        transition: 'background 0.2s', borderTop: '1px solid transparent',
+                        padding: '10px 16px', borderRadius: '8px', cursor: 'pointer',
+                        transition: 'background 0.15s',
                         background: selectedFriend?.id === friend.id ? 'var(--bg-tertiary)' : 'transparent',
+                        borderLeft: selectedFriend?.id === friend.id ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                        paddingLeft: '14px',
                     }}
                 >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '16px', minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '14px', minWidth: 0, flex: 1 }}>
                         <Avatar
                             userId={friend.id}
                             displayName={friend.displayName}
                             size={isMobile ? 36 : 40}
                             status={friend.status}
-                            statusRingColor="var(--bg-primary)"
+                            statusRingColor={selectedFriend?.id === friend.id ? 'var(--bg-tertiary)' : 'var(--bg-primary)'}
                             avatarHash={friend.avatarHash}
                         />
                         <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', minWidth: 0 }}>
                                 <span style={{ fontWeight: 600, fontSize: isMobile ? '14px' : '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{friend.displayName}</span>
-                                <span style={{ color: 'var(--text-muted)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>{friend.username}</span>
+                                <span style={{ color: 'var(--text-muted)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>{friend.username}</span>
                             </div>
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <span style={{
+                                color: friend.customStatus ? 'var(--text-secondary)' :
+                                    friend.status === 'online' ? 'var(--success)' :
+                                    friend.status === 'idle' ? '#F59E0B' :
+                                    friend.status === 'dnd' ? 'var(--error)' :
+                                    'var(--text-muted)',
+                                fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                            }}>
                                 {friend.customStatus || (friend.status === 'dnd' ? 'Do Not Disturb' : friend.status.charAt(0).toUpperCase() + friend.status.slice(1))}
                             </span>
                             {friend.activity && (
@@ -644,9 +665,9 @@ const Friends = () => {
                         </div>
                     </div>
 
-                    <div className="friend-actions" style={{ display: 'flex', gap: isMobile ? '4px' : '8px', position: 'relative', flexShrink: 0 }}>
-                        <button onClick={() => handleOpenDm(friend.id, friend.displayName)} style={{ width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} title="Message">
-                            <MessageSquare size={isMobile ? 16 : 18} />
+                    <div className="friend-actions" style={{ display: 'flex', gap: isMobile ? '4px' : '6px', position: 'relative', flexShrink: 0 }}>
+                        <button onClick={() => handleOpenDm(friend.id, friend.displayName)} className="fa-btn" title="Message">
+                            <MessageSquare size={isMobile ? 16 : 17} />
                         </button>
                         {!isMobile && (
                             <>
@@ -659,10 +680,10 @@ const Friends = () => {
                                             addToast({ title: 'Failed to start call', variant: 'error' });
                                         }
                                     }}
-                                    style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    className="fa-btn"
                                     title="Voice Call"
                                 >
-                                    <Phone size={18} />
+                                    <Phone size={17} />
                                 </button>
                                 <button
                                     onClick={async () => {
@@ -673,25 +694,30 @@ const Friends = () => {
                                             addToast({ title: 'Failed to start call', variant: 'error' });
                                         }
                                     }}
-                                    style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    className="fa-btn"
                                     title="Video Call"
                                 >
-                                    <Video size={18} />
+                                    <Video size={17} />
                                 </button>
                             </>
                         )}
-                        <button onClick={() => setMoreMenuId(moreMenuId === friend.id ? null : friend.id)} style={{ width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', borderRadius: '50%', background: moreMenuId === friend.id ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: 'none', color: moreMenuId === friend.id ? '#000' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} title="More">
-                            <MoreVertical size={isMobile ? 16 : 18} />
+                        <button
+                            onClick={() => setMoreMenuId(moreMenuId === friend.id ? null : friend.id)}
+                            className="fa-btn"
+                            style={{ background: moreMenuId === friend.id ? 'var(--accent-primary)' : undefined, color: moreMenuId === friend.id ? '#000' : undefined }}
+                            title="More"
+                        >
+                            <MoreVertical size={isMobile ? 16 : 17} />
                         </button>
                         {moreMenuId === friend.id && (
-                            <div style={{ position: 'absolute', top: '42px', right: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '4px', minWidth: '160px', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
-                                <div onClick={() => { setMoreMenuId(null); handleRemoveFriend(friend.id, friend.displayName); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }} className="hover-bg-tertiary">
+                            <div style={{ position: 'absolute', top: '42px', right: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '10px', padding: '4px', minWidth: '160px', zIndex: 50, boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}>
+                                <div onClick={() => { setMoreMenuId(null); handleRemoveFriend(friend.id, friend.displayName); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }} className="hover-bg-tertiary">
                                     <UserMinus size={14} /> Remove Friend
                                 </div>
-                                <div onClick={() => { setMoreMenuId(null); addToast({ title: 'User Muted', description: `${friend.displayName} has been muted.`, variant: 'info' }); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }} className="hover-bg-tertiary">
+                                <div onClick={() => { setMoreMenuId(null); addToast({ title: 'User Muted', description: `${friend.displayName} has been muted.`, variant: 'info' }); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'background 0.15s' }} className="hover-bg-tertiary">
                                     <VolumeX size={14} /> Mute
                                 </div>
-                                <div onClick={() => { setMoreMenuId(null); addToast({ title: 'User Reported', description: `Report filed for ${friend.displayName}.`, variant: 'info' }); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--error)', transition: 'background 0.15s' }} className="hover-bg-tertiary">
+                                <div onClick={() => { setMoreMenuId(null); addToast({ title: 'User Reported', description: `Report filed for ${friend.displayName}.`, variant: 'info' }); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', color: 'var(--error)', transition: 'background 0.15s' }} className="hover-bg-tertiary">
                                     <Flag size={14} /> Report
                                 </div>
                             </div>
@@ -705,23 +731,32 @@ const Friends = () => {
     return (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', height: '100%' }}>
             {/* Header */}
-            <header style={{ height: '60px', borderBottom: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', padding: isMobile ? '0 12px' : '0 24px', gap: isMobile ? '12px' : '24px' }}>
+            <header style={{ height: '60px', borderBottom: '1px solid var(--stroke)', display: 'flex', alignItems: 'stretch', padding: isMobile ? '0 12px' : '0 24px', gap: isMobile ? '8px' : '20px' }}>
                 {!isMobile && (
                     <>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontWeight: 600 }}>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontWeight: 700, fontSize: '15px', flexShrink: 0 }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent-primary)' }}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                             <span>Friends</span>
                         </div>
-                        <div style={{ width: '1px', height: '24px', background: 'var(--stroke)' }}></div>
+                        <div style={{ width: '1px', background: 'var(--stroke)', alignSelf: 'center', height: '24px' }} />
                     </>
                 )}
 
-                <div style={{ display: 'flex', gap: isMobile ? '6px' : '16px', overflowX: isMobile ? 'auto' : undefined, whiteSpace: isMobile ? 'nowrap' : undefined, scrollbarWidth: 'none', flex: isMobile ? 1 : undefined } as React.CSSProperties}>
-                    <button className={activeTab === 'online' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('online')} style={{ background: activeTab === 'online' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', padding: isMobile ? '6px 10px' : '6px 12px', borderRadius: '4px', color: activeTab === 'online' ? 'white' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500, fontSize: isMobile ? '13px' : undefined, flexShrink: 0 }}>Online</button>
-                    <button className={activeTab === 'all' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('all')} style={{ background: activeTab === 'all' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', padding: isMobile ? '6px 10px' : '6px 12px', borderRadius: '4px', color: activeTab === 'all' ? 'white' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500, fontSize: isMobile ? '13px' : undefined, flexShrink: 0 }}>All</button>
-                    <button className={activeTab === 'pending' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('pending')} style={{ background: activeTab === 'pending' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', padding: isMobile ? '6px 10px' : '6px 12px', borderRadius: '4px', color: activeTab === 'pending' ? 'white' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500, fontSize: isMobile ? '13px' : undefined, flexShrink: 0 }}>Pending {requests.length > 0 && <span style={{ background: 'var(--error)', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '10px', marginLeft: '4px' }}>{requests.length}</span>}</button>
-                    <button className={activeTab === 'activity' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('activity')} style={{ background: activeTab === 'activity' ? 'var(--bg-tertiary)' : 'transparent', border: 'none', padding: isMobile ? '6px 10px' : '6px 12px', borderRadius: '4px', color: activeTab === 'activity' ? 'white' : 'var(--text-muted)', cursor: 'pointer', fontWeight: 500, fontSize: isMobile ? '13px' : undefined, flexShrink: 0 }}>Activity</button>
-                    <button className={activeTab === 'add' ? 'active-tab' : 'tab-btn'} onClick={() => setActiveTab('add')} style={{ background: activeTab === 'add' ? 'rgba(16, 185, 129, 0.2)' : 'var(--success)', border: 'none', padding: isMobile ? '6px 10px' : '6px 12px', borderRadius: '4px', color: activeTab === 'add' ? 'var(--success)' : 'white', cursor: 'pointer', fontWeight: 500, fontSize: isMobile ? '13px' : undefined, flexShrink: 0 }}>Add Friend</button>
+                <div style={{ display: 'flex', gap: isMobile ? '0' : '2px', overflowX: isMobile ? 'auto' : undefined, scrollbarWidth: 'none', flex: isMobile ? 1 : undefined, alignItems: 'stretch' } as React.CSSProperties}>
+                    <button className={`ft-tab${activeTab === 'online' ? ' ft-tab--active' : ''}`} onClick={() => setActiveTab('online')}>Online</button>
+                    <button className={`ft-tab${activeTab === 'all' ? ' ft-tab--active' : ''}`} onClick={() => setActiveTab('all')}>All</button>
+                    <button className={`ft-tab${activeTab === 'pending' ? ' ft-tab--active' : ''}`} onClick={() => setActiveTab('pending')}>
+                        Pending
+                        {requests.length > 0 && <span style={{ background: 'var(--error)', color: 'white', padding: '1px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: 700, lineHeight: '16px' }}>{requests.length}</span>}
+                    </button>
+                    <button className={`ft-tab${activeTab === 'activity' ? ' ft-tab--active' : ''}`} onClick={() => setActiveTab('activity')}>Activity</button>
+                    <button
+                        className={`ft-tab-add${activeTab === 'add' ? ' ft-tab-add--active' : ''}`}
+                        onClick={() => setActiveTab('add')}
+                        style={{ alignSelf: 'center', marginLeft: isMobile ? '4px' : '8px' }}
+                    >
+                        + Add Friend
+                    </button>
                 </div>
             </header>
 
@@ -758,9 +793,13 @@ const Friends = () => {
                         const onlineFriends = friends.filter(f => f.status !== 'offline' && matchesFriendSearch(f.username, f.displayName));
                         return (
                             <div>
-                                <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px', borderBottom: '1px solid var(--stroke)', paddingBottom: '8px' }}>
-                                    Online — {friends.filter(f => f.status !== 'offline').length}
-                                </h3>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                                    <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', fontWeight: 700 }}>Online</span>
+                                    <span style={{ background: 'rgba(16,185,129,0.15)', color: 'var(--success)', fontSize: '11px', fontWeight: 700, padding: '1px 7px', borderRadius: '10px' }}>
+                                        {friends.filter(f => f.status !== 'offline').length}
+                                    </span>
+                                    <div style={{ flex: 1, height: '1px', background: 'var(--stroke)' }} />
+                                </div>
                                 {renderFriendList(onlineFriends)}
                                 {onlineFriends.length === 0 && (
                                     <EmptyState
@@ -806,34 +845,47 @@ const Friends = () => {
                                         onClick={(e) => handleFriendRowClick(friend, e)}
                                         style={{
                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                            padding: '12px 16px', borderRadius: '8px', cursor: 'grab',
-                                            transition: 'background 0.2s', borderTop: '1px solid transparent',
+                                            padding: '10px 14px', borderRadius: '8px', cursor: 'grab',
+                                            transition: 'background 0.15s',
+                                            borderLeft: selectedFriend?.id === friend.id ? '2px solid var(--accent-primary)' : '2px solid transparent',
                                             background: selectedFriend?.id === friend.id ? 'var(--bg-tertiary)' : draggedFriendId === friend.id ? 'var(--bg-elevated)' : 'transparent',
                                             opacity: draggedFriendId === friend.id ? 0.5 : 1,
                                         }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '16px', minWidth: 0, flex: 1 }}>
-                                            <Avatar userId={friend.id} displayName={friend.displayName} size={isMobile ? 36 : 40} status={friend.status} statusRingColor="var(--bg-primary)" avatarHash={friend.avatarHash} />
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '14px', minWidth: 0, flex: 1 }}>
+                                            <Avatar userId={friend.id} displayName={friend.displayName} size={isMobile ? 36 : 40} status={friend.status} statusRingColor={selectedFriend?.id === friend.id ? 'var(--bg-tertiary)' : 'var(--bg-primary)'} avatarHash={friend.avatarHash} />
                                             <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', minWidth: 0 }}>
                                                     <span style={{ fontWeight: 600, fontSize: isMobile ? '14px' : '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{friend.displayName}</span>
-                                                    <span style={{ color: 'var(--text-muted)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>{friend.username}</span>
+                                                    <span style={{ color: 'var(--text-muted)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>{friend.username}</span>
                                                 </div>
-                                                <span style={{ color: 'var(--text-secondary)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                <span style={{
+                                                    color: friend.customStatus ? 'var(--text-secondary)' :
+                                                        friend.status === 'online' ? 'var(--success)' :
+                                                        friend.status === 'idle' ? '#F59E0B' :
+                                                        friend.status === 'dnd' ? 'var(--error)' :
+                                                        'var(--text-muted)',
+                                                    fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                                                }}>
                                                     {friend.customStatus || (friend.status === 'dnd' ? 'Do Not Disturb' : friend.status.charAt(0).toUpperCase() + friend.status.slice(1))}
                                                 </span>
                                                 {friend.activity && <ActivityCard activity={friend.activity} compact />}
                                             </div>
                                         </div>
-                                        <div className="friend-actions" style={{ display: 'flex', gap: isMobile ? '4px' : '8px', position: 'relative', flexShrink: 0 }}>
-                                            <button onClick={() => handleOpenDm(friend.id, friend.displayName)} style={{ width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} title="Message">
-                                                <MessageSquare size={isMobile ? 16 : 18} />
+                                        <div className="friend-actions" style={{ display: 'flex', gap: isMobile ? '4px' : '6px', position: 'relative', flexShrink: 0 }}>
+                                            <button onClick={() => handleOpenDm(friend.id, friend.displayName)} className="fa-btn" title="Message">
+                                                <MessageSquare size={isMobile ? 16 : 17} />
                                             </button>
-                                            <button onClick={() => setMoreMenuId(moreMenuId === friend.id ? null : friend.id)} style={{ width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', borderRadius: '50%', background: moreMenuId === friend.id ? 'var(--accent-primary)' : 'var(--bg-elevated)', border: 'none', color: moreMenuId === friend.id ? '#000' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} title="More">
-                                                <MoreVertical size={isMobile ? 16 : 18} />
+                                            <button
+                                                onClick={() => setMoreMenuId(moreMenuId === friend.id ? null : friend.id)}
+                                                className="fa-btn"
+                                                style={{ background: moreMenuId === friend.id ? 'var(--accent-primary)' : undefined, color: moreMenuId === friend.id ? '#000' : undefined }}
+                                                title="More"
+                                            >
+                                                <MoreVertical size={isMobile ? 16 : 17} />
                                             </button>
                                             {moreMenuId === friend.id && (
-                                                <div style={{ position: 'absolute', top: '42px', right: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '4px', minWidth: '180px', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+                                                <div style={{ position: 'absolute', top: '42px', right: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '10px', padding: '4px', minWidth: '180px', zIndex: 50, boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}>
                                                     {/* Move to group options */}
                                                     {friendGroups.length > 0 && (
                                                         <>
@@ -874,9 +926,12 @@ const Friends = () => {
                             <div>
                                 {/* Create Group button */}
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                                    <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, margin: 0 }}>
-                                        All Friends — {friends.length}
-                                    </h3>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', fontWeight: 700 }}>All Friends</span>
+                                        <span style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: 700, padding: '1px 7px', borderRadius: '10px', border: '1px solid var(--stroke)' }}>
+                                            {friends.length}
+                                        </span>
+                                    </div>
                                     <button
                                         onClick={() => setShowCreateGroup(true)}
                                         style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '12px', fontWeight: 600, padding: '4px 8px', borderRadius: '4px', transition: 'all 0.15s' }}
@@ -956,8 +1011,8 @@ const Friends = () => {
                                                 <div style={{
                                                     position: 'fixed', top: groupContextMenu.y, left: groupContextMenu.x,
                                                     background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
-                                                    borderRadius: '8px', padding: '4px', minWidth: '180px', zIndex: 100,
-                                                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                                                    borderRadius: '10px', padding: '4px', minWidth: '180px', zIndex: 100,
+                                                    boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
                                                 }}>
                                                     <div onClick={() => { setGroupContextMenu(null); setEditingGroupId(group.id); setEditingGroupName(group.name); }}
                                                         style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)' }}
@@ -1100,15 +1155,23 @@ const Friends = () => {
 
                     {activeTab === 'pending' && (
                         <div>
-                            <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px', borderBottom: '1px solid var(--stroke)', paddingBottom: '8px' }}>
-                                Pending Requests — {requests.length}
-                            </h3>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                                <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', fontWeight: 700 }}>Pending</span>
+                                {requests.length > 0 && (
+                                    <span style={{ background: 'rgba(239,68,68,0.15)', color: 'var(--error)', fontSize: '11px', fontWeight: 700, padding: '1px 7px', borderRadius: '10px' }}>
+                                        {requests.length}
+                                    </span>
+                                )}
+                                <div style={{ flex: 1, height: '1px', background: 'var(--stroke)' }} />
+                            </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                 {requests.filter(r => matchesFriendSearch(r.username, r.displayName)).map(req => (
                                     <div key={req.id} className="friend-row hover-bg-tertiary" style={{
                                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                        padding: '12px 16px', borderRadius: '8px', cursor: 'pointer',
-                                        transition: 'background 0.2s'
+                                        padding: '10px 16px', borderRadius: '8px', cursor: 'pointer',
+                                        transition: 'background 0.15s',
+                                        borderLeft: req.type === 'incoming' ? '2px solid var(--success)' : '2px solid rgba(82,109,245,0.4)',
+                                        paddingLeft: '14px',
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '16px', minWidth: 0, flex: 1 }}>
                                             <Avatar
@@ -1122,16 +1185,20 @@ const Friends = () => {
                                                     <span className={req.nameplateStyle && req.nameplateStyle !== 'none' ? `nameplate-${req.nameplateStyle}` : undefined} style={{ fontWeight: 600, fontSize: isMobile ? '14px' : '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{req.displayName}</span>
                                                     <span style={{ color: 'var(--text-muted)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>{req.username}</span>
                                                 </div>
-                                                <span style={{ color: 'var(--text-secondary)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {req.type === 'incoming' ? 'Incoming Friend Request' : 'Outgoing Friend Request'}
+                                                <span style={{
+                                                    color: req.type === 'incoming' ? 'var(--success)' : 'var(--accent-primary)',
+                                                    fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                    fontWeight: 500,
+                                                }}>
+                                                    {req.type === 'incoming' ? '↙ Incoming Request' : '↗ Outgoing Request'}
                                                 </span>
                                             </div>
                                         </div>
 
-                                        <div className="friend-actions" style={{ display: 'flex', gap: isMobile ? '4px' : '8px', flexShrink: 0 }}>
+                                        <div className="friend-actions" style={{ display: 'flex', gap: isMobile ? '4px' : '6px', flexShrink: 0 }}>
                                             {req.type === 'incoming' && (
-                                                <button onClick={() => handleAcceptRequest(req.id, req.displayName)} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Accept">
-                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                <button onClick={() => handleAcceptRequest(req.id, req.displayName)} className="fa-btn" style={{ color: 'var(--success)' }} title="Accept">
+                                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                                 </button>
                                             )}
                                             <button onClick={async () => {
@@ -1142,8 +1209,8 @@ const Friends = () => {
                                                 } catch {
                                                     addToast({ title: 'Failed', variant: 'error' });
                                                 }
-                                            }} style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-elevated)', border: 'none', color: 'var(--error)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title={req.type === 'incoming' ? 'Decline' : 'Cancel'}>
-                                                <X size={20} />
+                                            }} className="fa-btn" style={{ color: 'var(--error)' }} title={req.type === 'incoming' ? 'Decline' : 'Cancel'}>
+                                                <X size={17} />
                                             </button>
                                         </div>
                                     </div>
@@ -1246,48 +1313,64 @@ const Friends = () => {
                     })()}
 
                     {activeTab === 'add' && (
-                        <div style={{ maxWidth: '600px', margin: '0 auto', marginTop: '40px' }}>
-                            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                                <h2 style={{ fontSize: '24px', fontWeight: 600, marginBottom: '8px' }}>Add Friend</h2>
-                                <p style={{ color: 'var(--text-secondary)' }}>You can add friends with their Gratonite username.</p>
+                        <div style={{ maxWidth: '640px', margin: '0 auto', marginTop: isMobile ? '16px' : '32px' }}>
+                            {/* Hero card */}
+                            <div style={{
+                                background: 'linear-gradient(135deg, rgba(82,109,245,0.12) 0%, rgba(139,92,246,0.08) 100%)',
+                                borderRadius: 16, padding: isMobile ? '28px 20px' : '40px 48px',
+                                border: '1px solid rgba(82,109,245,0.2)',
+                                marginBottom: '32px', textAlign: 'center',
+                                position: 'relative', overflow: 'hidden',
+                            }}>
+                                <div style={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(82,109,245,0.07)', pointerEvents: 'none' }} />
+                                <div style={{ position: 'absolute', bottom: -10, left: -10, width: 80, height: 80, borderRadius: '50%', background: 'rgba(139,92,246,0.05)', pointerEvents: 'none' }} />
+                                <div style={{ width: 56, height: 56, borderRadius: 14, background: 'rgba(82,109,245,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                                    <UserPlus size={28} style={{ color: 'var(--accent-primary)' }} />
+                                </div>
+                                <h2 style={{ fontSize: isMobile ? '20px' : '22px', fontWeight: 700, margin: '0 0 8px', color: 'var(--text-primary)' }}>Find your people</h2>
+                                <p style={{ color: 'var(--text-secondary)', margin: '0 0 24px', fontSize: '14px', lineHeight: 1.5 }}>Add a friend by their Gratonite username to start chatting.</p>
+
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                    <input
+                                        type="text"
+                                        className="auth-input"
+                                        placeholder="Enter a username..."
+                                        value={addFriendInput}
+                                        onChange={(e) => setAddFriendInput(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' && addFriendInput.length > 0) handleAddFriend(); }}
+                                        style={{ margin: 0, paddingRight: '150px', background: 'var(--bg-elevated)', border: '1px solid rgba(82,109,245,0.25)', height: '52px', fontSize: '15px' }}
+                                    />
+                                    <button
+                                        onClick={() => { if (addFriendInput.length > 0) { handleAddFriend(); } }}
+                                        style={{
+                                            position: 'absolute', right: '8px',
+                                            background: addFriendInput.length > 0 ? 'var(--accent-primary)' : 'rgba(82,109,245,0.3)',
+                                            border: 'none', padding: '8px 18px', borderRadius: '6px',
+                                            color: addFriendInput.length > 0 ? '#000' : 'var(--text-muted)',
+                                            fontWeight: 600, cursor: addFriendInput.length > 0 ? 'pointer' : 'default',
+                                            transition: 'all 0.2s', fontSize: '13px', whiteSpace: 'nowrap',
+                                        }}
+                                    >
+                                        Send Request
+                                    </button>
+                                </div>
                             </div>
 
-                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                <input
-                                    type="text"
-                                    className="auth-input"
-                                    placeholder="Enter Username#0000"
-                                    value={addFriendInput}
-                                    onChange={(e) => setAddFriendInput(e.target.value)}
-                                    style={{ margin: 0, paddingRight: '140px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', height: '56px', fontSize: '16px' }}
-                                />
+                            <div style={{ paddingTop: '4px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                                    <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', fontWeight: 700 }}>Other ways to connect</span>
+                                    <div style={{ flex: 1, height: '1px', background: 'var(--stroke)' }} />
+                                </div>
                                 <button
-                                    onClick={() => {
-                                        if (addFriendInput.length > 0) {
-                                            handleAddFriend();
-                                        }
-                                    }}
-                                    style={{
-                                        position: 'absolute', right: '8px',
-                                        background: addFriendInput.length > 0 ? 'var(--accent-primary)' : 'rgba(82, 109, 245, 0.5)',
-                                        border: 'none',
-                                        padding: '8px 16px',
-                                        borderRadius: '4px',
-                                        color: 'white',
-                                        fontWeight: 600,
-                                        cursor: addFriendInput.length > 0 ? 'pointer' : 'default',
-                                        transition: 'background 0.2s'
-                                    }}
+                                    onClick={() => { copyToClipboard(window.location.origin); addToast({ title: 'Invite Link Copied!', description: 'Share this link to invite friends to Gratonite.', variant: 'success' }); }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '10px', padding: '12px 20px', cursor: 'pointer', color: 'var(--text-primary)', fontWeight: 600, fontSize: '14px', transition: 'all 0.15s', width: '100%' }}
+                                    className="hover-bg-elevated"
                                 >
-                                    Send Friend Request
-                                </button>
-                            </div>
-
-                            <div style={{ marginTop: '48px', paddingTop: '32px', borderTop: '1px solid var(--stroke)' }}>
-                                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Other ways to connect</h3>
-                                <button onClick={() => { copyToClipboard(window.location.origin); addToast({ title: 'Invite Link Copied!', description: 'Share this link to invite friends to Gratonite.', variant: 'success' }); }} className="auth-button" style={{ marginTop: 0, background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: 'auto' }}>
-                                    <UserPlus size={18} />
-                                    Invite via Link
+                                    <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(82,109,245,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        <UserPlus size={16} style={{ color: 'var(--accent-primary)' }} />
+                                    </div>
+                                    Copy Invite Link
+                                    <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 400 }}>gratonite.chat</span>
                                 </button>
                             </div>
                         </div>
@@ -1302,21 +1385,90 @@ const Friends = () => {
 
             <style>
                 {`
-                    .tab-btn:hover {
+                    /* ── Tab bar ── */
+                    .ft-tab {
+                        background: transparent;
+                        border: none;
+                        border-bottom: 2px solid transparent;
+                        padding: 0 14px;
+                        color: var(--text-muted);
+                        cursor: pointer;
+                        font-weight: 500;
+                        font-size: 14px;
+                        flex-shrink: 0;
+                        transition: color 0.15s, border-color 0.15s;
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        margin-bottom: -1px;
+                        white-space: nowrap;
+                    }
+                    .ft-tab:hover { color: var(--text-secondary) !important; }
+                    .ft-tab--active {
+                        color: var(--text-primary) !important;
+                        font-weight: 600;
+                        border-bottom-color: var(--accent-primary);
+                    }
+                    .ft-tab-add {
+                        background: var(--success);
+                        border: none;
+                        padding: 5px 12px;
+                        border-radius: 6px;
+                        color: white;
+                        cursor: pointer;
+                        font-weight: 600;
+                        font-size: 13px;
+                        flex-shrink: 0;
+                        transition: all 0.15s;
+                        display: flex;
+                        align-items: center;
+                        gap: 4px;
+                        white-space: nowrap;
+                    }
+                    .ft-tab-add:hover {
+                        background: #0d9e6e !important;
+                        transform: translateY(-1px);
+                        box-shadow: 0 4px 12px rgba(16,185,129,0.25);
+                    }
+                    .ft-tab-add--active {
+                        background: rgba(16,185,129,0.15) !important;
+                        color: var(--success) !important;
+                        box-shadow: none !important;
+                        transform: none !important;
+                    }
+
+                    /* ── Friend row action buttons ── */
+                    .fa-btn {
+                        width: 34px;
+                        height: 34px;
+                        border-radius: 50%;
+                        background: var(--bg-elevated);
+                        border: none;
+                        color: var(--text-secondary);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        cursor: pointer;
+                        transition: all 0.15s;
+                        flex-shrink: 0;
+                    }
+                    .fa-btn:hover {
                         background: var(--bg-tertiary) !important;
+                        color: var(--text-primary) !important;
+                        transform: scale(1.05);
                     }
-                    .friend-actions button:hover {
-                        background: var(--stroke) !important;
-                    }
+
+                    /* ── Friend rows: actions fade in on hover ── */
+                    .friend-row .friend-actions { opacity: 0; transition: opacity 0.15s; }
+                    .friend-row:hover .friend-actions { opacity: 1; }
+
+                    /* Hover bg utility */
+                    .hover-bg-elevated:hover { background: var(--bg-elevated) !important; }
+
+                    /* ── Animations ── */
                     @keyframes slideInRight {
-                        from {
-                            transform: translateX(100%);
-                            opacity: 0;
-                        }
-                        to {
-                            transform: translateX(0);
-                            opacity: 1;
-                        }
+                        from { transform: translateX(100%); opacity: 0; }
+                        to   { transform: translateX(0);    opacity: 1; }
                     }
                 `}
             </style>
