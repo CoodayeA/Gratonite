@@ -429,8 +429,14 @@ relationshipsRouter.get(
 
           // Last message.
           const [lastMsg] = await db
-            .select({ content: messages.content, createdAt: messages.createdAt })
+            .select({
+              content: messages.content,
+              createdAt: messages.createdAt,
+              authorId: messages.authorId,
+              authorUsername: users.displayName,
+            })
             .from(messages)
+            .leftJoin(users, eq(messages.authorId, users.id))
             .where(eq(messages.channelId, channelId))
             .orderBy(desc(messages.createdAt))
             .limit(1);
