@@ -21,6 +21,38 @@ import { getAccessToken } from '../../lib/api';
 // Stable waveform bar heights — deterministic so they don't jump on re-render
 const WAVEFORM_HEIGHTS = [6, 14, 10, 18, 8, 16, 12, 20, 7, 15, 11, 17, 9, 13, 6];
 
+// Common emoji shortcode map
+const EMOJI_SHORTCODES: Record<string, string> = {
+  thumbsup: '👍', thumbsdown: '👎', heart: '❤️', fire: '🔥', star: '⭐',
+  sparkles: '✨', rocket: '🚀', tada: '🎉', eyes: '👀', wave: '👋',
+  clap: '👏', pray: '🙏', muscle: '💪', ok_hand: '👌', point_right: '👉',
+  point_left: '👈', raised_hands: '🙌', v: '✌️', thinking: '🤔',
+  smile: '😊', grin: '😁', laugh: '😂', joy: '😂', rofl: '🤣',
+  sweat_smile: '😅', wink: '😉', blush: '😊', kissing: '😘',
+  sunglasses: '😎', nerd: '🤓', party: '🥳', pleading: '🥺',
+  sob: '😭', scream: '😱', rage: '😡', skull: '💀', ghost: '👻',
+  robot: '🤖', alien: '👽', poop: '💩', zap: '⚡', boom: '💥',
+  sweat_drops: '💦', dash: '💨', zzz: '💤', speech: '💬',
+  '100': '💯', white_check_mark: '✅', x: '❌', warning: '⚠️',
+  no_entry: '⛔', question: '❓', exclamation: '❗', bangbang: '‼️',
+  moneybag: '💰', gem: '💎', trophy: '🏆', medal: '🥇', crown: '👑',
+  pizza: '🍕', burger: '🍔', fries: '🍟', coffee: '☕', beer: '🍺',
+  cake: '🎂', candy: '🍬', lollipop: '🍭', ice_cream: '🍦',
+  dog: '🐶', cat: '🐱', fox: '🦊', bear: '🐻', panda: '🐼',
+  lion: '🦁', monkey: '🐵', chicken: '🐔', penguin: '🐧', bird: '🐦',
+  butterfly: '🦋', rainbow: '🌈', sun: '☀️', moon: '🌙', snow: '❄️',
+  cloud: '☁️', thunder: '⛈️', umbrella: '☂️', earth: '🌍',
+  tree: '🌳', flower: '🌸', rose: '🌹', cactus: '🌵', leaves: '🍃',
+  house: '🏠', car: '🚗', plane: '✈️', ship: '🚢', train: '🚂',
+  flag: '🏳️', checkered_flag: '🏁', white_flag: '🏳️',
+  music: '🎵', headphones: '🎧', guitar: '🎸', piano: '🎹',
+  game: '🎮', dice: '🎲', art: '🎨', book: '📚', pencil: '✏️',
+  computer: '💻', phone: '📱', camera: '📷', video: '🎥',
+  key: '🔑', lock: '🔒', unlock: '🔓', hammer: '🔨', wrench: '🔧',
+  lightbulb: '💡', magnifying_glass: '🔍', bell: '🔔', mute: '🔇',
+  loud: '🔊', link: '🔗', pin: '📌', pushpin: '📌', paperclip: '📎',
+};
+
 interface MessageInputProps {
     channelId: string | undefined;
     channelName: string;
@@ -243,6 +275,69 @@ const MessageInput: React.FC<MessageInputProps> = ({
     const [editingFileType, setEditingFileType] = useState<'image' | 'video' | null>(null);
     const [sentAnnouncement, setSentAnnouncement] = useState('');
     const [showUploadMenu, setShowUploadMenu] = useState(false);
+
+    const [emojiQuery, setEmojiQuery] = useState<string | null>(null);
+    const [emojiSuggestions, setEmojiSuggestions] = useState<Array<{ key: string; emoji: string }>>([]);
+    const [emojiSuggestionIndex, setEmojiSuggestionIndex] = useState(0);
+
+    const detectEmojiShortcode = useCallback((text: string) => {
+        const match = text.match(/:([a-z0-9_]{2,})$/i);
+        if (match) {
+            const q = match[1].toLowerCase();
+            const suggestions = Object.entries(EMOJI_SHORTCODES)
+                .filter(([k]) => k.startsWith(q))
+                .slice(0, 8)
+                .map(([key, emoji]) => ({ key, emoji }));
+            setEmojiQuery(match[0]);
+            setEmojiSuggestions(suggestions);
+            setEmojiSuggestionIndex(0);
+        } else {
+            setEmojiQuery(null);
+            setEmojiSuggestions([]);
+        }
+    }, []);
+
+    const insertEmojiShortcode = useCallback((emoji: string) => {
+        if (!emojiQuery) return;
+        const idx = inputValue.lastIndexOf(emojiQuery);
+        const newVal = inputValue.slice(0, idx) + emoji + ' ';
+        setInputValue(newVal);
+        setEmojiQuery(null);
+        setEmojiSuggestions([]);
+    }, [emojiQuery, inputValue, setInputValue]);
+
+    const handleInputChangeWithEmoji = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        handleInputChange(e);
+        detectEmojiShortcode(e.target.value);
+    }, [handleInputChange, detectEmojiShortcode]);
+
+    const handleInputKeyDownWithEmoji = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (emojiSuggestions.length > 0 && emojiQuery) {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setEmojiSuggestionIndex(i => Math.max(0, i - 1));
+                return;
+            }
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setEmojiSuggestionIndex(i => Math.min(emojiSuggestions.length - 1, i + 1));
+                return;
+            }
+            if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault();
+                const selected = emojiSuggestions[emojiSuggestionIndex];
+                if (selected) insertEmojiShortcode(selected.emoji);
+                return;
+            }
+            if (e.key === 'Escape') {
+                setEmojiQuery(null);
+                setEmojiSuggestions([]);
+                return;
+            }
+        }
+        handleInputKeyDown(e);
+    }, [emojiSuggestions, emojiQuery, emojiSuggestionIndex, insertEmojiShortcode, handleInputKeyDown]);
+
     const handleSendWithAnnounce = useCallback(() => {
         handleSendMessage();
         setSentAnnouncement('Message sent');
@@ -733,8 +828,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
                             rows={1}
                             placeholder={`Message #${channelName}...`}
                             value={inputValue}
-                            onChange={handleInputChange}
-                            onKeyDown={handleInputKeyDown}
+                            onChange={handleInputChangeWithEmoji}
+                            onKeyDown={handleInputKeyDownWithEmoji}
                             onInput={(e) => { const t = e.target as HTMLTextAreaElement; t.style.height = '24px'; t.style.height = Math.min(t.scrollHeight, 200) + 'px'; }}
                             onPaste={(e) => {
                                 const items = e.clipboardData?.items;
@@ -904,6 +999,39 @@ const MessageInput: React.FC<MessageInputProps> = ({
                         onStickerSelect={handleSendSticker}
                         guildId={guildId}
                     />
+                )}
+
+                {/* Emoji shortcode autocomplete dropdown */}
+                {emojiSuggestions.length > 0 && (
+                    <div role="listbox" aria-label="Emoji shortcode suggestions" style={{
+                        position: 'absolute', bottom: '100%', left: '16px',
+                        background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+                        borderRadius: '12px', padding: '6px', boxShadow: '0 -8px 24px rgba(0,0,0,0.4)',
+                        zIndex: 50, display: 'flex', flexDirection: 'column', gap: '2px',
+                        minWidth: '180px', maxWidth: '240px',
+                    }}>
+                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', padding: '2px 8px 4px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            Emoji
+                        </div>
+                        {emojiSuggestions.map((s, i) => (
+                            <button
+                                key={s.key}
+                                role="option"
+                                aria-selected={i === emojiSuggestionIndex}
+                                onMouseDown={(e) => { e.preventDefault(); insertEmojiShortcode(s.emoji); }}
+                                onMouseEnter={() => setEmojiSuggestionIndex(i)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                    background: i === emojiSuggestionIndex ? 'var(--hover-overlay)' : 'transparent',
+                                    border: 'none', borderRadius: '8px', padding: '6px 10px',
+                                    cursor: 'pointer', width: '100%', textAlign: 'left',
+                                }}
+                            >
+                                <span style={{ fontSize: '20px', lineHeight: 1 }}>{s.emoji}</span>
+                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>:{s.key}:</span>
+                            </button>
+                        ))}
+                    </div>
                 )}
 
                 {/* GIF Reaction Picker */}

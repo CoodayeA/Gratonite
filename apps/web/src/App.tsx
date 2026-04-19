@@ -3182,6 +3182,7 @@ export const AppLayout = () => {
     const [incomingCall, setIncomingCall] = useState<CallInvitePayload | null>(null);
     const [isGuildRailOpen, setIsGuildRailOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [focusMode, setFocusMode] = useState(false);
     const [isMemberDrawerOpen, setIsMemberDrawerOpen] = useState(false);
     const mainContentRef = useRef<HTMLDivElement>(null);
     const { user: ctxUser, loading: userLoading, gratoniteBalance, setGratoniteBalance } = useUser();
@@ -3893,6 +3894,14 @@ export const AppLayout = () => {
                 e.preventDefault();
                 setActiveModal(prev => prev === 'bugReport' ? null : 'bugReport');
             }
+            if (combo === getCombo('focusMode')) {
+                e.preventDefault();
+                setFocusMode(prev => {
+                    const next = !prev;
+                    addToast({ title: next ? 'Focus mode on' : 'Focus mode off', variant: 'info' });
+                    return next;
+                });
+            }
             if (e.key === 'Escape' && activeModal) {
                 e.preventDefault();
                 setActiveModal(null);
@@ -3944,7 +3953,7 @@ export const AppLayout = () => {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeModal, location.pathname, guildSession, navigate, voiceCtx]);
+    }, [activeModal, addToast, location.pathname, guildSession, navigate, voiceCtx]);
 
     // Push to Talk: Hold configured key to unmute while in voice, release to re-mute
     const pttActiveRef = useRef(false);
@@ -4176,7 +4185,7 @@ export const AppLayout = () => {
     return (
         <ContextMenuProvider>
             <GlobalBugReportContextMenu onOpenBugReport={() => setActiveModal('bugReport')} />
-            <div className="app-container">
+            <div className={`app-container${focusMode ? ' focus-mode' : ''}`}>
                 {/* Visually hidden route announcer for screen readers */}
                 <div ref={routeAnnouncerRef} className="sr-route-announcer" aria-live="assertive" aria-atomic="true" role="status" />
                 <a href="#main-content" className="skip-link">Skip to content</a>

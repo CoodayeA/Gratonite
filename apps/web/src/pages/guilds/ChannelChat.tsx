@@ -1011,6 +1011,9 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     // Pinned Messages Panel State
     const [showPinnedPanel, setShowPinnedPanel] = useState(false);
     const [pinnedMessages, setPinnedMessages] = useState<any[]>([]);
+    const [pinBannerDismissed, setPinBannerDismissed] = useState<boolean>(() => {
+        return sessionStorage.getItem(`gratonite:pin-banner-dismissed-${channelId}`) === '1';
+    });
     const [pinBoardView, setPinBoardView] = useState(false);
     const [showThreadsPanel, setShowThreadsPanel] = useState(false);
     const [showNotesPanel, setShowNotesPanel] = useState(false);
@@ -1199,6 +1202,10 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             }
         }
         prevChannelIdRef.current = channelId;
+    }, [channelId]);
+
+    useEffect(() => {
+        setPinBannerDismissed(sessionStorage.getItem(`gratonite:pin-banner-dismissed-${channelId}`) === '1');
     }, [channelId]);
 
     // Reset state and fetch messages when channelId changes
@@ -1951,6 +1958,12 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
 
         return () => { unsubPins(); };
     }, [channelId, showPinnedPanel]);
+
+    // Silently load pins for the banner on channel open
+    useEffect(() => {
+        if (channelId) loadPinnedMessages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [channelId]);
 
     // Decay velocity
     useEffect(() => {
@@ -3327,6 +3340,46 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                     )}
                 </div>
             </header>
+
+                {/* Pinned Message Banner */}
+                {pinnedMessages.length > 0 && !pinBannerDismissed && (() => {
+                    const latest = pinnedMessages[0];
+                    const text = latest?.content || latest?.attachments?.[0]?.filename || 'Pinned message';
+                    return (
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '10px',
+                            padding: '7px 16px',
+                            background: 'linear-gradient(90deg, rgba(82,109,245,0.08), rgba(82,109,245,0.04))',
+                            borderBottom: '1px solid rgba(82,109,245,0.2)',
+                            fontSize: '13px', cursor: 'pointer', flexShrink: 0,
+                        }}
+                            onClick={() => { setShowPinnedPanel(true); loadPinnedMessages(); }}
+                        >
+                            <Pin size={13} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                            <span style={{ color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0 }}>Pinned</span>
+                            <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                                {text.length > 80 ? text.slice(0, 80) + '…' : text}
+                            </span>
+                            {pinnedMessages.length > 1 && (
+                                <span style={{ color: 'var(--text-muted)', fontSize: '11px', flexShrink: 0 }}>
+                                    +{pinnedMessages.length - 1} more
+                                </span>
+                            )}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPinBannerDismissed(true);
+                                    sessionStorage.setItem(`gratonite:pin-banner-dismissed-${channelId}`, '1');
+                                }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                                title="Dismiss"
+                                aria-label="Dismiss pinned banner"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    );
+                })()}
 
             {channelIsEncrypted && !channelE2EKey && channelKeyRecoveryRequired && (
                 <div style={{ padding: '8px 16px', background: 'var(--warning-bg, rgba(234,179,8,0.15))', borderBottom: '1px solid var(--warning, #eab308)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--warning, #eab308)' }}>

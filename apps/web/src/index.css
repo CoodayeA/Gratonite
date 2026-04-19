@@ -4137,6 +4137,24 @@ img[loading="lazy"][src] {
   backface-visibility: hidden;
 }
 
+/* ── Focus Mode — Ctrl+Shift+F hides sidebars for distraction-free reading ── */
+.focus-mode .channel-sidebar,
+.focus-mode .guild-rail {
+  transform: translateX(-100%);
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+.focus-mode .members-sidebar {
+  transform: translateX(100%);
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+.focus-mode .main-content-wrapper {
+  flex: 1;
+}
+
 /* ── Feature 14: WCAG 2.1 AA — Focus Indicators ── */
 :focus-visible {
   outline: 2px solid var(--accent-primary);
