@@ -96,6 +96,7 @@ import { useDesktopDeepLinks } from './hooks/useDesktopDeepLinks';
 import { useDesktopIdleDetection } from './hooks/useDesktopIdleDetection';
 import { useDesktopMenuNavigation } from './hooks/useDesktopMenuNavigation';
 import { useDesktopNotifications } from './hooks/useDesktopNotifications';
+import { useDmNotifications } from './hooks/useDmNotifications';
 import { useGameActivity } from './hooks/useGameActivity';
 import { useKeyboardNav } from './hooks/useKeyboardNav';
 import UpdateBanner from './components/ui/UpdateBanner';
@@ -131,6 +132,7 @@ import { RecentChannels, addRecentChannel } from './components/guild/RecentChann
 import { getAllThemes } from './themes/registry';
 import { ContextMenuProvider, useContextMenu } from './components/ui/ContextMenu';
 import { ToastProvider, useToast } from './components/ui/ToastManager';
+import { DmNotificationToast } from './components/ui/DmNotificationToast';
 import { Shield as ShieldIcon } from 'lucide-react';
 import { StarRating } from './components/ui/StarRating';
 import AchievementToastProvider from './components/ui/AchievementToast';
@@ -3658,6 +3660,10 @@ export const AppLayout = () => {
     }, []);
 
     const refreshGuildSession = guildSession.refresh;
+
+    // Wire DM notifications — in-app popup, browser notification, and sound
+    useDmNotifications({ dmChannels, currentUserId: userProfile.id || undefined });
+
     useEffect(() => {
         const unsubscribe = onSocketReconnect(() => {
             if (isAuthRuntimeExpired()) return;
@@ -4367,6 +4373,7 @@ export const AppLayout = () => {
                 id="sr-announcements"
             />
             {tour.show && <OnboardingTour onClose={tour.dismiss} />}
+            <DmNotificationToast />
         </ContextMenuProvider>
     );
 };
