@@ -2901,7 +2901,12 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             return;
         }
 
-        // ↑ arrow in empty input: start editing your last message (Discord standard)
+        if (e.key === 'Escape' && replyingTo) {
+            setReplyingTo(null);
+            return;
+        }
+
+
         if (e.key === 'ArrowUp' && !inputValue.trim() && !editingMessage) {
             const lastOwn = [...messages].reverse().find(m => m.authorId === currentUserId && !m.system && m.apiId);
             if (lastOwn) {
