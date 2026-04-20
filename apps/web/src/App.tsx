@@ -4652,6 +4652,22 @@ const LazyFallback = () => (
     </div>
 );
 
+// Wrapper components that key on URL params so React fully remounts the page
+// component when navigating between different DMs or channels, preventing the
+// URL-changes-but-content-stays-stale bug.
+function DmRoute() {
+    const { id } = useParams<{ id: string }>();
+    return <ErrorBoundary key={id}><Suspense fallback={<LazyFallback />}><DirectMessage /></Suspense></ErrorBoundary>;
+}
+function ChannelChatRoute() {
+    const { guildId, channelId } = useParams<{ guildId: string; channelId: string }>();
+    return <ErrorBoundary key={`${guildId}:${channelId}`}><Suspense fallback={<LazyFallback />}><ChannelChat /></Suspense></ErrorBoundary>;
+}
+function GuildOverviewRoute() {
+    const { guildId } = useParams<{ guildId: string }>();
+    return <ErrorBoundary key={guildId}><Suspense fallback={<LazyFallback />}><GuildOverview /></Suspense></ErrorBoundary>;
+}
+
 const appRouter = createBrowserRouter(
     createRoutesFromElements(
         <Route element={<Outlet />} errorElement={<RouteErrorBoundary />}>
@@ -4729,15 +4745,15 @@ const appRouter = createBrowserRouter(
                 <Route path="admin/portals" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminPortals /></Suspense></RequireAdmin>} />
                 <Route path="admin/federation" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><FederationAdmin /></Suspense></RequireAdmin>} />
                 <Route path="admin/cosmetics" element={<RequireAdmin><Suspense fallback={<LazyFallback />}><AdminCosmetics /></Suspense></RequireAdmin>} />
-                <Route path="dm/:id" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><DirectMessage /></Suspense></ErrorBoundary>} />
+                <Route path="dm/:id" element={<DmRoute />} />
                 {/* Parameterized guild routes */}
-                <Route path="guild/:guildId" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><GuildOverview /></Suspense></ErrorBoundary>} />
-                <Route path="guild/:guildId/channel/:channelId" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><ChannelChat /></Suspense></ErrorBoundary>} />
+                <Route path="guild/:guildId" element={<GuildOverviewRoute />} />
+                <Route path="guild/:guildId/channel/:channelId" element={<ChannelChatRoute />} />
                 <Route path="guild/:guildId/voice/:channelId" element={<Suspense fallback={<LazyFallback />}><VoiceChannel /></Suspense>} />
                 <Route path="guilds/:guildId/:channelId" element={<LegacyGuildChannelRedirect />} />
                 <Route path="guilds/:guildId/voice/:channelId" element={<LegacyGuildVoiceRedirect />} />
                 <Route path="guild/:guildId/:channelId" element={<LegacyGuildChannelRedirect />} />
-                <Route path="guild/:guildId/overview" element={<ErrorBoundary><Suspense fallback={<LazyFallback />}><GuildOverview /></Suspense></ErrorBoundary>} />
+                <Route path="guild/:guildId/overview" element={<GuildOverviewRoute />} />
                 <Route path="guild/:guildId/audit-log" element={<Suspense fallback={<LazyFallback />}><AuditLog /></Suspense>} />
                 <Route path="guild/:guildId/workflows" element={<Suspense fallback={<LazyFallback />}><GuildWorkflows /></Suspense>} />
                 <Route path="guild/:guildId/events" element={<Suspense fallback={<LazyFallback />}><EventScheduler /></Suspense>} />
