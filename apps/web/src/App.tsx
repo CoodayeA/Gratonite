@@ -4288,8 +4288,8 @@ export const AppLayout = () => {
         const path = location.pathname;
         const guildMatch = path.match(/^\/guild\/([^/]+)/);
         if (guildMatch) return `guild-${guildMatch[1]}`;
-        const dmMatch = path.match(/^\/dm\//);
-        if (dmMatch) return 'dm';
+        const dmMatch = path.match(/^\/dm\/([^/]+)/);
+        if (dmMatch) return `dm-${dmMatch[1]}`;
         // Top-level sections: /, /friends, /shop, /discover, etc.
         const section = path.split('/')[1] || 'home';
         return section;
