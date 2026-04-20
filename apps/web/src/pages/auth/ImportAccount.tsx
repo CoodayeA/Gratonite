@@ -283,7 +283,7 @@ const ImportAccount = () => {
                             <PreviewRow label="Display Name" value={previewInfo.displayName} />
                             <PreviewRow label="Federation Address" value={previewInfo.federationAddress} mono />
                             <PreviewRow label="Relationships" value={String(previewInfo.relationshipsCount)} />
-                            <PreviewRow label="Guild Memberships" value={String(previewInfo.guildMembershipsCount)} />
+                            <PreviewRow label="Portal Memberships" value={String(previewInfo.guildMembershipsCount)} />
                         </div>
                     )}
 

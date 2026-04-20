@@ -120,7 +120,7 @@ export default function Timeline({ guildId, canManage }: TimelineProps) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
           <Clock style={{ width: '20px', height: '20px' }} />
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold' }}>Server Timeline</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold' }}>Portal Timeline</h2>
         </div>
         {canManage && (
           <button

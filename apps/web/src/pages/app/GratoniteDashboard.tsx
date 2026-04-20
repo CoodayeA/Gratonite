@@ -301,7 +301,7 @@ const GratoniteDashboard = () => {
                                         <span style={{ fontWeight: 600, fontSize: '14px' }}>Chatterbox</span>
                                         <span style={{ fontSize: '13px', color: 'var(--accent-primary)', fontWeight: 600 }}>+100 &#8383;</span>
                                     </div>
-                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }}>Send 500 messages across any guilds.</div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }}>Send 500 messages across any portals.</div>
                                     <div style={{ width: '100%', height: '6px', background: 'var(--bg-elevated)', borderRadius: '3px', overflow: 'hidden' }}>
                                         <div style={{ width: '65%', height: '100%', background: 'var(--accent-primary)', borderRadius: '3px' }}></div>
                                     </div>
@@ -317,7 +317,7 @@ const GratoniteDashboard = () => {
                                         <span style={{ fontWeight: 600, fontSize: '14px' }}>Community Leader</span>
                                         <span style={{ fontSize: '13px', color: 'var(--accent-primary)', fontWeight: 600 }}>+500 &#8383;</span>
                                     </div>
-                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }}>Have 10 people join a guild you created.</div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }}>Have 10 people join a portal you created.</div>
                                     <div style={{ width: '100%', height: '6px', background: 'var(--bg-elevated)', borderRadius: '3px', overflow: 'hidden' }}>
                                         <div style={{ width: '30%', height: '100%', background: 'var(--accent-primary)', borderRadius: '3px' }}></div>
                                     </div>

@@ -140,7 +140,7 @@ const ServerStatsWidget = ({ data }: { data: ServerStatsData }) => {
         <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '16px', marginTop: '8px', maxWidth: '400px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <Users size={18} color="var(--accent-primary)" />
-                <span style={{ fontSize: '14px', fontWeight: 600 }}>Server Stats</span>
+                <span style={{ fontSize: '14px', fontWeight: 600 }}>Portal Stats</span>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
                 {stats.map(s => (

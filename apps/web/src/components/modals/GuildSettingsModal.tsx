@@ -170,7 +170,7 @@ function CurrencyPanel({ guildId, addToast }: { guildId: string; addToast: (t: {
                 earnPerVoiceMinute: currencyEarnVoice,
             });
             setCurrencyEnabled(true);
-            addToast({ title: 'Server currency saved', variant: 'success' });
+            addToast({ title: 'Portal currency saved', variant: 'success' });
         } catch {
             addToast({ title: 'Failed to save currency', variant: 'error' });
         } finally {
@@ -186,7 +186,7 @@ function CurrencyPanel({ guildId, addToast }: { guildId: string; addToast: (t: {
             setCurrencyName('');
             setCurrencyEmoji('\u{1F4B0}');
             setCurrencyLeaderboard([]);
-            addToast({ title: 'Server currency disabled', variant: 'success' });
+            addToast({ title: 'Portal currency disabled', variant: 'success' });
         } catch {
             addToast({ title: 'Failed to disable currency', variant: 'error' });
         } finally {
@@ -196,7 +196,7 @@ function CurrencyPanel({ guildId, addToast }: { guildId: string; addToast: (t: {
 
     return (
         <>
-            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Currency</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Portal Currency</h2>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
                 Create a custom currency for your server. Members earn it by participating and can compete on the leaderboard.
             </p>
@@ -210,7 +210,7 @@ function CurrencyPanel({ guildId, addToast }: { guildId: string; addToast: (t: {
                             value={currencyName}
                             onChange={e => setCurrencyName(e.target.value)}
                             onBlur={() => setCurrencyNameTouched(true)}
-                            placeholder="e.g. Server Coins"
+                            placeholder="e.g. Portal Coins"
                             maxLength={50}
                             style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${currencyNameTouched && !currencyName.trim() ? 'var(--error)' : 'var(--stroke)'}`, background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
                         />
@@ -755,7 +755,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             setBans(prev => prev.filter(b => b.userId !== userId));
             if (banned) {
                 addAuditEntry('Member Unbanned', actorName, banned.displayName, 'member');
-                addToast({ title: 'User unbanned', description: `${banned.displayName} can now rejoin the server.`, variant: 'success' });
+                addToast({ title: 'User unbanned', description: `${banned.displayName} can now rejoin the portal.`, variant: 'success' });
             }
         } catch {
             addToast({ title: 'Failed to unban user', variant: 'error' });
@@ -978,7 +978,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                 url: e.imageHash ? `${API_BASE}/files/${e.imageHash}` : `https://placehold.co/32/526df5/FFF?text=${e.name.charAt(0).toUpperCase()}`,
                 categoryId: e.categoryId || null,
             })));
-        }).catch(() => { addToast({ title: 'Failed to load server emojis', variant: 'error' }); });
+        }).catch(() => { addToast({ title: 'Failed to load portal emojis', variant: 'error' }); });
         api.guilds.getEmojiCategories(guildId).then(setEmojiCategories).catch(() => { addToast({ title: 'Failed to load emoji categories', variant: 'error' }); });
     }, [guildId]);
 
@@ -1017,7 +1017,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             return;
         }
         if (customEmojis.length >= 50) {
-            addToast({ title: 'Emoji limit reached', description: 'You can have up to 50 custom emojis per server.', variant: 'error' });
+            addToast({ title: 'Emoji limit reached', description: 'You can have up to 50 custom emojis per portal.', variant: 'error' });
             return;
         }
         setEmojiUploading(true);
@@ -1268,7 +1268,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             setMembers(prev => prev.filter(m => m.id !== memberId));
             if (member) {
                 addAuditEntry('Member Kicked', actorName, member.name, 'member');
-                addToast({ title: 'Member kicked', description: `${member.name} has been removed from the server.`, variant: 'success' });
+                addToast({ title: 'Member kicked', description: `${member.name} has been removed from the portal.`, variant: 'success' });
             }
         } catch {
             addToast({ title: 'Failed to kick member', variant: 'error' });
@@ -1335,10 +1335,10 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         try {
             const result = await api.guilds.uploadIcon(guildId, file);
             setAvatarUrl(`${API_BASE}/files/${result.iconHash}`);
-            addToast({ title: 'Server icon updated', variant: 'success' });
+            addToast({ title: 'Portal icon updated', variant: 'success' });
             emitGuildUpdated({ guildId, iconHash: result.iconHash });
         } catch (err: any) {
-            addToast({ title: 'Failed to upload server icon', description: err?.message || 'Unknown error', variant: 'error' });
+            addToast({ title: 'Failed to upload portal icon', description: err?.message || 'Unknown error', variant: 'error' });
         }
     };
 
@@ -1389,14 +1389,14 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         try {
             await api.guilds.delete(guildId);
             addAuditEntry('Server Deleted', actorName, serverName, 'settings');
-            addToast({ title: 'Server deleted', description: `${serverName} was permanently deleted.`, variant: 'success' });
+            addToast({ title: 'Portal deleted', description: `${serverName} was permanently deleted.`, variant: 'success' });
             emitGuildUpdated();
             window.dispatchEvent(new CustomEvent('gratonite:guild-deleted', { detail: { guildId } }));
             onClose();
             navigate('/');
         } catch (err: any) {
             addToast({
-                title: 'Failed to delete server',
+                title: 'Failed to delete portal',
                 description: err?.message || 'Unknown error',
                 variant: 'error',
             });
@@ -1409,12 +1409,12 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         if (!guildId) return;
         try {
             await api.guilds.leave(guildId);
-            addToast({ title: 'Left Server', description: `You have left ${serverName}.`, variant: 'info' });
+            addToast({ title: 'Left Portal', description: `You have left ${serverName}.`, variant: 'info' });
             onClose();
             navigate('/');
             window.dispatchEvent(new CustomEvent('gratonite:guild-left', { detail: { guildId } }));
         } catch {
-            addToast({ title: 'Failed', description: 'Could not leave the server.', variant: 'error' });
+            addToast({ title: 'Failed', description: 'Could not leave the portal.', variant: 'error' });
         }
     };
 
@@ -1459,7 +1459,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     return (
         <>
         <div className="modal-backdrop" onClick={onClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div role="dialog" aria-modal="true" aria-label="Server settings" onClick={e => e.stopPropagation()} style={{ width: 'min(900px, 95vw)', height: 'min(650px, 90vh)', display: 'flex', background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
+            <div role="dialog" aria-modal="true" aria-label="Portal settings" onClick={e => e.stopPropagation()} style={{ width: 'min(900px, 95vw)', height: 'min(650px, 90vh)', display: 'flex', background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
                 {/* Left Sidebar */}
                 <div className="settings-sidebar" style={{ width: '220px', background: 'var(--bg-elevated)', padding: '32px 16px', borderRight: '1px solid var(--stroke)', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto' }}>
                     <div>
@@ -1530,11 +1530,11 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                         <div onClick={() => setActiveTab('boosts')}
                             onMouseEnter={() => setHoveredBtn('tab-boosts')} onMouseLeave={() => setHoveredBtn(null)}
                             style={tabStyle('boosts')}
-                        >Server Boosts</div>
+                        >Portal Boosts</div>
                         <div onClick={() => setActiveTab('currency')}
                             onMouseEnter={() => setHoveredBtn('tab-currency')} onMouseLeave={() => setHoveredBtn(null)}
                             style={tabStyle('currency')}
-                        >Server Currency</div>
+                        >Portal Currency</div>
                     </div>
                     <div>
                         <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', padding: '0 12px', marginBottom: '8px' }}>ADVANCED</div>
@@ -1580,7 +1580,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     {/* ===================== OVERVIEW ===================== */}
                     {activeTab === 'overview' && (
                         <>
-                            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Overview</h2>
+                            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Portal Overview</h2>
                             <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Configure the basic information of your server.</p>
 
                             <div style={{ display: 'flex', gap: '32px', marginBottom: '32px' }}>
@@ -1847,20 +1847,20 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             {currentUser.id === guildOwnerId ? (
                                 !deleteConfirm ? (
                                     <button onClick={() => setDeleteConfirm(true)} style={{ background: 'transparent', border: '1px solid var(--error)', padding: '10px 24px', borderRadius: '8px', color: 'var(--error)', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}>
-                                        Delete Server
+                                        Delete Portal
                                     </button>
                                 ) : (
                                     <div style={{ background: 'rgba(237,66,69,0.1)', border: '1px solid var(--error)', borderRadius: '12px', padding: '24px' }}>
                                         <h4 style={{ color: 'var(--error)', marginBottom: '8px' }}>Are you sure? This cannot be undone.</h4>
-                                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Type the server name to confirm: <strong>{serverName}</strong></p>
-                                        <input type="text" value={deleteInput} onChange={e => setDeleteInput(e.target.value)} placeholder="Type server name..." style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const, marginBottom: '16px' }} />
+                                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Type the portal name to confirm: <strong>{serverName}</strong></p>
+                                        <input type="text" value={deleteInput} onChange={e => setDeleteInput(e.target.value)} placeholder="Type portal name..." style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const, marginBottom: '16px' }} />
                                         <div style={{ display: 'flex', gap: '8px' }}>
                                             <button
                                                 disabled={deleteInput !== serverName || deletingGuild}
                                                 onClick={deleteGuild}
                                                 style={{ background: deleteInput === serverName ? 'var(--error)' : 'var(--bg-tertiary)', border: 'none', padding: '10px 24px', borderRadius: '8px', color: deleteInput === serverName ? 'white' : 'var(--text-muted)', fontWeight: 700, fontSize: '14px', cursor: deleteInput === serverName ? 'pointer' : 'not-allowed' }}
                                             >
-                                                {deletingGuild ? 'Deleting...' : 'Delete Server'}
+                                                {deletingGuild ? 'Deleting...' : 'Delete Portal'}
                                             </button>
                                             <button onClick={() => { setDeleteConfirm(false); setDeleteInput(''); }} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '10px 24px', borderRadius: '8px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
                                         </div>
@@ -1868,7 +1868,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 )
                             ) : (
                                 <button onClick={leaveGuild} style={{ background: 'transparent', border: '1px solid var(--error)', padding: '10px 24px', borderRadius: '8px', color: 'var(--error)', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}>
-                                    Leave Server
+                                    Leave Portal
                                 </button>
                             )}
                         </>
@@ -2368,7 +2368,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 </div>
                                 <button onMouseEnter={() => setHoveredBtn('invite-member')} onMouseLeave={() => setHoveredBtn(null)}
                                     onClick={() => {
-                                        addToast({ title: 'Invite link copied', description: 'Share this link to invite members to the server.', variant: 'success' });
+                                        addToast({ title: 'Invite link copied', description: 'Share this link to invite members to the portal.', variant: 'success' });
                                     }}
                                     style={{ background: hoveredBtn === 'invite-member' ? 'var(--accent-primary)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '0 16px', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
                                 ><UserPlus size={16} /> Invite</button>
@@ -2801,7 +2801,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         <Lock size={20} color="var(--error)" />
                                         <div>
-                                            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--error)' }}>Server is Locked</div>
+                                            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--error)' }}>Portal is Locked</div>
                                             <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>No new members can join until the lockdown is lifted.</div>
                                         </div>
                                     </div>
@@ -2811,13 +2811,13 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                             try {
                                                 await api.delete(`/guilds/${guildId}/lock`);
                                                 setGuildLocked(false);
-                                                addToast({ title: 'Server unlocked', variant: 'success' });
+                                                addToast({ title: 'Portal unlocked', variant: 'success' });
                                             } catch {
                                                 addToast({ title: 'Failed to unlock', variant: 'error' });
                                             }
                                         }}
                                         style={{ padding: '8px 20px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
-                                    >Unlock Server</button>
+                                    >Unlock Portal</button>
                                 </div>
                             )}
 
@@ -2837,7 +2837,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                         setDefaultMemberNotificationLevel(next);
                                         try {
                                             await api.guilds.update(guildId, { defaultMemberNotificationLevel: next } as any);
-                                            addToast({ title: next ? `Default set to ${next === 'all' ? 'all messages' : next === 'mentions' ? 'mentions only' : 'nothing'}` : 'Server default cleared', variant: 'success' });
+                                            addToast({ title: next ? `Default set to ${next === 'all' ? 'all messages' : next === 'mentions' ? 'mentions only' : 'nothing'}` : 'Portal default cleared', variant: 'success' });
                                         } catch {
                                             addToast({ title: 'Failed to update default notifications', variant: 'error' });
                                             api.guilds.get(guildId).then((g: any) => {
@@ -2871,7 +2871,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                     <div>
-                                        <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>Public Server Stats</h3>
+                                        <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>Public Portal Stats</h3>
                                         <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Allow anyone to view server statistics at a public URL. Shows member count, message activity, and more.</p>
                                     </div>
                                     <div
@@ -2985,9 +2985,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                             try {
                                                 await api.post(`/guilds/${guildId}/lock`, {});
                                                 setGuildLocked(true);
-                                                addToast({ title: 'Server locked', description: 'Emergency lockdown activated.', variant: 'success' });
+                                                addToast({ title: 'Portal locked', description: 'Emergency lockdown activated.', variant: 'success' });
                                             } catch {
-                                                addToast({ title: 'Failed to lock server', variant: 'error' });
+                                                addToast({ title: 'Failed to lock portal', variant: 'error' });
                                             }
                                         }}
                                         style={{
@@ -3121,7 +3121,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                     <Clock size={12} /> {ban.bannedAt}
                                                 </span>
                                                 <button
-                                                    onClick={() => setConfirmDialog({ title: 'Unban Member', description: `Are you sure you want to unban ${ban.displayName}? They will be able to rejoin the server.`, onConfirm: () => handleUnban(ban.userId) })}
+                                                    onClick={() => setConfirmDialog({ title: 'Unban Member', description: `Are you sure you want to unban ${ban.displayName}? They will be able to rejoin the portal.`, onConfirm: () => handleUnban(ban.userId) })}
                                                     onMouseEnter={() => setHoveredBtn(`unban-${ban.userId}`)}
                                                     onMouseLeave={() => setHoveredBtn(`ban-${ban.userId}`)}
                                                     style={{
@@ -3571,7 +3571,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                 style={{ padding: '8px', borderRadius: '6px', background: copiedWebhookId === wh.id ? 'rgba(16,185,129,0.15)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: copiedWebhookId === wh.id ? 'var(--success)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
                                                 {copiedWebhookId === wh.id ? <Check size={16} /> : <Copy size={16} />}
                                             </button>
-                                            <button onClick={() => { addToast({ title: 'Token Regeneration', description: 'Webhook tokens are managed by the server. Delete and recreate the webhook to get a new token.', variant: 'info' }); }}
+                                            <button onClick={() => { addToast({ title: 'Token Regeneration', description: 'Webhook tokens are managed by the portal. Delete and recreate the webhook to get a new token.', variant: 'info' }); }}
                                                 title="Regenerate Token"
                                                 aria-label="Regenerate token"
                                                 style={{ padding: '8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
@@ -3763,7 +3763,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                         },
                                         {
                                             name: '/info',
-                                            description: 'Returns information about the current server or user.',
+                                            description: 'Returns information about the current portal or user.',
                                             example: `app.command('/info', async ({ respond, context }) => {\n  await respond({ text: \`Guild: \${context.guild.name}\\nMembers: \${context.guild.memberCount}\` });\n});`,
                                             tag: 'info',
                                         },
@@ -3874,7 +3874,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     {/* ===================== TEMPLATES ===================== */}
                     {activeTab === 'templates' && (
                         <>
-                            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Templates</h2>
+                            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Portal Templates</h2>
                             <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>Create templates from your server that others can use to create new servers.</p>
 
                             {/* Create Template Form */}
@@ -3993,9 +3993,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     {activeTab === 'branding' && (
                         <>
                             <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Brand Identity</h2>
-                            <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Customize the visual appearance of your Guild.</p>
+                            <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Customize the visual appearance of your Portal.</p>
 
-                            <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Guild Banner Background</h3>
+                            <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Portal Banner Background</h3>
                             <div style={{ display: 'flex', gap: '24px', marginBottom: '40px' }}>
                                 <div style={{ width: '280px', height: '120px', background: !bannerUrl ? 'linear-gradient(135deg, rgba(82, 109, 245, 0.2), rgba(0,0,0,0.5))' : 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)', flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
                                     {bannerUrl ? (
@@ -4022,8 +4022,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 </div>
                             </div>
 
-                            <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Guild Accent Color</h3>
-                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>This color will be used for buttons, links, and highlights throughout your Guild.</p>
+                            <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Portal Accent Color</h3>
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>This color will be used for buttons, links, and highlights throughout your Portal.</p>
                             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '32px' }}>
                                 {accentColors.map(accent => (
                                     <div key={accent.name} onClick={() => setSelectedAccentColor(accent.color)} title={accent.name}
@@ -4053,7 +4053,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                     {/* Server Rules Gate — Item 19 */}
                     {activeTab === 'rules' && guildId && (
                         <>
-                            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Rules</h2>
+                            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Portal Rules</h2>
                             <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
                                 Define server rules that new members must agree to before participating.
                             </p>
@@ -4075,7 +4075,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 onClick={async () => {
                                     try {
                                         await api.patch(`/guilds/${guildId}`, { rulesText: rulesText || null, requireRulesAgreement });
-                                        addToast({ title: 'Server rules saved', variant: 'success' });
+                                        addToast({ title: 'Portal rules saved', variant: 'success' });
                                     } catch {
                                         addToast({ title: 'Failed to save rules', variant: 'error' });
                                     }
@@ -4139,7 +4139,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                         const progressToNext = nextTierData ? Math.min((boostCount / nextTierData.min) * 100, 100) : 100;
                         return (
                             <>
-                                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Boosts</h2>
+                                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Portal Boosts</h2>
                                 <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
                                     Boost your server to unlock perks and features for everyone.
                                 </p>
@@ -4301,7 +4301,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                     )}
                                                     {block.type === 'rules' && block.data.summary && (
                                                         <div>
-                                                            <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '6px', letterSpacing: '0.05em' }}>Server Rules</div>
+                                                            <div style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '6px', letterSpacing: '0.05em' }}>Portal Rules</div>
                                                             <div style={{ background: 'var(--bg-tertiary)', borderRadius: '8px', padding: '12px', fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{block.data.summary}</div>
                                                         </div>
                                                     )}
@@ -4486,7 +4486,7 @@ function GuildInsightsPanel({ guildId }: { guildId: string }) {
 
     return (
         <>
-            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Insights</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Portal Insights</h2>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>Analytics for the past 7 days.</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
                 <div style={{ background: 'var(--bg-tertiary)', padding: 16, borderRadius: 8, border: '1px solid var(--stroke)', position: 'relative', overflow: 'hidden' }}>
@@ -4682,7 +4682,7 @@ function ImportWizard({ guildId, addToast }: { guildId: string; addToast: (t: an
     // Upload step
     return (
         <>
-            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Import Server</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Import Portal</h2>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>
                 Import channels and roles from another platform's JSON export.
             </p>
@@ -5060,7 +5060,7 @@ function SoundboardPanel({ guildId, addToast }: { guildId: string; addToast: (t:
     return (
         <>
             <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Custom Soundboard</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>Upload sound clips for voice channels. Max 50 clips per server.</p>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>Upload sound clips for voice channels. Max 50 clips per portal.</p>
 
             <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
                 <div style={{ fontSize: '12px', textTransform: 'uppercase', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '12px' }}>Upload Sound Clip</div>
@@ -5179,7 +5179,7 @@ function BackupsPanel({ guildId, addToast }: { guildId: string; addToast: (t: an
 
     return (
         <>
-            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Server Backups</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Portal Backups</h2>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>Export your server structure (channels, roles, settings) as JSON backups.</p>
 
             <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>

@@ -527,7 +527,7 @@ export default function ThemeEditorModal({ onClose, editingThemeId }: ThemeEdito
               </div>
               {/* Sidebar */}
               <div style={{ width: '140px', background: activeVars.bgSidebar, padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: activeVars.textPrimary, marginBottom: '6px', padding: '0 4px' }}>Server Name</div>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: activeVars.textPrimary, marginBottom: '6px', padding: '0 4px' }}>Portal Name</div>
                 <div style={{ padding: '4px 8px', borderRadius: '4px', background: activeVars.hoverOverlay }}>
                   <div style={{ fontSize: '10px', color: activeVars.textSecondary }}># general</div>
                 </div>

@@ -541,7 +541,7 @@ export default function GuildInsights({ guildId }: { guildId: string }) {
   return (
     <div style={{ padding: 24, color: 'var(--text-primary)', maxWidth: 960, overflow: 'auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 600 }}>Server Insights</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 600 }}>Portal Insights</h2>
         <button
           onClick={handleExport}
           disabled={exporting}

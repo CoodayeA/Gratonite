@@ -296,7 +296,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
                     <X size={24} />
                 </button>
 
-                <h2 style={{ fontSize: '24px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '4px' }}>Server Options</h2>
+                <h2 style={{ fontSize: '24px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '4px' }}>Portal Options</h2>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '28px', fontSize: '14px' }}>{guildName}</p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -317,7 +317,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
                     <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>Notifications</label>
                     <SectionRow
                         icon={muted ? <BellOff size={16} /> : <Bell size={16} />}
-                        label="Mute this Server"
+                        label="Mute this Portal"
                         sub={muted ? 'Notifications are suppressed' : 'You will receive notifications'}
                         right={<Toggle value={muted} onChange={handleMuteToggle} />}
                     />
@@ -607,7 +607,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
                                         className="auth-button"
                                         style={{ margin: 0, flex: 1, background: 'var(--error)', color: '#fff', border: '3px solid #000', fontWeight: 800, opacity: leaving ? 0.7 : 1 }}
                                     >
-                                        {leaving ? 'Leaving...' : 'Yes, Leave Server'}
+                                        {leaving ? 'Leaving...' : 'Yes, Leave Portal'}
                                     </button>
                                     <button
                                         onClick={() => setLeaveConfirm(false)}
@@ -623,7 +623,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
                                     className="auth-button"
                                     style={{ margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'transparent', color: 'var(--error)', border: '2px solid var(--error)', fontWeight: 700 }}
                                 >
-                                    <LogOut size={16} /> Leave Server
+                                    <LogOut size={16} /> Leave Portal
                                 </button>
                             )}
                         </>

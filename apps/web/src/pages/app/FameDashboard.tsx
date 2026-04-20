@@ -1032,7 +1032,7 @@ const FameDashboard = () => {
                             color: 'var(--text-secondary)', fontSize: '13px'
                         }}>
                             <Shield size={18} color="var(--text-muted)" />
-                            <span>Ratings are anonymous. Servers with consistently high ratings get featured in the <strong style={{ color: 'var(--text-primary)' }}>Discover</strong> Featured section.</span>
+                            <span>Ratings are anonymous. Portals with consistently high ratings get featured in the <strong style={{ color: 'var(--text-primary)' }}>Discover</strong> Featured section.</span>
                         </div>
                     </div>
                 )}

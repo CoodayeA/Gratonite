@@ -319,16 +319,16 @@ const SettingsPrivacyTab = ({ userProfile, onNavigateTab }: Props) => {
         <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
           <PrivacyToggle label="Filter message requests" description="Automatically filter DMs from people you don't know into Message Requests. Suspected spam will be moved to a separate Spam folder." storageKey="privacy-filter-message-requests" defaultValue={true} />
           <div style={{ height: '1px', background: 'var(--stroke)' }} />
-          <PrivacyToggle label="Allow DMs from server members" description="Allow direct messages from people in your shared servers. When disabled, only friends can DM you directly." storageKey="privacy-allow-server-dms" defaultValue={true} />
+          <PrivacyToggle label="Allow DMs from portal members" description="Allow direct messages from people in your shared portals. When disabled, only friends can DM you directly." storageKey="privacy-allow-server-dms" defaultValue={true} />
           <div style={{ height: '1px', background: 'var(--stroke)' }} />
-          <PrivacyToggle label="Allow DMs from everyone" description="When enabled, anyone on Gratonite can send you a direct message. When disabled, only friends and server members (if allowed above) can message you." storageKey="privacy-allow-all-dms" defaultValue={false} />
+          <PrivacyToggle label="Allow DMs from everyone" description="When enabled, anyone on Gratonite can send you a direct message. When disabled, only friends and portal members (if allowed above) can message you." storageKey="privacy-allow-all-dms" defaultValue={false} />
         </div>
       </div>
 
       <div style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Server Privacy Defaults</h3>
+        <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Portal Privacy Defaults</h3>
         <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden' }}>
-          <PrivacyToggle label="Allow DMs from new server members" description="When you join a new server, allow members of that server to send you direct messages. You can override this per-server in server settings." storageKey="privacy-new-server-dms" defaultValue={true} />
+          <PrivacyToggle label="Allow DMs from new portal members" description="When you join a new portal, allow members of that portal to send you direct messages. You can override this per-portal in portal settings." storageKey="privacy-new-server-dms" defaultValue={true} />
         </div>
       </div>
 

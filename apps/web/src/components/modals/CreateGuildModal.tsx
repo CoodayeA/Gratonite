@@ -382,7 +382,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                 {/* ── Step 1: Template picker ── */}
                 {step === 'template' && (
                     <>
-                        <h2 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>Create a Server</h2>
+                        <h2 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>Create a Portal</h2>
                         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', textAlign: 'center' }}>
                             Pick a template or start blank. You can always customize everything after.
                         </p>
@@ -424,7 +424,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                                 className="hover-border-accent-only"
                             >
                                 <Plus size={20} style={{ color: 'var(--text-muted)' }} />
-                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Blank Server</span>
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Blank Portal</span>
                             </div>
 
                             {/* Use a Template Code */}

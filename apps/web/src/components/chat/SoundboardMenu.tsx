@@ -283,7 +283,7 @@ const SoundboardMenu = ({ isOpen, onPlaySound }: SoundboardMenuProps) => {
         }}>
             <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-tertiary)' }}>
                 <Volume2 size={16} color="var(--accent-primary)" />
-                <span style={{ fontWeight: 600, fontSize: '14px' }}>Guild Soundboard</span>
+                <span style={{ fontWeight: 600, fontSize: '14px' }}>Portal Soundboard</span>
             </div>
 
             <div style={{ padding: '16px', overflowY: 'auto', maxHeight: '300px' }}>

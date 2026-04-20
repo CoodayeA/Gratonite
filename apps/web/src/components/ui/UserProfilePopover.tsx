@@ -461,7 +461,7 @@ const UserProfilePopover = ({
                     {mutuals && mutuals.mutualServers.length > 0 && (
                         <div style={{ marginBottom: '8px' }}>
                             <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '6px', letterSpacing: '0.05em' }}>
-                                Mutual Servers — {mutuals.mutualServers.length}
+                                Mutual Portals — {mutuals.mutualServers.length}
                             </div>
                             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                                 {mutuals.mutualServers.slice(0, 8).map(s => (

@@ -79,7 +79,7 @@ export default function FederationAdmin() {
     { key: 'instances', label: 'Instances', icon: Server, count: instances.length },
     { key: 'verification', label: 'Verification', icon: BadgeCheck, count: verificationRequests.filter(r => r.status === 'pending').length },
     { key: 'reports', label: 'Reports', icon: Flag, count: reports.filter(r => r.status === 'pending').length },
-    { key: 'discover', label: 'Remote Guilds', icon: Globe, count: remoteGuilds.length },
+    { key: 'discover', label: 'Remote Portals', icon: Globe, count: remoteGuilds.length },
     { key: 'queue', label: 'Activity', icon: Activity },
     { key: 'relays', label: 'Relays', icon: Wifi },
     { key: 'blocks', label: 'Blocks', icon: Ban, count: blocks.length },
@@ -122,7 +122,7 @@ export default function FederationAdmin() {
               { label: 'Instances', value: stats.instances?.total ?? 0, sub: `${stats.instances?.active ?? 0} active`, color: '#6366f1' },
               { label: 'Pending', value: stats.activities?.pending ?? 0, sub: 'activities', color: '#f59e0b' },
               { label: 'Remote Users', value: stats.remoteUsers ?? 0, sub: 'shadow users', color: '#3b82f6' },
-              { label: 'Remote Guilds', value: stats.remoteGuilds ?? 0, sub: 'in network', color: '#10b981' },
+              { label: 'Remote Portals', value: stats.remoteGuilds ?? 0, sub: 'in network', color: '#10b981' },
             ].map(s => (
               <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.color }} />
@@ -342,7 +342,7 @@ export default function FederationAdmin() {
                 </Card>
               );
             })}
-            {remoteGuilds.length === 0 && <EmptyState icon={Globe} text="No remote guilds" />}
+            {remoteGuilds.length === 0 && <EmptyState icon={Globe} text="No remote portals" />}
           </div>
         )}
 
@@ -416,7 +416,7 @@ export default function FederationAdmin() {
               { icon: Server, label: 'Instances', value: stats.instances?.total ?? 0, sub: `${stats.instances?.active ?? 0} active`, gradient: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15))' },
               { icon: Activity, label: 'Pending Activities', value: stats.activities?.pending ?? 0, sub: 'in queue', gradient: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(249,115,22,0.15))' },
               { icon: Users, label: 'Remote Users', value: stats.remoteUsers ?? 0, sub: 'shadow accounts', gradient: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(6,182,212,0.15))' },
-              { icon: Globe, label: 'Remote Guilds', value: stats.remoteGuilds ?? 0, sub: 'in network', gradient: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(52,211,153,0.15))' },
+              { icon: Globe, label: 'Remote Portals', value: stats.remoteGuilds ?? 0, sub: 'in network', gradient: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(52,211,153,0.15))' },
             ].map(s => (
               <Card key={s.label} style={{ background: s.gradient }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: 'var(--text-muted)' }}>

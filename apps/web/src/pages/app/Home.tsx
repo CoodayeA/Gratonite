@@ -100,7 +100,7 @@ const Home = () => {
         return (
             <div style={{ flex: 1, overflowY: 'auto' }}>
                 <div style={{ padding: '16px' }}>
-                    <h1 style={{ fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: '12px' }}>Servers</h1>
+                    <h1 style={{ fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: '12px' }}>Portals</h1>
 
                     {/* Search */}
                     <div style={{ position: 'relative', marginBottom: '16px' }}>

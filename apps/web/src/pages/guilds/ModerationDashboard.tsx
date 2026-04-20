@@ -495,7 +495,7 @@ export default function ModerationDashboard() {
                             <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px', fontSize: '13px' }}>Loading rules...</div>
                         ) : automodRules.length === 0 ? (
                             <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px', fontSize: '13px' }}>
-                                No automod rules configured. Set them up in Server Settings.
+                                No automod rules configured. Set them up in Portal Settings.
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -555,7 +555,7 @@ export default function ModerationDashboard() {
                             Escalation Chain
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                            {(['Guild Mod', 'Instance Admin', 'Federation'] as const).map((level, i, arr) => (
+                            {(['Portal Mod', 'Instance Admin', 'Federation'] as const).map((level, i, arr) => (
                                 <>
                                     <span key={level} style={{
                                         fontSize: '12px', fontWeight: 600, padding: '3px 10px',

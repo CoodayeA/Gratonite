@@ -161,7 +161,7 @@ export const NoCodeBotBuilder = ({ guildId, channels, roles, onSave }: Props) =>
         <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
           <Zap size={32} style={{ opacity: 0.5, marginBottom: '8px' }} />
           <p style={{ fontSize: '14px' }}>Role reactions are configured via the Reaction Roles tab.</p>
-          <p style={{ fontSize: '12px', marginTop: '4px' }}>Go to Server Settings &gt; Reaction Roles to set up role assignment on reactions.</p>
+          <p style={{ fontSize: '12px', marginTop: '4px' }}>Go to Portal Settings &gt; Reaction Roles to set up role assignment on reactions.</p>
         </div>
       )}
 

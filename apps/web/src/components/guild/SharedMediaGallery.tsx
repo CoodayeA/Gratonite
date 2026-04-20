@@ -69,7 +69,7 @@ export const SharedMediaGallery = ({ guildId, onClose }: Props) => {
         border: '1px solid var(--stroke)', overflow: 'hidden', display: 'flex', flexDirection: 'column',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid var(--stroke)' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 600 }}>Server Media Gallery</h2>
+          <h2 style={{ fontSize: '18px', fontWeight: 600 }}>Portal Media Gallery</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} aria-label="Close"><X size={20} /></button>
         </div>
 

@@ -1402,7 +1402,7 @@ const SettingsModal = ({
 
                                         {/* Per-Server Profile Overrides */}
                                         <div>
-                                            <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '4px' }}>Per-Server Profiles</h3>
+                                            <h3 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '4px' }}>Per-Portal Profiles</h3>
                                             <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>Customize your display name, avatar, bio, and nickname per server. Overrides your global defaults.</p>
 
                                             {joinedGuilds.map(server => (
@@ -1428,7 +1428,7 @@ const SettingsModal = ({
                                                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                                             <input
                                                                 className="auth-input"
-                                                                placeholder="Server Display Name"
+                                                                placeholder="Portal Display Name"
                                                                 style={{ flex: 1, minWidth: '100px', padding: '6px 10px', fontSize: '12px', height: 'auto' }}
                                                                 maxLength={64}
                                                                 value={serverProfileDrafts[server.id]?.displayName ?? ''}
@@ -1437,7 +1437,7 @@ const SettingsModal = ({
                                                         </div>
                                                         <textarea
                                                             className="auth-input"
-                                                            placeholder="Server Bio (optional)"
+                                                            placeholder="Portal Bio (optional)"
                                                             maxLength={190}
                                                             rows={2}
                                                             style={{ width: '100%', padding: '6px 10px', fontSize: '12px', resize: 'vertical', minHeight: '36px' }}
@@ -1498,7 +1498,7 @@ const SettingsModal = ({
                                                 <div style={{ marginTop: '8px', padding: '12px 14px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-primary)', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                                                     <Info size={16} color="var(--accent-primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
                                                     <div>
-                                                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Per-Server Profiles</div>
+                                                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Per-Portal Profiles</div>
                                                         <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5', margin: 0 }}>Each server you join will appear here, letting you set a unique display name, bio, and nickname that only applies in that server. Other members will see your server-specific profile instead of your global one.</p>
                                                     </div>
                                                 </div>

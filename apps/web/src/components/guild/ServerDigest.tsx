@@ -212,7 +212,7 @@ export function ServerDigest({ digest }: ServerDigestProps) {
       <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* Server Stats */}
         <section>
-          <SectionHeader icon={<TrendingUp size={16} />} title="Server Stats" />
+          <SectionHeader icon={<TrendingUp size={16} />} title="Portal Stats" />
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <StatCard
               label="Messages"

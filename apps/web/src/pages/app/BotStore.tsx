@@ -274,7 +274,7 @@ const BotStore = () => {
           </div>
 
           <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '10px' }}>Install to guild</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '10px' }}>Install to portal</div>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               <select
                 value={selectedGuildId}
@@ -283,7 +283,7 @@ const BotStore = () => {
                 style={{ minWidth: '260px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', padding: '10px 12px', fontSize: '14px' }}
               >
                 {myGuilds.length === 0 ? (
-                  <option value="">No guilds available</option>
+                  <option value="">No portals available</option>
                 ) : (
                   myGuilds.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)
                 )}
@@ -375,7 +375,7 @@ const BotStore = () => {
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '48px 24px', width: '100%' }}>
         <div style={{ marginBottom: '40px' }}>
           <h1 style={{ fontSize: '32px', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: '8px' }}>Bot Store</h1>
-          <p style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>Discover and install bots to supercharge your server.</p>
+          <p style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>Discover and install bots to supercharge your portal.</p>
         </div>
 
         <div style={{ display: 'flex', gap: '12px', marginBottom: '32px', flexWrap: 'wrap' }}>

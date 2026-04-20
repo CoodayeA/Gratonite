@@ -4058,8 +4058,8 @@ export const AppLayout = () => {
         const MODAL_LABELS: Record<string, string> = {
             settings: 'Settings',
             userProfile: 'User Profile',
-            createGuild: 'Create Server',
-            guildSettings: 'Server Settings',
+            createGuild: 'Create Portal',
+            guildSettings: 'Portal Settings',
             memberOptions: 'Member Options',
             invite: 'Invite',
             globalSearch: 'Search',
@@ -4091,7 +4091,7 @@ export const AppLayout = () => {
                     onClick={() => { setIsGuildRailOpen(false); setIsSidebarOpen(false); }}
                 />
 
-                <ErrorBoundary fallback={<div style={{ width: 72, background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 11, textAlign: 'center', padding: 8 }}>Server list unavailable.<br/><button onClick={() => window.location.reload()} style={{ marginTop: 8, background: 'var(--accent-primary)', border: 'none', borderRadius: 6, padding: '4px 12px', color: '#000', fontWeight: 600, fontSize: 11, cursor: 'pointer' }}>Reload</button></div>}>
+                <ErrorBoundary fallback={<div style={{ width: 72, background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 11, textAlign: 'center', padding: 8 }}>Portal list unavailable.<br/><button onClick={() => window.location.reload()} style={{ marginTop: 8, background: 'var(--accent-primary)', border: 'none', borderRadius: 6, padding: '4px 12px', color: '#000', fontWeight: 600, fontSize: 11, cursor: 'pointer' }}>Reload</button></div>}>
                 <GuildRail
                     isOpen={isGuildRailOpen}
                     onOpenCreateGuild={() => setActiveModal('createGuild')}
@@ -4293,7 +4293,7 @@ export const AppLayout = () => {
                     <div style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', maxWidth: '520px', width: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                         <div style={{ padding: '24px 24px 0', textAlign: 'center' }}>
                             <ShieldAlert size={36} style={{ color: 'var(--accent-primary)', marginBottom: '12px' }} />
-                            <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px', fontFamily: 'var(--font-display)' }}>Server Rules</h2>
+                            <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px', fontFamily: 'var(--font-display)' }}>Portal Rules</h2>
                             <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 16px' }}>Please read and accept the rules for <strong>{guildInfo.name}</strong> before participating.</p>
                         </div>
                         <div style={{ padding: '0 24px', flex: 1, overflow: 'auto' }}>
