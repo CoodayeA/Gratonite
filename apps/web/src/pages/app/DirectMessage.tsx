@@ -319,6 +319,15 @@ const DirectMessage = () => {
         if (showPinnedPanel) loadPinnedMessages();
     }, [showPinnedPanel, loadPinnedMessages]);
 
+    // Search state — must be declared before the callbacks below that close over them
+    const [showSearchBar, setShowSearchBar] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<Array<{ id: string }>>([]);
+    const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
+    const [isSearching, setIsSearching] = useState(false);
+    const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
     const performDmSearch = useCallback((query: string) => {
         if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
         if (!query.trim() || !dmChannelId) {
@@ -440,13 +449,6 @@ const DirectMessage = () => {
     // Reaction state
     const [hoveredMessageId, setHoveredMessageId] = useState<number | null>(null);
     const [highlightedMsgId, setHighlightedMsgId] = useState<number | null>(null);
-    const [showSearchBar, setShowSearchBar] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState<Array<{ id: string }>>([]);
-    const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
-    const [isSearching, setIsSearching] = useState(false);
-    const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const searchInputRef = useRef<HTMLInputElement>(null);
     const [reactionPickerMessageId, setReactionPickerMessageId] = useState<number | null>(null);
     const reactionPickerRef = useRef<HTMLDivElement>(null);
     const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
