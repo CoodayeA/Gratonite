@@ -201,7 +201,7 @@ export default function PublicGuildStats() {
         <StatCard icon={<MessageSquare size={18} />} value={data.messagesThisWeek} label="Messages This Week" color="#eb459e" />
         <StatCard icon={<Hash size={18} />} value={data.channelsCount} label="Channels" color="#ed4245" />
         <StatCard icon={<Zap size={18} />} value={data.boostCount} label={`Boosts (Tier ${data.boostTier})`} color="#f47fff" />
-        <StatCard icon={<Calendar size={18} />} value={`${guildAge}d`} label="Server Age" color="#5865f2" />
+        <StatCard icon={<Calendar size={18} />} value={`${guildAge}d`} label="Portal Age" color="#5865f2" />
       </div>
 
       {/* Activity Chart */}

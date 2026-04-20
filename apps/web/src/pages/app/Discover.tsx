@@ -834,11 +834,11 @@ const Discover = () => {
                 )}
             </div>
 
-            {/* Self-Hosted Servers from federated instances */}
+            {/* Self-Hosted Portals from federated instances */}
             {federatedPortals.length > 0 && (
                 <div style={{ marginBottom: '28px' }}>
                     <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
-                        <Globe size={18} color="var(--accent-primary)" /> Self-Hosted Servers
+                        <Globe size={18} color="var(--accent-primary)" /> Self-Hosted Portals
                     </h2>
                     <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
                         Communities running on independent Gratonite instances

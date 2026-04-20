@@ -146,7 +146,7 @@ const GuildWelcomeModal = ({
         >
             <div
                 role="dialog" aria-modal="true"
-                aria-label="Welcome to server"
+                aria-label="Welcome to portal"
                 onClick={e => e.stopPropagation()}
                 style={{
                     width: 'min(480px, 95vw)',

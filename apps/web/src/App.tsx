@@ -410,7 +410,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
     }, [guilds]);
 
     return (
-        <nav ref={railRef} className={`guild-rail glass-panel ${isOpen ? 'open' : ''}`} aria-label="Server navigation" onKeyDown={(e) => {
+        <nav ref={railRef} className={`guild-rail glass-panel ${isOpen ? 'open' : ''}`} aria-label="Portal navigation" onKeyDown={(e) => {
             if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
             e.preventDefault();
             const nav = e.currentTarget;
@@ -534,7 +534,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
             })}
 
             <Tooltip content="Create Portal" position="right">
-                <div className="guild-icon" role="button" aria-label="Create guild" tabIndex={0} onClick={onOpenCreateGuild} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenCreateGuild(); } }} style={{ background: 'transparent', border: '1px dashed var(--stroke-light)', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <div className="guild-icon" role="button" aria-label="Create portal" tabIndex={0} onClick={onOpenCreateGuild} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenCreateGuild(); } }} style={{ background: 'transparent', border: '1px dashed var(--stroke-light)', color: 'var(--text-muted)', cursor: 'pointer' }}>
                     <Plus size={24} />
                 </div>
             </Tooltip>

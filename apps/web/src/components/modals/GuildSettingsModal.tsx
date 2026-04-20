@@ -4062,7 +4062,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 <textarea
                                     value={rulesText}
                                     onChange={e => setRulesText(e.target.value)}
-                                    placeholder="Enter your server rules here. One rule per line recommended."
+                                    placeholder="Enter your portal rules here. One rule per line recommended."
                                     rows={10}
                                     style={{ width: '100%', padding: '12px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box' as const, lineHeight: '1.6' }}
                                 />

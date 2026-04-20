@@ -107,7 +107,7 @@ const Home = () => {
                         <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                         <input
                             type="text"
-                            placeholder="Search servers..."
+                            placeholder="Search portals..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             style={{
@@ -176,8 +176,8 @@ const Home = () => {
                         searchQuery ? (
                             <EmptyState
                                 type="search"
-                                title="No servers match your search"
-                                description="Try a different search term to find your server."
+                                title="No portals match your search"
+                                description="Try a different search term to find your portal."
                             />
                         ) : (
                             <div style={{
@@ -475,13 +475,13 @@ const Home = () => {
                         </div>
                     </div>
 
-                    <div className="action-card hover-lift" role="button" tabIndex={0} aria-label="FAME Dashboard — Give FAME, view leaderboards, and rate servers" onClick={() => navigate('/fame')} onKeyDown={(e) => handleCardKeyDown(e, () => navigate('/fame'))} style={{ cursor: 'pointer', gridColumn: 'span 2', background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.04))', border: '1px solid rgba(245,158,11,0.2)' }}>
+                    <div className="action-card hover-lift" role="button" tabIndex={0} aria-label="FAME Dashboard — Give FAME, view leaderboards, and rate portals" onClick={() => navigate('/fame')} onKeyDown={(e) => handleCardKeyDown(e, () => navigate('/fame'))} style={{ cursor: 'pointer', gridColumn: 'span 2', background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.04))', border: '1px solid rgba(245,158,11,0.2)' }}>
                         <div className="action-card-icon" style={{ background: 'linear-gradient(135deg, var(--warning), #d97706)' }} aria-hidden="true">
                             <Star size={24} color="#111" fill="#111" />
                         </div>
                         <div className="action-card-text">
                             <div className="action-title" style={{ color: 'var(--warning)' }}>FAME Dashboard</div>
-                            <div className="action-subtext">Give FAME, view leaderboards, and rate servers · You have 5 FAME tokens to give today</div>
+                            <div className="action-subtext">Give FAME, view leaderboards, and rate portals · You have 5 FAME tokens to give today</div>
                         </div>
                     </div>
 

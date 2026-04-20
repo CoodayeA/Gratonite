@@ -157,7 +157,7 @@ export default function WelcomeScreenBuilder({ guildId, channels = [] }: Props) 
           value={description}
           onChange={e => setDescription(e.target.value)}
           maxLength={500}
-          placeholder="Tell new members what your server is about..."
+          placeholder="Tell new members what your portal is about..."
           rows={2}
           style={{
             width: '100%', padding: '8px 12px', borderRadius: '8px',
