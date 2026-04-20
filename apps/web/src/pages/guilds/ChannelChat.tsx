@@ -2442,6 +2442,13 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
         setRoomVelocity(prev => Math.min(10, prev + 2));
         setHasDraft(false);
         if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+        if (channelId) {
+            try { localStorage.removeItem(`gratonite:draft:${channelId}`); } catch { /* ignore */ }
+            fetch(`${API_BASE}/channels/${channelId}/draft`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
+            }).catch(() => {});
+        }
     };
 
     // Retry a failed optimistic message
@@ -4692,6 +4699,13 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                 setScheduleTime('');
                                 setHasDraft(false);
                                 if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+                                if (channelId) {
+                                    try { localStorage.removeItem(`gratonite:draft:${channelId}`); } catch { /* ignore */ }
+                                    fetch(`${API_BASE}/channels/${channelId}/draft`, {
+                                        method: 'DELETE',
+                                        headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
+                                    }).catch(() => {});
+                                }
                             }}>
                                 Schedule Message
                             </button>
