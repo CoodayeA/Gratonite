@@ -455,7 +455,7 @@ export default function GuildSettingsScreen({ route, navigation }: Props) {
         ) : (
           <View style={styles.actionRow}>
             <Ionicons name="lock-closed-outline" size={22} color={colors.textMuted} />
-            <Text style={styles.actionText}>You need Administrator or Manage Server permission to access these settings.</Text>
+            <Text style={styles.actionText}>You need Administrator or Manage Portal permission to access these settings.</Text>
           </View>
         )}
       </View>

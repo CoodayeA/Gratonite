@@ -261,7 +261,7 @@ const WikiChannel = () => {
                 <div style={{ padding: '24px 16px', borderBottom: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <h2 style={{ fontSize: '18px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <FileText size={20} color="var(--accent-primary)" />
-                        Guild Wiki
+                        Portal Wiki
                     </h2>
                     <button onClick={() => setShowNewPageForm(prev => !prev)} style={{ background: 'transparent', border: 'none', color: showNewPageForm ? 'var(--accent-primary)' : 'var(--text-muted)', cursor: 'pointer' }}>
                         {showNewPageForm ? <X size={18} /> : <Plus size={18} />}
@@ -627,7 +627,7 @@ const WikiChannel = () => {
                                             {currentSettings.visible ? <Eye size={16} color="var(--text-muted)" /> : <EyeOff size={16} color="var(--text-muted)" />}
                                             <div>
                                                 <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Visible to Members</div>
-                                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Show this page to all guild members</div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Show this page to all portal members</div>
                                             </div>
                                         </div>
                                         <button

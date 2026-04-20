@@ -513,7 +513,7 @@ function CustomDrawerContent(
                 })
             }
             style={s.headerBtn}
-            accessibilityLabel="Server settings"
+            accessibilityLabel="Portal settings"
           >
             <Ionicons name="settings-outline" size={20} color={colors.textPrimary} />
           </TouchableOpacity>
