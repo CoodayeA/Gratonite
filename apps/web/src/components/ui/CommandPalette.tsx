@@ -183,7 +183,7 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
         items.push({
             id: 'nav-discover',
             label: 'Discover',
-            description: 'Explore servers',
+            description: 'Explore portals',
             icon: <Globe size={18} />,
             action: wrapAction('nav-discover', () => { navigate('/discover'); onClose(); }),
             category: 'Navigation',
@@ -215,7 +215,7 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
                 description: guild.description || `${guild.memberCount} members`,
                 icon: <Users size={18} />,
                 action: wrapAction(`guild-${guild.id}`, () => { navigate(targetPath); onClose(); }),
-                category: 'Servers',
+                category: 'Portals',
                 keywords: [guild.name.toLowerCase()],
             });
         }
