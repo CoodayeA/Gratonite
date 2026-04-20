@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import JSZip from 'jszip';
 import {
     Send, Smile, Image as ImageIcon, Reply, X, Plus, Mic, BarChart2, Clock,
-    Edit2, Eye, Volume2, Square, Trash2, Hash, FileText, Scissors
+    Edit2, Eye, Volume2, Square, Trash2, Hash, FileText, Scissors, FolderArchive, Upload
 } from 'lucide-react';
 import Avatar from '../ui/Avatar';
 import EmojiPicker from './EmojiPicker';
@@ -240,6 +241,21 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
     const [editingFileIndex, setEditingFileIndex] = useState<number | null>(null);
     const [editingFileType, setEditingFileType] = useState<'image' | 'video' | null>(null);
+    const [plusMenuOpen, setPlusMenuOpen] = useState(false);
+    const [compressing, setCompressing] = useState(false);
+    const plusMenuRef = useRef<HTMLDivElement>(null);
+    const folderInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (!plusMenuOpen) return;
+        const handler = (e: MouseEvent) => {
+            if (plusMenuRef.current && !plusMenuRef.current.contains(e.target as Node)) {
+                setPlusMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [plusMenuOpen]);
     const [sentAnnouncement, setSentAnnouncement] = useState('');
     const handleSendWithAnnounce = useCallback(() => {
         handleSendMessage();
@@ -605,10 +621,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
                         <input id="channel-file-upload" type="file" multiple style={{ display: 'none' }} onChange={(e) => {
                             const files = e.target.files;
                             if (!files) return;
-                            const MAX_FILE_SIZE = 50 * 1024 * 1024;
+                            const MAX_FILE_SIZE = 25 * 1024 * 1024;
                             const newFiles = Array.from(files).filter(f => {
                                 if (f.size > MAX_FILE_SIZE) {
-                                    addToast({ title: `${f.name} is too large (max 50MB)`, variant: 'error' });
+                                    addToast({ title: `${f.name} is too large (max 25MB)`, variant: 'error' });
                                     return false;
                                 }
                                 return true;
@@ -621,9 +637,69 @@ const MessageInput: React.FC<MessageInputProps> = ({
                             setChatAttachedFiles(prev => [...prev, ...newFiles]);
                             e.target.value = '';
                         }} />
-                        <label htmlFor={channelAttachmentsEnabled ? "channel-file-upload" : undefined} className="input-icon-btn" title={channelAttachmentsEnabled ? "Upload Attachment" : "Attachments disabled in this channel"} aria-label="Upload attachment" role="button" style={channelAttachmentsEnabled ? { cursor: 'pointer' } : { opacity: 0.3, cursor: 'not-allowed' }}>
-                            <Plus size={20} />
-                        </label>
+                        <input ref={folderInputRef} type="file" style={{ display: 'none' }} onChange={async (e) => {
+                            const files = e.target.files;
+                            if (!files || files.length === 0) return;
+                            const folderName = files[0].webkitRelativePath.split('/')[0] || 'folder';
+                            setCompressing(true);
+                            setPlusMenuOpen(false);
+                            try {
+                                const zip = new JSZip();
+                                Array.from(files).forEach(f => zip.file(f.webkitRelativePath, f));
+                                const blob = await zip.generateAsync({ type: 'blob' });
+                                const MAX_FILE_SIZE = 25 * 1024 * 1024;
+                                if (blob.size > MAX_FILE_SIZE) {
+                                    addToast({ title: `Folder is too large to compress (max 25MB)`, variant: 'error' });
+                                    return;
+                                }
+                                const zipFile = new File([blob], `${folderName}.zip`, { type: 'application/zip' });
+                                const sizeStr = zipFile.size < 1024 ? `${zipFile.size} B` : zipFile.size < 1048576 ? `${(zipFile.size / 1024).toFixed(1)} KB` : `${(zipFile.size / 1048576).toFixed(1)} MB`;
+                                setChatAttachedFiles(prev => [...prev, { name: zipFile.name, size: sizeStr, file: zipFile }]);
+                            } catch {
+                                addToast({ title: 'Failed to compress folder', variant: 'error' });
+                            } finally {
+                                setCompressing(false);
+                                e.target.value = '';
+                            }
+                        }} {...{ webkitdirectory: '' } as React.InputHTMLAttributes<HTMLInputElement>} />
+                        <div ref={plusMenuRef} style={{ position: 'relative' }}>
+                            <button
+                                className="input-icon-btn"
+                                title={channelAttachmentsEnabled ? 'Attach' : 'Attachments disabled in this channel'}
+                                aria-label="Attach files"
+                                disabled={!channelAttachmentsEnabled || compressing}
+                                style={channelAttachmentsEnabled ? { cursor: 'pointer' } : { opacity: 0.3, cursor: 'not-allowed' }}
+                                onClick={() => channelAttachmentsEnabled && setPlusMenuOpen(v => !v)}
+                            >
+                                {compressing ? <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Zipping…</span> : <Plus size={20} />}
+                            </button>
+                            {plusMenuOpen && (
+                                <div style={{
+                                    position: 'absolute', bottom: 'calc(100% + 6px)', left: 0,
+                                    background: 'var(--bg-secondary)', border: '1px solid var(--stroke)',
+                                    borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                                    minWidth: '180px', zIndex: 200, overflow: 'hidden',
+                                }}>
+                                    <label htmlFor="channel-file-upload" style={{
+                                        display: 'flex', alignItems: 'center', gap: '10px',
+                                        padding: '10px 14px', cursor: 'pointer', fontSize: '14px',
+                                        color: 'var(--text-primary)',
+                                    }} onClick={() => setPlusMenuOpen(false)}>
+                                        <Upload size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                        Upload Files
+                                    </label>
+                                    <button style={{
+                                        display: 'flex', alignItems: 'center', gap: '10px',
+                                        width: '100%', padding: '10px 14px', border: 'none', background: 'none',
+                                        cursor: 'pointer', fontSize: '14px', color: 'var(--text-primary)', textAlign: 'left',
+                                        borderTop: '1px solid var(--stroke)',
+                                    }} onClick={() => { setPlusMenuOpen(false); folderInputRef.current?.click(); }}>
+                                        <FolderArchive size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                        Upload Folder as Zip
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         {hasDraft && !editingMessage && (
                             <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 15%, transparent)', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0 }}>Draft</span>
                         )}
