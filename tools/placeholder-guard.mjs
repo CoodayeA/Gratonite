@@ -82,7 +82,10 @@ async function walk(dir, files = []) {
       continue;
     }
     const ext = path.extname(entry.name).toLowerCase();
-    if (scanExtensions.has(ext)) files.push(full);
+    if (!scanExtensions.has(ext)) continue;
+    const filename = entry.name.toLowerCase();
+    if (['.test.', '.spec.', '.story.', '.stories.', '.mock.'].some((pattern) => filename.includes(pattern))) continue;
+    files.push(full);
   }
   return files;
 }

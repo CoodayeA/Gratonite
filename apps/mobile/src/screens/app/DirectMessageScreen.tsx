@@ -656,10 +656,10 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
     try {
       const filename = asset.fileName ?? asset.uri.split('/').pop() ?? 'upload.jpg';
       const mimeType = asset.mimeType || 'image/jpeg';
-      const fileResp = await fetch(asset.uri);
-      const fileBuffer = await fileResp.arrayBuffer();
 
       if (e2eKey) {
+        const fileResp = await fetch(asset.uri);
+        const fileBuffer = await fileResp.arrayBuffer();
         const { encryptedBuffer, encryptedFilename, iv } = await encryptFile(e2eKey, fileBuffer, filename);
         const formData = new FormData();
         const blob = new Blob([encryptedBuffer], { type: 'application/octet-stream' });
@@ -697,7 +697,10 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
           type: mimeType,
         } as any);
         const uploadRes = await filesApi.upload(formData);
-        const msg = await messagesApi.send(channelId, uploadRes.url);
+        const msg = await messagesApi.send(channelId, {
+          content: null,
+          attachmentIds: [uploadRes.id],
+        });
         setMessageList((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;
           return [...prev, msg];
@@ -939,7 +942,8 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
       flexDirection: 'row',
       alignItems: 'flex-end',
       paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
+      paddingTop: spacing.sm,
+      paddingBottom: Platform.OS === 'android' ? spacing.sm + insets.bottom : spacing.sm,
       gap: spacing.sm,
       ...(glass ? {
         backgroundColor: glass.glassBackground,
@@ -956,13 +960,12 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
       }),
     },
     attachButton: {
-      width: 40,
-      height: 40,
-      borderRadius: neo ? 0 : 20,
+      width: 48,
+      height: 48,
+      borderRadius: neo ? 0 : 24,
       backgroundColor: glass ? glass.glassBackground : colors.bgElevated,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 4,
       ...(neo ? { borderWidth: neo.borderWidth, borderColor: colors.border } : {}),
       ...(glass ? { borderWidth: 1, borderColor: glass.glassBorder } : {}),
     },
@@ -972,6 +975,7 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
       borderRadius: neo ? 0 : borderRadius.lg,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
+      minHeight: 48,
       fontSize: fontSize.md,
       color: colors.textPrimary,
       maxHeight: 120,
@@ -979,9 +983,9 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
       ...(glass ? { borderWidth: 1, borderColor: glass.glassBorder } : {}),
     },
     sendButton: {
-      width: 40,
-      height: 40,
-      borderRadius: neo ? 0 : 20,
+      width: 48,
+      height: 48,
+      borderRadius: neo ? 0 : 24,
       backgroundColor: colors.accentPrimary,
       justifyContent: 'center',
       alignItems: 'center',
@@ -1028,7 +1032,7 @@ export default function DirectMessageScreen({ route, navigation }: Props) {
     emojiPickerText: {
       fontSize: fontSize.xl,
     },
-  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass, insets.bottom]);
 
   // --- Render ---
 

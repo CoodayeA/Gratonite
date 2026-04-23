@@ -10,8 +10,12 @@
     "audit:e2e": "node tools/audit-e2e-primitives.mjs"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "@sentry/cli"],
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "@sentry/cli"
+    ],
     "overrides": {
+      "gratonite-mobile>@types/react": "19.2.10",
       "@types/react": "18.3.28",
       "@types/react-dom": "18.3.7",
       "markdown-it@<12.3.2": ">=12.3.2",
@@ -43,7 +47,7 @@
       "picomatch@>=4.0.0 <4.0.4": ">=4.0.4",
       "yaml@>=2.0.0 <2.8.3": ">=2.8.3",
       "path-to-regexp@>=8.0.0 <8.4.0": ">=8.4.0",
-      "@xmldom/xmldom@<0.8.12": ">=0.8.12",
+      "@xmldom/xmldom": "0.8.12",
       "lodash-es@>=4.0.0 <=4.17.23": ">=4.18.0",
       "lodash@>=4.0.0 <=4.17.23": ">=4.18.0",
       "lodash-es@<=4.17.23": ">=4.18.0",
@@ -51,5 +55,9 @@
       "electron@<38.8.6": ">=38.8.6",
       "electron@<39.8.1": ">=39.8.1"
     }
+  },
+  "devDependencies": {
+    "@types/react": "18.3.28",
+    "@types/react-dom": "18.3.7"
   }
 }
