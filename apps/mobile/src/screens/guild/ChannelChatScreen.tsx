@@ -288,7 +288,8 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       flexDirection: 'row',
       alignItems: 'flex-end',
       paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
+      paddingTop: spacing.sm,
+      paddingBottom: Platform.OS === 'android' ? spacing.sm + insets.bottom : spacing.sm,
       gap: spacing.sm,
       ...(glass ? {
         backgroundColor: glass.glassBackground,
@@ -308,13 +309,12 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       }),
     },
     attachButton: {
-      width: 40,
-      height: 40,
-      borderRadius: neo ? 0 : 20,
+      width: 48,
+      height: 48,
+      borderRadius: neo ? 0 : 24,
       backgroundColor: glass ? glass.glassBackground : colors.bgElevated,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 4,
       ...(neo ? {
         borderWidth: neo.borderWidth,
         borderColor: colors.border,
@@ -330,6 +330,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       borderRadius: neo ? 0 : borderRadius.lg,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
+      minHeight: 48,
       fontSize: fontSize.md,
       color: colors.textPrimary,
       maxHeight: 120,
@@ -343,9 +344,9 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       } : {}),
     },
     sendButton: {
-      width: 40,
-      height: 40,
-      borderRadius: neo ? 0 : 20,
+      width: 48,
+      height: 48,
+      borderRadius: neo ? 0 : 24,
       backgroundColor: colors.accentPrimary,
       justifyContent: 'center',
       alignItems: 'center',
@@ -441,7 +442,7 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       fontSize: fontSize.md,
       fontWeight: '500' as const,
     },
-  }), [colors, spacing, fontSize, borderRadius, neo, glass]);
+  }), [colors, spacing, fontSize, borderRadius, neo, glass, insets.bottom]);
 
   // Set header with pin and member list buttons
   useEffect(() => {
@@ -1025,10 +1026,10 @@ export default function ChannelChatScreen({ route, navigation }: Props) {
       }
       const filename = asset.fileName ?? asset.uri.split('/').pop() ?? 'upload.jpg';
       const mimeType = asset.mimeType || 'image/jpeg';
-      const fileResp = await fetch(asset.uri);
-      const fileBuffer = await fileResp.arrayBuffer();
 
       if (channelIsEncrypted && channelE2EKey) {
+        const fileResp = await fetch(asset.uri);
+        const fileBuffer = await fileResp.arrayBuffer();
         const { encryptedBuffer, encryptedFilename, iv } = await encryptFile(channelE2EKey, fileBuffer, filename);
         const formData = new FormData();
         const blob = new Blob([encryptedBuffer], { type: 'application/octet-stream' });

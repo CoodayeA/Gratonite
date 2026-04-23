@@ -579,6 +579,12 @@ const DirectMessage = () => {
     const myKeyVersionRef = useRef<number>(1);
     const [showSafetyNumber, setShowSafetyNumber] = useState(false);
     const [safetyNumber, setSafetyNumber] = useState<string | null>(null);
+
+    useEffect(() => {
+        setInfoPanelOpen(false);
+        setMemberPanelOpen(false);
+        setShowSafetyNumber(false);
+    }, [id]);
     // Map of attachmentId -> decrypted blob URL + metadata (for E2E-encrypted files)
     const [decryptedFileUrls, setDecryptedFileUrls] = useState<Map<string, { url: string; filename: string; mimeType: string }>>(new Map());
     const decryptInFlightRef = useRef(new Set<string>());

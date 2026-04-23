@@ -1276,18 +1276,18 @@ export const bookmarks = {
 
 export const drafts = {
   get(channelId: string) {
-    return apiFetch<Draft | null>(`/drafts/${channelId}`);
+    return apiFetch<Draft | null>(`/channels/${channelId}/draft`);
   },
 
   save(channelId: string, content: string) {
-    return apiFetch<Draft>('/drafts', {
+    return apiFetch<Draft>(`/channels/${channelId}/draft`, {
       method: 'PUT',
-      body: JSON.stringify({ channelId, content }),
+      body: JSON.stringify({ content }),
     });
   },
 
   delete(channelId: string) {
-    return apiFetch<void>(`/drafts/${channelId}`, { method: 'DELETE' });
+    return apiFetch<void>(`/channels/${channelId}/draft`, { method: 'DELETE' });
   },
 };
 
