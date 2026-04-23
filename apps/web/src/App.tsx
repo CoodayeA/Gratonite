@@ -4662,17 +4662,34 @@ const LazyFallback = () => (
 // Wrapper components that key on URL params so React fully remounts the page
 // component when navigating between different DMs or channels, preventing the
 // URL-changes-but-content-stays-stale bug.
+function DmRouteInner() {
+    const { id } = useParams<{ id: string }>();
+    return <ErrorBoundary><Suspense fallback={<LazyFallback />}><DirectMessage /></Suspense></ErrorBoundary>;
+}
 function DmRoute() {
     const { id } = useParams<{ id: string }>();
-    return <ErrorBoundary key={id}><Suspense fallback={<LazyFallback />}><DirectMessage /></Suspense></ErrorBoundary>;
+    // Key the entire route wrapper so React remounts on DM change
+    return <DmRouteInner key={id} />;
+}
+
+function ChannelChatRouteInner() {
+    const { guildId, channelId } = useParams<{ guildId: string; channelId: string }>();
+    return <ErrorBoundary><Suspense fallback={<LazyFallback />}><ChannelChat /></Suspense></ErrorBoundary>;
 }
 function ChannelChatRoute() {
     const { guildId, channelId } = useParams<{ guildId: string; channelId: string }>();
-    return <ErrorBoundary key={`${guildId}:${channelId}`}><Suspense fallback={<LazyFallback />}><ChannelChat /></Suspense></ErrorBoundary>;
+    // Key the entire route wrapper so React remounts on channel change
+    return <ChannelChatRouteInner key={`${guildId}:${channelId}`} />;
+}
+
+function GuildOverviewRouteInner() {
+    const { guildId } = useParams<{ guildId: string }>();
+    return <ErrorBoundary><Suspense fallback={<LazyFallback />}><GuildOverview /></Suspense></ErrorBoundary>;
 }
 function GuildOverviewRoute() {
     const { guildId } = useParams<{ guildId: string }>();
-    return <ErrorBoundary key={guildId}><Suspense fallback={<LazyFallback />}><GuildOverview /></Suspense></ErrorBoundary>;
+    // Key the entire route wrapper so React remounts on guild change
+    return <GuildOverviewRouteInner key={guildId} />;
 }
 
 const appRouter = createBrowserRouter(
