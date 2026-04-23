@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { userSettings as settingsApi } from '../../lib/api';
+import { registerForPushNotifications } from '../../lib/notifications';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../lib/theme';
 import SectionHeader from '../../components/SectionHeader';
@@ -89,6 +90,12 @@ export default function SettingsNotificationsScreen(_props: Props) {
     setPushEnabled(value);
     setSaving(true);
     try {
+      if (value) {
+        const token = await registerForPushNotifications();
+        if (!token) {
+          throw new Error('Push notification permission was not granted');
+        }
+      }
       const updated = await settingsApi.update({ pushEnabled: value });
       setSettings(updated);
     } catch (err: any) {

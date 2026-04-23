@@ -282,7 +282,7 @@ export default function ThemePickerScreen({ onComplete }: ThemePickerScreenProps
     },
     subtitle: {
       fontSize: 14,
-      color: '#9898b8',
+      color: '#c9c9df',
       textAlign: 'center',
       marginTop: 6,
       marginBottom: 24,
@@ -317,7 +317,7 @@ export default function ThemePickerScreen({ onComplete }: ThemePickerScreenProps
       letterSpacing: 1,
     },
     switchLater: {
-      color: '#6a6a8e',
+      color: '#a8a8c6',
       fontSize: 12,
       textAlign: 'center',
       marginTop: 12,

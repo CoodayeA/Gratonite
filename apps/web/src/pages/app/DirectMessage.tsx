@@ -822,6 +822,7 @@ const DirectMessage = () => {
 
     const fetchDmMessages = useCallback(async () => {
         if (!dmChannelId) return;
+        setMessages([]); // Clear previous messages immediately to prevent showing stale content
         setIsLoadingMessages(true);
         setMessagesError(false);
         setMessagesErrorDetail(null);

@@ -159,6 +159,7 @@ export const SplitViewButton = ({ onClick }: { onClick: () => void }) => (
 export const SplitViewRightPane = ({
     channelId,
     guildId,
+    outletContext,
 }: {
     channelId: string;
     guildId: string;

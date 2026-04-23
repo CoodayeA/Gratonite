@@ -13,7 +13,7 @@ export function useIsOnline(): boolean {
       cleanupSocketListeners?.();
 
       if (!socket) {
-        setIsConnected(false);
+        setIsConnected(true);
         cleanupSocketListeners = undefined;
         return;
       }

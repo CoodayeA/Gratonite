@@ -16,7 +16,7 @@ import { connectSocket, disconnectSocket } from './src/lib/socket';
 import { refreshAccessToken, getAccessToken } from './src/lib/api';
 import { colors } from './src/lib/theme';
 import { useTheme, themeStore } from './src/lib/themeStore';
-import { registerForPushNotifications, setupNotificationHandlers } from './src/lib/notifications';
+import { setupNotificationHandlers } from './src/lib/notifications';
 import { ToastProvider } from './src/contexts/ToastContext';
 import { VoiceProvider } from './src/contexts/VoiceContext';
 import { appLockStore } from './src/lib/appLockStore';
@@ -63,6 +63,12 @@ function RootNavigator() {
       setOnboardingDone(onboarded === 'true');
     });
   }, []);
+
+  React.useEffect(() => {
+    if (!user || themePickDone !== true || onboardingDone !== true) return;
+
+    return setupNotificationHandlers(navigationRef);
+  }, [user, themePickDone, onboardingDone]);
 
   if (loading || themePickDone === null || onboardingDone === null) {
     return (
@@ -199,12 +205,6 @@ function ThemedApp() {
       }
     });
     return () => sub.remove();
-  }, []);
-
-  React.useEffect(() => {
-    registerForPushNotifications();
-    const cleanup = setupNotificationHandlers(navigationRef);
-    return cleanup;
   }, []);
 
   const linking = {
