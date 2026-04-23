@@ -4283,12 +4283,18 @@ export const AppLayout = () => {
     const isDmRoute = location.pathname.match(/^\/dm\/[^/]+$/);
     const hideBottomNav = isChatRoute || isVoiceRoute || !!isDmRoute;
 
-    // Derive a section key for page transitions — same guild = same key (no animation)
+    // Derive a section key for page transitions
+    // Include channel/voice ID in key so route changes force Outlet remount
     const transitionKey = useMemo(() => {
         const path = location.pathname;
-        const guildMatch = path.match(/^\/guild\/([^/]+)/);
-        if (guildMatch) return `guild-${guildMatch[1]}`;
-        const dmMatch = path.match(/^\/dm\/([^/]+)/);
+        // Guild channels and voice channels - include channel ID for proper remount
+        const guildChannelMatch = path.match(/^\/guild\/([^/]+)\/(?:channel|voice)\/([^/]+)/);
+        if (guildChannelMatch) return `guild-${guildChannelMatch[1]}-${guildChannelMatch[2]}`;
+        // Guild overviews (no channel ID) - same guild = same key (no animation)
+        const guildOnlyMatch = path.match(/^\/guild\/([^/]+)$/);
+        if (guildOnlyMatch) return `guild-${guildOnlyMatch[1]}`;
+        // DM conversations
+        const dmMatch = path.match(/^\/dm\/([^/]+)$/);
         if (dmMatch) return `dm-${dmMatch[1]}`;
         // Top-level sections: /, /friends, /shop, /discover, etc.
         const section = path.split('/')[1] || 'home';
@@ -4449,6 +4455,7 @@ export const AppLayout = () => {
                                     }
                                     rightContent={
                                         <SplitViewRightPane
+                                            key={`split-${splitState.rightGuildId}-${splitState.rightChannelId}`}
                                             channelId={splitState.rightChannelId!}
                                             guildId={splitState.rightGuildId!}
                                             outletContext={outletCtx}
