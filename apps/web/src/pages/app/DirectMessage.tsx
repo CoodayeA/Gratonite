@@ -2543,7 +2543,9 @@ const DirectMessage = () => {
                             )}
                         </div>
                         {/* E2E lock toggle is next to username, not here */}
-                        <Search size={20} className="hover-text-primary-inactive" data-active={showSearchBar ? "true" : undefined} style={{ cursor: 'pointer', transition: 'color 0.2s', color: showSearchBar ? 'var(--accent-primary)' : 'var(--text-secondary)' }} title="Search messages (Ctrl+F)" onClick={() => { if (showSearchBar) { closeDmSearch(); } else { setShowSearchBar(true); setTimeout(() => searchInputRef.current?.focus(), 50); } }} />
+                        <span title="Search messages (Ctrl+F)" style={{ display: 'inline-flex' }}>
+                            <Search size={20} className="hover-text-primary-inactive" data-active={showSearchBar ? "true" : undefined} style={{ cursor: 'pointer', transition: 'color 0.2s', color: showSearchBar ? 'var(--accent-primary)' : 'var(--text-secondary)' }} onClick={() => { if (showSearchBar) { closeDmSearch(); } else { setShowSearchBar(true); setTimeout(() => searchInputRef.current?.focus(), 50); } }} />
+                        </span>
                         <Info size={20} className="hover-text-primary-inactive" data-active={infoPanelOpen ? "true" : undefined} style={{ cursor: 'pointer', transition: 'color 0.2s', color: infoPanelOpen ? 'var(--accent-primary)' : 'var(--text-secondary)' }} onClick={() => { setInfoPanelOpen(!infoPanelOpen); if (isGroupDm) setMemberPanelOpen(false); }} />
                     </div>
                 </header>
