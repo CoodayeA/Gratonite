@@ -4449,7 +4449,7 @@ export const AppLayout = () => {
                                                 exit={reducedEffects ? undefined : { opacity: 0 }}
                                                 transition={{ duration: 0.2, ease: 'easeOut' }}
                                             >
-                                                <Outlet context={outletCtx} />
+                                                <Outlet key={transitionKey} context={outletCtx} />
                                             </motion.div>
                                         </AnimatePresence>
                                     }
@@ -4478,7 +4478,7 @@ export const AppLayout = () => {
                                     exit={reducedEffects ? undefined : { opacity: 0 }}
                                     transition={{ duration: 0.2, ease: 'easeOut' }}
                                 >
-                                    <Outlet context={outletCtx} />
+                                    <Outlet key={transitionKey} context={outletCtx} />
                                 </motion.div>
                             </AnimatePresence>
                         );
