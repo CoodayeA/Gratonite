@@ -20,6 +20,22 @@ export const metadata: Metadata = createPageMetadata({
 
 const releases = [
   {
+    version: "1.1.0",
+    date: "April 25, 2026",
+    summary: "Activation & Trust Foundation — first-run experience, trust cards, search help, and accessibility Pass 3.",
+    accent: "purple" as const,
+    changes: [
+      "New user first-run onboarding checklist guides users through guild/DM creation in their first 10 minutes",
+      "Contextual trust cards explain E2E DM encryption, federation, privacy, and offline capabilities in-app",
+      "Search syntax help tooltip in Global Search shows advanced query examples and supported operators",
+      "Accessibility Pass 3: WCAG 2.1 AA compliance with focus traps in modals, skip links in app shell, and semantic buttons",
+      "Checklist uses localStorage for persistence with defensive error handling for corrupted data",
+      "Trust cards are discoverable in DM and settings flows as educational moments, not interruptions",
+      "Expanded Playwright smoke tests cover all new activation features plus core route transitions",
+      "Zero new lint warnings; all tests passing in production",
+    ],
+  },
+  {
     version: "1.0.9",
     date: "April 18, 2026",
     summary: "DM notifications you actually notice — popups, sidebar badges, sounds, and zip uploads.",
