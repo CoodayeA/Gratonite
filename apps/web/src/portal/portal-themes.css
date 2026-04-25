@@ -649,3 +649,49 @@
   .vibe-iso-grid { transform: rotateX(48deg) rotateZ(-38deg); }
   .vibe-lava-content { grid-template-columns: 1fr; }
 }
+
+/* Embedded picker (inside settings tab) — strip drawer chrome */
+.theme-picker--embedded {
+  background: transparent;
+  border: none;
+  padding: 0;
+  max-width: none;
+  box-shadow: none;
+}
+.theme-picker--embedded .theme-picker-head { padding-top: 0; }
+
+/* Custom image upload row */
+.theme-picker-upload-row {
+  display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap;
+}
+.theme-picker-upload-row .theme-picker-input { flex: 1 1 220px; }
+.theme-picker-upload-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 12px; border-radius: 8px; cursor: pointer;
+  background: rgba(255,255,255,0.06); color: #e6ebf5;
+  border: 1px solid rgba(255,255,255,0.10); font-size: 12px; font-weight: 600;
+  white-space: nowrap;
+}
+.theme-picker-upload-btn:hover { background: rgba(255,255,255,0.10); }
+.theme-picker-upload-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.theme-picker-error { color: #ff7a7a; font-size: 12px; flex-basis: 100%; }
+
+/* A11y — clearer focus rings */
+.theme-picker button:focus-visible,
+.theme-picker input:focus-visible,
+.theme-picker select:focus-visible {
+  outline: 2px solid var(--pt-accent, #00ff88);
+  outline-offset: 2px;
+}
+.portal-customize-btn:focus-visible {
+  outline: 2px solid var(--pt-accent, #00ff88);
+  outline-offset: 3px;
+}
+
+/* Tighter mobile for picker */
+@media (max-width: 600px) {
+  .portal-customize-drawer { width: 100% !important; max-width: 100% !important; }
+  .theme-picker-grid-3 { grid-template-columns: repeat(2, 1fr) !important; }
+  .theme-picker-vibes { grid-template-columns: 1fr !important; }
+  .theme-picker-foot { flex-wrap: wrap; }
+}

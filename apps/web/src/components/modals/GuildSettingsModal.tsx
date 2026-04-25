@@ -9,6 +9,8 @@ import { OnboardingFlowEditor } from '../guild/OnboardingFlowEditor';
 import { NoCodeBotBuilder } from '../guild/NoCodeBotBuilder';
 import { copyToClipboard } from '../../utils/clipboard';
 import { GuildFederationPanel } from './GuildFederationPanel';
+import { ThemePicker } from '../../portal/ThemePicker';
+import { PortalThemeProvider } from '../../portal/themes/PortalThemeProvider';
 import {
     GuildInsightsPanel, ImportWizard, GuildStickersPanel, GuildDiscoveryTagsPanel,
     SpamConfigPanel, ModQueuePanel, SoundboardPanel, BackupsPanel, HighlightsPanel,
@@ -137,7 +139,7 @@ type SettingsTab =
     | 'overview' | 'channels' | 'roles' | 'members' | 'bans' | 'invites' | 'emojis' | 'automod' | 'audit' | 'branding'
     | 'webhooks' | 'bots' | 'templates' | 'insights' | 'onboarding' | 'wordfilter' | 'security' | 'import' | 'boosts'
     | 'welcome' | 'currency' | 'stickers' | 'rules' | 'discovery' | 'soundboard' | 'spam' | 'backups' | 'modqueue'
-    | 'highlights' | 'federation';
+    | 'highlights' | 'federation' | 'appearance';
 
 const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId?: string | null }) => {
     const { addToast } = useToast();
@@ -3643,6 +3645,18 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 }
                             }}
                         />
+                    )}
+
+                    {activeTab === 'appearance' && guildId && (
+                        <PortalThemeProvider guildId={guildId}>
+                            <div style={{ marginBottom: 16 }}>
+                                <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Portal Appearance</h2>
+                                <p style={{ fontSize: '13px', opacity: 0.7, margin: 0 }}>
+                                    Customize the look and feel of this server's Portal homescreen. Settings here apply to everyone by default; members can override their personal view from the Customize button on the Portal.
+                                </p>
+                            </div>
+                            <ThemePicker scope="guildDefault" embedded />
+                        </PortalThemeProvider>
                     )}
 
                     {activeTab === 'insights' && guildId && (

@@ -6,10 +6,11 @@
  * Selecting/changing controls updates a live preview via setPreview() but
  * does NOT save until the user clicks Save.
  */
-import { useEffect, useState } from 'react';
-import { Save, RotateCcw, Trash2, Bookmark } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Save, RotateCcw, Trash2, Bookmark, Upload } from 'lucide-react';
 import { usePortalTheme } from './themes/PortalThemeProvider';
 import { portalThemeApi, PortalThemePresetRow } from './themes/api';
+import { API_BASE, getAccessToken } from '../lib/api';
 import {
   PortalTheme,
   PortalVibe,
@@ -64,9 +65,11 @@ interface Props {
   /** Whose theme are we editing? */
   scope: 'guildDefault' | 'memberOverride';
   onClose?: () => void;
+  /** When true, render without rounded card chrome (for embedding in settings). */
+  embedded?: boolean;
 }
 
-export function ThemePicker({ scope, onClose }: Props) {
+export function ThemePicker({ scope, onClose, embedded }: Props) {
   const ctx = usePortalTheme();
   const [draft, setDraft] = useState<PortalTheme>(() => {
     const initial =
@@ -97,6 +100,40 @@ export function ThemePicker({ scope, onClose }: Props) {
 
   const update = <K extends keyof PortalTheme>(key: K, value: PortalTheme[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
+
+  const bgFileInput = useRef<HTMLInputElement | null>(null);
+  const planetFileInput = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState<null | 'bg' | 'planet'>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const uploadImage = async (file: File, target: 'bg' | 'planet') => {
+    setUploading(target);
+    setUploadError(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const token = getAccessToken();
+      const res = await fetch(`${API_BASE}/files/upload`, {
+        method: 'POST',
+        body: fd,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.message || `Upload failed (${res.status})`);
+      }
+      const data = await res.json();
+      const url: string | undefined = data.url;
+      if (!url) throw new Error('Upload returned no URL');
+      if (target === 'bg') update('customBackgroundUrl', url);
+      else update('customPlanetUrl', url);
+    } catch (e: any) {
+      setUploadError(e?.message || 'Upload failed');
+    } finally {
+      setUploading(null);
+    }
+  };
 
   const save = async () => {
     setSaving(true);
@@ -138,7 +175,7 @@ export function ThemePicker({ scope, onClose }: Props) {
   const isCustomAccent = !ACCENT_PRESETS.includes(draft.accentColor);
 
   return (
-    <div className="theme-picker">
+    <div className={`theme-picker${embedded ? ' theme-picker--embedded' : ''}`}>
       <header className="theme-picker-head">
         <div>
           <h2>Portal customization</h2>
@@ -209,13 +246,39 @@ export function ThemePicker({ scope, onClose }: Props) {
           ))}
         </div>
         {draft.backgroundStyle === 'custom-image' ? (
-          <input
-            type="url"
-            placeholder="https://… image URL"
-            value={draft.customBackgroundUrl ?? ''}
-            onChange={(e) => update('customBackgroundUrl', e.target.value || null)}
-            className="theme-picker-input"
-          />
+          <div className="theme-picker-upload-row">
+            <input
+              type="url"
+              placeholder="https://… image URL"
+              value={draft.customBackgroundUrl ?? ''}
+              onChange={(e) => update('customBackgroundUrl', e.target.value || null)}
+              className="theme-picker-input"
+            />
+            <button
+              type="button"
+              className="theme-picker-upload-btn"
+              onClick={() => bgFileInput.current?.click()}
+              disabled={uploading === 'bg'}
+              aria-label="Upload background image"
+            >
+              <Upload size={14} />
+              {uploading === 'bg' ? 'Uploading…' : 'Upload'}
+            </button>
+            <input
+              ref={bgFileInput}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) uploadImage(f, 'bg');
+                e.target.value = '';
+              }}
+            />
+            {uploadError && uploading === null ? (
+              <span className="theme-picker-error" role="alert">{uploadError}</span>
+            ) : null}
+          </div>
         ) : null}
       </Section>
 
@@ -236,13 +299,36 @@ export function ThemePicker({ scope, onClose }: Props) {
           ))}
         </div>
         {draft.planetStyle === 'custom' ? (
-          <input
-            type="url"
-            placeholder="https://… planet image"
-            value={draft.customPlanetUrl ?? ''}
-            onChange={(e) => update('customPlanetUrl', e.target.value || null)}
-            className="theme-picker-input"
-          />
+          <div className="theme-picker-upload-row">
+            <input
+              type="url"
+              placeholder="https://… planet image"
+              value={draft.customPlanetUrl ?? ''}
+              onChange={(e) => update('customPlanetUrl', e.target.value || null)}
+              className="theme-picker-input"
+            />
+            <button
+              type="button"
+              className="theme-picker-upload-btn"
+              onClick={() => planetFileInput.current?.click()}
+              disabled={uploading === 'planet'}
+              aria-label="Upload planet image"
+            >
+              <Upload size={14} />
+              {uploading === 'planet' ? 'Uploading…' : 'Upload'}
+            </button>
+            <input
+              ref={planetFileInput}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) uploadImage(f, 'planet');
+                e.target.value = '';
+              }}
+            />
+          </div>
         ) : null}
       </Section>
 

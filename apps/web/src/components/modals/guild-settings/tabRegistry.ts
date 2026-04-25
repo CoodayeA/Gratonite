@@ -4,7 +4,7 @@ export type GuildSettingsTabId =
   | 'templates' | 'insights' | 'onboarding' | 'wordfilter' | 'security'
   | 'import' | 'boosts' | 'welcome' | 'currency' | 'stickers' | 'rules'
   | 'discovery' | 'soundboard' | 'spam' | 'backups' | 'modqueue'
-  | 'highlights' | 'federation';
+  | 'highlights' | 'federation' | 'appearance';
 
 export interface GuildSettingsTabEntry {
   tab: GuildSettingsTabId;
@@ -41,6 +41,7 @@ export const GUILD_SETTINGS_TABS: readonly GuildSettingsTabEntry[] = [
   { tab: 'emojis', label: 'Emojis', keywords: ['emojis', 'custom emojis', 'emoji upload', 'emoji categories', 'reaction'] },
   { tab: 'stickers', label: 'Stickers', keywords: ['stickers', 'custom stickers', 'sticker pack'] },
   { tab: 'branding', label: 'Brand Identity', keywords: ['branding', 'brand', 'accent color', 'server color', 'identity'] },
+  { tab: 'appearance', label: 'Portal Appearance', keywords: ['portal', 'appearance', 'theme', 'vibe', 'holographic', 'solar system', 'liquid lava', 'iso city', 'planet', 'background', 'customize', 'preset'] },
   { tab: 'webhooks', label: 'Webhooks', keywords: ['webhooks', 'webhook', 'integrations', 'incoming webhook', 'webhook url'] },
   { tab: 'bots', label: 'Installed Bots', keywords: ['bots', 'installed bots', 'bot management', 'slash commands', 'bot prefix'] },
   { tab: 'boosts', label: 'Server Boosts', keywords: ['boosts', 'boost', 'server boosts', 'nitro', 'boost tier', 'perks', 'boost server', 'tier', 'tier 1', 'tier 2', 'tier 3', 'boost perks', 'server tier'] },
@@ -57,7 +58,7 @@ export const GUILD_SETTINGS_TAB_GROUPS: readonly GuildSettingsTabGroup[] = [
   { id: 'moderation', label: 'Moderation', tabs: ['automod', 'wordfilter', 'spam', 'modqueue', 'audit', 'security'] },
   { id: 'community', label: 'Community', tabs: ['welcome', 'onboarding', 'rules', 'discovery', 'soundboard', 'highlights'] },
   { id: 'analytics', label: 'Analytics', tabs: ['insights'] },
-  { id: 'customization', label: 'Customization', tabs: ['emojis', 'stickers', 'branding'] },
+  { id: 'customization', label: 'Customization', tabs: ['emojis', 'stickers', 'branding', 'appearance'] },
   { id: 'integrations', label: 'Integrations', tabs: ['webhooks', 'bots'] },
   { id: 'premium', label: 'Premium & Economy', tabs: ['boosts', 'currency'] },
   { id: 'advanced', label: 'Advanced', tabs: ['backups', 'templates', 'import', 'federation'] },
@@ -65,7 +66,7 @@ export const GUILD_SETTINGS_TAB_GROUPS: readonly GuildSettingsTabGroup[] = [
 
 export const GUILD_SETTINGS_MOBILE_TABS: readonly GuildSettingsTabId[] = [
   'overview', 'channels', 'roles', 'members', 'invites', 'templates', 'import',
-  'emojis', 'stickers', 'branding', 'webhooks', 'bots', 'automod', 'wordfilter',
+  'emojis', 'stickers', 'branding', 'appearance', 'webhooks', 'bots', 'automod', 'wordfilter',
   'spam', 'bans', 'audit', 'modqueue', 'security', 'insights', 'onboarding',
   'rules', 'discovery', 'welcome', 'boosts', 'currency', 'soundboard', 'backups',
   'highlights', 'federation',
