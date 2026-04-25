@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Shield, Plus, Check, Search, ChevronDown, Trash2, Edit2, Ban, UserPlus, Hash, Mic, Settings, AlertTriangle, Clock, Save, Link2, Copy, RefreshCw, Bot, Power, Sliders, GripVertical, Upload, UserX, Lock, Eye, Type, ExternalLink, ArrowUp, ArrowDown, BookOpen, Activity, Globe } from 'lucide-react';
+import { X, Shield, Plus, Check, Search, ChevronDown, Trash2, Edit2, Ban, UserPlus, Hash, Mic, Settings, AlertTriangle, Clock, Save, Link2, Copy, RefreshCw, Bot, Power, Sliders, GripVertical, Upload, UserX, Lock, Eye, Type, ExternalLink, ArrowUp, ArrowDown, BookOpen, Activity, Globe, Compass } from 'lucide-react';
 import { useToast } from '../ui/ToastManager';
 import { useUser } from '../../contexts/UserContext';
 import { api, API_BASE } from '../../lib/api';
@@ -717,7 +717,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [appealsLoading, setAppealsLoading] = useState(false);
     const [selectedAppeals, setSelectedAppeals] = useState<Set<string>>(new Set());
     const [bulkAppealsLoading, setBulkAppealsLoading] = useState(false);
-    const [tagInput, setTagInput] = useState('');
+    // Tag editing now lives in GuildDiscoveryTagsPanel (see Discovery tab).
     const [assignRoleFor, setAssignRoleFor] = useState<string | null>(null);
     const [editingRule, setEditingRule] = useState<string | null>(null);
     const [editRuleName, setEditRuleName] = useState('');
@@ -1339,74 +1339,18 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 ))}
                             </div>
 
-                            {/* Category & Tags */}
-                            <div style={{ marginBottom: '24px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>CATEGORY</label>
-                                <select
-                                    value={guildCategory}
-                                    onChange={e => setGuildCategory(e.target.value)}
-                                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: guildCategory ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}
+                            {/* Category & Tags moved to the Discovery tab to avoid duplication */}
+                            <div style={{ marginBottom: '24px', padding: '14px 16px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <Compass size={18} color='var(--text-muted)' />
+                                <div style={{ flex: 1, fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                    Category and tags help users discover your portal. Manage them in the <strong>Discovery</strong> tab.
+                                </div>
+                                <button
+                                    onClick={() => setActiveTab('discovery')}
+                                    style={{ padding: '6px 14px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
                                 >
-                                    <option value=''>None (not categorized)</option>
-                                    <option value='gaming'>Gaming</option>
-                                    <option value='music'>Music</option>
-                                    <option value='art'>Art</option>
-                                    <option value='tech'>Tech</option>
-                                    <option value='community'>Community</option>
-                                    <option value='anime'>Anime</option>
-                                    <option value='education'>Education</option>
-                                    <option value='other'>Other</option>
-                                </select>
-                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>Category helps users find your server in Discovery.</p>
-                            </div>
-
-                            <div style={{ marginBottom: '24px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>TAGS</label>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
-                                    {guildTags.map(tag => (
-                                        <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--bg-tertiary)', borderRadius: '999px', border: '1px solid var(--stroke)', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                            {tag}
-                                            <button
-                                                onClick={() => setGuildTags(prev => prev.filter(t => t !== tag))}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
-                                            >
-                                                ×
-                                            </button>
-                                        </span>
-                                    ))}
-                                </div>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <input
-                                        type="text"
-                                        value={tagInput}
-                                        onChange={e => setTagInput(e.target.value)}
-                                        onKeyDown={e => {
-                                            if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
-                                                e.preventDefault();
-                                                const newTag = tagInput.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
-                                                if (newTag && !guildTags.includes(newTag) && guildTags.length < 10) {
-                                                    setGuildTags(prev => [...prev, newTag]);
-                                                }
-                                                setTagInput('');
-                                            }
-                                        }}
-                                        placeholder="Type a tag and press Enter (max 10)"
-                                        style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}
-                                    />
-                                    <button
-                                        onClick={() => {
-                                            const newTag = tagInput.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
-                                            if (newTag && !guildTags.includes(newTag) && guildTags.length < 10) {
-                                                setGuildTags(prev => [...prev, newTag]);
-                                            }
-                                            setTagInput('');
-                                        }}
-                                        style={{ padding: '8px 16px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
-                                    >
-                                        Add
-                                    </button>
-                                </div>
-                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>Up to 10 tags. Tags help users discover your server.</p>
+                                    Open Discovery
+                                </button>
                             </div>
 
                             <button onClick={saveOverview}onMouseEnter={() => setHoveredBtn('save-overview')} onMouseLeave={() => setHoveredBtn(null)}
