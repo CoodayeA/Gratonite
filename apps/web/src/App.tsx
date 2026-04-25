@@ -12,6 +12,7 @@ import { playSound, setSoundVolume } from './utils/SoundManager';
 import { copyToClipboard } from './utils/clipboard';
 
 import AuthLayout from './layouts/AuthLayout';
+import { AppLayoutAccessibility } from './layouts/AppLayout';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Verify from './pages/auth/Verify';
@@ -4473,6 +4474,7 @@ function App() {
         <VoiceProvider>
         <ToastProvider>
             <AchievementToastProvider>
+            <AppLayoutAccessibility />
             <AmbientPlayer />
             <ThemePreviewBanner />
             <ConnectionBanner />
