@@ -262,7 +262,7 @@ const Inventory = () => {
     /* ================================================================ */
 
     return (
-        <main className={`main-view ${hasCustomBg ? 'has-custom-bg' : ''}`} style={{ flex: 1, overflowY: 'auto' }}>
+        <main className={`main-view gt-commerce-surface gt-inventory-surface ${hasCustomBg ? 'has-custom-bg' : ''}`} data-ui-commerce-surface="inventory" style={{ flex: 1, overflowY: 'auto' }}>
 
             {/* ---- Top Bar ---- */}
             <header className="top-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -316,7 +316,7 @@ const Inventory = () => {
                 <div style={{ width: '340px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
                     {/* -- Profile Preview Card -- */}
-                    <div className="glass-panel" style={{
+                    <div className="glass-panel inventory-card reward-card inventory-card--preview" data-ui-inventory-card="preview" style={{
                         borderRadius: '16px',
                         border: '1px solid var(--stroke)',
                         overflow: 'hidden',
@@ -435,7 +435,7 @@ const Inventory = () => {
                     </div>
 
                     {/* -- Loadout Summary Rows -- */}
-                    <div className="glass-panel" style={{
+                    <div className="glass-panel inventory-card reward-card inventory-card--loadout" data-ui-inventory-card="loadout" style={{
                         padding: '14px',
                         borderRadius: '12px',
                         border: '1px solid var(--stroke)',
@@ -560,7 +560,7 @@ const Inventory = () => {
                             ) : (
                                 <>
                                     {/* Balance card */}
-                                    <div className="glass-panel" style={{
+                                    <div className="glass-panel inventory-card reward-card inventory-card--wallet" data-ui-inventory-card="wallet" style={{
                                         padding: '28px', borderRadius: '16px', border: '1px solid var(--stroke)',
                                         background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.02))',
                                         display: 'flex', alignItems: 'center', gap: '24px',
@@ -700,7 +700,10 @@ const Inventory = () => {
                                 return (
                                     <TiltCard key={item.id} maxTilt={8} scale={1.02}>
                                         <div
-                                            className="hover-lift"
+                                            className="inventory-card reward-card hover-lift"
+                                            data-ui-inventory-card={item.type}
+                                            data-inventory-item-id={item.id}
+                                            data-inventory-equipped={item.equipped ? 'true' : 'false'}
                                             style={{
                                                 background: 'var(--bg-elevated)',
                                                 borderRadius: 'var(--radius-md)',

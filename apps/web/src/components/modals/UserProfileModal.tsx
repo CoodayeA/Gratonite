@@ -334,11 +334,12 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
 
     return (
         <>
-        <div className="modal-backdrop" onClick={onClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="gt-profile-modal-backdrop modal-backdrop" data-ui-profile-modal-backdrop onClick={onClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div
                 role="dialog" aria-modal="true"
                 aria-label="User profile"
-                className="profile-modal"
+                className="gt-profile-modal profile-modal"
+                data-ui-profile-modal
                 onClick={e => e.stopPropagation()}
                 style={{ width: '400px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', position: 'relative' }}
             >
@@ -405,7 +406,7 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                 )}
 
                 {/* Animated Banner Area */}
-                <div style={{ height: '140px', position: 'relative', overflow: 'hidden', background: !bannerHash ? (profile?.bannerColor ?? undefined) : undefined }}>
+                <div className="gt-profile-modal__banner" data-ui-profile-banner style={{ height: '140px', position: 'relative', overflow: 'hidden', background: !bannerHash ? (profile?.bannerColor ?? undefined) : undefined }}>
                     {/* Real banner image if available */}
                     {bannerHash ? (
                         <img src={`${API_BASE}/files/${bannerHash}`} alt="Banner" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -425,8 +426,8 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                 </div>
 
                 {/* Content */}
-                <div style={{ padding: '0 24px 24px', position: 'relative' }}>
-                    <div style={{ marginTop: '-44px', marginBottom: '16px' }}>
+                <div className="gt-profile-modal__content" data-ui-profile-content style={{ padding: '0 24px 24px', position: 'relative' }}>
+                    <div className="gt-profile-modal__avatar" data-ui-profile-avatar style={{ marginTop: '-44px', marginBottom: '16px' }}>
                         <Avatar
                             userId={userProfile?.id || 'user'}
                             avatarHash={avatarHash}
@@ -669,7 +670,7 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                         </div>
                     )}
 
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div className="gt-profile-modal__actions" data-ui-profile-actions style={{ display: 'flex', gap: '8px' }}>
                         <button onClick={() => { addToast({ title: 'Direct Message', description: `Opening DM with ${displayName}...`, variant: 'info' }); onClose(); }} className="auth-button" style={{ marginTop: 0, flex: 1, height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                             <MessageSquare size={16} /> Message
                         </button>
@@ -854,8 +855,8 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
             />
         )}
         {showGiftModal && (
-            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
-                <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-lg)', padding: '24px', width: '320px' }}>
+            <div className="gt-gift-modal-backdrop" data-ui-gift-modal-backdrop style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+                <div className="gt-gift-modal" data-ui-gift-modal style={{ background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-lg)', padding: '24px', width: '320px' }}>
                     <h3 style={{ margin: '0 0 16px', color: 'var(--text-primary)' }}>🪙 Gift Coins</h3>
                     <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
                         Gift coins to <strong>{profile?.displayName}</strong>

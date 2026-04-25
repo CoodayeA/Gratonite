@@ -1,0 +1,850 @@
+:root[data-ui-experience="premium-gamer-os"] {
+  --gt-shell-gap: 12px;
+}
+
+:root[data-ui-experience="premium-gamer-os"] body {
+  background: var(--gt-experience-bg-depth);
+}
+
+:root[data-ui-experience="premium-gamer-os"].reduced-effects *,
+:root[data-ui-experience="premium-gamer-os"].low-power * {
+  animation-duration: 1ms !important;
+  transition-duration: 1ms !important;
+}
+
+.gt-new-ui .glass-panel {
+  background: var(--gt-experience-bg-surface);
+  border: 1px solid var(--gt-experience-border-subtle);
+  box-shadow: var(--gt-experience-shadow-panel);
+  backdrop-filter: var(--panel-blur, blur(18px));
+}
+
+.gt-new-ui .app-container {
+  background: var(--gt-experience-bg-depth);
+}
+
+.gt-new-ui .gt-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: var(--gt-experience-radius-control);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  color: rgba(246, 248, 255, 0.94);
+  background: var(--gt-experience-bg-surface);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  transition:
+    transform var(--gt-experience-motion-fast),
+    border-color var(--gt-experience-motion-fast),
+    background var(--gt-experience-motion-fast),
+    box-shadow var(--gt-experience-motion-fast);
+}
+
+.gt-new-ui .gt-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--gt-experience-border-luminous);
+  box-shadow: var(--gt-experience-glow-primary), 0 12px 34px rgba(0, 0, 0, 0.28);
+}
+
+.gt-new-ui .gt-button:focus-visible,
+.gt-new-ui .gt-field__input:focus-visible,
+.gt-new-ui .gt-nav-item:focus-visible {
+  outline: 2px solid rgba(139, 164, 255, 0.82);
+  outline-offset: 2px;
+}
+
+.gt-new-ui .gt-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  transform: none;
+}
+
+.gt-new-ui .gt-button--sm {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 0.78rem;
+}
+
+.gt-new-ui .gt-button--md {
+  min-height: 40px;
+  padding: 0 16px;
+  font-size: 0.88rem;
+}
+
+.gt-new-ui .gt-button--lg {
+  min-height: 48px;
+  padding: 0 20px;
+  font-size: 0.98rem;
+}
+
+.gt-new-ui .gt-button--primary {
+  border-color: rgba(139, 164, 255, 0.42);
+  background: linear-gradient(135deg, rgba(105, 132, 255, 0.95), rgba(127, 87, 255, 0.86));
+  box-shadow: var(--gt-experience-glow-primary), 0 14px 34px rgba(78, 95, 214, 0.26);
+}
+
+.gt-new-ui .gt-button--secondary {
+  border-color: var(--gt-experience-border-subtle);
+  background: var(--gt-experience-bg-surface-raised);
+}
+
+.gt-new-ui .gt-button--ghost {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: rgba(224, 230, 255, 0.78);
+}
+
+.gt-new-ui .gt-button--danger {
+  border-color: rgba(255, 104, 118, 0.42);
+  background: linear-gradient(135deg, rgba(255, 95, 110, 0.9), rgba(154, 48, 72, 0.86));
+  box-shadow: 0 0 28px rgba(255, 95, 110, 0.2), 0 14px 34px rgba(0, 0, 0, 0.28);
+}
+
+.gt-new-ui .gt-button__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gt-new-ui .gt-button__label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.gt-new-ui .gt-surface {
+  border: 1px solid var(--gt-experience-border-subtle);
+  border-radius: var(--gt-experience-radius-panel);
+  background: var(--gt-experience-bg-surface);
+  box-shadow: var(--gt-experience-shadow-panel);
+  color: rgba(246, 248, 255, 0.92);
+}
+
+.gt-new-ui .gt-surface--panel {
+  background: var(--gt-experience-bg-surface);
+}
+
+.gt-new-ui .gt-surface--raised {
+  background: var(--gt-experience-bg-surface-raised);
+  box-shadow: var(--gt-experience-shadow-float);
+}
+
+.gt-new-ui .gt-surface--inset {
+  background: var(--gt-experience-bg-surface-inset);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.gt-new-ui .gt-surface--interactive {
+  background: var(--gt-experience-bg-surface-raised);
+  transition:
+    transform var(--gt-experience-motion-standard),
+    border-color var(--gt-experience-motion-standard),
+    box-shadow var(--gt-experience-motion-standard);
+}
+
+.gt-new-ui .gt-surface--interactive:hover {
+  transform: translateY(-2px);
+  border-color: var(--gt-experience-border-luminous);
+  box-shadow: var(--gt-experience-glow-primary), var(--gt-experience-shadow-float);
+}
+
+.gt-new-ui .gt-field {
+  display: grid;
+  gap: 8px;
+  color: rgba(246, 248, 255, 0.9);
+}
+
+.gt-new-ui .gt-field__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(224, 230, 255, 0.72);
+}
+
+.gt-new-ui .gt-field__input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--gt-experience-border-subtle);
+  border-radius: var(--gt-experience-radius-control);
+  padding: 0 14px;
+  color: rgba(246, 248, 255, 0.94);
+  background: var(--gt-experience-bg-surface-inset);
+  transition:
+    border-color var(--gt-experience-motion-fast),
+    box-shadow var(--gt-experience-motion-fast),
+    background var(--gt-experience-motion-fast);
+}
+
+.gt-new-ui .gt-field__input::placeholder {
+  color: rgba(224, 230, 255, 0.42);
+}
+
+.gt-new-ui .gt-field__input:focus {
+  border-color: var(--gt-experience-border-luminous);
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: var(--gt-experience-glow-primary);
+}
+
+.gt-new-ui .gt-field__hint {
+  font-size: 0.78rem;
+  color: rgba(224, 230, 255, 0.62);
+}
+
+.gt-new-ui .gt-nav-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: var(--gt-experience-radius-control);
+  padding: 0 12px;
+  color: rgba(224, 230, 255, 0.76);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    color var(--gt-experience-motion-fast),
+    border-color var(--gt-experience-motion-fast),
+    background var(--gt-experience-motion-fast),
+    box-shadow var(--gt-experience-motion-fast);
+}
+
+.gt-new-ui .gt-nav-item:hover {
+  color: rgba(246, 248, 255, 0.94);
+  background: var(--gt-experience-bg-surface);
+  border-color: var(--gt-experience-border-subtle);
+}
+
+.gt-new-ui .gt-nav-item[data-active='true'] {
+  color: rgba(246, 248, 255, 0.98);
+  background: linear-gradient(135deg, rgba(105, 132, 255, 0.2), rgba(224, 179, 89, 0.12));
+  border-color: var(--gt-experience-border-luminous);
+  box-shadow: var(--gt-experience-glow-primary);
+}
+
+.gt-new-ui .gt-nav-item__icon,
+.gt-new-ui .gt-nav-item__meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(224, 230, 255, 0.62);
+}
+
+.gt-new-ui .gt-nav-item__label {
+  flex: 1;
+  font-weight: 700;
+}
+
+.gt-new-ui .gt-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.gt-new-ui .gt-status-pill--neutral {
+  color: rgba(224, 230, 255, 0.78);
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--gt-experience-border-subtle);
+}
+
+.gt-new-ui .gt-status-pill--success {
+  color: rgba(162, 255, 198, 0.96);
+  background: rgba(45, 212, 111, 0.14);
+  border-color: rgba(89, 255, 158, 0.3);
+}
+
+.gt-new-ui .gt-status-pill--warning {
+  color: rgba(255, 226, 157, 0.96);
+  background: rgba(224, 179, 89, 0.14);
+  border-color: rgba(224, 179, 89, 0.34);
+}
+
+.gt-new-ui .gt-status-pill--danger {
+  color: rgba(255, 179, 188, 0.96);
+  background: rgba(255, 95, 110, 0.14);
+  border-color: rgba(255, 95, 110, 0.34);
+}
+
+.gt-new-ui .gt-status-pill--accent {
+  color: rgba(210, 219, 255, 0.98);
+  background: rgba(105, 132, 255, 0.16);
+  border-color: rgba(139, 164, 255, 0.34);
+}
+
+/* Modal, settings, admin, and form surfaces */
+.gt-new-ui .modal-backdrop {
+  background:
+    radial-gradient(circle at 22% 16%, rgba(117, 145, 255, 0.18), transparent 32%),
+    radial-gradient(circle at 78% 12%, rgba(224, 179, 89, 0.12), transparent 28%),
+    rgba(3, 6, 16, 0.76) !important;
+  backdrop-filter: blur(18px) saturate(130%);
+}
+
+.gt-new-ui [role="dialog"],
+.gt-new-ui .modal-content,
+.gt-new-ui .settings-modal {
+  border: 1px solid var(--gt-experience-border-subtle) !important;
+  border-radius: var(--gt-experience-radius-panel) !important;
+  color: rgba(246, 248, 255, 0.94);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.088), rgba(255, 255, 255, 0.032)),
+    var(--gt-experience-bg-surface-raised) !important;
+  box-shadow: var(--gt-experience-shadow-float), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(22px) saturate(150%);
+}
+
+.gt-new-ui .settings-modal {
+  overflow: hidden;
+}
+
+.gt-new-ui .settings-sidebar {
+  border-right-color: var(--gt-experience-border-subtle) !important;
+  background:
+    linear-gradient(180deg, rgba(105, 132, 255, 0.11), rgba(255, 255, 255, 0.025)),
+    var(--gt-experience-bg-surface) !important;
+}
+
+.gt-new-ui .settings-content-panel {
+  background:
+    radial-gradient(circle at 78% 0%, rgba(224, 179, 89, 0.075), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(3, 6, 16, 0.08));
+  scrollbar-color: rgba(139, 164, 255, 0.42) transparent;
+}
+
+.gt-new-ui .sidebar-section-label {
+  color: rgba(224, 230, 255, 0.58) !important;
+  letter-spacing: 0.08em;
+}
+
+.gt-new-ui .sidebar-nav-item {
+  border: 1px solid transparent;
+  border-radius: var(--gt-experience-radius-control);
+  color: rgba(224, 230, 255, 0.76) !important;
+  transition:
+    color var(--gt-experience-motion-fast),
+    border-color var(--gt-experience-motion-fast),
+    background var(--gt-experience-motion-fast),
+    box-shadow var(--gt-experience-motion-fast),
+    transform var(--gt-experience-motion-fast);
+}
+
+.gt-new-ui .sidebar-nav-item:hover,
+.gt-new-ui .sidebar-nav-item:focus-visible {
+  color: rgba(246, 248, 255, 0.96) !important;
+  background: rgba(139, 164, 255, 0.11) !important;
+  border-color: var(--gt-experience-border-subtle);
+  outline: none;
+}
+
+.gt-new-ui .sidebar-nav-item.active {
+  color: rgba(246, 248, 255, 0.98) !important;
+  background: linear-gradient(135deg, rgba(105, 132, 255, 0.22), rgba(224, 179, 89, 0.12)) !important;
+  border-color: var(--gt-experience-border-luminous);
+  box-shadow: var(--gt-experience-glow-primary);
+}
+
+.gt-new-ui .settings-close-btn {
+  border-radius: 999px !important;
+  padding: 6px !important;
+  color: rgba(224, 230, 255, 0.66) !important;
+  transition:
+    color var(--gt-experience-motion-fast),
+    background var(--gt-experience-motion-fast),
+    box-shadow var(--gt-experience-motion-fast);
+}
+
+.gt-new-ui .settings-close-btn:hover,
+.gt-new-ui .settings-close-btn:focus-visible {
+  color: rgba(246, 248, 255, 0.96) !important;
+  background: rgba(139, 164, 255, 0.14) !important;
+  box-shadow: var(--gt-experience-glow-primary);
+  outline: none;
+}
+
+.gt-new-ui select,
+.gt-new-ui textarea,
+.gt-new-ui input:not([type="checkbox"]):not([type="radio"]) {
+  border-color: var(--gt-experience-border-subtle) !important;
+  border-radius: var(--gt-experience-radius-control) !important;
+  color: rgba(246, 248, 255, 0.94) !important;
+  background: var(--gt-experience-bg-surface-inset) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition:
+    border-color var(--gt-experience-motion-fast),
+    box-shadow var(--gt-experience-motion-fast),
+    background var(--gt-experience-motion-fast);
+}
+
+.gt-new-ui textarea {
+  line-height: 1.5;
+}
+
+.gt-new-ui select:focus,
+.gt-new-ui textarea:focus,
+.gt-new-ui input:not([type="checkbox"]):not([type="radio"]):focus {
+  border-color: var(--gt-experience-border-luminous) !important;
+  background: rgba(0, 0, 0, 0.28) !important;
+  box-shadow: var(--gt-experience-glow-primary), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.gt-new-ui input[type="range"] {
+  box-shadow: none;
+  accent-color: rgba(139, 164, 255, 0.95);
+}
+
+.gt-new-ui input[type="file"],
+.gt-new-ui input[type="hidden"] {
+  box-shadow: none;
+}
+
+.gt-new-ui .guild-rail {
+  margin: var(--gt-shell-gap) 0 var(--gt-shell-gap) var(--gt-shell-gap);
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.gt-new-ui .channel-sidebar {
+  margin: var(--gt-shell-gap) 0;
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.gt-new-ui .main-content-wrapper {
+  margin: var(--gt-shell-gap);
+  margin-left: 0;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid var(--gt-experience-border-subtle);
+  background: var(--gt-experience-bg-surface);
+  box-shadow: var(--gt-experience-shadow-panel);
+}
+
+.gt-new-ui .top-bar {
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.035));
+  border-bottom: 1px solid var(--gt-experience-border-subtle);
+}
+
+.gt-new-ui .channel-item {
+  border-radius: var(--gt-experience-radius-control);
+}
+
+.gt-new-ui .channel-item.active {
+  background: linear-gradient(90deg, rgba(117,145,255,.18), rgba(255,255,255,.04));
+  border: 1px solid var(--gt-experience-border-luminous);
+}
+
+.gt-new-ui [data-ui-chat-surface] {
+  min-height: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(117, 145, 255, 0.14), transparent 30%),
+    radial-gradient(circle at 90% 8%, rgba(224, 179, 89, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(0, 0, 0, 0.12));
+}
+
+.gt-new-ui [data-ui-chat-frame] {
+  min-height: 0;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.gt-new-ui [data-ui-chat-topbar] {
+  min-height: 64px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.035)),
+    var(--gt-experience-bg-surface-raised);
+  border-bottom: 1px solid var(--gt-experience-border-subtle);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+.gt-new-ui [data-ui-chat-topbar] h2 {
+  letter-spacing: 0.01em;
+}
+
+.gt-new-ui [data-ui-chat-body] {
+  background: linear-gradient(180deg, rgba(5, 8, 18, 0.08), rgba(5, 8, 18, 0.18));
+}
+
+.gt-new-ui [data-ui-message-list] {
+  scrollbar-color: rgba(139, 164, 255, 0.42) transparent;
+}
+
+.gt-new-ui [data-ui-message-list] .message,
+.gt-new-ui [data-ui-message-list] > .message {
+  border-radius: 16px;
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+.gt-new-ui [data-ui-message-list] .message:hover,
+.gt-new-ui [data-ui-message-list] > .message:hover {
+  background: linear-gradient(90deg, rgba(117, 145, 255, 0.11), rgba(255, 255, 255, 0.035));
+  box-shadow: inset 1px 0 0 rgba(139, 164, 255, 0.34);
+}
+
+.gt-new-ui [data-ui-message-list] .highlighted-message,
+.gt-new-ui [data-ui-message-list] .active-thread-message {
+  background: linear-gradient(90deg, rgba(117, 145, 255, 0.16), rgba(255, 255, 255, 0.045));
+  box-shadow: inset 2px 0 0 rgba(139, 164, 255, 0.7), var(--gt-experience-glow-primary);
+}
+
+.gt-new-ui [data-ui-message-list] .msg-author {
+  color: rgba(246, 248, 255, 0.94);
+}
+
+.gt-new-ui [data-ui-message-list] .msg-timestamp {
+  color: rgba(224, 230, 255, 0.52);
+}
+
+.gt-new-ui [data-ui-composer-region],
+.gt-new-ui [data-ui-chat-surface] .input-area {
+  padding: 12px 16px 16px;
+  background: linear-gradient(180deg, transparent, rgba(3, 6, 16, 0.28));
+}
+
+.gt-new-ui [data-ui-composer] {
+  border: 1px solid var(--gt-experience-border-subtle);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.045)),
+    var(--gt-experience-bg-surface-raised);
+  box-shadow: var(--gt-experience-shadow-float), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+.gt-new-ui [data-ui-composer]:focus-within {
+  border-color: var(--gt-experience-border-luminous);
+  box-shadow: var(--gt-experience-glow-primary), var(--gt-experience-shadow-float), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.gt-new-ui [data-ui-composer] .chat-input {
+  color: rgba(246, 248, 255, 0.96);
+}
+
+.gt-new-ui [data-ui-composer] .chat-input::placeholder {
+  color: rgba(224, 230, 255, 0.46);
+}
+
+.gt-new-ui [data-ui-composer] .input-icon-btn,
+.gt-new-ui [data-ui-chat-topbar] .action-icon-btn {
+  border-radius: 12px;
+  transition:
+    transform var(--gt-experience-motion-fast),
+    background var(--gt-experience-motion-fast),
+    color var(--gt-experience-motion-fast),
+    box-shadow var(--gt-experience-motion-fast);
+}
+
+.gt-new-ui [data-ui-composer] .input-icon-btn:hover,
+.gt-new-ui [data-ui-chat-topbar] .action-icon-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(139, 164, 255, 0.12);
+  color: rgba(246, 248, 255, 0.96) !important;
+  box-shadow: inset 0 0 0 1px rgba(139, 164, 255, 0.22);
+}
+
+.gt-new-ui [data-ui-composer] .input-icon-btn.primary {
+  background: linear-gradient(135deg, rgba(105, 132, 255, 0.95), rgba(127, 87, 255, 0.86));
+  box-shadow: var(--gt-experience-glow-primary);
+}
+
+.gt-new-ui [data-ui-upload-affordance] {
+  color: rgba(224, 230, 255, 0.82);
+  background: rgba(139, 164, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(139, 164, 255, 0.18);
+}
+
+.gt-new-ui [data-ui-composer] label[for$="file-upload"],
+.gt-new-ui [data-ui-composer] label[for$="folder-upload"] {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.gt-new-ui [data-ui-chat-surface] aside {
+  background: var(--gt-experience-bg-surface-raised) !important;
+  border-color: var(--gt-experience-border-subtle) !important;
+}
+
+/* Social and identity surfaces */
+.gt-new-ui [data-ui-social-surface],
+.gt-new-ui [data-ui-identity-surface] {
+  background:
+    radial-gradient(circle at 16% 0%, rgba(117, 145, 255, 0.14), transparent 28%),
+    radial-gradient(circle at 86% 10%, rgba(224, 179, 89, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(3, 6, 16, 0.2)) !important;
+}
+
+.gt-new-ui [data-ui-social-header] {
+  min-height: 64px;
+  border-bottom-color: var(--gt-experience-border-subtle) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.035));
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+.gt-new-ui [data-ui-social-tabs] .ft-tab {
+  color: rgba(224, 230, 255, 0.72);
+  border-radius: 14px 14px 0 0;
+  transition: color var(--gt-experience-motion-fast), background var(--gt-experience-motion-fast), border-color var(--gt-experience-motion-fast), box-shadow var(--gt-experience-motion-fast);
+}
+
+.gt-new-ui [data-ui-social-tabs] .ft-tab:hover {
+  color: rgba(246, 248, 255, 0.94) !important;
+  background: rgba(139, 164, 255, 0.08);
+}
+
+.gt-new-ui [data-ui-social-tabs] .ft-tab--active {
+  border-bottom-color: rgba(139, 164, 255, 0.86);
+  background: linear-gradient(180deg, rgba(105, 132, 255, 0.16), rgba(105, 132, 255, 0.04));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.gt-new-ui [data-ui-social-tabs] .ft-tab-add,
+.gt-new-ui .gt-add-friend-submit {
+  border: 1px solid rgba(89, 255, 158, 0.28) !important;
+  background: linear-gradient(135deg, rgba(45, 212, 111, 0.95), rgba(20, 184, 166, 0.84)) !important;
+  box-shadow: 0 0 24px rgba(45, 212, 111, 0.2);
+}
+
+.gt-new-ui [data-ui-social-content] {
+  scrollbar-color: rgba(139, 164, 255, 0.42) transparent;
+}
+
+.gt-new-ui .gt-social-referral,
+.gt-new-ui .gt-add-friend-card,
+.gt-new-ui .gt-identity-card,
+.gt-new-ui .gt-profile-modal,
+.gt-new-ui .gt-gift-modal {
+  border: 1px solid var(--gt-experience-border-subtle) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.035)),
+    var(--gt-experience-bg-surface-raised) !important;
+  box-shadow: var(--gt-experience-shadow-panel), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+.gt-new-ui [data-ui-friend-row],
+.gt-new-ui .gt-identity-menu-row,
+.gt-new-ui .gt-social-detail-panel {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  transition: transform var(--gt-experience-motion-fast), background var(--gt-experience-motion-fast), border-color var(--gt-experience-motion-fast), box-shadow var(--gt-experience-motion-fast);
+}
+
+.gt-new-ui [data-ui-friend-row]:hover,
+.gt-new-ui .gt-identity-menu-row:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(90deg, rgba(117, 145, 255, 0.13), rgba(255, 255, 255, 0.04)) !important;
+  border-color: var(--gt-experience-border-luminous) !important;
+  box-shadow: inset 1px 0 0 rgba(139, 164, 255, 0.35);
+}
+
+.gt-new-ui .gt-friend-action {
+  border: 1px solid var(--gt-experience-border-subtle);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(224, 230, 255, 0.82);
+}
+
+.gt-new-ui .gt-profile-modal__actions .auth-button {
+  border: 1px solid var(--gt-experience-border-subtle) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: rgba(224, 230, 255, 0.82) !important;
+}
+
+.gt-new-ui .gt-friend-action:hover,
+.gt-new-ui .gt-profile-modal__actions .auth-button:hover {
+  background: rgba(139, 164, 255, 0.14) !important;
+  color: rgba(246, 248, 255, 0.96) !important;
+  box-shadow: var(--gt-experience-glow-primary);
+}
+
+.gt-new-ui .gt-social-search,
+.gt-new-ui .gt-add-friend-input,
+.gt-new-ui [data-ui-profile-modal] textarea,
+.gt-new-ui [data-ui-gift-modal] input {
+  border-color: var(--gt-experience-border-subtle) !important;
+  background: var(--gt-experience-bg-surface-inset) !important;
+  color: rgba(246, 248, 255, 0.94) !important;
+}
+
+.gt-new-ui .gt-avatar[data-ui-avatar] .gt-avatar__core {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10), 0 0 24px rgba(117, 145, 255, 0.12);
+}
+
+.gt-new-ui .gt-avatar[data-avatar-status='online'] .gt-avatar__core {
+  box-shadow: inset 0 0 0 1px rgba(162, 255, 198, 0.18), 0 0 24px rgba(45, 212, 111, 0.18);
+}
+
+.gt-new-ui .gt-avatar__status {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 0 14px rgba(0, 0, 0, 0.32);
+}
+
+.gt-new-ui .gt-avatar__status-dot {
+  box-shadow: 0 0 12px currentColor;
+}
+
+.gt-new-ui [data-ui-profile-modal] {
+  border-radius: 24px !important;
+  overflow: hidden;
+}
+
+.gt-new-ui .gt-profile-modal__banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.14), transparent 30%);
+}
+
+.gt-new-ui .gt-profile-modal__content {
+  background: linear-gradient(180deg, rgba(3, 6, 16, 0.02), rgba(3, 6, 16, 0.16));
+}
+
+.gt-new-ui .gt-identity-shell {
+  padding-top: 40px !important;
+}
+
+.gt-new-ui .gt-identity-menu {
+  border: 1px solid var(--gt-experience-border-subtle);
+  border-radius: 18px;
+  padding: 6px;
+  background: var(--gt-experience-bg-surface);
+  box-shadow: var(--gt-experience-shadow-panel);
+}
+
+.gt-new-ui .gt-identity-menu-row--danger:hover {
+  background: rgba(255, 95, 110, 0.12) !important;
+  box-shadow: inset 1px 0 0 rgba(255, 95, 110, 0.35);
+}
+
+/* Commerce, rewards, and shared state surfaces */
+.gt-new-ui [data-ui-commerce-surface] {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 14% 0%, rgba(117, 145, 255, 0.14), transparent 30%),
+    radial-gradient(circle at 90% 8%, rgba(224, 179, 89, 0.10), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.032), rgba(3, 6, 16, 0.2)) !important;
+  scrollbar-color: rgba(139, 164, 255, 0.42) transparent;
+}
+
+.gt-new-ui .reward-card,
+.gt-new-ui .shop-card,
+.gt-new-ui .inventory-card,
+.gt-new-ui .marketplace-card,
+.gt-new-ui .gacha-card {
+  border-color: var(--gt-experience-border-subtle) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.078), rgba(255, 255, 255, 0.032)),
+    var(--gt-experience-bg-surface-raised) !important;
+  box-shadow: var(--gt-experience-shadow-panel), inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+.gt-new-ui .reward-card:hover,
+.gt-new-ui .shop-card:hover,
+.gt-new-ui .inventory-card:hover,
+.gt-new-ui .marketplace-card:hover,
+.gt-new-ui .gacha-card:hover {
+  border-color: var(--gt-experience-border-luminous) !important;
+  box-shadow: var(--gt-experience-glow-primary), var(--gt-experience-shadow-float), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.gt-new-ui .shop-card--featured,
+.gt-new-ui .gacha-pack-card {
+  background:
+    radial-gradient(circle at 74% 12%, rgba(224, 179, 89, 0.20), transparent 28%),
+    linear-gradient(135deg, rgba(105, 132, 255, 0.20), rgba(127, 87, 255, 0.14), rgba(224, 179, 89, 0.08)) !important;
+}
+
+.gt-new-ui .marketplace-card--auction,
+.gt-new-ui .inventory-card--wallet,
+.gt-new-ui .gacha-card--rates {
+  background:
+    linear-gradient(180deg, rgba(224, 179, 89, 0.08), rgba(255, 255, 255, 0.03)),
+    var(--gt-experience-bg-surface-raised) !important;
+}
+
+.gt-new-ui [data-rarity='legendary'],
+.gt-new-ui [data-rarity='Legendary'] {
+  box-shadow: 0 0 30px rgba(224, 179, 89, 0.16), var(--gt-experience-shadow-panel) !important;
+}
+
+.gt-new-ui [data-rarity='epic'],
+.gt-new-ui [data-rarity='Epic'] {
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.16), var(--gt-experience-shadow-panel) !important;
+}
+
+.gt-new-ui .gt-empty-state,
+.gt-new-ui .gt-error-state {
+  border: 1px solid var(--gt-experience-border-subtle);
+  border-radius: var(--gt-experience-radius-panel);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(117, 145, 255, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
+  box-shadow: var(--gt-experience-shadow-panel);
+}
+
+.gt-new-ui .gt-empty-state__illustration,
+.gt-new-ui .gt-error-state > div:first-child {
+  filter: drop-shadow(0 0 28px rgba(117, 145, 255, 0.18));
+}
+
+.gt-new-ui .gt-empty-state__action,
+.gt-new-ui .gt-error-state__retry {
+  border: 1px solid var(--gt-experience-border-subtle) !important;
+  border-radius: var(--gt-experience-radius-control) !important;
+  box-shadow: var(--gt-experience-glow-primary);
+}
+
+.gt-new-ui .gt-skeleton-state,
+.gt-new-ui .gt-skeleton-card,
+.gt-new-ui .skeleton-box {
+  border-color: var(--gt-experience-border-subtle) !important;
+}
+
+.gt-new-ui .gt-skeleton-card,
+.gt-new-ui .skeleton-box {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.055), rgba(139, 164, 255, 0.13), rgba(255, 255, 255, 0.055)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+
+.gt-new-ui .gt-toast-container {
+  filter: drop-shadow(0 18px 38px rgba(0, 0, 0, 0.36));
+}
+
+.gt-new-ui .gt-toast {
+  border-color: var(--gt-experience-border-subtle) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.092), rgba(255, 255, 255, 0.038)),
+    var(--gt-experience-bg-surface-raised) !important;
+  box-shadow: var(--gt-experience-shadow-float), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.gt-new-ui .gt-toast--achievement {
+  border-color: rgba(224, 179, 89, 0.52) !important;
+  background: linear-gradient(135deg, rgba(45, 212, 111, 0.95), rgba(15, 118, 110, 0.9)) !important;
+}
+
+.gt-new-ui .gt-toast__progress {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.gt-new-ui .gt-toast__undo,
+.gt-new-ui .gt-toast__dismiss {
+  border-radius: var(--gt-experience-radius-control);
+}

@@ -122,6 +122,47 @@ const ALLOWED_EXTENSIONS = new Set([
   '.bin', // E2E encrypted blob uploads (paired with application/octet-stream)
 ]);
 
+const FILE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const FALLBACK_MIME_BY_EXT: Record<string, string> = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+  '.bmp': 'image/bmp',
+  '.ico': 'image/x-icon',
+  '.avif': 'image/avif',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.mov': 'video/quicktime',
+  '.avi': 'video/x-msvideo',
+  '.mkv': 'video/x-matroska',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
+  '.flac': 'audio/flac',
+  '.aac': 'audio/aac',
+  '.m4a': 'audio/mp4',
+  '.pdf': 'application/pdf',
+  '.txt': 'text/plain',
+  '.md': 'text/markdown',
+  '.json': 'application/json',
+  '.csv': 'text/csv',
+  '.xml': 'application/xml',
+  '.zip': 'application/zip',
+  '.tar': 'application/x-tar',
+  '.gz': 'application/gzip',
+  '.doc': 'application/msword',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.xls': 'application/vnd.ms-excel',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.ppt': 'application/vnd.ms-powerpoint',
+  '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  '.bin': 'application/octet-stream',
+};
+
 /**
  * Cross-validate extension against claimed MIME type. Returns true if the
  * extension is in the allowed set and is consistent with the MIME type
@@ -182,6 +223,41 @@ const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads');
  * `recursive: true` is a no-op if the directory already exists.
  */
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+function resolveUploadPath(storageKey: string): string | null {
+  const filePath = path.join(UPLOADS_DIR, storageKey);
+  const uploadsRoot = path.resolve(UPLOADS_DIR);
+  const resolved = path.resolve(filePath);
+  const relative = path.relative(uploadsRoot, resolved);
+  return relative && !relative.startsWith('..') && !path.isAbsolute(relative) ? resolved : null;
+}
+
+async function findOrphanUpload(fileId: string): Promise<{ storageKey: string; filePath: string; mimeType: string } | null> {
+  if (!FILE_ID_PATTERN.test(fileId)) {
+    return null;
+  }
+
+  const candidates = await Promise.all(
+    Object.entries(FALLBACK_MIME_BY_EXT).map(async ([ext, mimeType]) => {
+      const storageKey = `${fileId}${ext}`;
+      const filePath = resolveUploadPath(storageKey);
+      if (!filePath) {
+        return null;
+      }
+      try {
+        const stat = await fs.promises.stat(filePath);
+        return stat.isFile() ? { storageKey, filePath, mimeType } : null;
+      } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'code' in err && err.code === 'ENOENT') {
+          return null;
+        }
+        throw err;
+      }
+    }),
+  );
+
+  return candidates.find((candidate): candidate is NonNullable<typeof candidate> => candidate !== null) ?? null;
+}
 
 // ---------------------------------------------------------------------------
 // Multer storage and upload middleware
@@ -390,15 +466,28 @@ filesRouter.get('/:fileId', publicFileRateLimit, (req: Request, res: Response, n
       .limit(1);
 
     if (!fileRecord) {
+      const orphanUpload = await findOrphanUpload(fileId);
+      if (orphanUpload) {
+        logger.warn('[files] serving upload without files row', {
+          fileId,
+          storageKey: orphanUpload.storageKey,
+        });
+        res.setHeader('Content-Type', orphanUpload.mimeType);
+        res.setHeader('Content-Disposition', `inline; filename="${orphanUpload.storageKey}"`);
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        res.sendFile(orphanUpload.filePath);
+        return;
+      }
       setFileErrorNoStore(res);
       res.status(404).json({ code: 'NOT_FOUND', message: 'File not found' });
       return;
     }
 
-    const filePath = path.join(UPLOADS_DIR, fileRecord.storageKey);
+    const filePath = resolveUploadPath(fileRecord.storageKey);
 
     // Path traversal defense: ensure resolved path stays within UPLOADS_DIR
-    if (!path.resolve(filePath).startsWith(path.resolve(UPLOADS_DIR))) {
+    if (!filePath) {
       setFileErrorNoStore(res);
       res.status(403).json({ code: 'FORBIDDEN', message: 'Invalid path'  });
       return;

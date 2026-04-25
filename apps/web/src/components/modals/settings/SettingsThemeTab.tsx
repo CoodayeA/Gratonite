@@ -27,6 +27,7 @@ const SettingsThemeTab = ({ addToast }: Props) => {
     buttonShape, setButtonShape, highContrast, setHighContrast,
     lowPower, setLowPower, previewTheme,
     messageDensity, setMessageDensity,
+    uiExperience, setUiExperience,
   } = useTheme();
 
   const [themeSearchQuery, setThemeSearchQuery] = useState('');
@@ -149,6 +150,25 @@ const SettingsThemeTab = ({ addToast }: Props) => {
     <>
       <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Theme & Appearance</h2>
       <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Customize the global look and feel of your Gratonite experience.</p>
+
+      <div className="settings-section">
+        <div className="settings-section-header">
+          <h3>New Gratonite UI</h3>
+          <p>Try the Premium Gamer OS redesign while the classic UI remains available.</p>
+        </div>
+        <label className="settings-toggle-row">
+          <span>
+            <strong>Premium Gamer OS beta</strong>
+            <small>Polished spatial surfaces, refined glow, and refreshed gamer-native details.</small>
+          </span>
+          <input
+            type="checkbox"
+            checked={uiExperience === 'premium-gamer-os'}
+            onChange={(event) => setUiExperience(event.currentTarget.checked ? 'premium-gamer-os' : 'classic')}
+            aria-label="Enable Premium Gamer OS beta UI"
+          />
+        </label>
+      </div>
 
       <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Color Mode</h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '32px' }}>

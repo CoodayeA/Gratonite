@@ -16,3 +16,14 @@ Start here for the practical docs behind Gratonite — product overview, self-ho
 | [`QUALITY-CHECKLIST.md`](QUALITY-CHECKLIST.md) | Quality bar (when present) |
 | [`../DEVELOPMENT.md`](../DEVELOPMENT.md) | CI, deploy, engineering conventions |
 | [`deploy-review-checklist.md`](deploy-review-checklist.md) | Checklist before production deploy |
+
+## New Gratonite UI rollout
+
+The Premium Gamer OS UI is controlled by the frontend UI experience preference:
+
+- `classic`: current/default UI
+- `premium-gamer-os`: opt-in redesigned UI
+
+Users can switch in Settings -> Appearance. Operators can roll back the New UI by instructing users to switch back to classic or by clearing `localStorage["gratonite:ui-experience"]`.
+
+The first rollout keeps the classic UI as default until the New UI passes route, chat, settings, attachment, and accessibility smoke checks.

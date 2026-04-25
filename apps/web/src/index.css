@@ -109,7 +109,12 @@ button, [role="button"] {
    ROUTE & VIEW TRANSITIONS
    ------------------------ */
 .route-transition-wrapper {
-    animation: fadeInSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    /*
+     * CSS animation removed: Framer Motion's AnimatePresence already handles
+     * enter/exit on this wrapper (opacity + translateY via motion.div).
+     * Stacking both caused the old route tree to stay visible during the
+     * AnimatePresence mode="wait" exit phase, producing the DM freeze bug.
+     */
 }
 
 @keyframes fadeInSlideUp {
@@ -4990,4 +4995,65 @@ body.gratonite-exp-reduced-motion *::after {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+}
+
+/* Settings opt-in rows */
+.settings-content-panel .settings-section {
+  margin-bottom: 32px;
+}
+
+.settings-content-panel .settings-section-header {
+  margin-bottom: 12px;
+}
+
+.settings-content-panel .settings-section-header h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.settings-content-panel .settings-section-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.settings-content-panel .settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--bg-tertiary);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stroke);
+  cursor: pointer;
+}
+
+.settings-content-panel .settings-toggle-row > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-content-panel .settings-toggle-row strong {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.settings-content-panel .settings-toggle-row small {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.settings-content-panel .settings-toggle-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-primary);
+  flex-shrink: 0;
 }

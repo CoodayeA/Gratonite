@@ -14,13 +14,17 @@ type EmptyStateProps = {
 export const EmptyState = ({ type, title, description, actionLabel, onAction, secondaryActionLabel, onSecondaryAction }: EmptyStateProps) => {
     // Generative abstract composition using pure CSS depending on type
     return (
-        <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            padding: '64px 24px', textAlign: 'center', animation: 'fadeInSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
-        }}>
+        <div
+            className="gt-empty-state"
+            data-ui-empty-state={type}
+            style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                padding: '64px 24px', textAlign: 'center', animation: 'fadeInSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
+            }}
+        >
 
             <TiltCard>
-                <div className="empty-state-illustration" style={{
+                <div className="empty-state-illustration gt-empty-state__illustration" style={{
                     width: '160px', height: '160px', position: 'relative', marginBottom: '32px',
                     perspective: '1000px'
                 }}>
@@ -170,6 +174,7 @@ export const EmptyState = ({ type, title, description, actionLabel, onAction, se
                     {actionLabel && onAction && (
                         <RippleWrapper>
                             <button
+                                className="gt-empty-state__action gt-empty-state__action--primary"
                                 onClick={onAction}
                                 style={{
                                     background: type === '404' ? 'var(--error)' : 'var(--accent-primary)',
@@ -190,6 +195,7 @@ export const EmptyState = ({ type, title, description, actionLabel, onAction, se
                     {secondaryActionLabel && onSecondaryAction && (
                         <RippleWrapper>
                             <button
+                                className="gt-empty-state__action gt-empty-state__action--secondary"
                                 onClick={onSecondaryAction}
                                 style={{
                                     background: 'transparent',

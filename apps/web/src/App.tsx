@@ -3,7 +3,6 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { createPortal } from 'react-dom';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
 import gsap from 'gsap';
 import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar, Compass, User, Columns, Paintbrush, PenLine, FileText, LayoutGrid } from 'lucide-react';
 import './components/chat.css';
@@ -1730,7 +1729,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         overscan: 5,
     });
 
-    const UserPanel = () => (
+    const renderUserPanel = () => (
         <div className="user-panel">
             <span data-presence-toggle style={{ display: 'contents' }}>
                 <Avatar
@@ -2287,7 +2286,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     }
                 })}
 
-                <UserPanel />
+                {renderUserPanel()}
             </nav>
         );
     }
@@ -2673,7 +2672,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 </div>,
                 document.body
             )}
-            <UserPanel />
+            {renderUserPanel()}
 
             {/* Channel Settings Modal */}
             {channelSettingsOpen && activeGuildId && (
@@ -3297,7 +3296,7 @@ export const AppLayout = () => {
     const [isMemberDrawerOpen, setIsMemberDrawerOpen] = useState(false);
     const mainContentRef = useRef<HTMLDivElement>(null);
     const { user: ctxUser, loading: userLoading, gratoniteBalance, setGratoniteBalance } = useUser();
-    const { theme: activeTheme, colorMode, fontFamily, fontSize, accentColor, buttonShape, glassMode, highContrast, compactMode, reducedEffects: reducedEffectsVal, linkUnderlines, setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects, setLinkUnderlines, reducedEffects, screenReaderMode, setScreenReaderMode, focusIndicatorSize, setFocusIndicatorSize, colorBlindMode, setColorBlindMode, lowPower, setLowPower } = useTheme();
+    const { theme: activeTheme, colorMode, fontFamily, fontSize, accentColor, buttonShape, glassMode, highContrast, compactMode, reducedEffects: reducedEffectsVal, linkUnderlines, setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects, setLinkUnderlines, reducedEffects, screenReaderMode, setScreenReaderMode, focusIndicatorSize, setFocusIndicatorSize, colorBlindMode, setColorBlindMode, lowPower, setLowPower, uiExperience } = useTheme();
     const settingsHydratingRef = useRef(false);
     const routeAnnouncerRef = useRef<HTMLDivElement>(null);
     const [guilds, setGuilds] = useState<Array<{ id: string; name: string; ownerId: string; iconHash: string | null; description: string | null; memberCount: number; boostTier?: number }>>([]);
@@ -4277,16 +4276,18 @@ export const AppLayout = () => {
         return () => window.removeEventListener('gratonite:request-timeout', handler);
     }, [addToast]);
 
+    const routePath = location.pathname.replace(/^\/app(?=\/|$)/, '') || '/';
+
     // Only chat/channel routes show the members sidebar
-    const isChatRoute = location.pathname.includes('/chat') || location.pathname.includes('/channel/');
-    const isVoiceRoute = location.pathname.includes('/voice');
-    const isDmRoute = location.pathname.match(/^\/dm\/[^/]+$/);
-    const hideBottomNav = isChatRoute || isVoiceRoute || !!isDmRoute;
+    const isChatRoute = routePath.includes('/chat') || routePath.includes('/channel/');
+    const isVoiceRoute = routePath.includes('/voice');
+    const isDmRoute = /^\/dm\/[^/]+$/.test(routePath);
+    const hideBottomNav = isChatRoute || isVoiceRoute || isDmRoute;
 
     // Derive a section key for page transitions
     // Include channel/voice ID in key so route changes force Outlet remount
     const transitionKey = useMemo(() => {
-        const path = location.pathname;
+        const path = routePath;
         // Guild channels and voice channels - include channel ID for proper remount
         const guildChannelMatch = path.match(/^\/guild\/([^/]+)\/(?:channel|voice)\/([^/]+)/);
         if (guildChannelMatch) return `guild-${guildChannelMatch[1]}-${guildChannelMatch[2]}`;
@@ -4299,14 +4300,14 @@ export const AppLayout = () => {
         // Top-level sections: /, /friends, /shop, /discover, etc.
         const section = path.split('/')[1] || 'home';
         return section;
-    }, [location.pathname]);
+    }, [routePath]);
 
     // Mobile swipe gestures
     useMobileSwipe(mainContentRef, {
         onSwipeRight: () => {
             haptic.swipe();
             if (isMobile) {
-                const guildMatch = location.pathname.match(/\/guild\/([^/]+)\/(?:channel|voice)\//);
+                const guildMatch = routePath.match(/\/guild\/([^/]+)\/(?:channel|voice)\//);
                 if (guildMatch) navigate(`/guild/${guildMatch[1]}`);
                 else if (isDmRoute) navigate('/friends');
                 return;
@@ -4325,7 +4326,7 @@ export const AppLayout = () => {
     // Screen reader: announce route changes
     useEffect(() => {
         if (!screenReaderMode || !routeAnnouncerRef.current) return;
-        const path = location.pathname;
+        const path = routePath;
         let label = 'Page changed';
         if (path === '/') label = 'Home page';
         else if (path === '/friends') label = 'Friends page';
@@ -4338,7 +4339,23 @@ export const AppLayout = () => {
         else if (path === '/marketplace') label = 'Marketplace';
         else if (path === '/me') label = 'Your profile';
         routeAnnouncerRef.current.textContent = label;
-    }, [location.pathname, screenReaderMode]);
+    }, [routePath, screenReaderMode]);
+
+    const handleAppLinkClickCapture = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+        if (!isDmRoute || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+        const target = event.target instanceof HTMLElement ? event.target : null;
+        const anchor = target?.closest<HTMLAnchorElement>('a[href]');
+        if (!anchor || anchor.target || anchor.hasAttribute('download')) return;
+
+        const url = new URL(anchor.href, window.location.href);
+        if (url.origin !== window.location.origin || !url.pathname.startsWith('/app')) return;
+        if (url.pathname === window.location.pathname && url.search === window.location.search) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        window.location.assign(url.toString());
+    }, [isDmRoute]);
 
     // Screen reader: announce modal open/close
     const prevModalRef = useRef<ModalType>(null);
@@ -4371,7 +4388,11 @@ export const AppLayout = () => {
     return (
         <ContextMenuProvider>
             <GlobalBugReportContextMenu onOpenBugReport={() => setActiveModal('bugReport')} />
-            <div className={`app-container${focusMode ? ' focus-mode' : ''}`}>
+            <div
+                className={`app-container${focusMode ? ' focus-mode' : ''}`}
+                data-ui-shell={uiExperience === 'premium-gamer-os' ? 'premium' : 'classic'}
+                onClickCapture={handleAppLinkClickCapture}
+            >
                 {/* Visually hidden route announcer for screen readers */}
                 <div ref={routeAnnouncerRef} className="sr-route-announcer" aria-live="assertive" aria-atomic="true" role="status" />
                 <a href="#main-content" className="skip-link">Skip to content</a>
@@ -4439,19 +4460,13 @@ export const AppLayout = () => {
                             return (
                                 <SplitViewContainer
                                     leftContent={
-                                        <AnimatePresence mode="wait" initial={false}>
-                                            <motion.div
-                                                key={transitionKey}
-                                                className="route-transition-wrapper route-container"
-                                                style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}
-                                                initial={reducedEffects ? false : { opacity: 0, y: 8 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={reducedEffects ? undefined : { opacity: 0 }}
-                                                transition={{ duration: 0.2, ease: 'easeOut' }}
-                                            >
-                                                <Outlet key={transitionKey} context={outletCtx} />
-                                            </motion.div>
-                                        </AnimatePresence>
+                                        <div
+                                            key={transitionKey}
+                                            className="route-transition-wrapper route-container"
+                                            style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}
+                                        >
+                                            <Outlet key={transitionKey} context={outletCtx} />
+                                        </div>
                                     }
                                     rightContent={
                                         <SplitViewRightPane
@@ -4468,19 +4483,13 @@ export const AppLayout = () => {
                             );
                         }
                         return (
-                            <AnimatePresence mode="wait" initial={false}>
-                                <motion.div
-                                    key={transitionKey}
-                                    className="route-transition-wrapper route-container"
-                                    style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}
-                                    initial={reducedEffects ? false : { opacity: 0, y: 8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={reducedEffects ? undefined : { opacity: 0 }}
-                                    transition={{ duration: 0.2, ease: 'easeOut' }}
-                                >
-                                    <Outlet key={transitionKey} context={outletCtx} />
-                                </motion.div>
-                            </AnimatePresence>
+                            <div
+                                key={transitionKey}
+                                className="route-transition-wrapper route-container"
+                                style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}
+                            >
+                                <Outlet key={transitionKey} context={outletCtx} />
+                            </div>
                         );
                     })()}
                     {isChatRoute && (isSidebarOpen || (isMobile && isMemberDrawerOpen)) && (
@@ -4494,11 +4503,11 @@ export const AppLayout = () => {
                 {/* Mobile Bottom Navigation (< 768px) — 5 tabs: Home, DMs, Search, Notifications, Settings */}
                 {!hideBottomNav && (
                 <nav className="mobile-bottom-nav" aria-label="Main navigation">
-                    <Link to="/" className={`mobile-nav-item ${location.pathname === '/' ? 'active' : ''}`} aria-current={location.pathname === '/' ? 'page' : undefined}>
+                    <Link to="/" className={`mobile-nav-item ${routePath === '/' ? 'active' : ''}`} aria-current={routePath === '/' ? 'page' : undefined}>
                         <Home size={20} aria-hidden="true" />
                         <span>Home</span>
                     </Link>
-                    <Link to="/friends" className={`mobile-nav-item ${location.pathname.startsWith('/dm') || location.pathname === '/friends' ? 'active' : ''}`} aria-current={location.pathname.startsWith('/dm') || location.pathname === '/friends' ? 'page' : undefined}>
+                    <Link to="/friends" className={`mobile-nav-item ${routePath.startsWith('/dm') || routePath === '/friends' ? 'active' : ''}`} aria-current={routePath.startsWith('/dm') || routePath === '/friends' ? 'page' : undefined}>
                         <MessageSquare size={20} aria-hidden="true" />
                         <span>DMs</span>
                     </Link>

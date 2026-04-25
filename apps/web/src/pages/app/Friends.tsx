@@ -28,7 +28,7 @@ function ReferralCard() {
     if (!refData) return null;
 
     return (
-        <div style={{
+        <div className="gt-social-referral" data-ui-social-referral style={{
             background: 'linear-gradient(135deg, rgba(82, 109, 245, 0.1) 0%, rgba(139, 92, 246, 0.07) 100%)',
             borderRadius: 12, padding: 20, marginBottom: 20,
             border: '1px solid rgba(82, 109, 245, 0.22)',
@@ -414,6 +414,8 @@ const Friends = () => {
         return (
             <div
                 ref={detailPanelRef}
+                className="gt-social-detail-panel"
+                data-ui-profile-card
                 style={{
                     width: '320px',
                     minWidth: '320px',
@@ -624,7 +626,8 @@ const Friends = () => {
             {friends.map(friend => (
                 <div
                     key={friend.id}
-                    className="friend-row hover-bg-tertiary"
+                    className="gt-friend-row friend-row hover-bg-tertiary"
+                    data-ui-friend-row
                     onClick={(e) => handleFriendRowClick(friend, e)}
                     style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -666,7 +669,7 @@ const Friends = () => {
                     </div>
 
                     <div className="friend-actions" style={{ display: 'flex', gap: isMobile ? '4px' : '6px', position: 'relative', flexShrink: 0 }}>
-                        <button onClick={() => handleOpenDm(friend.id, friend.displayName)} className="fa-btn" title="Message">
+                        <button onClick={() => handleOpenDm(friend.id, friend.displayName)} className="gt-friend-action fa-btn" title="Message">
                             <MessageSquare size={isMobile ? 16 : 17} />
                         </button>
                         {!isMobile && (
@@ -680,7 +683,7 @@ const Friends = () => {
                                             addToast({ title: 'Failed to start call', variant: 'error' });
                                         }
                                     }}
-                                    className="fa-btn"
+                                    className="gt-friend-action fa-btn"
                                     title="Voice Call"
                                 >
                                     <Phone size={17} />
@@ -694,7 +697,7 @@ const Friends = () => {
                                             addToast({ title: 'Failed to start call', variant: 'error' });
                                         }
                                     }}
-                                    className="fa-btn"
+                                    className="gt-friend-action fa-btn"
                                     title="Video Call"
                                 >
                                     <Video size={17} />
@@ -703,7 +706,7 @@ const Friends = () => {
                         )}
                         <button
                             onClick={() => setMoreMenuId(moreMenuId === friend.id ? null : friend.id)}
-                            className="fa-btn"
+                            className="gt-friend-action fa-btn"
                             style={{ background: moreMenuId === friend.id ? 'var(--accent-primary)' : undefined, color: moreMenuId === friend.id ? '#000' : undefined }}
                             title="More"
                         >
@@ -729,9 +732,9 @@ const Friends = () => {
     );
 
     return (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', height: '100%' }}>
+        <div className="gt-social-surface" data-ui-social-surface style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', height: '100%' }}>
             {/* Header */}
-            <header style={{ height: '60px', borderBottom: '1px solid var(--stroke)', display: 'flex', alignItems: 'stretch', padding: isMobile ? '0 12px' : '0 24px', gap: isMobile ? '8px' : '20px' }}>
+            <header className="gt-social-header" data-ui-social-header style={{ height: '60px', borderBottom: '1px solid var(--stroke)', display: 'flex', alignItems: 'stretch', padding: isMobile ? '0 12px' : '0 24px', gap: isMobile ? '8px' : '20px' }}>
                 {!isMobile && (
                     <>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontWeight: 700, fontSize: '15px', flexShrink: 0 }}>
@@ -742,7 +745,7 @@ const Friends = () => {
                     </>
                 )}
 
-                <div style={{ display: 'flex', gap: isMobile ? '0' : '2px', overflowX: isMobile ? 'auto' : undefined, scrollbarWidth: 'none', flex: isMobile ? 1 : undefined, alignItems: 'stretch' } as React.CSSProperties}>
+                <div className="gt-social-tabs" data-ui-social-tabs style={{ display: 'flex', gap: isMobile ? '0' : '2px', overflowX: isMobile ? 'auto' : undefined, scrollbarWidth: 'none', flex: isMobile ? 1 : undefined, alignItems: 'stretch' } as React.CSSProperties}>
                     <button className={`ft-tab${activeTab === 'online' ? ' ft-tab--active' : ''}`} onClick={() => setActiveTab('online')}>Online</button>
                     <button className={`ft-tab${activeTab === 'all' ? ' ft-tab--active' : ''}`} onClick={() => setActiveTab('all')}>All</button>
                     <button className={`ft-tab${activeTab === 'pending' ? ' ft-tab--active' : ''}`} onClick={() => setActiveTab('pending')}>
@@ -763,7 +766,7 @@ const Friends = () => {
             {/* Main body: content + optional detail panel */}
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                 {/* Content Area */}
-                <div style={{ flex: 1, padding: isMobile ? '16px 12px' : '24px 32px', overflowY: 'auto' }}>
+                <div className="gt-social-content" data-ui-social-content style={{ flex: 1, padding: isMobile ? '16px 12px' : '24px 32px', overflowY: 'auto' }}>
                     {isLoading ? (
                         <SkeletonFriendList count={6} />
                     ) : fetchError ? (
@@ -779,7 +782,8 @@ const Friends = () => {
                         <div style={{ position: 'relative', marginBottom: '24px' }}>
                             <input
                                 type="text"
-                                className="auth-input"
+                                className="gt-social-search auth-input"
+                                data-ui-social-search
                                 placeholder="Search"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -841,7 +845,8 @@ const Friends = () => {
                                         draggable
                                         onDragStart={() => setDraggedFriendId(friend.id)}
                                         onDragEnd={() => { setDraggedFriendId(null); setDragOverGroupId(null); }}
-                                        className="friend-row hover-bg-tertiary"
+                                        className="gt-friend-row friend-row hover-bg-tertiary"
+                                        data-ui-friend-row
                                         onClick={(e) => handleFriendRowClick(friend, e)}
                                         style={{
                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -873,12 +878,12 @@ const Friends = () => {
                                             </div>
                                         </div>
                                         <div className="friend-actions" style={{ display: 'flex', gap: isMobile ? '4px' : '6px', position: 'relative', flexShrink: 0 }}>
-                                            <button onClick={() => handleOpenDm(friend.id, friend.displayName)} className="fa-btn" title="Message">
+                                            <button onClick={() => handleOpenDm(friend.id, friend.displayName)} className="gt-friend-action fa-btn" title="Message">
                                                 <MessageSquare size={isMobile ? 16 : 17} />
                                             </button>
                                             <button
                                                 onClick={() => setMoreMenuId(moreMenuId === friend.id ? null : friend.id)}
-                                                className="fa-btn"
+                                                className="gt-friend-action fa-btn"
                                                 style={{ background: moreMenuId === friend.id ? 'var(--accent-primary)' : undefined, color: moreMenuId === friend.id ? '#000' : undefined }}
                                                 title="More"
                                             >
@@ -1166,7 +1171,11 @@ const Friends = () => {
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                 {requests.filter(r => matchesFriendSearch(r.username, r.displayName)).map(req => (
-                                    <div key={req.id} className="friend-row hover-bg-tertiary" style={{
+                                    <div
+                                        key={req.id}
+                                        className="gt-friend-row friend-row hover-bg-tertiary"
+                                        data-ui-friend-row
+                                        style={{
                                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                         padding: '10px 16px', borderRadius: '8px', cursor: 'pointer',
                                         transition: 'background 0.15s',
@@ -1197,7 +1206,7 @@ const Friends = () => {
 
                                         <div className="friend-actions" style={{ display: 'flex', gap: isMobile ? '4px' : '6px', flexShrink: 0 }}>
                                             {req.type === 'incoming' && (
-                                                <button onClick={() => handleAcceptRequest(req.id, req.displayName)} className="fa-btn" style={{ color: 'var(--success)' }} title="Accept">
+                                                <button onClick={() => handleAcceptRequest(req.id, req.displayName)} className="gt-friend-action fa-btn" style={{ color: 'var(--success)' }} title="Accept">
                                                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                                 </button>
                                             )}
@@ -1209,7 +1218,7 @@ const Friends = () => {
                                                 } catch {
                                                     addToast({ title: 'Failed', variant: 'error' });
                                                 }
-                                            }} className="fa-btn" style={{ color: 'var(--error)' }} title={req.type === 'incoming' ? 'Decline' : 'Cancel'}>
+                                            }} className="gt-friend-action fa-btn" style={{ color: 'var(--error)' }} title={req.type === 'incoming' ? 'Decline' : 'Cancel'}>
                                                 <X size={17} />
                                             </button>
                                         </div>
@@ -1315,7 +1324,7 @@ const Friends = () => {
                     {activeTab === 'add' && (
                         <div style={{ maxWidth: '640px', margin: '0 auto', marginTop: isMobile ? '16px' : '32px' }}>
                             {/* Hero card */}
-                            <div style={{
+                            <div className="gt-add-friend-card" data-ui-add-friend-card style={{
                                 background: 'linear-gradient(135deg, rgba(82,109,245,0.12) 0%, rgba(139,92,246,0.08) 100%)',
                                 borderRadius: 16, padding: isMobile ? '28px 20px' : '40px 48px',
                                 border: '1px solid rgba(82,109,245,0.2)',
@@ -1333,7 +1342,8 @@ const Friends = () => {
                                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                     <input
                                         type="text"
-                                        className="auth-input"
+                                        className="gt-add-friend-input auth-input"
+                                        data-ui-add-friend-input
                                         placeholder="Enter a username..."
                                         value={addFriendInput}
                                         onChange={(e) => setAddFriendInput(e.target.value)}
@@ -1341,6 +1351,8 @@ const Friends = () => {
                                         style={{ margin: 0, paddingRight: '150px', background: 'var(--bg-elevated)', border: '1px solid rgba(82,109,245,0.25)', height: '52px', fontSize: '15px' }}
                                     />
                                     <button
+                                        className="gt-add-friend-submit"
+                                        data-ui-add-friend-submit
                                         onClick={() => { if (addFriendInput.length > 0) { handleAddFriend(); } }}
                                         style={{
                                             position: 'absolute', right: '8px',

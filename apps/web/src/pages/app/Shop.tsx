@@ -288,7 +288,7 @@ const Shop = () => {
     const bundleDiscounted = Math.floor(bundleTotal * (1 - bundleDiscount / 100));
 
     return (
-        <div style={{ flex: 1, padding: isMobile ? '16px 12px' : '32px 48px', overflowY: 'auto', background: 'var(--bg-primary)', position: 'relative' }}>
+        <div className="gt-commerce-surface gt-shop-surface" data-ui-commerce-surface="shop" style={{ flex: 1, padding: isMobile ? '16px 12px' : '32px 48px', overflowY: 'auto', background: 'var(--bg-primary)', position: 'relative' }}>
             <style>{`
                 @keyframes shop-rainbow-spin { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
                 @keyframes shop-pulse-glow { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.04); } }
@@ -317,7 +317,7 @@ const Shop = () => {
                 </header>
 
                 {/* Featured Section */}
-                <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, rgba(82,109,245,0.12), rgba(217,70,239,0.12), rgba(245,158,11,0.06))', padding: isMobile ? '20px' : '36px', borderRadius: '20px', border: '1px solid rgba(217,70,239,0.3)', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between', marginBottom: isMobile ? '24px' : '48px', gap: isMobile ? '20px' : '32px' }}>
+                <div className="shop-card reward-card shop-card--featured" data-ui-shop-card="featured" style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, rgba(82,109,245,0.12), rgba(217,70,239,0.12), rgba(245,158,11,0.06))', padding: isMobile ? '20px' : '36px', borderRadius: '20px', border: '1px solid rgba(217,70,239,0.3)', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between', marginBottom: isMobile ? '24px' : '48px', gap: isMobile ? '20px' : '32px' }}>
                     {/* Ambient glow blobs */}
                     <div style={{ position: 'absolute', top: '-40px', right: isMobile ? '-20px' : '80px', width: '180px', height: '180px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(217,70,239,0.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
                     <div style={{ position: 'absolute', bottom: '-30px', right: isMobile ? 'auto' : '240px', left: isMobile ? '-20px' : 'auto', width: '140px', height: '140px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(82,109,245,0.14) 0%, transparent 70%)', pointerEvents: 'none' }} />
@@ -361,7 +361,7 @@ const Shop = () => {
 
                 {/* Bundle Items Panel */}
                 {showBundleItems && (
-                    <div ref={bundleItemsRef} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '16px', padding: '24px', marginBottom: '48px' }}>
+                    <div ref={bundleItemsRef} className="shop-card reward-card shop-card--bundle" data-ui-shop-card="bundle" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '16px', padding: '24px', marginBottom: '48px' }}>
                         <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Layers size={18} color="var(--accent-primary)" /> Bundle Includes ({bundleIncludedItems.length} items)
                         </h3>
@@ -450,7 +450,7 @@ const Shop = () => {
                     ) : view === 'nameplates' ? (
                         filteredItems.map(item => (
                             <TiltCard key={item.id} maxTilt={10} scale={1.03}>
-                                <div className="hover-lift" style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '24px', border: `1px solid ${rarityColor[item.rarity]}40`, display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', overflow: 'hidden', boxShadow: `0 4px 24px ${rarityColor[item.rarity]}15, var(--shadow-panel)` }}>
+                                <div className="shop-card reward-card hover-lift" data-ui-shop-card={item.type} data-rarity={item.rarity} style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '24px', border: `1px solid ${rarityColor[item.rarity]}40`, display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', overflow: 'hidden', boxShadow: `0 4px 24px ${rarityColor[item.rarity]}15, var(--shadow-panel)` }}>
                                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: rarityColor[item.rarity] }} />
                                     <ItemBadge item={item} />
 
@@ -496,7 +496,7 @@ const Shop = () => {
                     ) : view === 'decorations' ? (
                         filteredItems.map(item => (
                             <TiltCard key={item.id} maxTilt={12} scale={1.03}>
-                                <div className="hover-lift" style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '24px', border: `1px solid ${rarityColor[item.rarity]}40`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', position: 'relative', overflow: 'hidden', boxShadow: `0 4px 24px ${rarityColor[item.rarity]}15, var(--shadow-panel)` }}>
+                                <div className="shop-card reward-card hover-lift" data-ui-shop-card={item.type} data-rarity={item.rarity} style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '24px', border: `1px solid ${rarityColor[item.rarity]}40`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', position: 'relative', overflow: 'hidden', boxShadow: `0 4px 24px ${rarityColor[item.rarity]}15, var(--shadow-panel)` }}>
                                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: rarityColor[item.rarity] }} />
                                     <ItemBadge item={item} />
 
@@ -554,7 +554,7 @@ const Shop = () => {
 
                             return (
                             <TiltCard key={item.id} maxTilt={12} scale={1.03}>
-                                <div className="hover-lift" style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '24px', border: `1px solid ${rarityColor[item.rarity]}40`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', position: 'relative', overflow: 'hidden', height: '100%', boxShadow: `0 4px 24px ${rarityColor[item.rarity]}15, var(--shadow-panel)` }}>
+                                <div className="shop-card reward-card hover-lift" data-ui-shop-card={item.type} data-rarity={item.rarity} style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', padding: '24px', border: `1px solid ${rarityColor[item.rarity]}40`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', position: 'relative', overflow: 'hidden', height: '100%', boxShadow: `0 4px 24px ${rarityColor[item.rarity]}15, var(--shadow-panel)` }}>
                                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '80px', background: 'linear-gradient(180deg, var(--bg-tertiary) 0%, transparent 100%)', zIndex: 0 }}></div>
                                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: rarityColor[item.rarity] }} />
                                     <ItemBadge item={item} />
@@ -655,7 +655,7 @@ const Shop = () => {
 
             {/* Bundle Builder */}
             {showBundleBuilder && (
-                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--accent-primary)', borderRadius: '16px', padding: '24px', marginBottom: '32px', maxWidth: '1000px', margin: '0 auto 32px' }}>
+                <div className="shop-card reward-card shop-card--bundle-builder" data-ui-shop-card="bundle-builder" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--accent-primary)', borderRadius: '16px', padding: '24px', marginBottom: '32px', maxWidth: '1000px', margin: '0 auto 32px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                         <h3 style={{ fontSize: '18px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Package size={20} color="var(--accent-primary)" /> Build a Bundle (max 5)

@@ -64,7 +64,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
         <ToastContext.Provider value={{ addToast, removeToast }}>
             {children}
             <div
-                className="toast-container"
+                className="toast-container gt-toast-container"
                 role="status"
                 aria-live="polite"
                 aria-atomic="false"
@@ -279,7 +279,8 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
                     ? 'all 0.3s cubic-bezier(0.4, 0, 1, 1)'
                     : 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
             }}
-            className="hover-lift"
+            className={`hover-lift gt-toast gt-toast--${toast.variant}`}
+            data-ui-toast={toast.variant}
             role="alert"
             aria-label={`${toast.variant}: ${toast.title}${count > 1 ? ` (${count})` : ''}${toast.description ? '. ' + toast.description : ''}`}
             onClick={isUndo ? undefined : handleRemove}
@@ -311,7 +312,7 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
                     {isUndo && toast.onUndo && (
                         <button
                             onClick={handleUndo}
-                            className="toast-undo-btn"
+                            className="toast-undo-btn gt-toast__undo"
                         >
                             Undo
                         </button>
@@ -326,7 +327,7 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
             <button
                 aria-label="Dismiss notification"
                 onClick={(e) => { e.stopPropagation(); handleRemove(); }}
-                className="toast-dismiss-btn"
+                className="toast-dismiss-btn gt-toast__dismiss"
                 style={{
                     color: isAchievement ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)',
                 }}
@@ -334,7 +335,7 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
                 <X size={16} />
             </button>
             {/* Auto-dismiss progress bar */}
-            <div style={{
+            <div className="gt-toast__progress" style={{
                 position: 'absolute',
                 bottom: 0,
                 left: 0,
@@ -344,7 +345,7 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
                 borderRadius: '0 0 var(--radius-md) var(--radius-md)',
                 overflow: 'hidden'
             }}>
-                <div style={{
+                <div className="gt-toast__progress-bar" style={{
                     height: '100%',
                     background: iconColor,
                     borderRadius: 'inherit',

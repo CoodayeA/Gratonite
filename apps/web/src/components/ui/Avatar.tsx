@@ -169,6 +169,10 @@ const Avatar = memo(({
 
   return (
     <div
+      className="gt-avatar"
+      data-ui-avatar
+      data-avatar-status={status ?? undefined}
+      data-avatar-frame={resolvedFrame}
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -183,7 +187,7 @@ const Avatar = memo(({
     >
       {/* Inner circle — overflow:hidden here clips the image without clipping the status dot */}
       <div
-        className={frameClassName}
+        className={`gt-avatar__core${frameClassName ? ` ${frameClassName}` : ''}`}
         style={{
           width: size,
           height: size,
@@ -253,6 +257,8 @@ const Avatar = memo(({
       {/* Status dot — rendered outside the overflow:hidden inner circle */}
       {status && (
         <div
+          className="gt-avatar__status"
+          data-ui-avatar-status
           style={{
             position: 'absolute',
             bottom: -2,
@@ -268,7 +274,7 @@ const Avatar = memo(({
           aria-label={`Status: ${status}`}
         >
           <div
-            className="status-dot-inner"
+            className="gt-avatar__status-dot status-dot-inner"
             style={{
               width: statusDotSize,
               height: statusDotSize,
@@ -294,7 +300,7 @@ const Avatar = memo(({
         const pos = DECORATION_POSITIONS[decoration.position] ?? DECORATION_POSITIONS['top-right'];
         const badgeSize = Math.max(12, Math.round(size * 0.38));
         return (
-          <div style={{
+          <div className="gt-avatar__decoration" style={{
             position: 'absolute',
             ...pos,
             fontSize: badgeSize,
@@ -311,6 +317,8 @@ const Avatar = memo(({
       {/* Remote instance globe indicator */}
       {instanceDomain && (
         <div
+          className="gt-avatar__remote"
+          data-ui-avatar-remote
           title={`From ${instanceDomain}`}
           aria-label={`Federated user from ${instanceDomain}`}
           style={{

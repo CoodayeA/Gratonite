@@ -28,7 +28,7 @@ export const ErrorState = ({
 }: ErrorStateProps) => {
     if (compact) {
         return (
-            <div style={{
+            <div className="gt-error-state gt-error-state--compact" data-ui-error-state="compact" style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px',
@@ -40,6 +40,7 @@ export const ErrorState = ({
                 <span>{message}</span>
                 {onRetry && (
                     <button
+                        className="gt-error-state__retry"
                         onClick={onRetry}
                         style={{
                             background: 'transparent',
@@ -65,7 +66,7 @@ export const ErrorState = ({
     }
 
     return (
-        <div style={{
+        <div className="gt-error-state" data-ui-error-state="full" style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -127,7 +128,7 @@ export const ErrorState = ({
                         gap: '8px',
                         transition: 'opacity 0.15s',
                     }}
-                    className="hover-opacity-85"
+                    className="hover-opacity-85 gt-error-state__retry"
                 >
                     <RefreshCw size={16} />
                     {retryLabel}

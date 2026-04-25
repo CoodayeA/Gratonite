@@ -695,7 +695,7 @@ const Marketplace = () => {
     ];
 
     return (
-        <div style={{ flex: 1, padding: '32px 48px', overflowY: 'auto', background: 'var(--bg-primary)' }}>
+        <div className="gt-commerce-surface gt-marketplace-surface" data-ui-commerce-surface="marketplace" style={{ flex: 1, padding: '32px 48px', overflowY: 'auto', background: 'var(--bg-primary)' }}>
             <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
                 <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
                     <div>
@@ -810,6 +810,9 @@ const Marketplace = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
                                     {filteredItems.map(item => (
                                         <div key={item.id}
+                                            className="marketplace-card reward-card"
+                                            data-ui-marketplace-card={item.type}
+                                            data-marketplace-item-id={item.id}
                                             onMouseEnter={() => setHoveredCard(String(item.id))} onMouseLeave={() => setHoveredCard(null)}
                                             style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', transform: hoveredCard === String(item.id) ? 'translateY(-4px)' : 'translateY(0)', boxShadow: hoveredCard === String(item.id) ? '0 12px 32px rgba(0,0,0,0.3)' : 'none' }}>
                                             {/* Creator banner preview */}
@@ -918,6 +921,9 @@ const Marketplace = () => {
                                     const isUrgent = timeLeft.endsWith('m') && !timeLeft.includes('h');
                                     return (
                                         <div key={auction.id}
+                                            className="marketplace-card marketplace-card--auction reward-card"
+                                            data-ui-marketplace-card="auction"
+                                            data-marketplace-auction-id={auction.id}
                                             onMouseEnter={() => setHoveredCard(auction.id)} onMouseLeave={() => setHoveredCard(null)}
                                             style={{ background: hoveredCard === auction.id ? 'var(--bg-tertiary)' : 'var(--bg-elevated)', border: `1px solid ${isUrgent ? 'var(--error)' : 'var(--stroke)'}`, borderRadius: '14px', padding: '20px', display: 'grid', gridTemplateColumns: '80px 2fr 1fr 1fr auto', alignItems: 'center', gap: '20px', transition: 'background 0.15s, box-shadow 0.15s', cursor: 'pointer', boxShadow: hoveredCard === auction.id ? '0 8px 24px rgba(0,0,0,0.2)' : 'none' }}>
                                             <div style={{ position: 'relative', width: '80px', height: '80px' }}>
@@ -984,7 +990,7 @@ const Marketplace = () => {
                                     const timeLeft = getTimeRemaining(a.endsAt);
                                     const isActive = a.status === 'active' && timeLeft !== 'Ended';
                                     return (
-                                        <div key={a.id} style={{
+                                        <div key={a.id} className="marketplace-card marketplace-card--my-auction reward-card" data-ui-marketplace-card="my-auction" style={{
                                             display: 'flex', alignItems: 'center', gap: '16px',
                                             padding: '16px', borderRadius: '12px',
                                             background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
@@ -1037,7 +1043,7 @@ const Marketplace = () => {
                                     const timeLeft = getTimeRemaining(a.endsAt);
                                     const isWinning = b.isWinning;
                                     return (
-                                        <div key={b.bidId} style={{
+                                        <div key={b.bidId} className="marketplace-card marketplace-card--my-bid reward-card" data-ui-marketplace-card="my-bid" style={{
                                             display: 'flex', alignItems: 'center', gap: '16px',
                                             padding: '16px', borderRadius: '12px',
                                             background: 'var(--bg-elevated)',
