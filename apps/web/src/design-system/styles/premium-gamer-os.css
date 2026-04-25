@@ -1,0 +1,24 @@
+:root[data-ui-experience="premium-gamer-os"] {
+  --gt-shell-gap: 12px;
+}
+
+:root[data-ui-experience="premium-gamer-os"] body {
+  background: var(--gt-experience-bg-depth);
+}
+
+:root[data-ui-experience="premium-gamer-os"].reduced-effects *,
+:root[data-ui-experience="premium-gamer-os"].low-power * {
+  animation-duration: 1ms !important;
+  transition-duration: 1ms !important;
+}
+
+.gt-new-ui .glass-panel {
+  background: var(--gt-experience-bg-surface);
+  border: 1px solid var(--gt-experience-border-subtle);
+  box-shadow: var(--gt-experience-shadow-panel);
+  backdrop-filter: var(--panel-blur, blur(18px));
+}
+
+.gt-new-ui .app-container {
+  background: var(--gt-experience-bg-depth);
+}

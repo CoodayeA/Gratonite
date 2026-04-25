@@ -1,0 +1,17 @@
+export const PREMIUM_GAMER_OS_TOKENS: Record<string, string> = {
+  '--gt-experience-bg-depth': 'radial-gradient(circle at 18% 0%, rgba(104, 132, 255, 0.22), transparent 34%), radial-gradient(circle at 92% 4%, rgba(224, 179, 89, 0.16), transparent 28%), linear-gradient(135deg, #070911 0%, #10131d 52%, #080a10 100%)',
+  '--gt-experience-bg-surface': 'rgba(255, 255, 255, 0.055)',
+  '--gt-experience-bg-surface-raised': 'rgba(255, 255, 255, 0.082)',
+  '--gt-experience-bg-surface-inset': 'rgba(0, 0, 0, 0.22)',
+  '--gt-experience-border-subtle': 'rgba(255, 255, 255, 0.11)',
+  '--gt-experience-border-luminous': 'rgba(139, 164, 255, 0.32)',
+  '--gt-experience-glow-primary': '0 0 32px rgba(117, 145, 255, 0.24)',
+  '--gt-experience-glow-warm': '0 0 28px rgba(224, 179, 89, 0.18)',
+  '--gt-experience-radius-panel': '20px',
+  '--gt-experience-radius-control': '14px',
+  '--gt-experience-shadow-panel': '0 22px 70px rgba(0, 0, 0, 0.38)',
+  '--gt-experience-shadow-float': '0 14px 42px rgba(0, 0, 0, 0.34)',
+  '--gt-experience-motion-fast': '140ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+  '--gt-experience-motion-standard': '220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+  '--gt-experience-motion-emphasized': '360ms cubic-bezier(0.16, 1, 0.3, 1)',
+};

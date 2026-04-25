@@ -4,6 +4,8 @@ import { MotionConfig } from 'framer-motion';
 import { resolveTheme, addRecentTheme, getScheduledTheme } from '../../themes/registry';
 import { applyThemeSync, applyThemeWithTransition } from '../../themes/injector';
 import type { ThemeVariables } from '../../themes/types';
+import { applyExperienceTokens, type UiExperience } from '../../design-system/tokens/applyExperienceTokens';
+import { readStoredUiExperience, writeStoredUiExperience } from '../../design-system/experience/useUiExperience';
 
 export type AppTheme = string; // Now accepts any theme ID (preset or custom)
 export type ColorMode = 'light' | 'dark';
@@ -20,10 +22,12 @@ type ThemeContextType = {
     colorMode: ColorMode;
     fontFamily: FontFamily;
     fontSize: FontSize;
+    uiExperience: UiExperience;
     setTheme: (theme: AppTheme) => void;
     setColorMode: (mode: ColorMode) => void;
     setFontFamily: (font: FontFamily) => void;
     setFontSize: (size: FontSize) => void;
+    setUiExperience: (experience: UiExperience) => void;
     showChannelBackgrounds: boolean;
     setShowChannelBackgrounds: (show: boolean) => void;
     playMovingBackgrounds: boolean;
@@ -263,6 +267,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         return 'comfortable';
     });
 
+    const [uiExperience, setUiExperienceState] = useState<UiExperience>(() => readStoredUiExperience());
+
     // Preview state
     const [previewThemeId, setPreviewThemeId] = useState<string | null>(null);
     const isPreviewActive = previewThemeId !== null;
@@ -371,6 +377,11 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('gratonite:density', density);
     };
 
+    const setUiExperience = (experience: UiExperience) => {
+        setUiExperienceState(experience);
+        writeStoredUiExperience(experience);
+    };
+
     const previewTheme= (themeId: string | null) => {
         setPreviewThemeId(themeId);
     };
@@ -394,6 +405,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         document.documentElement.setAttribute('data-font-size', fontSize);
         document.documentElement.setAttribute('data-glass-mode', glassMode);
         document.documentElement.setAttribute('data-button-shape', buttonShape);
+        applyExperienceTokens(uiExperience);
 
         // Toggle classes
         const el = document.documentElement;
@@ -445,7 +457,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         el.style.fontSize = fontSizeMap[fontSize] ?? '100%';
         el.style.setProperty('--font-scale', (scaleMap[fontSize] ?? 1.0).toString());
 
-    }, [activeThemeId, colorMode, fontFamily, fontSize, glassMode, reducedEffects, lowPower, accentColor, highContrast, compactMode, buttonShape, screenReaderMode, linkUnderlines, focusIndicatorSize, colorBlindMode, lowDataMode, messageDensity, previewThemeId]);
+    }, [activeThemeId, colorMode, fontFamily, fontSize, glassMode, reducedEffects, lowPower, accentColor, highContrast, compactMode, buttonShape, screenReaderMode, linkUnderlines, focusIndicatorSize, colorBlindMode, lowDataMode, messageDensity, uiExperience, previewThemeId]);
 
     // --- B7: OS Accent Color Sync on desktop ---
     useEffect(() => {
@@ -490,6 +502,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     return (
         <ThemeContext.Provider value={{
             theme, colorMode, fontFamily, fontSize,
+            uiExperience, setUiExperience,
             setTheme, setColorMode, setFontFamily, setFontSize,
             showChannelBackgrounds, setShowChannelBackgrounds,
             playMovingBackgrounds, setPlayMovingBackgrounds,
