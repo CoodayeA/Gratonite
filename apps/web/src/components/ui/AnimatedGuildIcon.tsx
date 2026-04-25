@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 
 interface AnimatedGuildIconProps {
     src: string;
@@ -6,35 +6,70 @@ interface AnimatedGuildIconProps {
 }
 
 /**
- * Guild icon rendered as orbital system: central glowing orb with orbiting satellite.
- * Creates dynamic sci-fi aesthetic with continuous orbital motion.
- * Satellites represent active guild members or ongoing activity.
+ * Guild icon that only animates GIF/APNG on hover.
+ * Shows a frozen first frame by default.
+ * Respects prefers-reduced-motion and the app's reduced-effects class.
  */
 const AnimatedGuildIcon = memo(({ src, alt }: AnimatedGuildIconProps) => {
-    // Extract a deterministic color from src URL for satellite color variation
-    const getColorFromSrc = (url: string): string => {
-        let hash = 0;
-        for (let i = 0; i < url.length; i++) {
-            const char = url.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32-bit integer
-        }
-        // Map hash to magenta, cyan, yellow, lime range
-        const colors = ['#ff00ff', '#00ffff', '#ffff00', '#00ff88', '#ff0088', '#00d4ff'];
-        return colors[Math.abs(hash) % colors.length];
-    };
+    const [hovered, setHovered] = useState(false);
+    const [staticFrame, setStaticFrame] = useState<string | null>(null);
+    const isAnimated = /\.(gif|apng)/i.test(src);
 
-    const satelliteColor = getColorFromSrc(src);
+    // Check reduced motion preference
+    const prefersReducedMotion = typeof window !== 'undefined' && (
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+        document.documentElement.classList.contains('reduced-effects')
+    );
+
+    // Extract first frame for animated images
+    useEffect(() => {
+        if (!isAnimated) {
+            setStaticFrame(null);
+            return;
+        }
+
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0);
+                    setStaticFrame(canvas.toDataURL('image/png'));
+                }
+            } catch {
+                setStaticFrame(null);
+            }
+        };
+        img.src = src;
+    }, [src, isAnimated]);
+
+    // Non-animated or reduced motion with no hover: just show image
+    if (!isAnimated || (prefersReducedMotion && !hovered)) {
+        return (
+            <img
+                src={prefersReducedMotion ? (staticFrame || src) : src}
+                alt={alt}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }}
+                onMouseEnter={isAnimated ? () => setHovered(true) : undefined}
+                onMouseLeave={isAnimated ? () => setHovered(false) : undefined}
+            />
+        );
+    }
 
     return (
-        <div className="guild-icon-orbital" title={alt}>
-            {/* Central glowing orb */}
-            <div className="orb-center" />
-            
-            {/* Orbiting satellite */}
-            <div
-                className="orb-satellite"
-                style={{ background: satelliteColor, boxShadow: `0 0 8px ${satelliteColor}` }}
+        <div
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{ width: '100%', height: '100%', borderRadius: 'inherit', overflow: 'hidden' }}
+        >
+            <img
+                src={hovered || !staticFrame ? src : staticFrame}
+                alt={alt}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }}
             />
         </div>
     );

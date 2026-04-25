@@ -459,9 +459,9 @@ const GuildOverview = () => {
                                 </div>
                             </div>
 
-                            <div className="setup-items-container">
+                            <div className="setup-checklist-items">
                                 {setupChecklist.map((item) => (
-                                    <div key={item.id} className={`setup-item pulse-wave ${item.done ? 'setup-item-done' : ''}`}>
+                                    <div key={item.id} className={`setup-item ${item.done ? 'setup-item-done' : ''}`}>
                                         <div className="setup-item-checkbox">
                                             {item.done ? '✓' : ''}
                                         </div>
