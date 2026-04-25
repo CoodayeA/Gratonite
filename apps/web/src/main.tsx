@@ -12,6 +12,7 @@ import './themes/overrides/theme-scrollbar.css'
 import './themes/overrides/theme-selection.css'
 import './themes/overrides/glass-optimization.css'
 import { ThemeProvider } from './components/ui/ThemeProvider'
+import { ActivationProvider } from './contexts/ActivationContext'
 import { queryClient } from './lib/queryClient'
 import { init as initErrorReporter } from './lib/errorReporter'
 import { applyWebExperimentsToDocument } from './lib/experiments'
@@ -66,10 +67,12 @@ if (localStorage.getItem('gratonite:streamer-mode') === 'true') {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <Sentry.ErrorBoundary fallback={<p>Something went wrong</p>}>
-        <QueryClientProvider client={queryClient}>
-            <ThemeProvider>
-                <App />
-            </ThemeProvider>
-        </QueryClientProvider>
+        <ActivationProvider>
+            <QueryClientProvider client={queryClient}>
+                <ThemeProvider>
+                    <App />
+                </ThemeProvider>
+            </QueryClientProvider>
+        </ActivationProvider>
     </Sentry.ErrorBoundary>,
 )
