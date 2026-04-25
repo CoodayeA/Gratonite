@@ -562,7 +562,7 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                     } position="right">
                     <Link to={`/guild/${guild.id}`} style={{ textDecoration: 'none', position: 'relative' }} onContextMenu={(e) => handleGuildContext(e, guild)}>
                         <div className={`guild-icon ${activeGuildId === guild.id ? 'active' : ''}`}
-                             style={{ background: getDeterministicGradient(guild.name), color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>
+                             style={{ background: guild.iconHash ? 'transparent' : getDeterministicGradient(guild.name), color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: 600, overflow: 'hidden' }}>
                             {guild.iconHash ? (
                                 <AnimatedGuildIcon
                                     src={`${API_BASE}/files/${guild.iconHash}`}
@@ -2322,7 +2322,9 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
             </div>
 
             <div style={{ padding: '0 16px' }}>
-              <FirstRunChecklist />
+              <ErrorBoundary fallback={<></>} name="FirstRunChecklist">
+                <FirstRunChecklist />
+              </ErrorBoundary>
             </div>
 
             <div ref={channelScrollRef} className="channel-list" role="listbox" aria-label="Channels" onKeyDown={(e) => {

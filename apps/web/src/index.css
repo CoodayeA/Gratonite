@@ -6001,7 +6001,7 @@ body.gratonite-exp-reduced-motion *::after {
   margin-bottom: 8px;
 }
 
-.guild-icon {
+.guild-identity-icon {
   width: 100px;
   height: 100px;
   border-radius: 16px;
@@ -6009,7 +6009,7 @@ body.gratonite-exp-reduced-motion *::after {
   object-fit: cover;
 }
 
-.guild-icon-fallback {
+.guild-identity-icon-fallback {
   width: 100px;
   height: 100px;
   border-radius: 16px;
@@ -6422,11 +6422,12 @@ body.gratonite-exp-reduced-motion *::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 24px;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
   position: relative;
-  overflow: visible;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, rgba(0, 30, 15, 0.85) 0%, rgba(0, 0, 0, 0.95) 100%);
 }
 
 .orb-center {

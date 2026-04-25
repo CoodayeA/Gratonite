@@ -394,11 +394,11 @@ const GuildOverview = () => {
                                 <img
                                     src={`${API_BASE}/files/${guild.iconHash}`}
                                     alt={guildName}
-                                    className="guild-icon"
+                                    className="guild-identity-icon"
                                     onError={() => setIconImgError(true)}
                                 />
                             ) : (
-                                <div className="guild-icon-fallback" style={{ background: getDeterministicGradient(guildName) }}>
+                                <div className="guild-identity-icon-fallback" style={{ background: getDeterministicGradient(guildName) }}>
                                     {guildInitial}
                                 </div>
                             )}
