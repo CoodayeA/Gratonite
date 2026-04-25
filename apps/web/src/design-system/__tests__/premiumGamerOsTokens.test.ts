@@ -5,6 +5,7 @@ const requiredTokenKeys = [
   '--gt-experience-bg-depth',
   '--gt-experience-bg-surface',
   '--gt-experience-bg-surface-raised',
+  '--gt-experience-bg-surface-inset',
   '--gt-experience-border-subtle',
   '--gt-experience-border-luminous',
   '--gt-experience-glow-primary',
