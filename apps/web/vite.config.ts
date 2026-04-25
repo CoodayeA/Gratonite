@@ -27,15 +27,24 @@ export default defineConfig(({ mode }) => ({
     sourcemap: mode === 'analyze' ? true : 'hidden',
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query', '@tanstack/react-virtual'],
-          'vendor-socket': ['socket.io-client'],
-          'vendor-livekit': ['livekit-client'],
-          'vendor-icons': ['lucide-react'],
-          'vendor-motion': ['framer-motion'],
-          'vendor-code': ['dompurify'],
-          'vendor-sentry': ['@sentry/react', '@sentry/browser', '@sentry/core'],
-          'vendor-gsap': ['gsap'],
+        manualChunks: (id) => {
+          if (id.includes('node_modules/.pnpm/')) {
+            const match = id.match(/node_modules\/\.pnpm\/([^/]+)/);
+            const pkgFolder = match?.[1] || '';
+            if (pkgFolder.startsWith('gsap@')) return 'vendor-gsap';
+            if (pkgFolder.startsWith('@sentry')) return 'vendor-sentry';
+            if (pkgFolder.startsWith('@sentry-internal')) return 'vendor-sentry';
+            if (pkgFolder.startsWith('react@') || pkgFolder.startsWith('react-dom@') ||
+                pkgFolder.startsWith('react-router-dom@') ||
+                pkgFolder.startsWith('@tanstack+react-query') ||
+                pkgFolder.startsWith('@tanstack+react-virtual')) return 'vendor-react';
+            if (pkgFolder.startsWith('socket.io-client')) return 'vendor-socket';
+            if (pkgFolder.startsWith('livekit-client')) return 'vendor-livekit';
+            if (pkgFolder.startsWith('lucide-react')) return 'vendor-icons';
+            if (pkgFolder.startsWith('framer-motion')) return 'vendor-motion';
+            if (pkgFolder.startsWith('dompurify')) return 'vendor-code';
+          }
+          return undefined;
         },
       },
     },
