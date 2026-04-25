@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Check, Search, Download, Upload, Palette, ShoppingBag, Edit3, Trash2, Share2, Sparkles, Dices, Star, Eye } from 'lucide-react';
 import { useTheme, type AppTheme, type ColorMode, type MessageDensity } from '../../ui/ThemeProvider';
+import { useConfirm } from '../../ui/ConfirmDialog';
 import { playSound } from '../../../utils/SoundManager';
 import { api } from '../../../lib/api';
 import {
@@ -18,6 +19,7 @@ import type { SettingsTabProps } from './types';
 type Props = SettingsTabProps;
 
 const SettingsThemeTab = ({ addToast }: Props) => {
+  const { confirm: confirmDialog } = useConfirm();
   const {
     theme, setTheme, colorMode, setColorMode, accentColor, setAccentColor,
     fontFamily, setFontFamily, fontSize, setFontSize,
@@ -263,9 +265,9 @@ const SettingsThemeTab = ({ addToast }: Props) => {
                     </div>
                     <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                       <button onClick={(e) => { e.stopPropagation(); setEditingCustomThemeId(t.id); setShowThemeEditor(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }} title="Edit theme"><Edit3 size={12} color="var(--text-muted)" /></button>
-                      <button onClick={(e) => {
+                      <button onClick={async (e) => {
                         e.stopPropagation();
-                        if (confirm(`Publish "${t.name}" to the Theme Store?`)) {
+                        if (await confirmDialog({ title: 'Publish theme', message: `Publish "${t.name}" to the Theme Store?`, confirmLabel: 'Publish' })) {
                           const varsForApi: Record<string, string> = {};
                           for (const [k, v] of Object.entries(t.dark)) { varsForApi[`dark.${k}`] = String(v); }
                           for (const [k, v] of Object.entries(t.light)) { varsForApi[`light.${k}`] = String(v); }
@@ -275,7 +277,7 @@ const SettingsThemeTab = ({ addToast }: Props) => {
                             .catch(() => addToast({ title: 'Failed to publish theme', variant: 'error' }));
                         }
                       }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }} title="Publish to Theme Store"><Share2 size={12} color="var(--text-muted)" /></button>
-                      <button onClick={(e) => { e.stopPropagation(); if (confirm(`Delete "${t.name}"?`)) { deleteCustomTheme(t.id); setCustomThemesList(getCustomThemes()); if (theme === t.id) setTheme('default'); addToast({ title: 'Theme deleted', variant: 'success' }); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }} title="Delete theme"><Trash2 size={12} color="var(--error)" /></button>
+                      <button onClick={async (e) => { e.stopPropagation(); if (await confirmDialog({ title: 'Delete theme?', message: `Delete "${t.name}"?`, variant: 'danger' })) { deleteCustomTheme(t.id); setCustomThemesList(getCustomThemes()); if (theme === t.id) setTheme('default'); addToast({ title: 'Theme deleted', variant: 'success' }); } }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex' }} title="Delete theme"><Trash2 size={12} color="var(--error)" /></button>
                     </div>
                   </div>
                   {isSelected && <div style={{ position: 'absolute', top: 6, right: 6, background: 'var(--accent-primary)', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={11} color="#000" /></div>}

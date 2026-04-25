@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Plus, Trash2, Edit2, Zap, ToggleLeft, ToggleRight, X, Check } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../components/ui/ToastManager';
+import { useConfirm } from '../../components/ui/ConfirmDialog';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -410,6 +411,7 @@ function WorkflowFormPanel({ initial, onSave, onCancel, saving }: WorkflowFormPr
 export default function GuildWorkflows() {
     const { guildId } = useParams<{ guildId: string }>();
     const { addToast } = useToast();
+    const { confirm: confirmDialog } = useConfirm();
 
     const [workflows, setWorkflows] = useState<Workflow[]>([]);
     const [loading, setLoading] = useState(true);
@@ -506,7 +508,7 @@ export default function GuildWorkflows() {
 
     const handleDelete = async (workflow: Workflow) => {
         if (!guildId) return;
-        if (!confirm(`Delete workflow "${workflow.name}"? This cannot be undone.`)) return;
+        if (!(await confirmDialog({ title: 'Delete workflow?', message: `Delete workflow "${workflow.name}"? This cannot be undone.`, variant: 'danger' }))) return;
         try {
             await api.workflows.delete(guildId, workflow.id);
             addToast({ title: 'Workflow deleted', variant: 'info' });

@@ -21,6 +21,7 @@ import { SkeletonMessageList } from '../../components/ui/SkeletonLoader';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { useContextMenu } from '../../components/ui/ContextMenu';
 import { useToast } from '../../components/ui/ToastManager';
+import { useConfirm } from '../../components/ui/ConfirmDialog';
 import { copyToClipboard } from '../../utils/clipboard';
 import { TopBarActions } from '../../components/ui/TopBarActions';
 import { BackgroundMedia } from '../../components/ui/BackgroundMedia';
@@ -373,6 +374,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
 
     const { openMenu } = useContextMenu();
     const { addToast } = useToast();
+    const { confirm: askConfirm } = useConfirm();
     const [currentUserName, setCurrentUserName] = useState('');
     const [currentUserId, setCurrentUserId] = useState('');
     const [currentUserAvatarHash, setCurrentUserAvatarHash] = useState<string | null>(null);
@@ -990,12 +992,12 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             { id: 'copy-id', label: 'Copy User ID', icon: Copy, onClick: () => { copyToClipboard(userId); addToast({ title: 'User ID copied', variant: 'info' }); }},
             ...(!isOwnUser && canManageChannel && guildId ? [
                 { divider: true, id: 'div-user-2', label: '', onClick: () => {} },
-                { id: 'kick', label: 'Kick Member', icon: ShieldAlert, color: 'var(--warning)', onClick: () => {
-                    if (!confirm(`Kick ${username} from this server?`)) return;
+                { id: 'kick', label: 'Kick Member', icon: ShieldAlert, color: 'var(--warning)', onClick: async () => {
+                    if (!(await askConfirm({ title: 'Kick member?', message: `Kick ${username} from this server?`, variant: 'danger', confirmLabel: 'Kick' }))) return;
                     api.guilds.kickMember(guildId, userId).then(() => addToast({ title: `${username} was kicked`, variant: 'success' })).catch(() => addToast({ title: 'Failed to kick member', variant: 'error' }));
                 }},
-                { id: 'ban', label: 'Ban Member', icon: Ban, color: 'var(--error)', onClick: () => {
-                    if (!confirm(`Ban ${username} from this server?`)) return;
+                { id: 'ban', label: 'Ban Member', icon: Ban, color: 'var(--error)', onClick: async () => {
+                    if (!(await askConfirm({ title: 'Ban member?', message: `Ban ${username} from this server?`, variant: 'danger', confirmLabel: 'Ban' }))) return;
                     api.guilds.ban(guildId, userId, 'Banned via context menu').then(() => addToast({ title: `${username} was banned`, variant: 'success' })).catch(() => addToast({ title: 'Failed to ban member', variant: 'error' }));
                 }},
             ] : []),

@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { Palette, Check, X, RefreshCw, Eye } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../components/ui/ToastManager';
+import { useConfirm } from '../../components/ui/ConfirmDialog';
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/api\/v1$/, '');
 
@@ -13,6 +14,7 @@ export default function AdminCosmetics() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { addToast } = useToast();
+  const { prompt: promptDialog } = useConfirm();
 
   const loadItems = async () => {
     setLoading(true);
@@ -39,7 +41,7 @@ export default function AdminCosmetics() {
   };
 
   const handleReject = async (id: string) => {
-    const reason = prompt('Rejection reason:');
+    const reason = await promptDialog({ title: 'Reject cosmetic', message: 'Rejection reason:', placeholder: 'Reason shown to the creator', confirmLabel: 'Reject' });
     if (reason === null) return;
     try {
       await api.patch(`/admin/cosmetics/${id}/reject`, { reason });

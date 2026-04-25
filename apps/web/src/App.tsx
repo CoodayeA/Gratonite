@@ -132,6 +132,7 @@ import { RecentChannels, addRecentChannel } from './components/guild/RecentChann
 import { getAllThemes } from './themes/registry';
 import { ContextMenuProvider, useContextMenu } from './components/ui/ContextMenu';
 import { ToastProvider, useToast } from './components/ui/ToastManager';
+import { ConfirmProvider } from './components/ui/ConfirmDialog';
 import { DmNotificationToast } from './components/ui/DmNotificationToast';
 import { Shield as ShieldIcon } from 'lucide-react';
 import { StarRating } from './components/ui/StarRating';
@@ -4832,6 +4833,7 @@ function App() {
         <UserProvider>
         <VoiceProvider>
         <ToastProvider>
+            <ConfirmProvider>
             <AchievementToastProvider>
             <AppLayoutAccessibility />
             <AmbientPlayer />
@@ -4865,6 +4867,7 @@ function App() {
             </svg>
             <RouterProvider router={appRouter} />
             </AchievementToastProvider>
+            </ConfirmProvider>
         </ToastProvider>
         </VoiceProvider>
         </UserProvider>

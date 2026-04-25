@@ -24,6 +24,7 @@ import {
 } from '../../lib/socket';
 import { useUser } from '../../contexts/UserContext';
 import Avatar from '../ui/Avatar';
+import { useConfirm } from '../ui/ConfirmDialog';
 
 // Deterministic color for cursor labels
 const CURSOR_COLORS = [
@@ -52,6 +53,7 @@ interface CollaborativeEditorProps {
 
 export default function CollaborativeEditor({ channelId, channelName }: CollaborativeEditorProps) {
   const { user } = useUser();
+  const { prompt: promptDialog } = useConfirm();
   const editorRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState('Untitled');
@@ -233,14 +235,14 @@ export default function CollaborativeEditor({ channelId, channelName }: Collabor
     handleInput();
   }, [handleInput]);
 
-  const insertImage = useCallback(() => {
-    const url = prompt('Enter image URL:');
+  const insertImage = useCallback(async () => {
+    const url = await promptDialog({ title: 'Insert image', message: 'Enter the image URL:', placeholder: 'https://...', confirmLabel: 'Insert' });
     if (url && /^https?:\/\/.+/.test(url)) {
       document.execCommand('insertImage', false, url);
       contentChangedRef.current = true;
       handleInput();
     }
-  }, [handleInput]);
+  }, [handleInput, promptDialog]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {

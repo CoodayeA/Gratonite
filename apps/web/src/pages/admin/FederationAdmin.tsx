@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { Globe, Server, Activity, Shield, Ban, Wifi, Trash2, Check, X, Users, BadgeCheck, Flag, RefreshCw, ExternalLink, Plus } from 'lucide-react';
 import { api } from '../../lib/api';
 import ConnectInstanceWizard from '../../components/modals/ConnectInstanceWizard';
+import { useConfirm } from '../../components/ui/ConfirmDialog';
 
 type Tab = 'instances' | 'queue' | 'relays' | 'discover' | 'verification' | 'reports' | 'blocks' | 'health';
 
@@ -40,6 +41,7 @@ const SmallBtn = ({ onClick, color = 'var(--text-secondary)', title, children }:
 );
 
 export default function FederationAdmin() {
+  const { prompt: promptDialog } = useConfirm();
   const [tab, setTab] = useState<Tab>('instances');
   const [stats, setStats] = useState<any>(null);
   const [instances, setInstances] = useState<any[]>([]);
@@ -243,7 +245,7 @@ export default function FederationAdmin() {
                     <SmallBtn onClick={async () => { await api.patch(`/federation/admin/verification-requests/${r.id}`, { status: 'approved' }); loadTab('verification'); }} color="#10b981" title="Approve">
                       <Check size={14} /> Approve — Promote to Verified
                     </SmallBtn>
-                    <SmallBtn onClick={async () => { const notes = prompt('Rejection reason (visible to instance owner):'); if (notes !== null) { await api.patch(`/federation/admin/verification-requests/${r.id}`, { status: 'rejected', reviewNotes: notes }); loadTab('verification'); } }} color="#ef4444" title="Reject">
+                    <SmallBtn onClick={async () => { const notes = await promptDialog({ title: 'Reject verification request', message: 'Rejection reason (visible to instance owner):', placeholder: 'Reason...', confirmLabel: 'Reject' }); if (notes !== null) { await api.patch(`/federation/admin/verification-requests/${r.id}`, { status: 'rejected', reviewNotes: notes }); loadTab('verification'); } }} color="#ef4444" title="Reject">
                       <X size={14} /> Reject
                     </SmallBtn>
                   </div>

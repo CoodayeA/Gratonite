@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Shield, Plus, Check, Search, ChevronDown, Trash2, Edit2, Ban, UserPlus, Hash, Mic, Settings, AlertTriangle, Clock, Save, Link2, Copy, RefreshCw, Bot, Power, Sliders, GripVertical, Upload, UserX, Lock, Eye, Type, ExternalLink, ArrowUp, ArrowDown, BookOpen, Activity, Globe, Compass } from 'lucide-react';
 import { useToast } from '../ui/ToastManager';
+import { useConfirm } from '../ui/ConfirmDialog';
 import { useUser } from '../../contexts/UserContext';
 import { api, API_BASE } from '../../lib/api';
 import Avatar from '../ui/Avatar';
@@ -143,6 +144,7 @@ type SettingsTab =
 
 const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId?: string | null }) => {
     const { addToast } = useToast();
+    const { confirm: askConfirm, prompt: promptDialog } = useConfirm();
     const { user: currentUser } = useUser();
     const navigate = useNavigate();
     const actorName = currentUser.name || currentUser.handle || 'Unknown';
@@ -2023,12 +2025,12 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 <button
                                     onClick={async () => {
                                         if (!guildId) return;
-                                        const days = prompt('Prune members inactive for how many days? (default: 30)', '30');
+                                        const days = await promptDialog({ title: 'Prune inactive members', message: 'Remove members inactive for how many days?', defaultValue: '30', placeholder: '30', confirmLabel: 'Preview' });
                                         if (!days) return;
                                         const d = parseInt(days) || 30;
                                         try {
                                             const preview = await api.get<{ count: number }>(`/guilds/${guildId}/prune/preview?days=${d}`);
-                                            if (confirm(`This will remove ${(preview as any).count ?? 0} inactive members. Continue?`)) {
+                                            if (await askConfirm({ title: 'Prune members?', message: `This will remove ${(preview as any).count ?? 0} inactive members. Continue?`, variant: 'danger', confirmLabel: 'Prune' })) {
                                                 const result = await api.post<{ pruned: number }>(`/guilds/${guildId}/prune`, { days: d });
                                                 addToast({ title: `Pruned ${(result as any).pruned ?? 0} members`, variant: 'success' });
                                                 fetchMembers();
@@ -2629,7 +2631,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     <button
                                         onClick={async () => {
                                             if (!guildId) return;
-                                            if (!confirm('Are you sure you want to lock down the server? Non-admin messaging will be disabled.')) return;
+                                            if (!(await askConfirm({ title: 'Lock down server?', message: 'Are you sure you want to lock down the server? Non-admin messaging will be disabled.', variant: 'danger', confirmLabel: 'Lock down' }))) return;
                                             try {
                                                 await api.post(`/guilds/${guildId}/lock`, {});
                                                 setGuildLocked(true);
@@ -3349,7 +3351,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                         <div style={{ display: 'flex', gap: '8px' }}>
                                             <button onClick={async () => {
                                                 if (!bot.applicationId || !guildId) return;
-                                                if (!confirm(`Uninstall ${bot.name} from this guild?`)) return;
+                                                if (!(await askConfirm({ title: 'Uninstall bot?', message: `Uninstall ${bot.name} from this guild?`, variant: 'danger', confirmLabel: 'Uninstall' }))) return;
                                                 try {
                                                     await api.delete(`/bots/installs/${guildId}/${bot.applicationId}`);
                                                     setInstalledBots(prev => prev.filter(b => b.id !== bot.id));

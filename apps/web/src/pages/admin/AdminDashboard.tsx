@@ -12,6 +12,7 @@ import {
 import { api } from '../../lib/api';
 import { ApiRequestError } from '../../lib/api/_core';
 import { useToast } from '../../components/ui/ToastManager';
+import { useConfirm } from '../../components/ui/ConfirmDialog';
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/api\/v1$/, '');
 
@@ -94,6 +95,7 @@ export default function AdminDashboard() {
   const [preflightResult, setPreflightResult] = useState<{ checks: { id: string; label: string; ok: boolean | null; value?: string; info?: boolean }[]; allOk: boolean; checkedAt: string } | null>(null);
   const [preflightOpen, setPreflightOpen] = useState(false);
   const { addToast } = useToast();
+  const { confirm: confirmDialog } = useConfirm();
 
   useEffect(() => {
     let cancelled = false;
@@ -172,7 +174,7 @@ export default function AdminDashboard() {
   }, [searchQuery]);
 
   const promoteToAdmin = async (userId: string, username: string) => {
-    if (!confirm(`Are you sure you want to make @${username} an admin? They will have full access to all admin tools.`)) return;
+    if (!(await confirmDialog({ title: 'Promote to admin?', message: `Make @${username} an admin? They will have full access to all admin tools.`, variant: 'danger', confirmLabel: 'Promote' }))) return;
     setPromoting(userId);
     try {
       await api.patch(`/admin/users/${userId}/promote`, {});
