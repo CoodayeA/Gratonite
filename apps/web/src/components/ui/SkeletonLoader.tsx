@@ -10,7 +10,7 @@ import Skeleton from './Skeleton';
 
 /** A single message-row skeleton (avatar + name + text lines) */
 export const SkeletonMessageRow = ({ grouped = false }: { grouped?: boolean }) => (
-    <div style={{
+    <div className="gt-skeleton-state gt-skeleton-message-row" style={{
         display: 'flex',
         gap: '12px',
         padding: grouped ? '4px 16px' : '16px 16px 4px 16px',
@@ -48,7 +48,7 @@ export const SkeletonMessageList = ({ count = 6 }: { count?: number }) => {
     }, [count]);
 
     return (
-        <div style={{ padding: '8px 0' }}>
+        <div className="gt-skeleton-state gt-skeleton-message-list" style={{ padding: '8px 0' }}>
             {rows.map(r => (
                 <SkeletonMessageRow key={r.key} grouped={r.grouped} />
             ))}
@@ -58,7 +58,7 @@ export const SkeletonMessageList = ({ count = 6 }: { count?: number }) => {
 
 /** Channel-list sidebar item skeleton */
 export const SkeletonChannelItem = () => (
-    <div style={{
+    <div className="gt-skeleton-state gt-skeleton-channel-item" style={{
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
@@ -73,7 +73,7 @@ export const SkeletonChannelItem = () => (
 
 /** Category header skeleton + a few channel items */
 export const SkeletonChannelGroup = ({ channels = 3 }: { channels?: number }) => (
-    <div style={{ marginBottom: '8px' }}>
+    <div className="gt-skeleton-state gt-skeleton-channel-group" style={{ marginBottom: '8px' }}>
         <div style={{ padding: '8px 16px 4px' }}>
             <Skeleton variant="text" width={randomBetween(70, 120)} height={10} />
         </div>
@@ -85,7 +85,7 @@ export const SkeletonChannelGroup = ({ channels = 3 }: { channels?: number }) =>
 
 /** Skeleton for a user/member row in the members sidebar */
 export const SkeletonMemberItem = () => (
-    <div style={{
+    <div className="gt-skeleton-state gt-skeleton-member-item" style={{
         display: 'flex',
         alignItems: 'center',
         gap: '10px',
@@ -100,7 +100,7 @@ export const SkeletonMemberItem = () => (
 
 /** Member sidebar skeleton: category header + member rows */
 export const SkeletonMemberList = ({ count = 8 }: { count?: number }) => (
-    <div style={{ padding: '8px 0' }}>
+    <div className="gt-skeleton-state gt-skeleton-member-list" style={{ padding: '8px 0' }}>
         <div style={{ padding: '8px 16px 4px' }}>
             <Skeleton variant="text" width={90} height={10} />
         </div>
@@ -112,7 +112,7 @@ export const SkeletonMemberList = ({ count = 8 }: { count?: number }) => (
 
 /** DM conversation skeleton item (avatar + name) */
 export const SkeletonDmItem = () => (
-    <div style={{
+    <div className="gt-skeleton-state gt-skeleton-dm-item" style={{
         display: 'flex',
         alignItems: 'center',
         gap: '10px',
@@ -127,7 +127,7 @@ export const SkeletonDmItem = () => (
 
 /** DM list skeleton */
 export const SkeletonDmList = ({ count = 5 }: { count?: number }) => (
-    <div style={{ padding: '4px 0' }}>
+    <div className="gt-skeleton-state gt-skeleton-dm-list" style={{ padding: '4px 0' }}>
         {Array.from({ length: count }).map((_, i) => (
             <SkeletonDmItem key={`skeleton-dm-${i}`} />
         ))}
@@ -136,7 +136,7 @@ export const SkeletonDmList = ({ count = 5 }: { count?: number }) => (
 
 /** Friend row skeleton */
 export const SkeletonFriendItem = () => (
-    <div style={{
+    <div className="gt-skeleton-state gt-skeleton-friend-item" style={{
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
@@ -157,7 +157,7 @@ export const SkeletonFriendItem = () => (
 
 /** Friends list skeleton */
 export const SkeletonFriendList = ({ count = 5 }: { count?: number }) => (
-    <div>
+    <div className="gt-skeleton-state gt-skeleton-friend-list">
         <div style={{ padding: '0 0 8px 0' }}>
             <Skeleton variant="text" width={120} height={10} style={{ marginBottom: '8px' }} />
         </div>
@@ -169,7 +169,7 @@ export const SkeletonFriendList = ({ count = 5 }: { count?: number }) => (
 
 /** Profile page skeleton: avatar + name + bio + stats */
 export const SkeletonProfile = () => (
-    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+    <div className="gt-skeleton-state gt-skeleton-profile" style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
         <Skeleton variant="circle" width={80} height={80} />
         <Skeleton variant="text" width={140} height={20} />
         <Skeleton variant="text" width={200} height={14} />
@@ -192,9 +192,9 @@ export const SkeletonProfile = () => (
 
 /** Shop card grid skeleton */
 export const SkeletonShopGrid = ({ count = 8 }: { count?: number }) => (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+    <div className="gt-skeleton-state gt-skeleton-shop-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
         {Array.from({ length: count }).map((_, i) => (
-            <div key={`skeleton-shop-${i}`} style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--stroke)' }}>
+            <div key={`skeleton-shop-${i}`} className="gt-skeleton-card" style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--stroke)' }}>
                 <Skeleton variant="rect" width="100%" height={160} style={{ borderRadius: 0 }} />
                 <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <Skeleton variant="text" width={randomBetween(100, 180)} height={16} />
@@ -211,7 +211,7 @@ export const SkeletonShopGrid = ({ count = 8 }: { count?: number }) => (
 
 /** Settings panel skeleton: sidebar + content area */
 export const SkeletonSettingsPanel = () => (
-    <div style={{ display: 'flex', gap: '24px', padding: '24px' }}>
+    <div className="gt-skeleton-state gt-skeleton-settings-panel" style={{ display: 'flex', gap: '24px', padding: '24px' }}>
         <div style={{ width: '200px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {Array.from({ length: 6 }).map((_, i) => (
                 <Skeleton key={`skeleton-setting-${i}`} variant="text" width={randomBetween(100, 180)} height={32} style={{ borderRadius: '6px' }} />

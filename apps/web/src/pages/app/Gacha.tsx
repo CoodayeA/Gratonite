@@ -335,11 +335,14 @@ const CollectionModal = ({ items, totalCount, onClose }: { items: CollectibleIte
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '12px' }}>
                         {filtered.map(item => (
                             <TiltCard key={item.id} maxTilt={10} scale={1.04}>
-                            <div
-                                title={item.owned ? item.name : '???'}
-                                onClick={() => { if (item.owned) setSelectedCard(item); }}
-                                style={{ background: 'var(--bg-elevated)', border: `1px solid ${item.owned ? rarityColors[item.rarity] + '40' : 'var(--stroke)'}`, borderRadius: '12px', padding: '12px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', position: 'relative', cursor: item.owned ? 'pointer' : 'default', transition: 'border-color 0.2s' }}
-                            >
+                                <div
+                                    className="gacha-card reward-card gacha-card--collection-item"
+                                    data-ui-gacha-card={item.owned ? 'collection-owned' : 'collection-locked'}
+                                    data-rarity={item.rarity}
+                                    title={item.owned ? item.name : '???'}
+                                    onClick={() => { if (item.owned) setSelectedCard(item); }}
+                                    style={{ background: 'var(--bg-elevated)', border: `1px solid ${item.owned ? rarityColors[item.rarity] + '40' : 'var(--stroke)'}`, borderRadius: '12px', padding: '12px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', position: 'relative', cursor: item.owned ? 'pointer' : 'default', transition: 'border-color 0.2s' }}
+                                >
                                 {/* Rarity dot */}
                                 <div style={{ position: 'absolute', top: 6, right: 6, width: '8px', height: '8px', borderRadius: '50%', background: rarityColors[item.rarity], opacity: item.owned ? 1 : 0.3 }} />
 
@@ -362,7 +365,7 @@ const CollectionModal = ({ items, totalCount, onClose }: { items: CollectibleIte
                                 {item.owned && (
                                     <div style={{ fontSize: '9px', color: rarityColors[item.rarity], fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.rarity}</div>
                                 )}
-                            </div>
+                                </div>
                             </TiltCard>
                         ))}
                     </div>
@@ -666,7 +669,7 @@ const Gacha = () => {
     const progressPercent = totalCount > 0 ? Math.round((ownedCount / totalCount) * 100) : 0;
 
     return (
-        <div style={{ flex: 1, padding: '32px 48px', overflowY: 'auto', background: 'var(--bg-primary)', position: 'relative' }}>
+        <div className="gt-commerce-surface gt-gacha-surface" data-ui-commerce-surface="gacha" style={{ flex: 1, padding: '32px 48px', overflowY: 'auto', background: 'var(--bg-primary)', position: 'relative' }}>
             <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
                 <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
                     <div>
@@ -690,7 +693,7 @@ const Gacha = () => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(400px, 1fr) 2fr', gap: '32px' }}>
                     {/* Pack Opening Area */}
-                    <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '16px', padding: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', minHeight: '400px' }}>
+                    <div className="gacha-card reward-card gacha-card--pack" data-ui-gacha-card="pack" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '16px', padding: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', minHeight: '400px' }}>
                         {packState === 'idle' && (
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                 {/* Drag-to-tear pack */}
@@ -708,7 +711,7 @@ const Gacha = () => {
                                     }}
                                 >
                                     <TiltCard maxTilt={isDragging ? 0 : 12} scale={1.05}>
-                                        <div style={{
+                                        <div className="gacha-card reward-card gacha-pack-card" data-ui-gacha-card="premium-pack" style={{
                                             width: '180px', height: '180px', borderRadius: '24px',
                                             background: `linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-purple) 100%)`,
                                             boxShadow: isDragging
@@ -773,7 +776,7 @@ const Gacha = () => {
                     {/* Right Column */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                         {/* Collection Progress */}
-                        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '16px', padding: '24px' }}>
+                        <div className="gacha-card reward-card gacha-card--progress" data-ui-gacha-card="collection-progress" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '16px', padding: '24px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                 <h3 style={{ fontSize: '18px', fontWeight: 600 }}>Your Collection Progress</h3>
                                 <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-primary)' }}>{ownedCount} / {totalCount} ({progressPercent}%)</span>
@@ -806,7 +809,7 @@ const Gacha = () => {
                         </div>
 
                         {/* Drop Rates */}
-                        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '16px', padding: '24px', flex: 1 }}>
+                        <div className="gacha-card reward-card gacha-card--rates" data-ui-gacha-card="drop-rates" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '16px', padding: '24px', flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
                                 <HelpCircle size={18} color="var(--text-muted)" />
                                 <h3 style={{ fontSize: '16px', fontWeight: 600 }}>Drop Rates</h3>

@@ -84,10 +84,20 @@ async function mockCoreSurfaceApi(page: Page) {
     else if (path === '/users/e2e-user/public-key' || path === '/users/friend-user/public-key') body = { publicKeyJwk: null, keyVersion: 1 };
     else if (path === '/economy/wallet') {
       body = { userId: mockUser.id, balance: 0, lifetimeEarned: 0, lifetimeSpent: 0, lastDailyClaimAt: null, updatedAt: '2024-01-01T00:00:00.000Z' };
-    } else if (path.includes('/unread') || path.includes('/count')) body = { count: 0, total: 0 };
+    } else if (path === '/inventory') body = { items: [] };
+    else if (path === '/shop/items') body = [];
+    else if (path === '/cosmetics/marketplace') body = [];
+    else if (path === '/auctions' || path === '/auctions/me/selling' || path === '/auctions/me/bids') body = [];
+    else if (path === '/cards/collection' || path === '/cards/packs') body = [];
+    else if (path === '/economy/ledger') body = [];
+    else if (path.includes('/unread') || path.includes('/count')) body = { count: 0, total: 0 };
     else if (route.request().method() !== 'GET') body = { success: true };
 
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+  });
+
+  await page.route('**/gacha/gacha_manifest.json', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
   });
 }
 
@@ -97,6 +107,15 @@ async function openFriendsWithExperience(page: Page, experience: 'classic' | 'pr
     localStorage.setItem('gratonite_tour_complete', '1');
   }, experience);
   await page.goto('/app/friends', { waitUntil: 'networkidle' });
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 10_000 });
+}
+
+async function openAppRouteWithExperience(page: Page, route: string, experience: 'classic' | 'premium-gamer-os') {
+  await page.addInitScript((value) => {
+    localStorage.setItem('gratonite:ui-experience', value);
+    localStorage.setItem('gratonite_tour_complete', '1');
+  }, experience);
+  await page.goto(route, { waitUntil: 'networkidle' });
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 10_000 });
 }
 
@@ -157,6 +176,25 @@ test.describe('New UI core chat surfaces', () => {
     await expect(page.getByRole('button', { name: /^All$/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /Pending/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /Add Friend/ })).toBeVisible();
+  });
+
+  test('premium UI renders commerce routes inside the app shell', async ({ page }) => {
+    const routes = [
+      { path: '/app/shop', surface: 'shop', heading: /Cosmetics Shop/i },
+      { path: '/app/marketplace', surface: 'marketplace', heading: /Community Marketplace/i },
+      { path: '/app/inventory', surface: 'inventory', heading: /Inventory & Loadout/i },
+      { path: '/app/gacha', surface: 'gacha', heading: /Gratonite Guys Gacha/i },
+    ];
+
+    for (const route of routes) {
+      await openAppRouteWithExperience(page, route.path, 'premium-gamer-os');
+
+      await expect(page.locator('html')).toHaveAttribute('data-ui-experience', 'premium-gamer-os');
+      await expect(page.locator('html')).toHaveClass(/gt-new-ui/);
+      await expect(page.locator('.app-container')).toBeVisible();
+      await expect(page.locator(`[data-ui-commerce-surface="${route.surface}"]`)).toBeVisible();
+      await expect(page.getByText(route.heading).first()).toBeVisible();
+    }
   });
 
   test('classic fallback remains available on a DM route', async ({ page }) => {

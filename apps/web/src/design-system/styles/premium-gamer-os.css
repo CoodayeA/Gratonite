@@ -605,3 +605,120 @@
   background: rgba(255, 95, 110, 0.12) !important;
   box-shadow: inset 1px 0 0 rgba(255, 95, 110, 0.35);
 }
+
+/* Commerce, rewards, and shared state surfaces */
+.gt-new-ui [data-ui-commerce-surface] {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 14% 0%, rgba(117, 145, 255, 0.14), transparent 30%),
+    radial-gradient(circle at 90% 8%, rgba(224, 179, 89, 0.10), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.032), rgba(3, 6, 16, 0.2)) !important;
+  scrollbar-color: rgba(139, 164, 255, 0.42) transparent;
+}
+
+.gt-new-ui .reward-card,
+.gt-new-ui .shop-card,
+.gt-new-ui .inventory-card,
+.gt-new-ui .marketplace-card,
+.gt-new-ui .gacha-card {
+  border-color: var(--gt-experience-border-subtle) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.078), rgba(255, 255, 255, 0.032)),
+    var(--gt-experience-bg-surface-raised) !important;
+  box-shadow: var(--gt-experience-shadow-panel), inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+.gt-new-ui .reward-card:hover,
+.gt-new-ui .shop-card:hover,
+.gt-new-ui .inventory-card:hover,
+.gt-new-ui .marketplace-card:hover,
+.gt-new-ui .gacha-card:hover {
+  border-color: var(--gt-experience-border-luminous) !important;
+  box-shadow: var(--gt-experience-glow-primary), var(--gt-experience-shadow-float), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.gt-new-ui .shop-card--featured,
+.gt-new-ui .gacha-pack-card {
+  background:
+    radial-gradient(circle at 74% 12%, rgba(224, 179, 89, 0.20), transparent 28%),
+    linear-gradient(135deg, rgba(105, 132, 255, 0.20), rgba(127, 87, 255, 0.14), rgba(224, 179, 89, 0.08)) !important;
+}
+
+.gt-new-ui .marketplace-card--auction,
+.gt-new-ui .inventory-card--wallet,
+.gt-new-ui .gacha-card--rates {
+  background:
+    linear-gradient(180deg, rgba(224, 179, 89, 0.08), rgba(255, 255, 255, 0.03)),
+    var(--gt-experience-bg-surface-raised) !important;
+}
+
+.gt-new-ui [data-rarity='legendary'],
+.gt-new-ui [data-rarity='Legendary'] {
+  box-shadow: 0 0 30px rgba(224, 179, 89, 0.16), var(--gt-experience-shadow-panel) !important;
+}
+
+.gt-new-ui [data-rarity='epic'],
+.gt-new-ui [data-rarity='Epic'] {
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.16), var(--gt-experience-shadow-panel) !important;
+}
+
+.gt-new-ui .gt-empty-state,
+.gt-new-ui .gt-error-state {
+  border: 1px solid var(--gt-experience-border-subtle);
+  border-radius: var(--gt-experience-radius-panel);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(117, 145, 255, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
+  box-shadow: var(--gt-experience-shadow-panel);
+}
+
+.gt-new-ui .gt-empty-state__illustration,
+.gt-new-ui .gt-error-state > div:first-child {
+  filter: drop-shadow(0 0 28px rgba(117, 145, 255, 0.18));
+}
+
+.gt-new-ui .gt-empty-state__action,
+.gt-new-ui .gt-error-state__retry {
+  border: 1px solid var(--gt-experience-border-subtle) !important;
+  border-radius: var(--gt-experience-radius-control) !important;
+  box-shadow: var(--gt-experience-glow-primary);
+}
+
+.gt-new-ui .gt-skeleton-state,
+.gt-new-ui .gt-skeleton-card,
+.gt-new-ui .skeleton-box {
+  border-color: var(--gt-experience-border-subtle) !important;
+}
+
+.gt-new-ui .gt-skeleton-card,
+.gt-new-ui .skeleton-box {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.055), rgba(139, 164, 255, 0.13), rgba(255, 255, 255, 0.055)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+
+.gt-new-ui .gt-toast-container {
+  filter: drop-shadow(0 18px 38px rgba(0, 0, 0, 0.36));
+}
+
+.gt-new-ui .gt-toast {
+  border-color: var(--gt-experience-border-subtle) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.092), rgba(255, 255, 255, 0.038)),
+    var(--gt-experience-bg-surface-raised) !important;
+  box-shadow: var(--gt-experience-shadow-float), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.gt-new-ui .gt-toast--achievement {
+  border-color: rgba(224, 179, 89, 0.52) !important;
+  background: linear-gradient(135deg, rgba(45, 212, 111, 0.95), rgba(15, 118, 110, 0.9)) !important;
+}
+
+.gt-new-ui .gt-toast__progress {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.gt-new-ui .gt-toast__undo,
+.gt-new-ui .gt-toast__dismiss {
+  border-radius: var(--gt-experience-radius-control);
+}
