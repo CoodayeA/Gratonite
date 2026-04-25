@@ -240,7 +240,7 @@ const GuildOverview = () => {
     }
 
     return (
-        <div className="main-content-wrapper" style={{ flex: 1, overflowY: 'auto', flexDirection: 'column' }}>
+        <div className="guild-homescreen">
             {showWelcomeModal && guild && onboardingData && onboardingData.welcomeMessage && (
                 <GuildWelcomeModal
                     guildId={guild.id}
@@ -254,24 +254,22 @@ const GuildOverview = () => {
                 />
             )}
             {loading && !guild && (
-                <div style={{ padding: '48px', maxWidth: '1400px', margin: '0 auto' }}>
-                    {/* Skeleton header */}
-                    <div style={{ marginBottom: '40px' }}>
+                <div className="guild-skeleton-container">
+                    <div className="skeleton-header">
                         <Skeleton variant="text" width="60%" height={40} style={{ marginBottom: '12px' }} />
                         <Skeleton variant="text" width="40%" height={20} />
                     </div>
-                    {/* Skeleton channel sections */}
-                    <div style={{ marginBottom: '24px' }}>
+                    <div className="skeleton-section">
                         <Skeleton variant="text" width={120} height={16} style={{ marginBottom: '16px' }} />
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
+                        <div className="skeleton-grid">
                             <Skeleton variant="card" width="100%" height={80} />
                             <Skeleton variant="card" width="100%" height={80} />
                             <Skeleton variant="card" width="100%" height={80} />
                         </div>
                     </div>
-                    <div style={{ marginBottom: '24px' }}>
+                    <div className="skeleton-section">
                         <Skeleton variant="text" width={120} height={16} style={{ marginBottom: '16px' }} />
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+                        <div className="skeleton-grid">
                             <Skeleton variant="card" width="100%" height={64} />
                             <Skeleton variant="card" width="100%" height={64} />
                         </div>
@@ -280,309 +278,227 @@ const GuildOverview = () => {
             )}
             {/* Guild Banner */}
             {bannerUrl && (
-                <div className="guild-banner" style={{ width: '100%', height: '240px', position: 'relative', overflow: 'hidden', flexShrink: 0, isolation: 'isolate' }}>
+                <div className="guild-banner">
                     {isBannerVideo ? (
-                        <video src={bannerUrl} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <video src={bannerUrl} autoPlay loop muted playsInline />
                     ) : (
-                        <img src={bannerUrl} alt={`${guildName} banner`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={bannerUrl} alt={`${guildName} banner`} />
                     )}
-                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '80px', background: 'linear-gradient(transparent, var(--bg-primary))' }} />
+                    <div className="guild-banner-overlay" />
                 </div>
             )}
             {isMobile && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px' }}>
+                <div className="guild-mobile-header">
                     <button className="mobile-back-btn" onClick={() => navigate('/')}>
                         <ArrowLeft size={20} />
                     </button>
-                    <span style={{ fontWeight: 600, fontSize: '16px' }}>{guildName}</span>
+                    <span>{guildName}</span>
                 </div>
             )}
-            <div className="content-padding" style={{ padding: isMobile ? '24px 16px' : '48px 48px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) 340px', gap: isMobile ? '24px' : '48px', alignItems: 'start', maxWidth: '1400px', margin: '0 auto' }}>
-
+            <div className="guild-main-content">
                 {/* Left Column: Channels */}
-                <div>
-                    <h1 style={{ fontSize: '32px', fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: '8px', letterSpacing: '-0.5px' }}>Welcome to {guildName}</h1>
-                    <p style={{ fontSize: '15px', color: 'var(--text-muted)', marginBottom: '40px' }}>
-                        {isOwner && textChannels.length === 0 && voiceChannels.length === 0
-                            ? 'This portal is still in setup mode. Knock out the basics below, then invite people in.'
-                            : 'Select a channel below to jump into the conversation.'}
-                    </p>
+                <div className="guild-channels-section">
+                    <div className="guild-hero">
+                        <h1>Welcome to {guildName}</h1>
+                        <p className="guild-subtitle">
+                            {isOwner && textChannels.length === 0 && voiceChannels.length === 0
+                                ? 'This portal is still in setup mode. Knock out the basics below, then invite people in.'
+                                : 'Select a channel below to jump into the conversation.'}
+                        </p>
+                    </div>
 
                     {/* Text Channels Grid */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                        <h3 className="section-label" style={{ margin: 0 }}>Text Channels</h3>
-                    </div>
-                    <div className="channels-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', marginBottom: '40px' }}>
-                        {textChannels.length === 0 && (
-                            <div style={{
-                                padding: '20px',
-                                border: '1px dashed var(--stroke)',
-                                borderRadius: '16px',
-                                background: 'var(--bg-elevated)',
-                                display: 'grid',
-                                gap: '12px',
-                            }}>
-                                <div style={{ fontWeight: 700 }}>No text channels yet</div>
-                                <div style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.5 }}>
-                                    {isOwner
-                                        ? 'Start with one chat channel for everyday conversation, plus a forum if you want longer threads.'
-                                        : 'The owner has not added a text channel yet.'}
-                                </div>
-                                {isOwner && (
-                                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                        <button className="auth-button" onClick={() => setActiveModal('guildSettings')} style={{ margin: 0, padding: '10px 14px', background: 'var(--accent-primary)', color: '#000', border: '3px solid #000', fontWeight: 800 }}>
-                                            Open Portal Settings
-                                        </button>
-                                        <button className="auth-button" onClick={() => setActiveModal('invite')} style={{ margin: 0, padding: '10px 14px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800 }}>
-                                            Invite your first people
-                                        </button>
+                    <div className="guild-section">
+                        <h3 className="guild-section-title">Text Channels</h3>
+                        <div className="channels-grid">
+                            {textChannels.length === 0 && (
+                                <div className="empty-state">
+                                    <div className="empty-state-title">No text channels yet</div>
+                                    <div className="empty-state-description">
+                                        {isOwner
+                                            ? 'Start with one chat channel for everyday conversation, plus a forum if you want longer threads.'
+                                            : 'The owner has not added a text channel yet.'}
                                     </div>
-                                )}
-                            </div>
-                        )}
-                        {textChannels.map(ch => (
-                            <Link key={ch.id} to={`/guild/${guildId}/channel/${ch.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                                <div className="channel-card">
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontWeight: 600 }}>
-                                        <HashIcon size={16} color="var(--text-muted)" /> {ch.name}
-                                    </div>
-                                    {ch.topic && <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{ch.topic}</p>}
+                                    {isOwner && (
+                                        <div className="empty-state-actions">
+                                            <button className="auth-button" onClick={() => setActiveModal('guildSettings')} style={{ margin: 0, background: 'var(--accent-primary)', color: '#000' }}>
+                                                Open Portal Settings
+                                            </button>
+                                            <button className="auth-button" onClick={() => setActiveModal('invite')} style={{ margin: 0, background: 'var(--bg-tertiary)' }}>
+                                                Invite your first people
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
-                            </Link>
-                        ))}
+                            )}
+                            {textChannels.map(ch => (
+                                <Link key={ch.id} to={`/guild/${guildId}/channel/${ch.id}`} className="channel-card-link">
+                                    <div className="channel-card">
+                                        <div className="channel-card-header">
+                                            <HashIcon size={16} className="channel-icon" /> {ch.name}
+                                        </div>
+                                        {ch.topic && <p className="channel-topic">{ch.topic}</p>}
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
                     </div>
 
                     {/* Voice Channels Grid */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                        <h3 className="section-label" style={{ margin: 0 }}>Voice Channels</h3>
-                    </div>
-                    <div className="channels-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
-                        {voiceChannels.length === 0 && (
-                            <div style={{
-                                padding: '20px',
-                                border: '1px dashed var(--stroke)',
-                                borderRadius: '16px',
-                                background: 'var(--bg-elevated)',
-                                display: 'grid',
-                                gap: '12px',
-                            }}>
-                                <div style={{ fontWeight: 700 }}>No voice channels yet</div>
-                                <div style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.5 }}>
-                                    {isOwner
-                                        ? 'Add a voice room for quick calls, hangouts, or events once people start arriving.'
-                                        : 'Voice spaces have not been set up here yet.'}
-                                </div>
-                                {isOwner && (
-                                    <button className="auth-button" onClick={() => setActiveModal('guildSettings')} style={{ margin: 0, padding: '10px 14px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800, width: 'fit-content' }}>
-                                        Open Portal Settings
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                        {voiceChannels.map(ch => {
-                            const participantCount = voiceParticipants[ch.id] || 0;
-                            return (
-                                <Link key={ch.id} to={`/guild/${guildId}/voice/${ch.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                                    <div className="channel-card">
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
-                                                <Mic size={16} color="var(--text-muted)" /> {ch.name}
-                                            </div>
-                                        </div>
-                                        {participantCount > 0 && (
-                                            <div style={{ 
-                                                display: 'flex', 
-                                                alignItems: 'center', 
-                                                gap: '6px', 
-                                                fontSize: '12px', 
-                                                color: 'var(--success)',
-                                                marginTop: '4px'
-                                            }}>
-                                                <Users size={14} />
-                                                <span>{participantCount} {participantCount === 1 ? 'user' : 'users'} in voice</span>
-                                            </div>
-                                        )}
+                    <div className="guild-section">
+                        <h3 className="guild-section-title">Voice Channels</h3>
+                        <div className="channels-grid">
+                            {voiceChannels.length === 0 && (
+                                <div className="empty-state">
+                                    <div className="empty-state-title">No voice channels yet</div>
+                                    <div className="empty-state-description">
+                                        {isOwner
+                                            ? 'Add a voice room for quick calls, hangouts, or events once people start arriving.'
+                                            : 'Voice spaces have not been set up here yet.'}
                                     </div>
-                                </Link>
-                            );
-                        })}
+                                    {isOwner && (
+                                        <button className="auth-button" onClick={() => setActiveModal('guildSettings')} style={{ margin: 0, background: 'var(--bg-tertiary)', width: 'fit-content' }}>
+                                            Open Portal Settings
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                            {voiceChannels.map(ch => {
+                                const participantCount = voiceParticipants[ch.id] || 0;
+                                return (
+                                    <Link key={ch.id} to={`/guild/${guildId}/voice/${ch.id}`} className="channel-card-link">
+                                        <div className="channel-card">
+                                            <div className="channel-card-header">
+                                                <Mic size={16} className="channel-icon" /> {ch.name}
+                                            </div>
+                                            {participantCount > 0 && (
+                                                <div className="voice-participants-badge">
+                                                    <Users size={14} />
+                                                    <span>{participantCount} {participantCount === 1 ? 'user' : 'users'} in voice</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </Link>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 
-                {/* Right Column: Server Identity */}
-                <div style={{
-                    display: 'flex', flexDirection: 'column',
-                    background: 'var(--bg-elevated)',
-                    border: 'var(--border-structural, 3px solid #000)',
-                    borderRadius: 'var(--radius-lg, 0)',
-                    padding: '32px',
-                    boxShadow: 'var(--shadow-panel, 8px 8px 0 #000)',
-                    position: 'sticky',
-                    top: '48px'
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-                        <div style={{
-                            width: '120px', height: '120px',
-                            borderRadius: '24px',
-                            background: (guild?.iconHash && !iconImgError) ? 'transparent' : getDeterministicGradient(guildName),
-                            border: '4px solid var(--accent-primary)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '48px', fontWeight: 'bold', color: 'white',
-                            overflow: 'hidden',
-                        }}>
+                {/* Right Column: Guild Identity & Actions */}
+                <aside className="guild-sidebar">
+                    {/* Guild Identity Card */}
+                    <div className="guild-identity-card">
+                        <div className="guild-icon-container">
                             {(guild?.iconHash && !iconImgError) ? (
                                 <img
                                     src={`${API_BASE}/files/${guild.iconHash}`}
                                     alt={guildName}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    className="guild-icon"
                                     onError={() => setIconImgError(true)}
                                 />
-                            ) : guildInitial}
+                            ) : (
+                                <div className="guild-icon-fallback" style={{ background: getDeterministicGradient(guildName) }}>
+                                    {guildInitial}
+                                </div>
+                            )}
                         </div>
-                    </div>
 
-                    <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                        <h2 style={{ fontSize: '24px', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: '8px' }}>{guildName}</h2>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600 }}>
-                            {createdDate && <span>Est. {createdDate}</span>}
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)' }}></span>
-                                {guild?.memberCount ?? 0} Members
-                            </span>
-                            {ownerUser && (
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    Owned by <span style={{ color: 'var(--accent-primary)', cursor: 'pointer', fontWeight: 600 }}>@{ownerUser.displayName || ownerUser.username}</span>
+                        <div className="guild-identity-content">
+                            <h2 className="guild-name">{guildName}</h2>
+                            <div className="guild-meta">
+                                {createdDate && <span>Est. {createdDate}</span>}
+                                <span className="guild-member-badge">
+                                    {guild?.memberCount ?? 0} Members
                                 </span>
+                                {ownerUser && (
+                                    <span className="guild-owner">Owned by <span className="owner-name">@{ownerUser.displayName || ownerUser.username}</span></span>
+                                )}
+                            </div>
+                            {guild?.description && (
+                                <p className="guild-description">{guild.description}</p>
                             )}
                         </div>
                     </div>
 
-                    {guild?.description && (
-                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6, textAlign: 'center', marginBottom: '32px' }}>
-                            {guild.description}
-                        </p>
-                    )}
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <button className="auth-button" onClick={() => setActiveModal('invite')} style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--accent-primary)', color: '#000', border: '3px solid #000', fontWeight: 800 }}>Create Invite</button>
+                    {/* Primary Actions */}
+                    <div className="guild-actions">
+                        <button className="auth-button guild-action-primary" onClick={() => setActiveModal('invite')}>Create Invite</button>
                         {isOwner ? (
                             <>
-                                <button className="auth-button" onClick={() => setActiveModal('guildSettings')} style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800 }}>Portal Settings</button>
+                                <button className="auth-button guild-action-secondary" onClick={() => setActiveModal('guildSettings')}>Portal Settings</button>
                                 <Link to={`/guild/${guildId}/workflows`} style={{ textDecoration: 'none' }}>
-                                    <button className="auth-button" style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                    <button className="auth-button guild-action-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%' }}>
                                         <Zap size={16} /> Automations
                                     </button>
                                 </Link>
                                 <Link to={`/guild/${guildId}/events`} style={{ textDecoration: 'none' }}>
-                                    <button className="auth-button" style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                    <button className="auth-button guild-action-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%' }}>
                                         <Calendar size={16} /> Events
                                     </button>
                                 </Link>
                             </>
                         ) : (
-                            <button className="auth-button" onClick={() => setActiveModal('memberOptions')} style={{ margin: 0, padding: '12px', width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '3px solid #000', fontWeight: 800 }}>Community options</button>
+                            <button className="auth-button guild-action-secondary" onClick={() => setActiveModal('memberOptions')}>Community options</button>
                         )}
                     </div>
 
+                    {/* Setup Checklist Card (for owners only) */}
                     {isOwner && (
-                        <div style={{
-                            marginTop: '24px',
-                            padding: '20px',
-                            borderRadius: '16px',
-                            background: 'var(--bg-tertiary)',
-                            border: '1px solid var(--stroke)',
-                            display: 'grid',
-                            gap: '14px',
-                        }}>
-                            <div>
-                                <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: '6px' }}>
-                                    Setup checklist
+                        <div className="guild-setup-card">
+                            <div className="setup-card-header">
+                                <div>
+                                    <div className="setup-card-label">Setup Checklist</div>
+                                    <div className="setup-card-title">Get this portal ready</div>
+                                    <div className="setup-card-description">
+                                        {completedSetupCount}/{setupChecklist.length} basics done. Finish the essentials, then share an invite.
+                                    </div>
                                 </div>
-                                <div style={{ fontSize: '18px', fontWeight: 800 }}>Get this portal ready for people</div>
-                                <div style={{ marginTop: '6px', color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.5 }}>
-                                    {completedSetupCount}/{setupChecklist.length} basics done. Finish the essentials, then share an invite.
+                                <div className="progress-bar">
+                                    <div className="progress-fill" style={{ width: `${(completedSetupCount / setupChecklist.length) * 100}%` }} />
                                 </div>
                             </div>
-                            <div style={{ display: 'grid', gap: '10px' }}>
+
+                            <div className="setup-checklist-items">
                                 {setupChecklist.map((item) => (
-                                    <div key={item.id} style={{
-                                        display: 'flex',
-                                        alignItems: 'flex-start',
-                                        gap: '10px',
-                                        padding: '10px 12px',
-                                        borderRadius: '12px',
-                                        background: 'var(--bg-elevated)',
-                                        border: '1px solid var(--stroke)',
-                                    }}>
-                                        <div style={{
-                                            width: '20px',
-                                            height: '20px',
-                                            borderRadius: '999px',
-                                            flexShrink: 0,
-                                            marginTop: '2px',
-                                            background: item.done ? 'var(--success)' : 'transparent',
-                                            border: item.done ? 'none' : '2px solid var(--stroke)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            color: '#000',
-                                            fontSize: '12px',
-                                            fontWeight: 900,
-                                        }}>
+                                    <div key={item.id} className={`setup-item ${item.done ? 'setup-item-done' : ''}`}>
+                                        <div className="setup-item-checkbox">
                                             {item.done ? '✓' : ''}
                                         </div>
-                                        <div style={{ color: item.done ? 'var(--text-primary)' : 'var(--text-secondary)', lineHeight: 1.5, fontSize: '14px' }}>
-                                            <div>{item.label}</div>
+                                        <div className="setup-item-content">
+                                            <div className="setup-item-label">{item.label}</div>
                                             {!item.done && (
-                                                <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--text-muted)' }}>{item.hint}</div>
+                                                <div className="setup-item-hint">{item.hint}</div>
                                             )}
                                         </div>
                                         {!item.done && (
-                                            <button
-                                                className="auth-button"
-                                                onClick={item.onAction}
-                                                style={{ margin: 0, marginLeft: 'auto', padding: '8px 10px', minWidth: 'fit-content', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '2px solid #000', fontWeight: 800, alignSelf: 'center' }}
-                                            >
+                                            <button className="auth-button setup-item-action" onClick={item.onAction}>
                                                 {item.actionLabel}
                                             </button>
                                         )}
                                     </div>
                                 ))}
                             </div>
-                            <div style={{ display: 'grid', gap: '10px' }}>
-                                <div style={{
-                                    padding: '14px 16px',
-                                    borderRadius: '12px',
-                                    border: '1px solid var(--stroke)',
-                                    background: 'var(--bg-elevated)',
-                                    display: 'grid',
-                                    gap: '6px',
-                                }}>
-                                    <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-primary)' }}>
-                                        Next best step
-                                    </div>
-                                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+
+                            {/* Tips Section */}
+                            <div className="setup-tips-section">
+                                <div className="setup-tip-card">
+                                    <div className="setup-tip-label">Next best step</div>
+                                    <div className="setup-tip-title">
                                         {nextSetupStep ? nextSetupStep.label : 'Your launch basics are done.'}
                                     </div>
-                                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                                    <div className="setup-tip-description">
                                         {nextSetupStep
                                             ? nextSetupStep.hint
                                             : 'Now focus on seeding a first conversation, checking your moderation settings, and inviting people in waves.'}
                                     </div>
                                 </div>
-                                <div style={{
-                                    padding: '14px 16px',
-                                    borderRadius: '12px',
-                                    border: '1px solid var(--stroke)',
-                                    background: 'var(--bg-elevated)',
-                                    display: 'grid',
-                                    gap: '8px',
-                                }}>
-                                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Launch tips for admins</div>
-                                    <div style={{ display: 'grid', gap: '8px' }}>
+                                <div className="setup-tip-card">
+                                    <div className="setup-tip-title">Launch tips for admins</div>
+                                    <div className="setup-tips-list">
                                         {ownerLaunchTips.map((tip) => (
-                                            <div key={tip} style={{ display: 'flex', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                                                <span style={{ color: 'var(--accent-primary)', fontWeight: 900 }}>•</span>
+                                            <div key={tip} className="setup-tip-item">
+                                                <span className="setup-tip-bullet">•</span>
                                                 <span>{tip}</span>
                                             </div>
                                         ))}
@@ -591,8 +507,7 @@ const GuildOverview = () => {
                             </div>
                         </div>
                     )}
-                </div>
-
+                </aside>
             </div>
         </div>
     );
