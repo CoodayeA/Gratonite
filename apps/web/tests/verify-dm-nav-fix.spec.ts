@@ -176,10 +176,8 @@ test.describe('DM navigation freeze regression', () => {
         const dm = await firstDmLink(page);
         const channel = await firstChannelLink(page);
 
-        if (!dm || !channel) {
-            test.skip(); // Skip when fixtures absent — covered by earlier test
-            return;
-        }
+        expect(dm, 'No DM links found — fixture required for this test').not.toBeNull();
+        expect(channel, 'No guild channel links found — fixture required for this test').not.toBeNull();
 
         for (let i = 0; i < 3; i++) {
             await dm.click();
