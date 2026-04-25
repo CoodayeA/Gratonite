@@ -1,3 +1,6 @@
+# Git worktrees (isolated development)
+.worktrees/
+
 # Dependencies
 node_modules/
 .pnp
