@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Hash as HashIcon, Mic, Users, Zap, Calendar, ArrowLeft, X } from 'lucide-react';
+import { Hash as HashIcon, Mic, Users, Zap, Calendar, ArrowLeft, X, Check } from 'lucide-react';
 import { useOutletContext, Link, useParams, useNavigate } from 'react-router-dom';
 import { api, API_BASE, getAccessToken } from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
@@ -166,34 +166,34 @@ const GuildOverview = () => {
     const setupChecklist = [
         {
             id: 'identity',
-            label: 'Add an icon and description so people know what this portal is for.',
+            label: 'Add an icon and description',
             hint: 'A clear icon, short description, and welcome note do most of the work for first impressions.',
             done: Boolean(guild?.iconHash && guild?.description),
-            actionLabel: 'Open settings',
+            actionLabel: 'Settings',
             onAction: openPortalSettings,
         },
         {
             id: 'text',
-            label: 'Create at least one text channel for conversation.',
-            hint: 'Start with a simple chat channel and one forum or help space before you branch out.',
+            label: 'Create a text channel',
+            hint: 'Start with a simple chat channel before you branch out.',
             done: textChannels.length > 0,
-            actionLabel: 'Add channels',
+            actionLabel: 'Add',
             onAction: openPortalSettings,
         },
         {
             id: 'voice',
-            label: 'Create at least one voice channel for drop-ins.',
-            hint: 'One open hangout room is enough for launch. You can add events or stage rooms later.',
+            label: 'Create a voice channel',
+            hint: 'One open hangout room is enough for launch.',
             done: voiceChannels.length > 0,
-            actionLabel: 'Add voice room',
+            actionLabel: 'Add',
             onAction: openPortalSettings,
         },
         {
             id: 'invite',
-            label: 'Invite your first people so the space stops feeling empty.',
-            hint: 'Send invites only after the basics are ready so newcomers land somewhere that already feels welcoming.',
+            label: 'Invite your first people',
+            hint: 'Send invites once the basics feel welcoming.',
             done: (guild?.memberCount ?? 0) > 1,
-            actionLabel: 'Create invite',
+            actionLabel: 'Invite',
             onAction: () => setActiveModal('invite'),
         },
     ];
@@ -239,11 +239,6 @@ const GuildOverview = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [setupChecklist.map((s) => s.id).join('|')]);
     const nextSetupStep = setupChecklist.find((item) => !item.done);
-    const ownerLaunchTips = [
-        'Pin one welcome thread or forum prompt so the first visitors know exactly where to speak.',
-        'Keep your first launch small: a general chat, one help or topic channel, and one voice room is enough.',
-        'After a few people join, watch which channels stay quiet and archive the extras before the layout sprawls.',
-    ];
 
     const guildName = guild?.name || 'Loading...';
     const guildInitial = guildName.charAt(0).toUpperCase();
@@ -518,68 +513,44 @@ const GuildOverview = () => {
                         )}
                     </div>
 
-                    {/* Setup Checklist Card — only when chip dismissed and still incomplete (progressive disclosure) */}
+                    {/* Setup Checklist — quiet, compact list. Hint is a tooltip, not body copy. */}
                     {isOwner && setupDismissed && !setupComplete && (
-                        <div className="guild-setup-card">
+                        <div className="guild-setup-card" role="region" aria-label="Portal setup checklist">
                             <div className="setup-card-header">
-                                <div>
-                                    <div className="setup-card-label">Setup Checklist</div>
-                                    <div className="setup-card-title">Get this portal ready</div>
-                                    <div className="setup-card-description">
-                                        {completedSetupCount}/{setupChecklist.length} basics done. Finish the essentials, then share an invite.
-                                    </div>
+                                <div className="setup-card-heading">
+                                    <h3 className="setup-card-title">Finish setup</h3>
+                                    <span className="setup-card-count">{completedSetupCount} of {setupChecklist.length}</span>
                                 </div>
-                                <div className="progress-bar">
-                                    <div className="progress-fill" style={{ width: `${(completedSetupCount / setupChecklist.length) * 100}%` }} />
+                                <div
+                                    className="progress-bar"
+                                    role="progressbar"
+                                    aria-valuenow={portalCompletionPercent}
+                                    aria-valuemin={0}
+                                    aria-valuemax={100}
+                                >
+                                    <div className="progress-fill" style={{ width: `${portalCompletionPercent}%` }} />
                                 </div>
                             </div>
 
-                            <div className="setup-items-container">
+                            <ul className="setup-items-container">
                                 {setupChecklist.map((item) => (
-                                    <div key={item.id} className={`setup-item pulse-wave ${item.done ? 'setup-item-done' : ''}`}>
-                                        <div className="setup-item-checkbox">
-                                            {item.done ? '✓' : ''}
-                                        </div>
-                                        <div className="setup-item-content">
-                                            <div className="setup-item-label">{item.label}</div>
-                                            {!item.done && (
-                                                <div className="setup-item-hint">{item.hint}</div>
-                                            )}
-                                        </div>
+                                    <li
+                                        key={item.id}
+                                        className={`setup-item ${item.done ? 'setup-item-done' : ''}`}
+                                        title={item.done ? undefined : item.hint}
+                                    >
+                                        <span className="setup-item-checkbox" aria-hidden="true">
+                                            {item.done && <Check size={12} strokeWidth={3} />}
+                                        </span>
+                                        <span className="setup-item-label">{item.label}</span>
                                         {!item.done && (
-                                            <button className="auth-button setup-item-action" onClick={item.onAction}>
+                                            <button className="setup-item-action" onClick={item.onAction}>
                                                 {item.actionLabel}
                                             </button>
                                         )}
-                                    </div>
+                                    </li>
                                 ))}
-                            </div>
-
-                            {/* Tips Section */}
-                            <div className="setup-tips-section">
-                                <div className="setup-tip-card">
-                                    <div className="setup-tip-label">Next best step</div>
-                                    <div className="setup-tip-title">
-                                        {nextSetupStep ? nextSetupStep.label : 'Your launch basics are done.'}
-                                    </div>
-                                    <div className="setup-tip-description">
-                                        {nextSetupStep
-                                            ? nextSetupStep.hint
-                                            : 'Now focus on seeding a first conversation, checking your moderation settings, and inviting people in waves.'}
-                                    </div>
-                                </div>
-                                <div className="setup-tip-card">
-                                    <div className="setup-tip-title">Launch tips for admins</div>
-                                    <div className="setup-tips-list">
-                                        {ownerLaunchTips.map((tip) => (
-                                            <div key={tip} className="setup-tip-item">
-                                                <span className="setup-tip-bullet">•</span>
-                                                <span>{tip}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
+                            </ul>
                         </div>
                     )}
                 </aside>

@@ -6120,231 +6120,148 @@ body.gratonite-exp-reduced-motion *::after {
 }
 
 /* Setup checklist card */
+/* ===========================================
+   Portal Setup Checklist — quiet, compact card
+   =========================================== */
 .guild-setup-card {
-  padding: 24px;
-  border: 3px solid var(--stroke);
-  border-radius: 0;
-  background: var(--bg-tertiary);
+  padding: 16px;
+  border: 1px solid var(--stroke-subtle, var(--stroke));
+  border-radius: var(--radius-lg, 12px);
+  background: var(--bg-elevated);
   display: grid;
-  gap: 20px;
-  box-shadow: var(--shadow-panel, 8px 8px 0 #000);
+  gap: 14px;
+  box-shadow: var(--shadow-panel);
 }
 
 .setup-card-header {
   display: grid;
+  gap: 10px;
+}
+
+.setup-card-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 12px;
 }
 
-.setup-card-label {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent-primary);
-}
-
 .setup-card-title {
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 700;
   font-family: var(--font-display);
   margin: 0;
   color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
-.setup-card-description {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin: 0;
+.setup-card-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Progress bar */
 .progress-bar {
-  height: 8px;
-  background: var(--stroke);
-  border-radius: 4px;
+  height: 4px;
+  background: var(--stroke-subtle, rgba(0, 0, 0, 0.08));
+  border-radius: 999px;
   overflow: hidden;
-  margin-top: 8px;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent-primary), var(--accent-purple));
-  border-radius: 4px;
-  transition: width 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--accent-primary);
+  border-radius: 999px;
+  transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Setup checklist items container */
+/* Item list */
 .setup-items-container {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  min-width: 0;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .setup-item {
   display: flex;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 10px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--stroke);
-  transition: all 200ms ease-out;
-  min-height: 44px;
-  writing-mode: horizontal-tb;
-  min-width: 0;
-}
-
-.setup-item.setup-item-done {
-  opacity: 0.72;
-  background: var(--bg-elevated);
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  min-height: 36px;
+  transition: background-color 150ms ease-out;
+  cursor: default;
 }
 
 .setup-item:hover {
-  border-color: var(--accent-primary);
-  background: var(--bg-tertiary);
-  box-shadow: 0 0 0 1px var(--accent-primary);
+  background: var(--hover-overlay, rgba(0, 0, 0, 0.04));
 }
 
 .setup-item-checkbox {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   flex-shrink: 0;
-  margin-top: 2px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 900;
-  color: #000;
-  transition: all 200ms ease-out;
-}
-
-.setup-item:not(.setup-item-done) .setup-item-checkbox {
-  border: 2px solid var(--stroke);
+  border: 1.5px solid var(--stroke);
   background: transparent;
+  color: #fff;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out;
 }
 
 .setup-item.setup-item-done .setup-item-checkbox {
   background: var(--success);
-  border: none;
-  color: white;
-}
-
-.setup-item-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1 1 0;
-  min-width: 0;
+  border-color: var(--success);
 }
 
 .setup-item-label {
-  font-size: 15px;
-  font-weight: 700;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
   color: var(--text-primary);
-  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .setup-item.setup-item-done .setup-item-label {
-  color: var(--text-secondary);
+  color: var(--text-muted);
   text-decoration: line-through;
-  text-decoration-color: var(--text-muted);
-  text-decoration-thickness: 1.5px;
-}
-
-.setup-item-hint {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.5;
+  text-decoration-thickness: 1px;
 }
 
 .setup-item-action {
-  padding: 8px 14px !important;
-  margin-left: auto !important;
-  align-self: center;
-  background: var(--accent-primary) !important;
-  color: var(--text-on-accent, #fff) !important;
-  border: 2px solid var(--accent-primary-strong, #000) !important;
-  border-radius: 6px !important;
-  font-weight: 800 !important;
-  font-size: 13px !important;
-  white-space: nowrap;
   flex-shrink: 0;
-  flex-basis: 100%;
-  text-align: center;
-}
-
-@media (min-width: 1280px) {
-  .setup-item-action {
-    flex-basis: auto;
-    text-align: left;
-  }
+  padding: 4px 10px;
+  min-height: 28px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  background: transparent;
+  border: 1px solid var(--stroke);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out;
+  white-space: nowrap;
 }
 
 .setup-item-action:hover {
-  background: var(--accent-primary-hover, var(--accent-primary)) !important;
-  filter: brightness(1.08);
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--text-on-accent, #fff);
 }
 
-/* Tips section */
-.setup-tips-section {
-  display: grid;
-  gap: 12px;
-}
-
-.setup-tip-card {
-  padding: 14px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--stroke);
-  background: var(--bg-elevated);
-  display: grid;
-  gap: 6px;
-}
-
-.setup-tip-label {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent-primary);
-}
-
-.setup-tip-title {
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.setup-tip-description {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin: 0;
-}
-
-.setup-tips-list {
-  display: grid;
-  gap: 8px;
-}
-
-.setup-tip-item {
-  display: flex;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.setup-tip-bullet {
-  color: var(--accent-primary);
-  font-weight: 900;
-  flex-shrink: 0;
+.setup-item-action:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
 }
 
 /* Skeleton loaders */
