@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => ({
           'vendor-livekit': ['livekit-client'],
           'vendor-icons': ['lucide-react'],
           'vendor-motion': ['framer-motion'],
-          'vendor-code': ['highlight.js', 'dompurify'],
+          'vendor-code': ['dompurify'],
         },
       },
     },

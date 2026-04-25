@@ -1,10 +1,92 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import hljs from 'highlight.js';
+import hljs from 'highlight.js/lib/core';
 import DOMPurify from 'dompurify';
-import katex from 'katex';
-import 'katex/dist/katex.min.css';
 import { getCodeTheme, applyCodeTheme } from '../../utils/codeTheme';
 import { copyToClipboard } from '../../utils/clipboard';
+
+// ── Register a curated set of common languages instead of all 384 ──
+// Drops vendor-code bundle from ~960 KB to ~250 KB. Unknown languages render
+// as plain text (also faster than highlightAuto's heuristic guessing).
+import javascript from 'highlight.js/lib/languages/javascript';
+import typescript from 'highlight.js/lib/languages/typescript';
+import xml from 'highlight.js/lib/languages/xml';
+import css from 'highlight.js/lib/languages/css';
+import json from 'highlight.js/lib/languages/json';
+import bash from 'highlight.js/lib/languages/bash';
+import python from 'highlight.js/lib/languages/python';
+import sql from 'highlight.js/lib/languages/sql';
+import yaml from 'highlight.js/lib/languages/yaml';
+import markdown from 'highlight.js/lib/languages/markdown';
+import go from 'highlight.js/lib/languages/go';
+import rust from 'highlight.js/lib/languages/rust';
+import java from 'highlight.js/lib/languages/java';
+import c from 'highlight.js/lib/languages/c';
+import cpp from 'highlight.js/lib/languages/cpp';
+import csharp from 'highlight.js/lib/languages/csharp';
+import php from 'highlight.js/lib/languages/php';
+import ruby from 'highlight.js/lib/languages/ruby';
+import swift from 'highlight.js/lib/languages/swift';
+import kotlin from 'highlight.js/lib/languages/kotlin';
+import dockerfile from 'highlight.js/lib/languages/dockerfile';
+import diff from 'highlight.js/lib/languages/diff';
+import plaintext from 'highlight.js/lib/languages/plaintext';
+
+hljs.registerLanguage('javascript', javascript);
+hljs.registerLanguage('js', javascript);
+hljs.registerLanguage('jsx', javascript);
+hljs.registerLanguage('typescript', typescript);
+hljs.registerLanguage('ts', typescript);
+hljs.registerLanguage('tsx', typescript);
+hljs.registerLanguage('xml', xml);
+hljs.registerLanguage('html', xml);
+hljs.registerLanguage('svg', xml);
+hljs.registerLanguage('css', css);
+hljs.registerLanguage('json', json);
+hljs.registerLanguage('bash', bash);
+hljs.registerLanguage('sh', bash);
+hljs.registerLanguage('shell', bash);
+hljs.registerLanguage('zsh', bash);
+hljs.registerLanguage('python', python);
+hljs.registerLanguage('py', python);
+hljs.registerLanguage('sql', sql);
+hljs.registerLanguage('yaml', yaml);
+hljs.registerLanguage('yml', yaml);
+hljs.registerLanguage('markdown', markdown);
+hljs.registerLanguage('md', markdown);
+hljs.registerLanguage('go', go);
+hljs.registerLanguage('golang', go);
+hljs.registerLanguage('rust', rust);
+hljs.registerLanguage('rs', rust);
+hljs.registerLanguage('java', java);
+hljs.registerLanguage('c', c);
+hljs.registerLanguage('cpp', cpp);
+hljs.registerLanguage('c++', cpp);
+hljs.registerLanguage('csharp', csharp);
+hljs.registerLanguage('cs', csharp);
+hljs.registerLanguage('php', php);
+hljs.registerLanguage('ruby', ruby);
+hljs.registerLanguage('rb', ruby);
+hljs.registerLanguage('swift', swift);
+hljs.registerLanguage('kotlin', kotlin);
+hljs.registerLanguage('kt', kotlin);
+hljs.registerLanguage('dockerfile', dockerfile);
+hljs.registerLanguage('diff', diff);
+hljs.registerLanguage('text', plaintext);
+hljs.registerLanguage('plain', plaintext);
+
+// ─── Lazy KaTeX loader ─────────────────────────────────────────────────────
+// KaTeX + its CSS is ~270 KB. Only load when a message actually contains math.
+type KatexModule = typeof import('katex');
+let katexPromise: Promise<KatexModule> | null = null;
+function loadKatex(): Promise<KatexModule> {
+    if (!katexPromise) {
+        katexPromise = Promise.all([
+            import('katex'),
+            import('katex/dist/katex.min.css'),
+        ]).then(([mod]) => mod.default ? (mod as unknown as { default: KatexModule }).default : mod);
+    }
+    return katexPromise;
+}
 
 function isGratoniteDomain(url: string): boolean {
     try {
@@ -29,9 +111,17 @@ applyCodeTheme(getCodeTheme());
 // Code block with copy button — HTML is sanitized via DOMPurify before rendering
 const CodeBlock = ({ code, lang, idx }: { code: string; lang: string; idx: number }) => {
     const [copied, setCopied] = useState(false);
-    const rawHtml = lang && hljs.getLanguage(lang)
-        ? hljs.highlight(code, { language: lang }).value
-        : hljs.highlightAuto(code).value;
+    let rawHtml: string;
+    if (lang && hljs.getLanguage(lang)) {
+        rawHtml = hljs.highlight(code, { language: lang, ignoreIllegals: true }).value;
+    } else {
+        // Unknown / unspecified language → escape and render as plain text.
+        // Avoids highlightAuto (which required all 384 languages and was ~960 KB).
+        rawHtml = code
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
     // SECURITY: sanitize highlight.js output to prevent XSS
     const safeHtml = DOMPurify.sanitize(rawHtml);
 
@@ -105,29 +195,50 @@ const MermaidBlock = ({ code, idx }: { code: string; idx: number }) => {
     );
 };
 
-// ─── KaTeX Math Rendering ─────────────────────────────────────────────────────
+// ─── KaTeX Math Rendering (lazy) ──────────────────────────────────────────────
 const InlineMath = ({ tex }: { tex: string }) => {
-    const html = useMemo(() => {
-        try {
-            // SAFETY: KaTeX output is safe by design — it only generates math markup
-            return katex.renderToString(tex, { throwOnError: false, displayMode: false });
-        } catch {
-            return `<span style="color:#ef4444">${DOMPurify.sanitize(tex)}</span>`;
-        }
+    const [html, setHtml] = useState<string>('');
+    useEffect(() => {
+        let cancelled = false;
+        loadKatex().then(katex => {
+            if (cancelled) return;
+            try {
+                setHtml(katex.renderToString(tex, { throwOnError: false, displayMode: false }));
+            } catch {
+                setHtml(`<span style="color:#ef4444">${DOMPurify.sanitize(tex)}</span>`);
+            }
+        }).catch(() => {
+            if (!cancelled) setHtml(`<span style="color:#ef4444">${DOMPurify.sanitize(tex)}</span>`);
+        });
+        return () => { cancelled = true; };
     }, [tex]);
+    if (!html) {
+        // Show raw tex inline while katex is loading; avoids layout flash
+        return <span style={{ fontFamily: 'monospace', opacity: 0.7 }}>${tex}$</span>;
+    }
     // SAFETY: KaTeX renderToString produces safe HTML; fallback uses DOMPurify
     return <span dangerouslySetInnerHTML={{ __html: html }} style={{ verticalAlign: 'middle' }} />;
 };
 
 const BlockMath = ({ tex, keyStr }: { tex: string; keyStr: string }) => {
-    const html = useMemo(() => {
-        try {
-            // SAFETY: KaTeX output is safe by design — it only generates math markup
-            return katex.renderToString(tex, { throwOnError: false, displayMode: true });
-        } catch {
-            return `<div style="color:#ef4444">${DOMPurify.sanitize(tex)}</div>`;
-        }
+    const [html, setHtml] = useState<string>('');
+    useEffect(() => {
+        let cancelled = false;
+        loadKatex().then(katex => {
+            if (cancelled) return;
+            try {
+                setHtml(katex.renderToString(tex, { throwOnError: false, displayMode: true }));
+            } catch {
+                setHtml(`<div style="color:#ef4444">${DOMPurify.sanitize(tex)}</div>`);
+            }
+        }).catch(() => {
+            if (!cancelled) setHtml(`<div style="color:#ef4444">${DOMPurify.sanitize(tex)}</div>`);
+        });
+        return () => { cancelled = true; };
     }, [tex]);
+    if (!html) {
+        return <div key={keyStr} style={{ margin: '8px 0', textAlign: 'center', fontFamily: 'monospace', opacity: 0.7 }}>{`$$${tex}$$`}</div>;
+    }
     return (
         // SAFETY: KaTeX renderToString produces safe HTML; fallback uses DOMPurify
         <div key={keyStr} style={{ margin: '8px 0', textAlign: 'center', overflow: 'auto' }} dangerouslySetInnerHTML={{ __html: html }} />
