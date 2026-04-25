@@ -573,7 +573,7 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                                 </>
                             )}
 
-                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <div className="settings-save-bar">
                                 <button
                                     onClick={onClose}
                                     style={{

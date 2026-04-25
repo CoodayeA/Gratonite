@@ -2328,6 +2328,32 @@ a {
     flex: 1;
 }
 
+/* ── Sticky save bar for settings modal tabs ──
+   Wrap a tab's Cancel/Save buttons in this to get a frosted, full-bleed
+   footer that sticks to the bottom of the scroll container. */
+.settings-save-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin-top: 24px;
+    margin-left: -24px;
+    margin-right: -24px;
+    padding: 14px 24px;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    align-items: center;
+    background: linear-gradient(180deg, transparent 0%, var(--bg-secondary, #1a1a2e) 35%);
+    border-top: 1px solid var(--stroke);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.settings-save-bar .save-bar-hint {
+    flex: 1;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
 /* Channel item enhanced */
 .channel-item {
     transition: background 0.15s ease, transform 0.15s ease, color 0.15s ease;
