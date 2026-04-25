@@ -118,6 +118,22 @@ test.describe('New Gratonite UI opt-in', () => {
     await expect(page.locator('.app-container')).toHaveAttribute('data-ui-shell', 'classic');
   });
 
+  test('switching back to classic removes New UI class without logout', async ({ page }) => {
+    await page.goto('/app/');
+    await expect(page.locator('.app-container')).toBeVisible({ timeout: 10_000 });
+
+    await page.evaluate(() => localStorage.setItem('gratonite:ui-experience', 'premium-gamer-os'));
+    await page.reload({ waitUntil: 'networkidle' });
+    await expect(page.locator('html')).toHaveClass(/gt-new-ui/);
+    await expect(page.locator('.app-container')).toHaveAttribute('data-ui-shell', 'premium');
+
+    await page.evaluate(() => localStorage.setItem('gratonite:ui-experience', 'classic'));
+    await page.reload({ waitUntil: 'networkidle' });
+    await expect(page.locator('html')).not.toHaveClass(/gt-new-ui/);
+    await expect(page.locator('html')).toHaveAttribute('data-ui-experience', 'classic');
+    await expect(page.locator('.app-container')).toHaveAttribute('data-ui-shell', 'classic');
+  });
+
   test('settings exposes the Premium Gamer OS opt-in toggle', async ({ page }) => {
     await page.goto('/app/');
     await expect(page.locator('.app-container')).toBeVisible({ timeout: 10_000 });
