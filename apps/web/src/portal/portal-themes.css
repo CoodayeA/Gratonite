@@ -85,22 +85,32 @@
   color: #a0a8b8;
 }
 
-/* Embed Portal as a hero strip inside GuildOverview */
+/* Embed Portal as a full-width hero above the guild content */
 .guild-portal-hero {
   position: relative;
   width: 100%;
-  height: 540px;
-  border-radius: 16px;
-  overflow: hidden;
-  margin-bottom: 24px;
-  border: 1px solid rgba(255,255,255,0.06);
-  background: #07080d;
+  max-width: 1400px;
+  margin: 0 auto 8px;
+  padding: 0 48px;
+  box-sizing: border-box;
 }
 .guild-portal-hero .portal-root {
-  position: absolute; inset: 0;
+  position: relative;
+  width: 100%;
+  min-height: 560px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: #07080d;
+  box-shadow: 0 30px 80px -40px rgba(0,0,0,0.6);
 }
-@media (max-width: 900px) {
-  .guild-portal-hero { height: auto; min-height: 480px; }
+@media (max-width: 1024px) {
+  .guild-portal-hero { padding: 0 32px; }
+  .guild-portal-hero .portal-root { min-height: 520px; }
+}
+@media (max-width: 640px) {
+  .guild-portal-hero { padding: 0 16px; }
+  .guild-portal-hero .portal-root { min-height: 480px; border-radius: 14px; }
 }
 
 /* =====================================================================

@@ -318,26 +318,27 @@ const GuildOverview = () => {
                     <span>{guildName}</span>
                 </div>
             )}
+            {guild && (
+                <div className="guild-portal-hero">
+                    <Portal
+                        data={{
+                            guildId: guild.id,
+                            guildName: guild.name,
+                            guildDescription: guild.description,
+                            iconHash: guild.iconHash,
+                            memberCount: guild.memberCount,
+                            tasks: portalTasks,
+                            completionPercent: portalCompletionPercent,
+                            onTaskAction: (id) => portalTaskActions[id]?.(),
+                            onOpenSettings: openPortalSettings,
+                        }}
+                    />
+                </div>
+            )}
             <div className="guild-main-content">
                 {/* Left Column: Channels */}
                 <div className="guild-channels-section">
-                    {guild ? (
-                        <div className="guild-portal-hero">
-                            <Portal
-                                data={{
-                                    guildId: guild.id,
-                                    guildName: guild.name,
-                                    guildDescription: guild.description,
-                                    iconHash: guild.iconHash,
-                                    memberCount: guild.memberCount,
-                                    tasks: portalTasks,
-                                    completionPercent: portalCompletionPercent,
-                                    onTaskAction: (id) => portalTaskActions[id]?.(),
-                                    onOpenSettings: openPortalSettings,
-                                }}
-                            />
-                        </div>
-                    ) : (
+                    {!guild && (
                         <div className="guild-hero">
                             <h1>Welcome to {guildName}</h1>
                             <p className="guild-subtitle">Loading…</p>
@@ -424,39 +425,41 @@ const GuildOverview = () => {
 
                 {/* Right Column: Guild Identity & Actions */}
                 <aside className="guild-sidebar">
-                    {/* Guild Identity Card */}
-                    <div className="guild-identity-card">
-                        <div className="guild-icon-container">
-                            {(guild?.iconHash && !iconImgError) ? (
-                                <img
-                                    src={`${API_BASE}/files/${guild.iconHash}`}
-                                    alt={guildName}
-                                    className="guild-identity-icon"
-                                    onError={() => setIconImgError(true)}
-                                />
-                            ) : (
-                                <div className="guild-identity-icon-fallback" style={{ background: getDeterministicGradient(guildName) }}>
-                                    {guildInitial}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="guild-identity-content">
-                            <h2 className="guild-name">{guildName}</h2>
-                            <div className="guild-meta">
-                                {createdDate && <span>Est. {createdDate}</span>}
-                                <span className="guild-member-badge">
-                                    {guild?.memberCount ?? 0} Members
-                                </span>
-                                {ownerUser && (
-                                    <span className="guild-owner">Owned by <span className="owner-name">@{ownerUser.displayName || ownerUser.username}</span></span>
+                    {/* Guild Identity Card — only when Portal hero isn't rendered */}
+                    {!guild && (
+                        <div className="guild-identity-card">
+                            <div className="guild-icon-container">
+                                {(guild?.iconHash && !iconImgError) ? (
+                                    <img
+                                        src={`${API_BASE}/files/${guild.iconHash}`}
+                                        alt={guildName}
+                                        className="guild-identity-icon"
+                                        onError={() => setIconImgError(true)}
+                                    />
+                                ) : (
+                                    <div className="guild-identity-icon-fallback" style={{ background: getDeterministicGradient(guildName) }}>
+                                        {guildInitial}
+                                    </div>
                                 )}
                             </div>
-                            {guild?.description && (
-                                <p className="guild-description">{guild.description}</p>
-                            )}
+
+                            <div className="guild-identity-content">
+                                <h2 className="guild-name">{guildName}</h2>
+                                <div className="guild-meta">
+                                    {createdDate && <span>Est. {createdDate}</span>}
+                                    <span className="guild-member-badge">
+                                        {guild?.memberCount ?? 0} Members
+                                    </span>
+                                    {ownerUser && (
+                                        <span className="guild-owner">Owned by <span className="owner-name">@{ownerUser.displayName || ownerUser.username}</span></span>
+                                    )}
+                                </div>
+                                {guild?.description && (
+                                    <p className="guild-description">{guild.description}</p>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Primary Actions */}
                     <div className="guild-actions">
