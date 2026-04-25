@@ -3505,33 +3505,6 @@ body.electron-mac .modal-backdrop {
 }
 
 /* Skip-to-content link (accessibility) */
-.skip-link {
-  position: absolute;
-  left: -9999px;
-  top: auto;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  z-index: var(--z-toast);
-}
-.skip-link:focus {
-  position: fixed;
-  top: 8px;
-  left: 8px;
-  width: auto;
-  height: auto;
-  padding: 12px 24px;
-  background: var(--color-primary, #3b82f6);
-  color: white;
-  font-size: 16px;
-  font-weight: 600;
-  border-radius: 8px;
-  text-decoration: none;
-  z-index: var(--z-context-menu);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
-
-/* Skip links container - hidden by default */
 .skip-links {
   position: absolute;
   left: -9999px;
