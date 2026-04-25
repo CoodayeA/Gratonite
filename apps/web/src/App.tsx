@@ -4281,8 +4281,8 @@ export const AppLayout = () => {
     // Only chat/channel routes show the members sidebar
     const isChatRoute = routePath.includes('/chat') || routePath.includes('/channel/');
     const isVoiceRoute = routePath.includes('/voice');
-    const isDmRoute = routePath.match(/^\/dm\/[^/]+$/);
-    const hideBottomNav = isChatRoute || isVoiceRoute || !!isDmRoute;
+    const isDmRoute = /^\/dm\/[^/]+$/.test(routePath);
+    const hideBottomNav = isChatRoute || isVoiceRoute || isDmRoute;
 
     // Derive a section key for page transitions
     // Include channel/voice ID in key so route changes force Outlet remount
@@ -4341,6 +4341,22 @@ export const AppLayout = () => {
         routeAnnouncerRef.current.textContent = label;
     }, [routePath, screenReaderMode]);
 
+    const handleAppLinkClickCapture = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+        if (!isDmRoute || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+        const target = event.target instanceof HTMLElement ? event.target : null;
+        const anchor = target?.closest<HTMLAnchorElement>('a[href]');
+        if (!anchor || anchor.target || anchor.hasAttribute('download')) return;
+
+        const url = new URL(anchor.href, window.location.href);
+        if (url.origin !== window.location.origin || !url.pathname.startsWith('/app')) return;
+        if (url.pathname === window.location.pathname && url.search === window.location.search) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        window.location.assign(url.toString());
+    }, [isDmRoute]);
+
     // Screen reader: announce modal open/close
     const prevModalRef = useRef<ModalType>(null);
     useEffect(() => {
@@ -4372,7 +4388,7 @@ export const AppLayout = () => {
     return (
         <ContextMenuProvider>
             <GlobalBugReportContextMenu onOpenBugReport={() => setActiveModal('bugReport')} />
-            <div className={`app-container${focusMode ? ' focus-mode' : ''}`}>
+            <div className={`app-container${focusMode ? ' focus-mode' : ''}`} onClickCapture={handleAppLinkClickCapture}>
                 {/* Visually hidden route announcer for screen readers */}
                 <div ref={routeAnnouncerRef} className="sr-route-announcer" aria-live="assertive" aria-atomic="true" role="status" />
                 <a href="#main-content" className="skip-link">Skip to content</a>
