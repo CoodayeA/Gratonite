@@ -2294,6 +2294,40 @@ a {
     cursor: not-allowed;
 }
 
+/* ── auth-button modifiers (use these instead of inline overrides) ── */
+.auth-button.compact {
+    height: 40px;
+    font-size: 14px;
+    margin-top: 0;
+}
+.auth-button.secondary {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--stroke);
+    color: var(--text-primary);
+}
+.auth-button.secondary:hover:not(:disabled) {
+    background: var(--bg-hover, rgba(255,255,255,0.06));
+    box-shadow: none;
+    transform: translateY(-1px);
+}
+.auth-button.icon-square {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    margin-top: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.auth-button.flex-row {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 0;
+    flex: 1;
+}
+
 /* Channel item enhanced */
 .channel-item {
     transition: background 0.15s ease, transform 0.15s ease, color 0.15s ease;

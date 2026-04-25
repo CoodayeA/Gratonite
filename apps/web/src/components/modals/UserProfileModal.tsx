@@ -679,7 +679,7 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                     )}
 
                     <div className="gt-profile-modal__actions" data-ui-profile-actions style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={() => { addToast({ title: 'Direct Message', description: `Opening DM with ${displayName}...`, variant: 'info' }); onClose(); }} className="auth-button" style={{ marginTop: 0, flex: 1, height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        <button onClick={() => { addToast({ title: 'Direct Message', description: `Opening DM with ${displayName}...`, variant: 'info' }); onClose(); }} className="auth-button compact flex-row">
                             <MessageSquare size={16} /> Message
                         </button>
                         {userProfile?.id !== currentUser?.id && (
@@ -695,7 +695,7 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                             </button>
                         )}
                         <div ref={optionsRef} style={{ position: 'relative' }}>
-                            <button onClick={() => { setShowUserOptions(prev => !prev); setShowReportConfirm(false); }} className="auth-button" style={{ marginTop: 0, width: '40px', height: '40px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <button onClick={() => { setShowUserOptions(prev => !prev); setShowReportConfirm(false); }} className="auth-button compact secondary icon-square" aria-label="More options" aria-expanded={showUserOptions}>
                                 <MoreHorizontal size={16} />
                             </button>
 

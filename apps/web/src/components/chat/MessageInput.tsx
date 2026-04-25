@@ -1155,7 +1155,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                             </div>
                         </div>
 
-                        <button className="auth-button" style={{ margin: 0, padding: '8px 0', height: 'auto', fontSize: '13px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)' }} onClick={handleScheduleSubmit}>
+                        <button className="auth-button compact secondary" style={{ width: '100%' }} onClick={handleScheduleSubmit}>
                             Schedule Message
                         </button>
                     </div>
