@@ -34,6 +34,8 @@ export default defineConfig(({ mode }) => ({
           'vendor-icons': ['lucide-react'],
           'vendor-motion': ['framer-motion'],
           'vendor-code': ['dompurify'],
+          'vendor-sentry': ['@sentry/react', '@sentry/browser', '@sentry/core'],
+          'vendor-gsap': ['gsap'],
         },
       },
     },
