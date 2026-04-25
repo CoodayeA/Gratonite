@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Hash as HashIcon, Mic, Users, Zap, Calendar, ArrowLeft } from 'lucide-react';
 import { useOutletContext, Link, useParams, useNavigate } from 'react-router-dom';
 import { api, API_BASE, getAccessToken } from '../../lib/api';
@@ -9,6 +9,8 @@ import type { GuildSessionChannel, GuildSessionInfo, GuildSessionErrorCode } fro
 import GuildWelcomeModal from '../../components/modals/GuildWelcomeModal';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import Skeleton from '../../components/ui/Skeleton';
+import { PortalThemeProvider } from '../../portal/themes/PortalThemeProvider';
+import { Portal, type PortalTask } from '../../portal/Portal';
 
 interface GuildData {
     id: string;
@@ -196,6 +198,26 @@ const GuildOverview = () => {
         },
     ];
     const completedSetupCount = setupChecklist.filter((item) => item.done).length;
+    const portalCompletionPercent = setupChecklist.length
+        ? Math.round((completedSetupCount / setupChecklist.length) * 100)
+        : 0;
+    const portalTasks: PortalTask[] = useMemo(
+        () =>
+            setupChecklist.map((item) => ({
+                id: item.id,
+                label: item.label,
+                description: item.hint,
+                completed: item.done,
+            })),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [setupChecklist.map((s) => `${s.id}:${s.done}`).join('|')],
+    );
+    const portalTaskActions = useMemo(() => {
+        const map: Record<string, () => void> = {};
+        for (const item of setupChecklist) map[item.id] = item.onAction;
+        return map;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [setupChecklist.map((s) => s.id).join('|')]);
     const nextSetupStep = setupChecklist.find((item) => !item.done);
     const ownerLaunchTips = [
         'Pin one welcome thread or forum prompt so the first visitors know exactly where to speak.',
@@ -240,6 +262,7 @@ const GuildOverview = () => {
     }
 
     return (
+        <PortalThemeProvider guildId={guildId ?? ''}>
         <div className="guild-homescreen">
             {showWelcomeModal && guild && onboardingData && onboardingData.welcomeMessage && (
                 <GuildWelcomeModal
@@ -298,14 +321,28 @@ const GuildOverview = () => {
             <div className="guild-main-content">
                 {/* Left Column: Channels */}
                 <div className="guild-channels-section">
-                    <div className="guild-hero">
-                        <h1>Welcome to {guildName}</h1>
-                        <p className="guild-subtitle">
-                            {isOwner && textChannels.length === 0 && voiceChannels.length === 0
-                                ? 'This portal is still in setup mode. Knock out the basics below, then invite people in.'
-                                : 'Select a channel below to jump into the conversation.'}
-                        </p>
-                    </div>
+                    {guild ? (
+                        <div className="guild-portal-hero">
+                            <Portal
+                                data={{
+                                    guildId: guild.id,
+                                    guildName: guild.name,
+                                    guildDescription: guild.description,
+                                    iconHash: guild.iconHash,
+                                    memberCount: guild.memberCount,
+                                    tasks: portalTasks,
+                                    completionPercent: portalCompletionPercent,
+                                    onTaskAction: (id) => portalTaskActions[id]?.(),
+                                    onOpenSettings: openPortalSettings,
+                                }}
+                            />
+                        </div>
+                    ) : (
+                        <div className="guild-hero">
+                            <h1>Welcome to {guildName}</h1>
+                            <p className="guild-subtitle">Loading…</p>
+                        </div>
+                    )}
 
                     {/* Text Channels Grid */}
                     <div className="guild-section">
@@ -510,6 +547,7 @@ const GuildOverview = () => {
                 </aside>
             </div>
         </div>
+        </PortalThemeProvider>
     );
 };
 
