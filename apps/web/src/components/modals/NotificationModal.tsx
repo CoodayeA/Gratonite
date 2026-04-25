@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, AtSign, CheckCircle2, Trash2, X, ChevronDown, ChevronRight, MessageSquare, Heart, UserPlus, Mail, Settings, Gavel, BellOff } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
+import { useConfirm } from '../ui/ConfirmDialog';
 import Avatar from '../ui/Avatar';
 import { buildDmRoute, buildGuildChannelRoute, normalizeLegacyRoute } from '../../lib/routes';
 
@@ -221,6 +222,7 @@ function getSavedFilter(): FilterTab {
 const NotificationModal = ({ onClose }: { onClose: () => void }) => {
     const navigate = useNavigate();
     const { addToast } = useToast();
+    const { confirm } = useConfirm();
     const [activeTab, setActiveTab] = useState<FilterTab>(getSavedFilter);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -388,7 +390,15 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
         setNotifications(prev => prev.map(n => unreadIds.includes(n.id) ? { ...n, read: true } : n));
     };
 
-    const clearAll = () => {
+    const clearAll = async () => {
+        if (notifications.length === 0) return;
+        const ok = await confirm({
+            title: 'Clear all notifications?',
+            message: `This will permanently dismiss all ${notifications.length} notification${notifications.length === 1 ? '' : 's'}. You can't undo this.`,
+            confirmLabel: 'Clear all',
+            variant: 'danger',
+        });
+        if (!ok) return;
         api.notifications.clearAll()
             .then(() => setNotifications([]))
             .catch(() => addToast({ title: 'Failed to clear notifications', variant: 'error' }));
@@ -537,8 +547,8 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
                         )}
                     </div>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <button onClick={markAllRead} style={{ background: 'transparent', border: 'none', color: 'var(--accent-blue)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <CheckCircle2 size={14} /> Mark Read
+                        <button onClick={markAllRead} title="Mark all as read" style={{ background: 'transparent', border: 'none', color: 'var(--accent-blue)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <CheckCircle2 size={14} /> Mark all read
                         </button>
                         <div className="snooze-menu-container" style={{ position: 'relative' }}>
                             <button onClick={() => setShowSnoozeMenu(v => !v)} title="Snooze notifications" style={{ background: 'transparent', border: 'none', color: snoozedUntil ? 'var(--accent-blue)' : 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -645,9 +655,17 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
                 {/* Notification List */}
                 <div style={{ overflowY: 'auto', flex: 1, background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}>
                     {isLoading ? (
-                        <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ width: '32px', height: '32px', border: '3px solid var(--stroke)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                            <span style={{ fontSize: '14px' }}>Loading notifications...</span>
+                        <div role="status" aria-label="Loading notifications">
+                            {Array.from({ length: 6 }).map((_, i) => (
+                                <div key={i} style={{ padding: '12px 24px', borderBottom: '1px solid var(--stroke)', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-tertiary)', animation: 'pulse 1.5s ease-in-out infinite', flexShrink: 0 }} />
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <div style={{ width: `${50 + (i % 3) * 15}%`, height: '12px', borderRadius: '4px', background: 'var(--bg-tertiary)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                                        <div style={{ width: `${70 - (i % 4) * 10}%`, height: '10px', borderRadius: '4px', background: 'var(--bg-tertiary)', opacity: 0.7, animation: 'pulse 1.5s ease-in-out infinite' }} />
+                                    </div>
+                                </div>
+                            ))}
+                            <span style={{ position: 'absolute', left: '-9999px' }}>Loading notifications...</span>
                         </div>
                     ) : daySections.length === 0 ? (
                         <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted)' }}>
