@@ -12,13 +12,13 @@ import { copyToClipboard } from './utils/clipboard';
 
 import AuthLayout from './layouts/AuthLayout';
 import { AppLayoutAccessibility } from './layouts/AppLayout';
-import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
-import Verify from './pages/auth/Verify';
-import ResetPassword from './pages/auth/ResetPassword';
-import ImportAccount from './pages/auth/ImportAccount';
+const Login = lazy(() => import('./pages/auth/Login'));
+const Register = lazy(() => import('./pages/auth/Register'));
+const Verify = lazy(() => import('./pages/auth/Verify'));
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
+const ImportAccount = lazy(() => import('./pages/auth/ImportAccount'));
 
-import Download from './pages/Download';
+const Download = lazy(() => import('./pages/Download'));
 import RequireAdmin from './components/guards/RequireAdmin';
 import RequireAuth from './components/guards/RequireAuth';
 
@@ -80,7 +80,7 @@ const ActivityFeed = lazy(() => import('./pages/app/ActivityFeed'));
 const Leaderboard = lazy(() => import('./pages/app/Leaderboard'));
 const ScheduleCalendar = lazy(() => import('./pages/app/ScheduleCalendar'));
 
-import InviteAccept from './pages/InviteAccept';
+const InviteAccept = lazy(() => import('./pages/InviteAccept'));
 import { NotFound, ErrorBoundary as RouteErrorBoundary } from './pages/ErrorStates';
 import { getDeterministicGradient } from './utils/colors';
 import { api, API_BASE, getAccessToken, setAccessToken, ApiRequestError } from './lib/api';
@@ -4715,11 +4715,11 @@ const appRouter = createBrowserRouter(
         <Route element={<Outlet />} errorElement={<RouteErrorBoundary />}>
             {/* Public Auth Routes */}
             <Route element={<AuthLayout />}>
-                <Route path="login" element={<Login />} />
-                <Route path="register" element={<Register />} />
-                <Route path="verify" element={<Verify />} />
-                <Route path="reset-password" element={<ResetPassword />} />
-                <Route path="import-account" element={<ImportAccount />} />
+                <Route path="login" element={<Suspense fallback={<LazyFallback />}><Login /></Suspense>} />
+                <Route path="register" element={<Suspense fallback={<LazyFallback />}><Register /></Suspense>} />
+                <Route path="verify" element={<Suspense fallback={<LazyFallback />}><Verify /></Suspense>} />
+                <Route path="reset-password" element={<Suspense fallback={<LazyFallback />}><ResetPassword /></Suspense>} />
+                <Route path="import-account" element={<Suspense fallback={<LazyFallback />}><ImportAccount /></Suspense>} />
             </Route>
 
             {/* OAuth consent screen (must be logged in) */}
@@ -4735,7 +4735,7 @@ const appRouter = createBrowserRouter(
             } />
 
             {/* Public Invite Route */}
-            <Route path="invite/:code" element={<InviteAccept />} />
+            <Route path="invite/:code" element={<Suspense fallback={<LazyFallback />}><InviteAccept /></Suspense>} />
 
             {/* Public Vanity Profile */}
             <Route path="u/:vanityUrl" element={<Suspense fallback={<LazyFallback />}><VanityProfile /></Suspense>} />
@@ -4756,7 +4756,7 @@ const appRouter = createBrowserRouter(
                 <Route path="marketplace" element={<Suspense fallback={<LazyFallback />}><Marketplace /></Suspense>} />
                 <Route path="inventory" element={<Suspense fallback={<LazyFallback />}><Inventory /></Suspense>} />
                 <Route path="discover" element={<Suspense fallback={<LazyFallback />}><Discover /></Suspense>} />
-                <Route path="download" element={<Download />} />
+                <Route path="download" element={<Suspense fallback={<LazyFallback />}><Download /></Suspense>} />
                 <Route path="creator-dashboard" element={<Suspense fallback={<LazyFallback />}><CreatorDashboard /></Suspense>} />
                 <Route path="fame" element={<Suspense fallback={<LazyFallback />}><FameDashboard /></Suspense>} />
                 <Route path="theme-builder" element={<Suspense fallback={<LazyFallback />}><ThemeBuilder /></Suspense>} />
