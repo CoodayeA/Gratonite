@@ -148,6 +148,7 @@ import { RemoteBadge } from './components/ui/RemoteBadge';
 import UserProfilePopover from './components/ui/UserProfilePopover';
 import { useGuildSession, type GuildSessionErrorCode, type GuildSessionInfo, type GuildSessionChannel } from './hooks/useGuildSession';
 import { isAuthRuntimeExpired } from './lib/authRuntime';
+import { FirstRunChecklist } from './components/onboarding/FirstRunChecklist';
 import { useUnreadStore, setChannelHasUnread, incrementUnread, markRead as markReadStore, registerChannelGuild, hasGuildUnread, getGuildMentionCount } from './store/unreadStore';
 
 type MediaType = 'video' | 'image' | null;
@@ -2141,6 +2142,10 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     </div>
                     <div style={{ fontSize: '11px', fontWeight: 600, background: 'var(--bg-elevated)', padding: '2px 4px', borderRadius: '4px' }}>⌘K</div>
                 </div>
+            </div>
+
+            <div style={{ padding: '0 16px' }}>
+              <FirstRunChecklist />
             </div>
 
             <div ref={channelScrollRef} className="channel-list" role="listbox" aria-label="Channels" onKeyDown={(e) => {
