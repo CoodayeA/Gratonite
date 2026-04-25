@@ -3,6 +3,7 @@ import { Bell, Search, HelpCircle, X, Users, MessageSquare, Hash, Loader2, Trash
 import { useDebounce } from '../../hooks/useDebounce';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './ToastManager';
+import Skeleton from './Skeleton';
 import { api } from '../../lib/api';
 import { onNotificationCreate } from '../../lib/socket';
 import { clearAllUnread } from '../../store/unreadStore';
@@ -231,9 +232,16 @@ export const TopBarActions = () => {
                                 Type to search messages, users, and channels
                             </div>
                         ) : searching ? (
-                            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                <div style={{ width: '16px', height: '16px', border: '2px solid var(--stroke)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                                Searching...
+                            <div style={{ padding: '8px' }}>
+                                {Array.from({ length: 3 }).map((_, i) => (
+                                    <div key={`search-skel-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px' }}>
+                                        <Skeleton variant="circle" width={32} height={32} />
+                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <Skeleton variant="text" width="55%" />
+                                            <Skeleton variant="text" width="30%" height="0.85em" />
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         ) : searchResults.length === 0 ? (
                             <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>

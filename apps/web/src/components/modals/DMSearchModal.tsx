@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { X, Search, MessageSquare } from 'lucide-react';
 import { api } from '../../lib/api';
 import Avatar from '../ui/Avatar';
+import Skeleton from '../ui/Skeleton';
 import { useToast } from '../ui/ToastManager';
 import { buildDmRoute } from '../../lib/routes';
 
@@ -105,9 +106,16 @@ const DMSearchModal = ({ onClose }: { onClose: () => void }) => {
 
                 <div style={{ maxHeight: '320px', overflowY: 'auto', padding: '8px 0' }}>
                     {isLoading ? (
-                        <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ width: '24px', height: '24px', border: '3px solid var(--stroke)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                            <span style={{ fontSize: '13px' }}>Loading friends...</span>
+                        <div style={{ padding: '8px 24px' }}>
+                            {Array.from({ length: 4 }).map((_, i) => (
+                                <div key={`dm-skel-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0' }}>
+                                    <Skeleton variant="circle" width={40} height={40} />
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <Skeleton variant="text" width="40%" />
+                                        <Skeleton variant="text" width="25%" height="0.85em" />
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     ) : filteredUsers.length === 0 ? (
                         <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
