@@ -93,9 +93,11 @@ const SettingsSoundTab = ({ addToast }: Props) => {
   const saveSettingsToApi = useCallback((data: Record<string, unknown>) => {
     if (settingsSaveTimerRef.current) clearTimeout(settingsSaveTimerRef.current);
     settingsSaveTimerRef.current = setTimeout(() => {
-      api.users.updateSettings(data).catch(() => {});
+      api.users.updateSettings(data).catch(() => {
+        addToast({ title: 'Failed to save sound settings', description: 'Check your connection and try again.', variant: 'error' });
+      });
     }, 500);
-  }, []);
+  }, [addToast]);
 
   // Load email notification settings
   useEffect(() => {
@@ -463,14 +465,18 @@ const SettingsSoundTab = ({ addToast }: Props) => {
         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
           <input type="checkbox" checked={emailMentions} onChange={e => {
             setEmailMentions(e.target.checked);
-            api.users.updateSettings({ emailNotifications: { mentions: e.target.checked, dms: emailDms, frequency: emailFrequency } }).catch(() => {});
+            api.users.updateSettings({ emailNotifications: { mentions: e.target.checked, dms: emailDms, frequency: emailFrequency } }).catch(() => {
+              addToast({ title: 'Failed to update email settings', variant: 'error' });
+            });
           }} style={{ accentColor: 'var(--accent-primary)' }} />
           Email when mentioned while offline
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
           <input type="checkbox" checked={emailDms} onChange={e => {
             setEmailDms(e.target.checked);
-            api.users.updateSettings({ emailNotifications: { mentions: emailMentions, dms: e.target.checked, frequency: emailFrequency } }).catch(() => {});
+            api.users.updateSettings({ emailNotifications: { mentions: emailMentions, dms: e.target.checked, frequency: emailFrequency } }).catch(() => {
+              addToast({ title: 'Failed to update email settings', variant: 'error' });
+            });
           }} style={{ accentColor: 'var(--accent-primary)' }} />
           Email for DMs while offline
         </label>
@@ -479,7 +485,9 @@ const SettingsSoundTab = ({ addToast }: Props) => {
           <select value={emailFrequency} onChange={e => {
             const val = e.target.value as 'instant' | 'daily' | 'never';
             setEmailFrequency(val);
-            api.users.updateSettings({ emailNotifications: { mentions: emailMentions, dms: emailDms, frequency: val } }).catch(() => {});
+            api.users.updateSettings({ emailNotifications: { mentions: emailMentions, dms: emailDms, frequency: val } }).catch(() => {
+              addToast({ title: 'Failed to update email settings', variant: 'error' });
+            });
           }} style={{ padding: '6px 10px', borderRadius: '6px', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer' }}>
             <option value="instant">Instant</option>
             <option value="daily">Daily Digest</option>

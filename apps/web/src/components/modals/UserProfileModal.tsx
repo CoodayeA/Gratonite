@@ -176,6 +176,7 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
     const optionsRef = useRef<HTMLDivElement>(null);
     const [note, setNote] = useState('');
     const [noteLoaded, setNoteLoaded] = useState(false);
+    const lastSavedNoteRef = useRef<string>('');
     const [showGiftModal, setShowGiftModal] = useState(false);
     const [giftAmount, setGiftAmount] = useState(50);
     const [giftMessage, setGiftMessage] = useState('');
@@ -252,14 +253,21 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
         const userId = userProfile?.id;
         if (!userId || userId === currentUser?.id) { setNoteLoaded(true); return; }
         api.users.getNote(userId)
-            .then(data => { setNote(data.content || ''); setNoteLoaded(true); })
+            .then(data => { const c = data.content || ''; setNote(c); lastSavedNoteRef.current = c; setNoteLoaded(true); })
             .catch(() => setNoteLoaded(true));
     }, [userProfile?.id, currentUser?.id]);
 
     const saveNote = async () => {
         const userId = userProfile?.id;
         if (!userId) return;
-        await api.users.saveNote(userId, note).catch(() => {});
+        if (note === lastSavedNoteRef.current) return;
+        try {
+            await api.users.saveNote(userId, note);
+            lastSavedNoteRef.current = note;
+            addToast({ title: 'Note saved', variant: 'success' });
+        } catch {
+            addToast({ title: 'Failed to save note', description: 'Please try again.', variant: 'error' });
+        }
     };
 
     // Persist selected canvas per-user so it sticks between modal opens.
