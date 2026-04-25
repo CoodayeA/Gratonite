@@ -152,16 +152,20 @@ button, [role="button"] {
 
 /* Glass light mode contrast — now handled by global [data-color-mode="light"] override */
 
-/* Contrast fixes for all light themes — ensure readability on light backgrounds */
+/* Contrast fixes for all light themes — ensure readability on light backgrounds.
+   `!important` is required because the theme injector writes the same vars via
+   inline `documentElement.style.setProperty()`, which beats normal selector
+   specificity. These act as a safety net for any theme whose `light` variant
+   ships poor contrast values (legacy themes, user-authored themes, etc). */
 [data-color-mode="light"] {
-    --text-primary: #000000;
-    --text-secondary: #292929;
-    --text-muted: #444444;
-    --stroke: rgba(0, 0, 0, 0.15);
-    --stroke-light: rgba(0, 0, 0, 0.08);
-    --hover-overlay: rgba(0, 0, 0, 0.06);
-    --active-overlay: rgba(0, 0, 0, 0.1);
     color-scheme: light;
+    --text-muted: #5f6368 !important;            /* 4.6:1 on #ffffff */
+    --stroke-subtle: rgba(0, 0, 0, 0.08) !important;
+    --success: #15803D !important;               /* green-700, 4.7:1 on white */
+    --warning: #B45309 !important;               /* amber-700, 4.6:1 on white */
+    --error:   #B91C1C !important;               /* red-700,  5.9:1 on white */
+    --shadow-panel: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+    --shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.10) !important;
 }
 [data-color-mode="light"] input::placeholder,
 [data-color-mode="light"] textarea::placeholder {

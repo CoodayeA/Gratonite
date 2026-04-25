@@ -79,7 +79,7 @@ const nordTheme: ThemeDefinition = {
     accentPrimary: '#81a1c1',
     accentHover: '#88c0d0',
     accentPrimaryAlpha: 'rgba(129, 161, 193, 0.2)',
-    strokeSubtle: '#4c566a',
+    strokeSubtle: 'rgba(0, 0, 0, 0.08)',
     borderStructural: '1px solid rgba(46, 52, 64, 0.1)',
     borderFocused: '1px solid #81a1c1',
     shadowPanel: '0 4px 16px rgba(46, 52, 64, 0.08)',

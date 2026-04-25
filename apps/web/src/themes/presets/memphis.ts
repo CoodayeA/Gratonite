@@ -79,7 +79,7 @@ const memphisTheme: ThemeDefinition = {
     accentPrimary: '#EC4899',
     accentHover: '#E11D48',
     accentPrimaryAlpha: 'rgba(236, 72, 153, 0.2)',
-    strokeSubtle: '#1E293B',
+    strokeSubtle: 'rgba(0, 0, 0, 0.08)',
     borderStructural: '3px solid #1E293B',
     borderFocused: '3px dashed #EC4899',
     shadowPanel: '6px 6px 0px #2DD4BF',

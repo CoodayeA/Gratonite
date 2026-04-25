@@ -79,7 +79,7 @@ const solarizedTheme: ThemeDefinition = {
     accentPrimary: '#268bd2',
     accentHover: '#2aa198',
     accentPrimaryAlpha: 'rgba(38, 139, 210, 0.2)',
-    strokeSubtle: '#586e75',
+    strokeSubtle: 'rgba(0, 0, 0, 0.08)',
     borderStructural: '1px solid rgba(7, 54, 66, 0.1)',
     borderFocused: '1px solid #268bd2',
     shadowPanel: '0 4px 16px rgba(7, 54, 66, 0.08)',

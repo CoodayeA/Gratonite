@@ -79,7 +79,7 @@ const forestTheme: ThemeDefinition = {
     accentPrimary: '#4caf50',
     accentHover: '#66bb6a',
     accentPrimaryAlpha: 'rgba(76, 175, 80, 0.2)',
-    strokeSubtle: '#2e5030',
+    strokeSubtle: 'rgba(0, 0, 0, 0.08)',
     borderStructural: '1px solid rgba(76, 175, 80, 0.12)',
     borderFocused: '1px solid #4caf50',
     shadowPanel: '0 4px 16px rgba(10, 26, 10, 0.08)',

@@ -79,7 +79,7 @@ const y2kTheme: ThemeDefinition = {
     accentPrimary: '#0EA5E9',
     accentHover: '#38BDF8',
     accentPrimaryAlpha: 'rgba(14, 165, 233, 0.2)',
-    strokeSubtle: '#0284C7',
+    strokeSubtle: 'rgba(0, 0, 0, 0.08)',
     borderStructural: '2px solid #BAE6FD',
     borderFocused: '2px solid #0EA5E9',
     shadowPanel: '0 4px 6px rgba(14, 165, 233, 0.2), inset 0 2px 4px rgba(255, 255, 255, 1)',
