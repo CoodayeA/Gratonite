@@ -6184,9 +6184,9 @@ body.gratonite-exp-reduced-motion *::after {
   align-items: flex-start;
   flex-wrap: wrap;
   gap: 12px;
-  padding: 12px 16px;
-  border-radius: 8px;
-  background: var(--bg-elevated);
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
   border: 1px solid var(--stroke);
   transition: all 200ms ease-out;
   min-height: 44px;
@@ -6195,12 +6195,14 @@ body.gratonite-exp-reduced-motion *::after {
 }
 
 .setup-item.setup-item-done {
-  opacity: 0.6;
+  opacity: 0.72;
+  background: var(--bg-elevated);
 }
 
 .setup-item:hover {
   border-color: var(--accent-primary);
-  background: var(--bg-secondary);
+  background: var(--bg-tertiary);
+  box-shadow: 0 0 0 1px var(--accent-primary);
 }
 
 .setup-item-checkbox {
@@ -6238,30 +6240,35 @@ body.gratonite-exp-reduced-motion *::after {
 }
 
 .setup-item-label {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--text-primary);
+  line-height: 1.35;
 }
 
 .setup-item.setup-item-done .setup-item-label {
   color: var(--text-secondary);
+  text-decoration: line-through;
+  text-decoration-color: var(--text-muted);
+  text-decoration-thickness: 1.5px;
 }
 
 .setup-item-hint {
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.4;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 .setup-item-action {
-  padding: 8px 12px !important;
+  padding: 8px 14px !important;
   margin-left: auto !important;
   align-self: center;
-  background: var(--bg-tertiary) !important;
-  color: var(--text-primary) !important;
-  border: 2px solid #000 !important;
+  background: var(--accent-primary) !important;
+  color: var(--text-on-accent, #fff) !important;
+  border: 2px solid var(--accent-primary-strong, #000) !important;
+  border-radius: 6px !important;
   font-weight: 800 !important;
-  font-size: 12px !important;
+  font-size: 13px !important;
   white-space: nowrap;
   flex-shrink: 0;
   flex-basis: 100%;
@@ -6276,7 +6283,8 @@ body.gratonite-exp-reduced-motion *::after {
 }
 
 .setup-item-action:hover {
-  background: var(--bg-secondary) !important;
+  background: var(--accent-primary-hover, var(--accent-primary)) !important;
+  filter: brightness(1.08);
 }
 
 /* Tips section */
