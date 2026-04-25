@@ -47,15 +47,16 @@ async function friendsLink(page: Page) {
     return visible ? link : null;
 }
 
-/**
- * Assert that the main content area is visible and not frozen.
- * The main-content-wrapper is always present in AppLayout; if it's gone the
- * route transition left the layout in a broken state.
- */
-async function assertMainContentVisible(page: Page, context: string) {
+async function assertRouteContentVisible(page: Page, route: 'dm' | 'channel' | 'friends') {
+    const routeRoot = {
+        dm: page.getByRole('log', { name: /^Direct messages with / }),
+        channel: page.getByRole('log', { name: /^Messages in #/ }),
+        friends: page.getByRole('heading', { name: 'Friends' }),
+    }[route];
+
     await expect(
-        page.locator('#main-content'),
-        `main-content should be visible after navigating to ${context}`,
+        routeRoot,
+        `${route} route content should be visible after navigation`,
     ).toBeVisible({ timeout: 5_000 });
 }
 
@@ -83,8 +84,7 @@ test.describe('DM navigation freeze regression', () => {
         await page.waitForURL(/\/dm\//, { timeout: 5_000 });
         const dmUrl = page.url();
 
-        // DM route: the message input or message list area should be present
-        await assertMainContentVisible(page, 'DM route');
+        await assertRouteContentVisible(page, 'dm');
 
         // ------------------------------------------------------------------
         // Navigate to a guild channel — this is the critical transition
@@ -105,8 +105,7 @@ test.describe('DM navigation freeze regression', () => {
         expect(channelUrl).toContain('/channel/');
         expect(channelUrl).not.toBe(dmUrl);
 
-        // The main content area must still be visible (not a blank/frozen screen)
-        await assertMainContentVisible(page, 'guild channel route');
+        await assertRouteContentVisible(page, 'channel');
 
         // The route-transition-wrapper must exist and not be in a stuck exit state:
         // if AnimatePresence mode="wait" froze, the wrapper stays display:none / opacity:0
@@ -124,49 +123,44 @@ test.describe('DM navigation freeze regression', () => {
         await dm!.click();
         await page.waitForURL(/\/dm\//, { timeout: 5_000 });
 
-        // Try Friends link; fall back to home ('/') if not present
         const friends = await friendsLink(page);
-        if (friends) {
-            await friends.click();
-            await page.waitForURL('**/friends', { timeout: 5_000 });
-            expect(page.url()).toContain('/friends');
-        } else {
-            await page.goto('/app/', { waitUntil: 'networkidle' });
-            expect(page.url()).not.toMatch(/\/dm\//);
-        }
+        expect(friends, 'No Friends link found — top-level route fixture required for this test').not.toBeNull();
 
-        await assertMainContentVisible(page, 'top-level route');
+        await friends!.click();
+        await page.waitForURL('**/friends', { timeout: 5_000 });
+        expect(page.url()).toContain('/friends');
+        await assertRouteContentVisible(page, 'friends');
     });
 
     // -----------------------------------------------------------------------
     // Multi-route navigation — each link click must change the URL
     // -----------------------------------------------------------------------
     test('sequential route switches all produce URL changes', async ({ page }) => {
-        type RouteSpec = { label: string; selector: string; urlPattern: RegExp };
+        const dm = await firstDmLink(page);
+        const channel = await firstChannelLink(page);
+        const friends = await friendsLink(page);
+
+        expect(dm, 'No DM links found — fixture required for this test').not.toBeNull();
+        expect(channel, 'No guild channel links found — fixture required for this test').not.toBeNull();
+        expect(friends, 'No Friends link found — fixture required for this test').not.toBeNull();
+
+        type RouteSpec = { label: string; link: NonNullable<Awaited<ReturnType<typeof firstDmLink>>>; urlPattern: RegExp; route: 'dm' | 'channel' | 'friends' };
         const routes: RouteSpec[] = [
-            { label: 'DM',      selector: 'a[href*="/dm/"]',                           urlPattern: /\/dm\// },
-            { label: 'Channel', selector: 'a[href*="/guild/"][href*="/channel/"]',      urlPattern: /\/guild\/.*\/channel\// },
-            { label: 'Friends', selector: 'a[href="/friends"]',                         urlPattern: /\/friends/ },
+            { label: 'DM', link: dm!, urlPattern: /\/dm\//, route: 'dm' },
+            { label: 'Channel', link: channel!, urlPattern: /\/guild\/.*\/channel\//, route: 'channel' },
+            { label: 'Friends', link: friends!, urlPattern: /\/friends/, route: 'friends' },
         ];
 
-        let navigated = 0;
         for (const route of routes) {
-            const link = page.locator(route.selector).first();
-            if (!(await link.isVisible().catch(() => false))) continue;
-
             const urlBefore = page.url();
-            await link.click();
+            await route.link.click();
             await page.waitForURL(route.urlPattern, { timeout: 5_000 });
             const urlAfter = page.url();
 
             expect(urlAfter, `URL should change when navigating to ${route.label}`).not.toBe(urlBefore);
             expect(urlAfter).toMatch(route.urlPattern);
-            await assertMainContentVisible(page, route.label);
-            navigated++;
+            await assertRouteContentVisible(page, route.route);
         }
-
-        // At least one route must have been navigated (not all fixtures absent)
-        expect(navigated, 'At least one navigable route must be present').toBeGreaterThan(0);
     });
 
     // -----------------------------------------------------------------------
@@ -182,11 +176,11 @@ test.describe('DM navigation freeze regression', () => {
         for (let i = 0; i < 3; i++) {
             await dm.click();
             await page.waitForURL(/\/dm\//, { timeout: 5_000 });
-            await assertMainContentVisible(page, `DM (round ${i + 1})`);
+            await assertRouteContentVisible(page, 'dm');
 
             await channel.click();
             await page.waitForURL(/\/guild\/.*\/channel\//, { timeout: 5_000 });
-            await assertMainContentVisible(page, `Channel (round ${i + 1})`);
+            await assertRouteContentVisible(page, 'channel');
         }
 
         // After repeated toggling the route-transition-wrapper must still be visible
