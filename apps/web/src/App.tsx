@@ -153,6 +153,7 @@ import UserProfilePopover from './components/ui/UserProfilePopover';
 import { useGuildSession, type GuildSessionErrorCode, type GuildSessionInfo, type GuildSessionChannel } from './hooks/useGuildSession';
 import { isAuthRuntimeExpired } from './lib/authRuntime';
 import { FirstRunChecklist } from './components/onboarding/FirstRunChecklist';
+import { ActivationProvider } from './contexts/ActivationContext';
 import { useUnreadStore, setChannelHasUnread, incrementUnread, markRead as markReadStore, registerChannelGuild, hasGuildUnread, getGuildMentionCount } from './store/unreadStore';
 import { useDmUnreadStore, clearDmUnread } from './store/dmUnreadStore';
 
@@ -4828,6 +4829,7 @@ function formatDmTime(iso: string | null | undefined): string {
 function App() {
     return (
         <ErrorBoundary>
+        <ActivationProvider>
         <UserProvider>
         <VoiceProvider>
         <ToastProvider>
@@ -4867,6 +4869,7 @@ function App() {
         </ToastProvider>
         </VoiceProvider>
         </UserProvider>
+        </ActivationProvider>
         </ErrorBoundary>
     );
 }
