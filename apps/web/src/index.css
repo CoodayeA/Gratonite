@@ -4991,3 +4991,78 @@ body.gratonite-exp-reduced-motion *::after {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
 }
+
+/* ── Portal homescreen layout fixes ── */
+/* Fix for vertical text wrapping issue - aggressive grid item sizing */
+.main-content-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensures content-padding grid doesn't collapse and sidebar maintains proper width */
+.content-padding {
+    display: grid !important;
+    min-width: 0 !important;
+    overflow: visible;
+}
+
+.content-padding > div {
+    min-width: 0; /* Critical: enables grid items to respect minmax() constraints */
+    overflow: visible;
+}
+
+/* Left column (channels) - takes up available space */
+.content-padding > div:first-child {
+    min-width: 0;
+    flex: 1;
+}
+
+/* Right column (sidebar) - fixed width */
+.content-padding > div:last-child {
+    min-width: 0;
+    width: auto;
+    flex-shrink: 0;
+}
+
+/* Channels grid - prevent text wrapping issues */
+.channels-grid {
+    display: grid !important;
+    width: 100%;
+    min-width: 0;
+}
+
+/* Ensure all text content wraps normally, never vertically */
+.content-padding,
+.content-padding *:not(svg) {
+    writing-mode: horizontal-tb !important;
+    text-orientation: initial !important;
+}
+
+/* Fix for section labels and typography */
+.section-label {
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    display: inline-block;
+}
+
+/* Guild banner should be full width and not cause layout issues */
+.guild-banner {
+    width: 100% !important;
+    flex-shrink: 0;
+}
+
+/* Channel card - ensure proper layout */
+.channel-card {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Setup checklist card - ensure sidebar doesn't collapse */
+[style*="marginTop: '24px'"],
+[style*="marginTop: 24"],
+.guild-setup-card {
+    min-width: 0;
+    width: 100%;
+}
