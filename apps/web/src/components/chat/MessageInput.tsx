@@ -416,7 +416,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 />
             </Suspense>
         )}
-        <div className="input-area" style={{ zIndex: 2, position: 'relative' }}>
+        <div className="input-area" data-ui-composer-region style={{ zIndex: 2, position: 'relative' }}>
             {slowRemaining > 0 && (
                 <div style={{
                     display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 16px',
@@ -603,7 +603,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 />
             )}
 
-            <div className="chat-input-wrapper" role="toolbar" aria-label="Composer" style={{ position: 'relative' }}>
+            <div className="chat-input-wrapper" data-ui-composer role="toolbar" aria-label="Composer" style={{ position: 'relative' }}>
 
                 {/* Mentions Autocomplete */}
                 {mentionSearch !== null && (
@@ -831,6 +831,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                         )}
                         <button
                             className="input-icon-btn"
+                            data-ui-upload-affordance
                             title={channelAttachmentsEnabled ? "Upload Attachment" : "Attachments disabled in this channel"}
                             aria-label="Upload attachment"
                             style={channelAttachmentsEnabled ? { cursor: 'pointer' } : { opacity: 0.3, cursor: 'not-allowed' }}

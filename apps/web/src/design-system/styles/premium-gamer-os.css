@@ -320,3 +320,137 @@
   background: linear-gradient(90deg, rgba(117,145,255,.18), rgba(255,255,255,.04));
   border: 1px solid var(--gt-experience-border-luminous);
 }
+
+.gt-new-ui [data-ui-chat-surface] {
+  min-height: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(117, 145, 255, 0.14), transparent 30%),
+    radial-gradient(circle at 90% 8%, rgba(224, 179, 89, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(0, 0, 0, 0.12));
+}
+
+.gt-new-ui [data-ui-chat-frame] {
+  min-height: 0;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.gt-new-ui [data-ui-chat-topbar] {
+  min-height: 64px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.035)),
+    var(--gt-experience-bg-surface-raised);
+  border-bottom: 1px solid var(--gt-experience-border-subtle);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+.gt-new-ui [data-ui-chat-topbar] h2 {
+  letter-spacing: 0.01em;
+}
+
+.gt-new-ui [data-ui-chat-body] {
+  background: linear-gradient(180deg, rgba(5, 8, 18, 0.08), rgba(5, 8, 18, 0.18));
+}
+
+.gt-new-ui [data-ui-message-list] {
+  scrollbar-color: rgba(139, 164, 255, 0.42) transparent;
+}
+
+.gt-new-ui [data-ui-message-list] .message,
+.gt-new-ui [data-ui-message-list] > .message {
+  border-radius: 16px;
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+.gt-new-ui [data-ui-message-list] .message:hover,
+.gt-new-ui [data-ui-message-list] > .message:hover {
+  background: linear-gradient(90deg, rgba(117, 145, 255, 0.11), rgba(255, 255, 255, 0.035));
+  box-shadow: inset 1px 0 0 rgba(139, 164, 255, 0.34);
+}
+
+.gt-new-ui [data-ui-message-list] .highlighted-message,
+.gt-new-ui [data-ui-message-list] .active-thread-message {
+  background: linear-gradient(90deg, rgba(117, 145, 255, 0.16), rgba(255, 255, 255, 0.045));
+  box-shadow: inset 2px 0 0 rgba(139, 164, 255, 0.7), var(--gt-experience-glow-primary);
+}
+
+.gt-new-ui [data-ui-message-list] .msg-author {
+  color: rgba(246, 248, 255, 0.94);
+}
+
+.gt-new-ui [data-ui-message-list] .msg-timestamp {
+  color: rgba(224, 230, 255, 0.52);
+}
+
+.gt-new-ui [data-ui-composer-region],
+.gt-new-ui [data-ui-chat-surface] .input-area {
+  padding: 12px 16px 16px;
+  background: linear-gradient(180deg, transparent, rgba(3, 6, 16, 0.28));
+}
+
+.gt-new-ui [data-ui-composer] {
+  border: 1px solid var(--gt-experience-border-subtle);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.045)),
+    var(--gt-experience-bg-surface-raised);
+  box-shadow: var(--gt-experience-shadow-float), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+.gt-new-ui [data-ui-composer]:focus-within {
+  border-color: var(--gt-experience-border-luminous);
+  box-shadow: var(--gt-experience-glow-primary), var(--gt-experience-shadow-float), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.gt-new-ui [data-ui-composer] .chat-input {
+  color: rgba(246, 248, 255, 0.96);
+}
+
+.gt-new-ui [data-ui-composer] .chat-input::placeholder {
+  color: rgba(224, 230, 255, 0.46);
+}
+
+.gt-new-ui [data-ui-composer] .input-icon-btn,
+.gt-new-ui [data-ui-chat-topbar] .action-icon-btn {
+  border-radius: 12px;
+  transition:
+    transform var(--gt-experience-motion-fast),
+    background var(--gt-experience-motion-fast),
+    color var(--gt-experience-motion-fast),
+    box-shadow var(--gt-experience-motion-fast);
+}
+
+.gt-new-ui [data-ui-composer] .input-icon-btn:hover,
+.gt-new-ui [data-ui-chat-topbar] .action-icon-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(139, 164, 255, 0.12);
+  color: rgba(246, 248, 255, 0.96) !important;
+  box-shadow: inset 0 0 0 1px rgba(139, 164, 255, 0.22);
+}
+
+.gt-new-ui [data-ui-composer] .input-icon-btn.primary {
+  background: linear-gradient(135deg, rgba(105, 132, 255, 0.95), rgba(127, 87, 255, 0.86));
+  box-shadow: var(--gt-experience-glow-primary);
+}
+
+.gt-new-ui [data-ui-upload-affordance] {
+  color: rgba(224, 230, 255, 0.82);
+  background: rgba(139, 164, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(139, 164, 255, 0.18);
+}
+
+.gt-new-ui [data-ui-composer] label[for$="file-upload"],
+.gt-new-ui [data-ui-composer] label[for$="folder-upload"] {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.gt-new-ui [data-ui-chat-surface] aside {
+  background: var(--gt-experience-bg-surface-raised) !important;
+  border-color: var(--gt-experience-border-subtle) !important;
+}

@@ -2399,12 +2399,12 @@ const DirectMessage = () => {
     const callErrorHint = connectionError ? getConnectionErrorHint(connectionError) : null;
 
     return (
-        <main className={`main-view ${hasCustomBg ? 'has-custom-bg' : ''}`} style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'row' }}>
+        <main className={`main-view ${hasCustomBg ? 'has-custom-bg' : ''}`} data-ui-chat-surface data-ui-chat-kind="dm" style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'row' }}>
             <BackgroundMedia media={bgMedia} />
 
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', zIndex: 1 }}>
+            <div data-ui-chat-frame style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', zIndex: 1 }}>
                 {/* Header */}
-                <header className="top-bar">
+                <header className="top-bar" data-ui-chat-topbar>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         {isMobile && (
                             <button className="mobile-back-btn" onClick={() => navigate('/friends')}>
@@ -2973,7 +2973,7 @@ const DirectMessage = () => {
                                 <button onClick={closeDmSearch} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center' }} title="Close search (Esc)"><X size={16} /></button>
                             </div>
                         )}
-                        <div ref={messageListRef} className="message-area" role="log" aria-label={`Direct messages with ${userName}`} aria-live="polite" style={{ overflowY: 'auto', position: 'relative' }}
+                        <div ref={messageListRef} className="message-area" data-ui-message-list role="log" aria-label={`Direct messages with ${userName}`} aria-live="polite" style={{ overflowY: 'auto', position: 'relative' }}
                             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true); }}
                             onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); }}
                             onDrop={(e) => {
@@ -3730,7 +3730,7 @@ const DirectMessage = () => {
                                     })}
                                 </div>
                             )}
-                            <div className="chat-input-wrapper" style={{ position: 'relative' }}>
+                            <div className="chat-input-wrapper" data-ui-composer style={{ position: 'relative' }}>
                                 {/* Mention Autocomplete for Group DMs */}
                                 {isGroupDm && mentionSearch !== null && filteredMentionUsers.length > 0 && (
                                     <div style={{
@@ -3798,6 +3798,7 @@ const DirectMessage = () => {
                                     )}
                                     <button
                                         className="input-icon-btn"
+                                        data-ui-upload-affordance
                                         title="Upload Attachment"
                                         aria-label="Upload attachment"
                                         style={{ cursor: 'pointer' }}
@@ -3811,6 +3812,7 @@ const DirectMessage = () => {
                                 )}
                                 <textarea
                                     className="chat-input"
+                                    aria-label="Message input"
                                     rows={1}
                                     placeholder={`Message @${userName}...`}
                                     value={inputValue}

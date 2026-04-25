@@ -3112,6 +3112,8 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     return (
         <main
             className={`main-view ${hasCustomBg ? 'has-custom-bg' : ''}`}
+            data-ui-chat-surface
+            data-ui-chat-kind="channel"
             style={{ position: 'relative' }}
             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true); }}
             onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); }}
@@ -3182,9 +3184,9 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 zIndex: 0
             }} />
 
-            <div ref={chatContainerRef} style={{ display: 'flex', flexDirection: 'column', flex: 1, position: 'relative', zIndex: 1, background: 'transparent', overflow: 'hidden' }}>
+            <div ref={chatContainerRef} data-ui-chat-frame style={{ display: 'flex', flexDirection: 'column', flex: 1, position: 'relative', zIndex: 1, background: 'transparent', overflow: 'hidden' }}>
 
-            <header className="top-bar">
+            <header className="top-bar" data-ui-chat-topbar>
                 {/* Mobile Toggles */}
                 <div className="mobile-header-toggles">
                     <ArrowLeft size={20} className="mobile-toggle-btn" role="button" aria-label="Back to channels" tabIndex={0} onClick={() => navigate(`/guild/${guildId}`)} />
@@ -3551,7 +3553,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             )}
 
             {/* Content area wrapper — positions pinned panel between header and input */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', minHeight: 0 }}>
+            <div data-ui-chat-body style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', minHeight: 0 }}>
             {isViewingHistory && (
                 <button
                     onClick={() => { setIsViewingHistory(false); fetchMessages(); }}
@@ -3652,7 +3654,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             {/* Confession Board */}
             {channelTypeStr === 'GUILD_CONFESSION' && guildId && <ConfessionBoard channelId={channelId!} guildId={guildId} />}
 
-            <div ref={parentRef} className="message-area" role="log" aria-label={`Messages in #${channelName}`} aria-live="polite" style={{ overflowY: 'auto', zIndex: 2, position: 'relative', ...(channelTypeStr === 'GUILD_FORUM' || channelTypeStr === 'GUILD_DOCUMENT' || channelTypeStr === 'GUILD_WIKI' || channelTypeStr === 'GUILD_QA' || channelTypeStr === 'GUILD_TASK' || channelTypeStr === 'GUILD_CONFESSION' ? { display: 'none' } : {}) }}>
+            <div ref={parentRef} className="message-area" data-ui-message-list role="log" aria-label={`Messages in #${channelName}`} aria-live="polite" style={{ overflowY: 'auto', zIndex: 2, position: 'relative', ...(channelTypeStr === 'GUILD_FORUM' || channelTypeStr === 'GUILD_DOCUMENT' || channelTypeStr === 'GUILD_WIKI' || channelTypeStr === 'GUILD_QA' || channelTypeStr === 'GUILD_TASK' || channelTypeStr === 'GUILD_CONFESSION' ? { display: 'none' } : {}) }}>
                 {/* Pull-to-refresh indicator (mobile) */}
                 {isMobile && pullDistance > 0 && (
                     <div className="pull-to-refresh-indicator" style={{ height: `${pullDistance}px` }}>
