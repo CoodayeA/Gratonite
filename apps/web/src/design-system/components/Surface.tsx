@@ -9,7 +9,7 @@ type SurfaceProps = HTMLAttributes<HTMLDivElement> & {
 };
 
 export function Surface({ variant = 'panel', className = '', children, ...props }: SurfaceProps) {
-  const role = props['aria-label'] || props['aria-labelledby'] ? 'region' : props.role;
+  const role = props.role || (props['aria-label'] || props['aria-labelledby'] ? 'region' : undefined);
   return (
     <div {...props} role={role} className={`gt-surface gt-surface--${variant} ${className}`.trim()}>
       {children}

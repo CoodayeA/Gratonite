@@ -18,9 +18,24 @@ describe('New UI primitives', () => {
     expect(screen.getByRole('region', { name: 'Profile panel' })).toBeVisible();
   });
 
+  it('preserves an explicit surface role when labelled', () => {
+    render(<Surface aria-label="Profile panel" role="group">Profile</Surface>);
+    expect(screen.getByRole('group', { name: 'Profile panel' })).toBeVisible();
+  });
+
   it('renders a text field with a label', () => {
     render(<TextField label="Search" value="" onChange={() => {}} />);
     expect(screen.getByLabelText('Search')).toBeVisible();
+  });
+
+  it('combines caller and hint descriptions on a text field', () => {
+    const { container } = render(
+      <>
+        <span id="external-hint">External context</span>
+        <TextField aria-describedby="external-hint" hint="Find friends" id="search" label="Search" />
+      </>,
+    );
+    expect(container.querySelector('#search')).toHaveAttribute('aria-describedby', 'external-hint search-hint');
   });
 
   it('renders a nav item with active state', () => {
