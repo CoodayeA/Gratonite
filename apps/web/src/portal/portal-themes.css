@@ -119,22 +119,20 @@
 .vibe-holo-stage {
   position: relative; z-index: 1;
   min-height: 100%;
-  padding: 48px 56px;
+  padding: 28px 32px 24px;
   perspective: 1400px;
 }
 .vibe-holo-scene {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  gap: 56px;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  max-width: 1200px;
+  gap: 20px;
+  max-width: 760px;
   margin: 0 auto;
-  transform-style: preserve-3d;
-  transform: rotateX(6deg);
 }
 .vibe-holo-planet {
   position: relative;
-  width: 320px; height: 320px;
+  width: 200px; height: 200px;
   margin: 0 auto;
   transform-style: preserve-3d;
   animation: pt-holo-float calc(14s / max(var(--pt-anim-mult), 0.0001)) ease-in-out infinite;
@@ -146,26 +144,26 @@
   background:
     radial-gradient(circle at 35% 30%, hsl(var(--pt-planet-hue), 90%, 70%) 0%, hsl(var(--pt-planet-hue), 70%, 40%) 50%, hsl(var(--pt-planet-hue), 80%, 18%) 100%);
   box-shadow:
-    0 0 48px hsla(var(--pt-planet-hue), 90%, 50%, 0.35),
-    inset -30px -40px 60px hsla(0, 0%, 0%, 0.5);
+    0 0 38px hsla(var(--pt-planet-hue), 90%, 50%, 0.32),
+    inset -22px -28px 44px hsla(0, 0%, 0%, 0.5);
   display: grid; place-items: center;
 }
 .vibe-holo-initial {
-  font-size: 110px; font-weight: 800;
-  color: rgba(255,255,255,0.92);
-  text-shadow: 0 6px 24px rgba(0,0,0,0.5);
+  font-size: 76px; font-weight: 800;
+  color: rgba(255,255,255,0.94);
+  text-shadow: 0 4px 18px rgba(0,0,0,0.45);
 }
 .vibe-holo-ring, .vibe-holo-ring-2 {
   position: absolute; left: 50%; top: 50%;
-  width: 480px; height: 480px;
+  width: 300px; height: 300px;
   border-radius: 50%;
-  border: 2px solid hsla(var(--pt-accent-hue), 80%, 60%, 0.45);
+  border: 1.5px solid hsla(var(--pt-accent-hue), 80%, 60%, 0.40);
   transform: translate(-50%, -50%) rotateX(76deg);
   pointer-events: none;
 }
 .vibe-holo-ring-2 {
-  width: 560px; height: 560px;
-  border-color: hsla(var(--pt-accent-hue), 80%, 60%, 0.18);
+  width: 360px; height: 360px;
+  border-color: hsla(var(--pt-accent-hue), 80%, 60%, 0.16);
 }
 
 .vibe-holo-header-card,
@@ -187,7 +185,12 @@
   margin-bottom: 12px;
   font-weight: 600;
 }
-.vibe-holo-title { font-size: 32px; font-weight: 800; margin: 0 0 8px; letter-spacing: -0.02em; }
+.vibe-holo-title {
+  font-size: 28px; font-weight: 800; margin: 0;
+  letter-spacing: -0.02em; text-align: center;
+  color: var(--text-primary, #e6ebf5);
+  text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
 .vibe-holo-desc { color: #b6bdcc; line-height: 1.55; margin: 0 0 18px; }
 .vibe-holo-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .vibe-holo-btn {
@@ -541,24 +544,29 @@
 }
 
 /* "Next step" portal-setup chip surfaced in GuildOverview when setup is
-   incomplete. Quiet, one-line — does not compete with the Portal hero. */
+   incomplete. Quiet, one-line — does not compete with the Portal hero.
+   Uses explicit dark colors because it sits inside the dark portal area
+   regardless of global theme. */
 .portal-next-step-chip {
   display: flex; align-items: center; gap: 12px;
-  margin: 12px 56px 0;
-  padding: 10px 14px;
-  background: var(--bg-elevated, rgba(255,255,255,0.04));
-  border: 1px solid var(--border-subtle, rgba(255,255,255,0.08));
+  margin: -8px auto 0;
+  max-width: 760px;
+  padding: 10px 14px 10px 16px;
+  background: rgba(15, 17, 26, 0.72);
+  border: 1px solid rgba(255,255,255,0.10);
   border-radius: 999px;
   font-size: 13.5px;
-  color: var(--text-primary, #e6ebf5);
+  color: #e6ebf5;
+  backdrop-filter: blur(8px);
+  position: relative; z-index: 5;
 }
 .portal-next-step-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.portal-next-step-label strong { color: var(--text-secondary, #aab1c1); margin-right: 6px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 11px; }
+.portal-next-step-label strong { color: #aab1c1; margin-right: 8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 10.5px; }
 .portal-next-step-action {
   flex-shrink: 0;
-  padding: 6px 12px;
+  padding: 6px 14px;
   font-size: 12.5px; font-weight: 600;
-  background: var(--accent, #5b8cff); color: #fff;
+  background: hsl(var(--pt-accent-hue, 220), 80%, 60%); color: #fff;
   border: none; border-radius: 999px; cursor: pointer;
 }
 .portal-next-step-action:hover { filter: brightness(1.08); }
@@ -567,14 +575,14 @@
   flex-shrink: 0;
   width: 28px; height: 28px;
   display: grid; place-items: center;
-  background: transparent; color: var(--text-secondary, #98a0b3);
+  background: transparent; color: #98a0b3;
   border: none; border-radius: 50%; cursor: pointer;
 }
-.portal-next-step-dismiss:hover { background: rgba(255,255,255,0.06); color: var(--text-primary, #e6ebf5); }
-.portal-next-step-dismiss:focus-visible { outline: 2px solid var(--accent, #5b8cff); outline-offset: 2px; }
-@media (max-width: 1024px) { .portal-next-step-chip { margin: 12px 32px 0; } }
+.portal-next-step-dismiss:hover { background: rgba(255,255,255,0.08); color: #e6ebf5; }
+.portal-next-step-dismiss:focus-visible { outline: 2px solid hsl(var(--pt-accent-hue, 220), 80%, 60%); outline-offset: 2px; }
+@media (max-width: 1024px) { .portal-next-step-chip { margin: -8px 24px 0; } }
 @media (max-width: 640px) {
-  .portal-next-step-chip { margin: 12px 16px 0; flex-wrap: wrap; }
+  .portal-next-step-chip { margin: -8px 16px 0; flex-wrap: wrap; border-radius: 14px; }
   .portal-next-step-label { white-space: normal; }
 }
 
@@ -695,12 +703,12 @@
 
 /* Mobile */
 @media (max-width: 900px) {
-  .vibe-holo-scene, .vibe-solar-stage, .vibe-iso-stage { grid-template-columns: 1fr !important; }
-  .vibe-holo-stage, .vibe-solar-stage, .vibe-iso-stage, .vibe-lava-stage { padding: 24px !important; }
-  .vibe-holo-planet { width: 200px; height: 200px; }
-  .vibe-holo-initial { font-size: 70px; }
-  .vibe-holo-ring { width: 320px; height: 320px; }
-  .vibe-holo-ring-2 { width: 380px; height: 380px; }
+  .vibe-solar-stage, .vibe-iso-stage { grid-template-columns: 1fr !important; }
+  .vibe-holo-stage, .vibe-solar-stage, .vibe-iso-stage, .vibe-lava-stage { padding: 20px 16px !important; }
+  .vibe-holo-planet { width: 160px; height: 160px; }
+  .vibe-holo-initial { font-size: 62px; }
+  .vibe-holo-ring { width: 240px; height: 240px; }
+  .vibe-holo-ring-2 { width: 290px; height: 290px; }
   .vibe-iso-grid { transform: rotateX(48deg) rotateZ(-38deg); }
   .vibe-lava-content { grid-template-columns: 1fr; }
 }
