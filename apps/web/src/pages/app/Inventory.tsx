@@ -688,8 +688,16 @@ const Inventory = () => {
                         ) : displayItems.length === 0 ? (
                             <div style={{ gridColumn: '1 / -1' }}>
                                 <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
-                                    <p style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>No {emptyLabel} yet</p>
-                                    <p style={{ fontSize: '13px' }}>Visit the Shop to get some!</p>
+                                    <p style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px', color: 'var(--text-primary)' }}>No {emptyLabel} yet</p>
+                                    <p style={{ fontSize: '13px', marginBottom: '16px' }}>Visit the Shop to get some!</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate('/shop')}
+                                        className="settings-primary-btn"
+                                        style={{ display: 'inline-flex' }}
+                                    >
+                                        Browse the Shop
+                                    </button>
                                 </div>
                             </div>
                         ) : (

@@ -111,7 +111,21 @@ const DMSearchModal = ({ onClose }: { onClose: () => void }) => {
                         </div>
                     ) : filteredUsers.length === 0 ? (
                         <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                            {query ? `No friends found matching "${query}"` : 'No friends yet. Add some friends first!'}
+                            {query ? (
+                                <span>No friends found matching "{query}"</span>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                                    <span>No friends yet — add some to start a DM.</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => { onClose(); navigate('/friends'); }}
+                                        className="settings-primary-btn"
+                                        style={{ display: 'inline-flex' }}
+                                    >
+                                        Find friends
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         filteredUsers.map(user => (

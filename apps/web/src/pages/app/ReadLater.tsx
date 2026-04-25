@@ -127,9 +127,17 @@ const ReadLater = () => {
                         <div style={{ textAlign: 'center', padding: '64px 0' }}>
                             <BookOpen size={48} color="var(--text-muted)" style={{ marginBottom: '16px', opacity: 0.5 }} />
                             <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>Nothing here yet</h3>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-                                Add channels or threads to your Read Later queue from channel headers.
+                            <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '20px', maxWidth: '380px', margin: '0 auto 20px' }}>
+                                Save channels or threads to read later from the channel header menu — they'll appear here grouped by server.
                             </p>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/app')}
+                                className="settings-primary-btn"
+                                style={{ display: 'inline-flex' }}
+                            >
+                                Browse channels
+                            </button>
                         </div>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
