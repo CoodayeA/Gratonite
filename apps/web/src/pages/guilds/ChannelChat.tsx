@@ -370,7 +370,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     // Bulk message selection state
     const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
     const [selectionMode, setSelectionMode] = useState(false);
-    const [confirmDialog, setConfirmDialog] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
+
 
     const { openMenu } = useContextMenu();
     const { addToast } = useToast();
@@ -643,22 +643,23 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
 
     const handleBulkDelete = useCallback(async () => {
         if (!channelId || selectedMessages.size === 0) return;
-        setConfirmDialog({
+        const ok = await askConfirm({
             title: `Delete ${selectedMessages.size} message${selectedMessages.size === 1 ? '' : 's'}?`,
-            description: 'This action cannot be undone.',
-            onConfirm: async () => {
-                try {
-                    await api.messages.bulkDelete(channelId, [...selectedMessages]);
-                    setMessages(prev => prev.filter(m => !m.apiId || !selectedMessages.has(m.apiId)));
-                    addToast({ title: `Deleted ${selectedMessages.size} messages`, variant: 'success' });
-                } catch {
-                    addToast({ title: 'Bulk delete failed', variant: 'error' });
-                }
-                setSelectedMessages(new Set());
-                setSelectionMode(false);
-            },
+            message: 'This action cannot be undone.',
+            variant: 'danger',
+            confirmLabel: 'Delete',
         });
-    }, [channelId, selectedMessages, addToast]);
+        if (!ok) return;
+        try {
+            await api.messages.bulkDelete(channelId, [...selectedMessages]);
+            setMessages(prev => prev.filter(m => !m.apiId || !selectedMessages.has(m.apiId)));
+            addToast({ title: `Deleted ${selectedMessages.size} messages`, variant: 'success' });
+        } catch {
+            addToast({ title: 'Bulk delete failed', variant: 'error' });
+        }
+        setSelectedMessages(new Set());
+        setSelectionMode(false);
+    }, [channelId, selectedMessages, addToast, askConfirm]);
 
     // Debounced search API call
     const performSearch = useCallback((query: string) => {
@@ -4944,23 +4945,6 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                 <SharedMediaGallery guildId={guildId} onClose={() => setShowMediaGallery(false)} />
             )}
 
-            {confirmDialog && (
-                <div
-                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}
-                    onClick={() => setConfirmDialog(null)}
-                >
-                    <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', padding: '24px', width: '400px', maxWidth: '90vw', border: '1px solid var(--stroke)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>{confirmDialog.title}</h3>
-                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.5 }}>{confirmDialog.description}</p>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                            <button onClick={() => setConfirmDialog(null)} style={{ padding: '8px 16px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
-                            <button onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }} style={{ padding: '8px 16px', borderRadius: '6px', background: 'var(--error)', border: 'none', color: 'white', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>Delete</button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             </div>
         </main >

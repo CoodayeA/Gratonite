@@ -172,7 +172,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [previewRoleId, setPreviewRoleId] = useState<string | null>(null);
 
     // Confirmation dialog state for destructive actions
-    const [confirmDialog, setConfirmDialog] = useState<{title: string; description: string; onConfirm: () => void} | null>(null);
+
 
     // Channels tab state
     const [channelsList, setChannelsList] = useState<Array<{ id: string; name: string; type: string; parentId: string | null; position: number; topic: string | null; restricted?: boolean }>>([]);
@@ -1658,7 +1658,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                 {ch.type === 'GUILD_VOICE' ? <Mic size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : <Hash size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
                                                 {ch.restricted ? <Lock size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : null}
                                                 <span style={{ flex: 1, fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>{ch.name}</span>
-                                                <button onClick={() => setConfirmDialog({ title: 'Delete Channel', description: `Are you sure you want to delete #${ch.name}? This cannot be undone.`, onConfirm: () => handleDeleteChannel(ch.id) })} aria-label="Delete channel" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Trash2 size={14} /></button>
+                                                <button onClick={async () => { if (await askConfirm({ title: 'Delete Channel', message: `Are you sure you want to delete #${ch.name}? This cannot be undone.`, variant: 'danger', confirmLabel: 'Delete' })) handleDeleteChannel(ch.id); }} aria-label="Delete channel" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Trash2 size={14} /></button>
                                             </div>
                                         ))}
 
@@ -1701,7 +1701,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                         )}
                                                         <button onClick={() => { setEditingCategoryId(cat.id); setEditingCategoryName(cat.name); }} aria-label="Edit category" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Edit2 size={12} /></button>
                                                         <button onClick={() => setShowCreateChannelInSettings({ parentId: cat.id })} aria-label="Add channel" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Plus size={12} /></button>
-                                                        <button onClick={() => setConfirmDialog({ title: 'Delete Category', description: `Are you sure you want to delete "${cat.name}" and all its channels? This cannot be undone.`, onConfirm: () => handleDeleteChannel(cat.id) })} aria-label="Delete channel" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Trash2 size={12} /></button>
+                                                        <button onClick={async () => { if (await askConfirm({ title: 'Delete Category', message: `Are you sure you want to delete "${cat.name}" and all its channels? This cannot be undone.`, variant: 'danger', confirmLabel: 'Delete' })) handleDeleteChannel(cat.id); }} aria-label="Delete category" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Trash2 size={12} /></button>
                                                     </div>
                                                     <div style={{ paddingLeft: '24px', display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
                                                         {children.map(ch => (
@@ -1724,7 +1724,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                                 {ch.type === 'GUILD_VOICE' ? <Mic size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : <Hash size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
                                                                 {ch.restricted ? <Lock size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : null}
                                                                 <span style={{ flex: 1, fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>{ch.name}</span>
-                                                                <button onClick={() => setConfirmDialog({ title: 'Delete Channel', description: `Are you sure you want to delete #${ch.name}? This cannot be undone.`, onConfirm: () => handleDeleteChannel(ch.id) })} aria-label="Delete channel" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Trash2 size={14} /></button>
+                                                                <button onClick={async () => { if (await askConfirm({ title: 'Delete Channel', message: `Are you sure you want to delete #${ch.name}? This cannot be undone.`, variant: 'danger', confirmLabel: 'Delete' })) handleDeleteChannel(ch.id); }} aria-label="Delete channel" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Trash2 size={14} /></button>
                                                             </div>
                                                         ))}
                                                         {children.length === 0 && (
@@ -2771,7 +2771,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                     <Clock size={12} /> {ban.bannedAt}
                                                 </span>
                                                 <button
-                                                    onClick={() => setConfirmDialog({ title: 'Unban Member', description: `Are you sure you want to unban ${ban.displayName}? They will be able to rejoin the server.`, onConfirm: () => handleUnban(ban.userId) })}
+                                                    onClick={async () => { if (await askConfirm({ title: 'Unban Member', message: `Are you sure you want to unban ${ban.displayName}? They will be able to rejoin the server.`, confirmLabel: 'Unban' })) handleUnban(ban.userId); }}
                                                     onMouseEnter={() => setHoveredBtn(`unban-${ban.userId}`)}
                                                     onMouseLeave={() => setHoveredBtn(`ban-${ban.userId}`)}
                                                     style={{
@@ -3023,13 +3023,14 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                 >{cat.name}</span>
                                             )}
                                             <button
-                                                onClick={() => setConfirmDialog({ title: 'Delete Emoji Category', description: `Are you sure you want to delete the "${cat.name}" category? Emojis in this category will become uncategorized.`, onConfirm: async () => {
+                                                onClick={async () => {
                                                     if (!guildId) return;
+                                                    if (!(await askConfirm({ title: 'Delete Emoji Category', message: `Are you sure you want to delete the "${cat.name}" category? Emojis in this category will become uncategorized.`, variant: 'danger', confirmLabel: 'Delete' }))) return;
                                                     await api.guilds.deleteEmojiCategory(guildId, cat.id);
                                                     setEmojiCategories(prev => prev.filter(c => c.id !== cat.id));
                                                     setCustomEmojis(prev => prev.map(e => e.categoryId === cat.id ? { ...e, categoryId: null } : e));
                                                     addToast({ title: `Category "${cat.name}" deleted`, variant: 'success' });
-                                                } })}
+                                                }}
                                                 style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0', display: 'flex' }}
                                                 title="Delete category"
                                             >
@@ -3133,7 +3134,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                 </select>
                                             )}
                                             {hoveredBtn === `emoji-${emoji.name}` && (
-                                                <button onClick={() => setConfirmDialog({ title: 'Delete Emoji', description: `Are you sure you want to delete :${emoji.name}:? This cannot be undone.`, onConfirm: () => handleDeleteEmoji(emoji.id, emoji.name) })}
+                                                <button onClick={async () => { if (await askConfirm({ title: 'Delete Emoji', message: `Are you sure you want to delete :${emoji.name}:? This cannot be undone.`, variant: 'danger', confirmLabel: 'Delete' })) handleDeleteEmoji(emoji.id, emoji.name); }}
                                                     aria-label="Delete emoji"
                                                     style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(237,66,69,0.85)', border: 'none', borderRadius: '4px', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}>
                                                     <X size={10} />
@@ -3240,7 +3241,12 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                 style={{ padding: '8px', borderRadius: '6px', background: viewDeliveriesId === wh.id ? 'color-mix(in srgb, var(--accent-primary) 15%, transparent)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: viewDeliveriesId === wh.id ? 'var(--accent-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
                                                 <Activity size={16} />
                                             </button>
-                                            <button onClick={() => setConfirmDialog({ title: 'Delete Webhook', description: `Are you sure you want to delete the webhook "${wh.name}"? Any integrations using this webhook will stop working.`, onConfirm: async () => { try { await api.webhooks.delete(wh.id); } catch { addToast({ title: 'Failed to delete webhook', variant: 'error' }); } setWebhooksList(prev => prev.filter(w => w.id !== wh.id)); addAuditEntry('Webhook Deleted', actorName, wh.name, 'settings'); } })}
+                                            <button onClick={async () => {
+                                                if (!(await askConfirm({ title: 'Delete Webhook', message: `Are you sure you want to delete the webhook "${wh.name}"? Any integrations using this webhook will stop working.`, variant: 'danger', confirmLabel: 'Delete' }))) return;
+                                                try { await api.webhooks.delete(wh.id); } catch { addToast({ title: 'Failed to delete webhook', variant: 'error' }); }
+                                                setWebhooksList(prev => prev.filter(w => w.id !== wh.id));
+                                                addAuditEntry('Webhook Deleted', actorName, wh.name, 'settings');
+                                            }}
                                                 title="Delete Webhook"
                                                 aria-label="Delete webhook"
                                                 style={{ padding: '8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: 'var(--error)', display: 'flex', alignItems: 'center' }}>
@@ -3542,14 +3548,15 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                     style={{ padding: '6px 16px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
                                                 >Sync</button>
                                                 <button
-                                                    onClick={() => setConfirmDialog({ title: 'Delete Template', description: `Are you sure you want to delete the template "${tmpl.name}"? This cannot be undone.`, onConfirm: async () => {
+                                                    onClick={async () => {
                                                         if (!guildId) return;
+                                                        if (!(await askConfirm({ title: 'Delete Template', message: `Are you sure you want to delete the template "${tmpl.name}"? This cannot be undone.`, variant: 'danger', confirmLabel: 'Delete' }))) return;
                                                         try {
                                                             await api.guilds.deleteTemplate(guildId, tmpl.code);
                                                             setTemplates(prev => prev.filter(t => t.code !== tmpl.code));
                                                             addToast({ title: 'Template deleted', variant: 'success' });
                                                         } catch { addToast({ title: 'Failed to delete', variant: 'error' }); }
-                                                    } })}
+                                                    }}
                                                     style={{ padding: '6px 16px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--error)', color: 'var(--error)', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
                                                 >Delete</button>
                                             </div>
@@ -3896,33 +3903,6 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
             </div>
         </div>
 
-        {/* Confirmation Dialog for destructive actions */}
-        {confirmDialog && (
-            <div
-                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}
-                onClick={() => setConfirmDialog(null)}
-                onKeyDown={e => { if (e.key === 'Escape') setConfirmDialog(null); }}
-                tabIndex={-1}
-                ref={el => el?.focus()}
-            >
-                <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', padding: '24px', width: '400px', maxWidth: '90vw', border: '1px solid var(--stroke)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
-                    onClick={e => e.stopPropagation()}
-                >
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>{confirmDialog.title}</h3>
-                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.5 }}>{confirmDialog.description}</p>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                        <button
-                            onClick={() => setConfirmDialog(null)}
-                            style={{ padding: '8px 16px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}
-                        >Cancel</button>
-                        <button
-                            onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}
-                            style={{ padding: '8px 16px', borderRadius: '6px', background: 'var(--error)', border: 'none', color: 'white', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}
-                        >Confirm</button>
-                    </div>
-                </div>
-            </div>
-        )}
         </>
     );
 };
