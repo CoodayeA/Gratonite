@@ -284,3 +284,39 @@
   background: rgba(105, 132, 255, 0.16);
   border-color: rgba(139, 164, 255, 0.34);
 }
+
+.gt-new-ui .guild-rail {
+  margin: var(--gt-shell-gap) 0 var(--gt-shell-gap) var(--gt-shell-gap);
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.gt-new-ui .channel-sidebar {
+  margin: var(--gt-shell-gap) 0;
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.gt-new-ui .main-content-wrapper {
+  margin: var(--gt-shell-gap);
+  margin-left: 0;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid var(--gt-experience-border-subtle);
+  background: var(--gt-experience-bg-surface);
+  box-shadow: var(--gt-experience-shadow-panel);
+}
+
+.gt-new-ui .top-bar {
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.035));
+  border-bottom: 1px solid var(--gt-experience-border-subtle);
+}
+
+.gt-new-ui .channel-item {
+  border-radius: var(--gt-experience-radius-control);
+}
+
+.gt-new-ui .channel-item.active {
+  background: linear-gradient(90deg, rgba(117,145,255,.18), rgba(255,255,255,.04));
+  border: 1px solid var(--gt-experience-border-luminous);
+}

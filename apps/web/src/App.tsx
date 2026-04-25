@@ -3296,7 +3296,7 @@ export const AppLayout = () => {
     const [isMemberDrawerOpen, setIsMemberDrawerOpen] = useState(false);
     const mainContentRef = useRef<HTMLDivElement>(null);
     const { user: ctxUser, loading: userLoading, gratoniteBalance, setGratoniteBalance } = useUser();
-    const { theme: activeTheme, colorMode, fontFamily, fontSize, accentColor, buttonShape, glassMode, highContrast, compactMode, reducedEffects: reducedEffectsVal, linkUnderlines, setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects, setLinkUnderlines, reducedEffects, screenReaderMode, setScreenReaderMode, focusIndicatorSize, setFocusIndicatorSize, colorBlindMode, setColorBlindMode, lowPower, setLowPower } = useTheme();
+    const { theme: activeTheme, colorMode, fontFamily, fontSize, accentColor, buttonShape, glassMode, highContrast, compactMode, reducedEffects: reducedEffectsVal, linkUnderlines, setTheme, setColorMode, setFontFamily, setFontSize, setAccentColor, setButtonShape, setGlassMode, setHighContrast, setCompactMode, setReducedEffects, setLinkUnderlines, reducedEffects, screenReaderMode, setScreenReaderMode, focusIndicatorSize, setFocusIndicatorSize, colorBlindMode, setColorBlindMode, lowPower, setLowPower, uiExperience } = useTheme();
     const settingsHydratingRef = useRef(false);
     const routeAnnouncerRef = useRef<HTMLDivElement>(null);
     const [guilds, setGuilds] = useState<Array<{ id: string; name: string; ownerId: string; iconHash: string | null; description: string | null; memberCount: number; boostTier?: number }>>([]);
@@ -4388,7 +4388,11 @@ export const AppLayout = () => {
     return (
         <ContextMenuProvider>
             <GlobalBugReportContextMenu onOpenBugReport={() => setActiveModal('bugReport')} />
-            <div className={`app-container${focusMode ? ' focus-mode' : ''}`} onClickCapture={handleAppLinkClickCapture}>
+            <div
+                className={`app-container${focusMode ? ' focus-mode' : ''}`}
+                data-ui-shell={uiExperience === 'premium-gamer-os' ? 'premium' : 'classic'}
+                onClickCapture={handleAppLinkClickCapture}
+            >
                 {/* Visually hidden route announcer for screen readers */}
                 <div ref={routeAnnouncerRef} className="sr-route-announcer" aria-live="assertive" aria-atomic="true" role="status" />
                 <a href="#main-content" className="skip-link">Skip to content</a>
