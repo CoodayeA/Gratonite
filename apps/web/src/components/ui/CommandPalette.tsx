@@ -463,6 +463,7 @@ const CommandPalette = ({ isOpen, onClose, guilds, dmChannels, onOpenSettings }:
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder='Search servers, channels, users... (prefix ">" to filter by type)'
+                        className="gt-focusable"
                         style={{
                             flex: 1, background: 'none', border: 'none', outline: 'none',
                             color: 'var(--text-primary)', fontSize: '16px', fontWeight: 500,

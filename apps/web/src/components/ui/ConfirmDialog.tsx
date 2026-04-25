@@ -148,6 +148,7 @@ export const ConfirmProvider = ({ children }: { children: ReactNode }) => {
                                     value={inputValue}
                                     onChange={(e) => setInputValue(e.target.value)}
                                     placeholder={state.opts.placeholder}
+                                    className="gt-focusable"
                                     style={{
                                         marginTop: 12,
                                         width: '100%',

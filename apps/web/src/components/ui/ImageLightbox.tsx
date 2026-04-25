@@ -70,6 +70,7 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ url, imageUrls = [], onCl
       onClick={handleClose}
       onKeyDown={handleKeyDown}
       tabIndex={0}
+      className="gt-focusable"
       style={{
         position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
         backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',

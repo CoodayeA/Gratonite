@@ -1109,8 +1109,8 @@ p {
 }
 
 .input-icon-btn {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border: none;
     border-radius: var(--radius-md);
     background: rgba(255, 255, 255, 0.05);
@@ -1127,6 +1127,11 @@ p {
 .input-icon-btn:hover {
     background: rgba(255, 255, 255, 0.1);
     color: var(--text-primary);
+}
+
+.input-icon-btn:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
 }
 
 .input-icon-btn.primary {
@@ -1684,6 +1689,29 @@ html .main-view.has-custom-bg .input-area {
     border-left: 3px solid var(--accent-primary);
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
+}
+
+/* ── Shared focus-visible utility (use with elements that override outline) ── */
+.gt-focusable:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* ── Schedule message inputs ── */
+.schedule-input {
+    outline: none;
+}
+.schedule-input:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+.schedule-input::-webkit-calendar-picker-indicator {
+    filter: invert(0.6);
+    cursor: pointer;
+}
+[data-color-mode="light"] .schedule-input::-webkit-calendar-picker-indicator {
+    filter: invert(0.3);
 }
 
 /* ── Settings consistent buttons ── */
@@ -4428,8 +4456,8 @@ textarea:focus-visible,
 
 /* Ensure interactive elements without visible text have sufficient touch target (44x44) */
 .input-icon-btn {
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 40px;
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -5554,8 +5582,8 @@ body.gratonite-exp-reduced-motion *::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border: 1px solid var(--stroke);
   background: transparent;
   border-radius: 6px;
