@@ -5066,3 +5066,111 @@ body.gratonite-exp-reduced-motion *::after {
     min-width: 0;
     width: 100%;
 }
+
+/* ========================
+   PORTAL REDESIGN ANIMATIONS
+   ======================== */
+
+/* Orbital System Animation for Guild Icons */
+@keyframes orbit {
+  0% {
+    transform: rotate(0deg) translateX(18px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(360deg) translateX(18px) rotate(-360deg);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), inset 0 0 8px rgba(0, 255, 136, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(0, 255, 136, 0.8), inset 0 0 12px rgba(0, 255, 136, 0.4);
+  }
+}
+
+/* Pulse Wave Animation for Sidebar Items */
+@keyframes pulse-wave {
+  0%, 100% {
+    background: linear-gradient(90deg, #00d4ff 0%, #0099ff 100%);
+  }
+  50% {
+    background: linear-gradient(90deg, #0099ff 0%, #00d4ff 100%);
+  }
+}
+
+/* Guild Icon Orbital System Classes */
+.guild-icon-orbital {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  position: relative;
+  overflow: visible;
+}
+
+.orb-center {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #00ff88, #00aa44);
+  box-shadow: 0 0 16px rgba(0, 255, 136, 0.8), inset 0 0 8px rgba(0, 255, 136, 0.3);
+  animation: pulse-glow 2s ease-in-out infinite;
+  z-index: 2;
+}
+
+.orb-satellite {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ff00ff;
+  box-shadow: 0 0 8px rgba(255, 0, 255, 0.8);
+  animation: orbit 4s linear infinite;
+  z-index: 1;
+}
+
+/* Portal Sidebar Pulse Wave Animation Classes */
+.setup-item {
+  padding: 12px 16px;
+  margin: 8px 0;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #00d4ff 0%, #0099ff 100%);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-size: 0.95rem;
+  color: #fff;
+  writing-mode: horizontal-tb;
+}
+
+.setup-item.pulse-wave {
+  animation: pulse-wave 1.5s ease-in-out infinite;
+}
+
+.setup-item:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.setup-item:nth-child(2) {
+  animation-delay: 0.3s;
+}
+
+.setup-item:nth-child(3) {
+  animation-delay: 0.6s;
+}
+
+.setup-item:nth-child(4) {
+  animation-delay: 0.9s;
+}
+
+.setup-item:nth-child(5) {
+  animation-delay: 1.2s;
+}
