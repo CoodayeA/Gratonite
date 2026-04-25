@@ -6,11 +6,12 @@
  * Selecting/changing controls updates a live preview via setPreview() but
  * does NOT save until the user clicks Save.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Save, RotateCcw, Trash2, Bookmark, Upload } from 'lucide-react';
 import { usePortalTheme } from './themes/PortalThemeProvider';
 import { portalThemeApi, PortalThemePresetRow } from './themes/api';
 import { API_BASE, getAccessToken } from '../lib/api';
+import { useToast } from '../components/ui/ToastManager';
 import {
   PortalTheme,
   PortalVibe,
@@ -71,17 +72,25 @@ interface Props {
 
 export function ThemePicker({ scope, onClose, embedded }: Props) {
   const ctx = usePortalTheme();
-  const [draft, setDraft] = useState<PortalTheme>(() => {
-    const initial =
+  const { addToast } = useToast();
+  const baseline = useMemo<PortalTheme>(() => {
+    const b =
       scope === 'guildDefault'
         ? ctx.guildDefault ?? SYSTEM_DEFAULT_THEME
         : ctx.memberOverride ?? ctx.guildDefault ?? SYSTEM_DEFAULT_THEME;
-    return { ...initial };
-  });
+    return { ...b };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope, ctx.guildDefault, ctx.memberOverride]);
+  const [draft, setDraft] = useState<PortalTheme>(baseline);
   const [saving, setSaving] = useState(false);
   const [presets, setPresets] = useState<PortalThemePresetRow[]>([]);
   const [presetName, setPresetName] = useState('');
   const [savingPreset, setSavingPreset] = useState(false);
+
+  const dirty = useMemo(
+    () => JSON.stringify(draft) !== JSON.stringify(baseline),
+    [draft, baseline],
+  );
 
   // Live preview
   useEffect(() => {
@@ -140,7 +149,17 @@ export function ThemePicker({ scope, onClose, embedded }: Props) {
     try {
       if (scope === 'guildDefault') await ctx.saveGuildDefault(draft);
       else await ctx.saveMemberOverride(draft);
+      addToast({
+        title: scope === 'guildDefault' ? 'Guild theme saved' : 'Your portal look saved',
+        variant: 'success',
+      });
       onClose?.();
+    } catch (e: any) {
+      addToast({
+        title: 'Could not save theme',
+        description: e?.message || 'Please try again.',
+        variant: 'error',
+      });
     } finally {
       setSaving(false);
     }
@@ -416,6 +435,9 @@ export function ThemePicker({ scope, onClose, embedded }: Props) {
       ) : null}
 
       <footer className="theme-picker-foot">
+        {dirty ? (
+          <span className="theme-picker-dirty" aria-live="polite">Unsaved changes</span>
+        ) : null}
         <button type="button" className="theme-picker-btn" onClick={reset}>
           <RotateCcw size={14} /> Reset
         </button>
@@ -428,9 +450,9 @@ export function ThemePicker({ scope, onClose, embedded }: Props) {
           type="button"
           className="theme-picker-btn theme-picker-btn-primary"
           onClick={save}
-          disabled={saving}
+          disabled={saving || !dirty}
         >
-          <Save size={14} /> {saving ? 'Saving…' : 'Save'}
+          <Save size={14} /> {saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
         </button>
       </footer>
     </div>

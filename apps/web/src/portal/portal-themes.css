@@ -686,8 +686,26 @@
 }
 
 .theme-picker-foot {
-  display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; padding-top: 14px;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex; gap: 8px; justify-content: flex-end; align-items: center;
+  margin-top: 18px;
+  padding: 14px 26px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  position: sticky; bottom: 0;
+  background: linear-gradient(to top, #0b0d14 80%, rgba(11,13,20,0.85));
+  backdrop-filter: blur(8px);
+  z-index: 5;
+  /* Pull out of the .theme-picker padding so the gradient spans full drawer width */
+  margin-left: -26px; margin-right: -26px;
+}
+.theme-picker-dirty {
+  margin-right: auto;
+  font-size: 12px; font-weight: 600;
+  color: var(--pt-accent, #00ff88);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.theme-picker-dirty::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
 }
 .theme-picker-btn {
   display: inline-flex; align-items: center; gap: 6px;
@@ -722,6 +740,10 @@
   box-shadow: none;
 }
 .theme-picker--embedded .theme-picker-head { padding-top: 0; }
+.theme-picker--embedded .theme-picker-foot {
+  margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0;
+  background: linear-gradient(to top, var(--bg-primary, #0b0d14) 80%, transparent);
+}
 
 /* Custom image upload row */
 .theme-picker-upload-row {
