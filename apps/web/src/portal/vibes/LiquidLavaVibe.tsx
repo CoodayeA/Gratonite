@@ -1,12 +1,14 @@
 /**
  * LiquidLavaVibe — soft, organic, blob-radius cards over molten gradient
  * blobs. Warm and playful. Asymmetric border-radius makes nothing rigid.
+ *
+ * Identity-only hero: just the guild name. Member count, description, and
+ * Customize live elsewhere.
  */
 import type { PortalData } from '../Portal';
-import { Settings } from 'lucide-react';
 
 export default function LiquidLavaVibe(props: PortalData) {
-  const { guildName, guildDescription, memberCount, tasks, completionPercent, onTaskAction, onOpenSettings } = props;
+  const { guildName, tasks, completionPercent, onTaskAction, showQuests = true } = props;
 
   return (
     <div className="vibe-lava-stage">
@@ -16,18 +18,12 @@ export default function LiquidLavaVibe(props: PortalData) {
 
       <div className="vibe-lava-content">
         <div className="vibe-lava-hero">
-          <div className="vibe-lava-pill">FLOWING · {memberCount} HUMANS</div>
           <h1 className="vibe-lava-title">
             <span>{guildName}</span>
           </h1>
-          <p className="vibe-lava-desc">
-            {guildDescription ?? "A space that bends and flows around what you're making."}
-          </p>
-          <button className="vibe-lava-btn" onClick={onOpenSettings}>
-            <Settings size={14} /> Customize the flow
-          </button>
         </div>
 
+        {showQuests && tasks.length > 0 && (
         <div className="vibe-lava-quests-card">
           <div className="vibe-lava-quests-head">
             <h2>Warm-up</h2>
@@ -55,6 +51,7 @@ export default function LiquidLavaVibe(props: PortalData) {
             ))}
           </ul>
         </div>
+        )}
       </div>
     </div>
   );

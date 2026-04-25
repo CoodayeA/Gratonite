@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Hash as HashIcon, Mic, Users, Zap, Calendar, ArrowLeft } from 'lucide-react';
+import { Hash as HashIcon, Mic, Users, Zap, Calendar, ArrowLeft, X } from 'lucide-react';
 import { useOutletContext, Link, useParams, useNavigate } from 'react-router-dom';
 import { api, API_BASE, getAccessToken } from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
@@ -201,6 +201,26 @@ const GuildOverview = () => {
     const portalCompletionPercent = setupChecklist.length
         ? Math.round((completedSetupCount / setupChecklist.length) * 100)
         : 0;
+    const setupComplete = portalCompletionPercent === 100;
+    const [setupDismissed, setSetupDismissed] = useState<boolean>(() => {
+        if (!guildId) return false;
+        try {
+            const raw = JSON.parse(localStorage.getItem('gratonite-portal-setup-dismissed') || '{}');
+            return Boolean(raw[guildId]);
+        } catch { return false; }
+    });
+    // Auto-dismiss when fully complete so a one-off regression doesn't pop the
+    // whole onboarding back unprompted.
+    useEffect(() => {
+        if (!guildId || !setupComplete || setupDismissed) return;
+        try {
+            const raw = JSON.parse(localStorage.getItem('gratonite-portal-setup-dismissed') || '{}');
+            raw[guildId] = true;
+            localStorage.setItem('gratonite-portal-setup-dismissed', JSON.stringify(raw));
+        } catch { /* ignore */ }
+        setSetupDismissed(true);
+    }, [guildId, setupComplete, setupDismissed]);
+    const showSetupQuests = !setupComplete && !setupDismissed;
     const portalTasks: PortalTask[] = useMemo(
         () =>
             setupChecklist.map((item) => ({
@@ -231,6 +251,17 @@ const GuildOverview = () => {
 
     const bannerUrl = guild?.bannerHash ? `${API_BASE}/files/${guild.bannerHash}` : null;
     const isBannerVideo = bannerUrl?.endsWith('.mp4') || bannerUrl?.endsWith('.webm');
+    const [prefersReducedMotion, setPrefersReducedMotion] = useState<boolean>(() => {
+        if (typeof window === 'undefined' || !window.matchMedia) return false;
+        return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    });
+    useEffect(() => {
+        if (typeof window === 'undefined' || !window.matchMedia) return;
+        const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+        mq.addEventListener('change', handler);
+        return () => mq.removeEventListener('change', handler);
+    }, []);
 
     if (guildFetchEnabled && errorCode === 'FORBIDDEN') {
         return (
@@ -303,7 +334,14 @@ const GuildOverview = () => {
             {bannerUrl && (
                 <div className="guild-banner">
                     {isBannerVideo ? (
-                        <video src={bannerUrl} autoPlay loop muted playsInline />
+                        <video
+                            src={bannerUrl}
+                            autoPlay={!prefersReducedMotion}
+                            loop
+                            muted
+                            playsInline
+                            poster={bannerUrl.replace(/\.(mp4|webm)$/i, '.jpg')}
+                        />
                     ) : (
                         <img src={bannerUrl} alt={`${guildName} banner`} />
                     )}
@@ -329,10 +367,41 @@ const GuildOverview = () => {
                             memberCount: guild.memberCount,
                             tasks: portalTasks,
                             completionPercent: portalCompletionPercent,
+                            showQuests: showSetupQuests,
                             onTaskAction: (id) => portalTaskActions[id]?.(),
                             onOpenSettings: openPortalSettings,
                         }}
                     />
+                </div>
+            )}
+            {guild && showSetupQuests && nextSetupStep && (
+                <div className="portal-next-step-chip" role="region" aria-label="Portal setup">
+                    <span className="portal-next-step-label">
+                        <strong>Next:</strong> {nextSetupStep.label}
+                    </span>
+                    <button
+                        type="button"
+                        className="portal-next-step-action"
+                        onClick={nextSetupStep.onAction}
+                    >
+                        {nextSetupStep.actionLabel}
+                    </button>
+                    <button
+                        type="button"
+                        className="portal-next-step-dismiss"
+                        aria-label="Hide setup tips for this portal"
+                        onClick={() => {
+                            if (!guildId) return;
+                            try {
+                                const raw = JSON.parse(localStorage.getItem('gratonite-portal-setup-dismissed') || '{}');
+                                raw[guildId] = true;
+                                localStorage.setItem('gratonite-portal-setup-dismissed', JSON.stringify(raw));
+                            } catch { /* ignore */ }
+                            setSetupDismissed(true);
+                        }}
+                    >
+                        <X size={14} />
+                    </button>
                 </div>
             )}
             <div className="guild-main-content">

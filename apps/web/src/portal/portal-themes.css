@@ -33,7 +33,7 @@
   .portal-root *,
   .portal-root *::before,
   .portal-root *::after {
-    animation-duration: 0.001ms !important;
+    animation: none !important;
     transition-duration: 0.001ms !important;
   }
 }
@@ -137,16 +137,16 @@
   width: 320px; height: 320px;
   margin: 0 auto;
   transform-style: preserve-3d;
-  animation: pt-holo-float calc(8s / max(var(--pt-anim-mult), 0.0001)) ease-in-out infinite;
+  animation: pt-holo-float calc(14s / max(var(--pt-anim-mult), 0.0001)) ease-in-out infinite;
 }
-@keyframes pt-holo-float { 0%,100% { transform: translateY(0) rotate(-2deg);} 50% { transform: translateY(-14px) rotate(2deg);} }
+@keyframes pt-holo-float { 0%,100% { transform: translateY(0) rotate(-0.5deg);} 50% { transform: translateY(-6px) rotate(0.5deg);} }
 .vibe-holo-planet-body {
   position: absolute; inset: 0;
   border-radius: 50%;
   background:
     radial-gradient(circle at 35% 30%, hsl(var(--pt-planet-hue), 90%, 70%) 0%, hsl(var(--pt-planet-hue), 70%, 40%) 50%, hsl(var(--pt-planet-hue), 80%, 18%) 100%);
   box-shadow:
-    0 0 80px hsla(var(--pt-planet-hue), 90%, 50%, 0.55),
+    0 0 48px hsla(var(--pt-planet-hue), 90%, 50%, 0.35),
     inset -30px -40px 60px hsla(0, 0%, 0%, 0.5);
   display: grid; place-items: center;
 }
@@ -175,9 +175,8 @@
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 18px;
   padding: 24px 26px;
-  backdrop-filter: blur(14px);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.4),
-              inset 0 1px 0 rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.28);
 }
 .vibe-holo-quests { margin-top: 16px; }
 .vibe-holo-pill {
@@ -289,12 +288,12 @@
     hsl(var(--pt-accent-hue),95%,70%) 0%,
     hsl(var(--pt-accent-hue),85%,50%) 60%,
     hsl(var(--pt-accent-hue),80%,30%) 100%);
-  box-shadow: 0 0 60px hsla(var(--pt-accent-hue),90%,55%,0.7);
+  box-shadow: 0 0 32px hsla(var(--pt-accent-hue),90%,55%,0.45);
   display: grid; place-items: center;
-  animation: pt-solar-pulse calc(4s / max(var(--pt-anim-mult),0.0001)) ease-in-out infinite;
+  animation: pt-solar-pulse calc(7s / max(var(--pt-anim-mult),0.0001)) ease-in-out infinite;
   z-index: 2;
 }
-@keyframes pt-solar-pulse { 0%,100%{ box-shadow: 0 0 60px hsla(var(--pt-accent-hue),90%,55%,0.7);} 50%{ box-shadow: 0 0 90px hsla(var(--pt-accent-hue),90%,65%,0.95);} }
+@keyframes pt-solar-pulse { 0%,100%{ box-shadow: 0 0 32px hsla(var(--pt-accent-hue),90%,55%,0.45);} 50%{ box-shadow: 0 0 44px hsla(var(--pt-accent-hue),90%,60%,0.6);} }
 .vibe-solar-sun-letter { font-size: 42px; font-weight: 800; color: rgba(255,255,255,0.95); text-shadow: 0 4px 14px rgba(0,0,0,0.5); }
 
 .vibe-solar-orbit {
@@ -302,11 +301,7 @@
   border-radius: 50%;
   border: 1px dashed rgba(255,255,255,0.06);
   transform: translate(-50%,-50%);
-  animation-name: pt-solar-spin;
-  animation-iteration-count: infinite;
-  animation-timing-function: linear;
 }
-@keyframes pt-solar-spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
 .vibe-solar-planet {
   position: absolute;
   left: 50%; top: 50%;
@@ -315,19 +310,17 @@
   border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, hsl(var(--pt-planet-hue),85%,65%), hsl(var(--pt-planet-hue),70%,30%));
   border: 2px solid hsla(var(--pt-planet-hue),80%,50%,0.5);
-  box-shadow: 0 0 18px hsla(var(--pt-planet-hue),80%,50%,0.5);
+  box-shadow: 0 0 14px hsla(var(--pt-planet-hue),80%,50%,0.4);
   cursor: pointer;
   display: grid; place-items: center;
-  animation: pt-solar-counterspin calc(var(--anim-dur, 22s) / max(var(--pt-anim-mult),0.0001)) linear infinite;
 }
-.vibe-solar-planet.is-done { box-shadow: 0 0 28px hsla(var(--pt-accent-hue),90%,60%,0.9); border-color: hsl(var(--pt-accent-hue),90%,60%); }
+.vibe-solar-planet.is-done { box-shadow: 0 0 22px hsla(var(--pt-accent-hue),90%,60%,0.7); border-color: hsl(var(--pt-accent-hue),90%,60%); }
 .vibe-solar-planet-label {
   position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
   font-size: 10.5px; color: #cbd1de;
   white-space: nowrap; pointer-events: none;
   background: rgba(0,0,0,0.55); padding: 2px 6px; border-radius: 5px;
 }
-@keyframes pt-solar-counterspin { to { transform: translate(calc(var(--orbit-r) - 28px), -28px) rotate(-360deg); } }
 
 /* =====================================================================
    3) LIQUID LAVA VIBE
@@ -339,13 +332,15 @@
 }
 .vibe-lava-blob {
   position: absolute; border-radius: 50%;
-  filter: blur(70px); opacity: 0.7;
+  filter: blur(70px); opacity: 0.55;
   pointer-events: none;
-  animation: pt-lava-drift calc(20s / max(var(--pt-anim-mult),0.0001)) ease-in-out infinite;
 }
-.vibe-lava-blob-1 { width: 380px; height: 380px; background: hsl(var(--pt-accent-hue), 85%, 55%); top: -80px; left: -80px; }
-.vibe-lava-blob-2 { width: 460px; height: 460px; background: hsl(calc(var(--pt-accent-hue) + 40), 85%, 55%); bottom: -120px; right: -100px; animation-delay: -7s; }
-.vibe-lava-blob-3 { width: 280px; height: 280px; background: hsl(calc(var(--pt-accent-hue) - 30), 85%, 55%); top: 40%; right: 25%; animation-delay: -14s; }
+.vibe-lava-blob-1 {
+  width: 380px; height: 380px; background: hsl(var(--pt-accent-hue), 85%, 55%); top: -80px; left: -80px;
+  animation: pt-lava-drift calc(45s / max(var(--pt-anim-mult),0.0001)) ease-in-out infinite;
+}
+.vibe-lava-blob-2 { width: 460px; height: 460px; background: hsl(calc(var(--pt-accent-hue) + 40), 85%, 55%); bottom: -120px; right: -100px; }
+.vibe-lava-blob-3 { width: 280px; height: 280px; background: hsl(calc(var(--pt-accent-hue) - 30), 85%, 55%); top: 40%; right: 25%; }
 @keyframes pt-lava-drift {
   0%,100% { transform: translate(0,0) scale(1); }
   33% { transform: translate(40px,-30px) scale(1.06); }
@@ -362,7 +357,7 @@
   border: 1px solid rgba(255,255,255,0.08);
   padding: 28px 30px;
   border-radius: 36px 60px 36px 60px / 60px 36px 60px 36px;
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(8px);
 }
 .vibe-lava-pill {
   font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
@@ -390,7 +385,7 @@
   border: 1px solid rgba(255,255,255,0.08);
   padding: 24px 26px;
   border-radius: 60px 36px 60px 36px / 36px 60px 36px 60px;
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(8px);
 }
 .vibe-lava-quests-head { display:flex; align-items:center; justify-content: space-between; margin-bottom: 14px; }
 .vibe-lava-quests-head h2 { margin: 0; font-size: 18px; font-weight: 800; }
@@ -507,8 +502,10 @@
 .vibe-iso-tower-1 { --tower-hue: calc(var(--pt-accent-hue) + 40); }
 .vibe-iso-tower-2 { --tower-hue: var(--pt-planet-hue); }
 .vibe-iso-tower-3 { --tower-hue: calc(var(--pt-planet-hue) + 40); }
-.vibe-iso-tower.is-done { animation: pt-iso-bob calc(3s / max(var(--pt-anim-mult),0.0001)) ease-in-out infinite; }
-@keyframes pt-iso-bob { 0%,100% { transform: translateZ(0);} 50% { transform: translateZ(8px);} }
+.vibe-iso-tower.is-done { filter: brightness(1.18) saturate(1.1); }
+.vibe-iso-tower.is-done .vibe-iso-tower-top {
+  box-shadow: 0 0 18px hsla(var(--pt-accent-hue), 85%, 60%, 0.55);
+}
 .vibe-iso-tower-label {
   position: absolute; left: 50%; bottom: -28px;
   transform: translateX(-50%) rotateZ(42deg) rotateX(-58deg);
@@ -521,17 +518,65 @@
    THEME PICKER
    ===================================================================== */
 .portal-customize-btn {
-  position: absolute; bottom: 22px; right: 22px;
+  position: absolute; top: 14px; right: 14px;
   z-index: 50;
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 10px 16px;
-  background: var(--pt-accent-gradient, #00ff88);
-  color: #0b0c12;
-  font-weight: 700; font-size: 13px;
-  border: none; cursor: pointer; border-radius: 999px;
-  box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  padding: 0;
+  background: rgba(15, 17, 26, 0.62);
+  color: #e6ebf5;
+  border: 1px solid rgba(255,255,255,0.16);
+  cursor: pointer; border-radius: 999px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.30);
+  transition: background .15s, border-color .15s, transform .15s;
 }
-.portal-customize-btn:hover { transform: translateY(-1px); }
+.portal-customize-btn:hover { background: rgba(28, 32, 44, 0.78); border-color: rgba(255,255,255,0.28); }
+.portal-customize-btn:focus-visible { outline: 2px solid var(--pt-accent, #00ff88); outline-offset: 2px; }
+.portal-customize-btn span {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* "Next step" portal-setup chip surfaced in GuildOverview when setup is
+   incomplete. Quiet, one-line — does not compete with the Portal hero. */
+.portal-next-step-chip {
+  display: flex; align-items: center; gap: 12px;
+  margin: 12px 56px 0;
+  padding: 10px 14px;
+  background: var(--bg-elevated, rgba(255,255,255,0.04));
+  border: 1px solid var(--border-subtle, rgba(255,255,255,0.08));
+  border-radius: 999px;
+  font-size: 13.5px;
+  color: var(--text-primary, #e6ebf5);
+}
+.portal-next-step-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.portal-next-step-label strong { color: var(--text-secondary, #aab1c1); margin-right: 6px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 11px; }
+.portal-next-step-action {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  font-size: 12.5px; font-weight: 600;
+  background: var(--accent, #5b8cff); color: #fff;
+  border: none; border-radius: 999px; cursor: pointer;
+}
+.portal-next-step-action:hover { filter: brightness(1.08); }
+.portal-next-step-action:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.portal-next-step-dismiss {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  display: grid; place-items: center;
+  background: transparent; color: var(--text-secondary, #98a0b3);
+  border: none; border-radius: 50%; cursor: pointer;
+}
+.portal-next-step-dismiss:hover { background: rgba(255,255,255,0.06); color: var(--text-primary, #e6ebf5); }
+.portal-next-step-dismiss:focus-visible { outline: 2px solid var(--accent, #5b8cff); outline-offset: 2px; }
+@media (max-width: 1024px) { .portal-next-step-chip { margin: 12px 32px 0; } }
+@media (max-width: 640px) {
+  .portal-next-step-chip { margin: 12px 16px 0; flex-wrap: wrap; }
+  .portal-next-step-label { white-space: normal; }
+}
 
 .portal-customize-drawer-backdrop {
   position: fixed; inset: 0; z-index: 200;

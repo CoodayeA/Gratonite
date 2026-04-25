@@ -1,35 +1,26 @@
 /**
  * IsoCityVibe — isometric city grid where each task is a tower. Tower
  * height encodes progress, color encodes category index.
+ *
+ * Identity-only info panel: just the guild name. Member count, description,
+ * stats, and Customize live elsewhere. Towers act as the visual progress
+ * indicator on their own.
  */
 import type { PortalData } from '../Portal';
-import { Settings } from 'lucide-react';
 
 export default function IsoCityVibe(props: PortalData) {
-  const { guildName, guildDescription, memberCount, tasks, completionPercent, onTaskAction, onOpenSettings } = props;
+  const { guildName, tasks, onTaskAction, showQuests = true } = props;
+  const cityTasks = showQuests ? tasks : [];
 
   return (
     <div className="vibe-iso-stage">
       <div className="vibe-iso-info">
-        <div className="vibe-iso-pill">DISTRICT · {memberCount} CITIZENS</div>
         <h1 className="vibe-iso-title">{guildName}</h1>
-        <p className="vibe-iso-desc">
-          {guildDescription ?? 'A city you build one block at a time.'}
-        </p>
-        <div className="vibe-iso-progress">
-          <div className="vibe-iso-progress-track">
-            <div className="vibe-iso-progress-fill" style={{ width: `${completionPercent}%` }} />
-          </div>
-          <span>{completionPercent}% built</span>
-        </div>
-        <button className="vibe-iso-btn" onClick={onOpenSettings}>
-          <Settings size={14} /> Customize district
-        </button>
       </div>
 
       <div className="vibe-iso-grid">
         <div className="vibe-iso-ground" />
-        {tasks.map((t, i) => {
+        {cityTasks.map((t, i) => {
           const height = t.completed ? 110 : 60 + (i % 3) * 20;
           return (
             <button

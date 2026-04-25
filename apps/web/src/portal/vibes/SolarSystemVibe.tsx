@@ -1,34 +1,20 @@
 /**
  * SolarSystemVibe — guild = sun, tasks = orbiting planets. Click a planet
  * to act on its quest. Done planets glow brighter; the sun pulses.
+ *
+ * Identity-only info panel: just the guild name. Member count, description,
+ * stats, and Customize live elsewhere.
  */
 import type { PortalData } from '../Portal';
-import { Settings } from 'lucide-react';
 
 export default function SolarSystemVibe(props: PortalData) {
-  const { guildName, guildDescription, memberCount, tasks, completionPercent, onTaskAction, onOpenSettings } = props;
+  const { guildName, tasks, onTaskAction, showQuests = true } = props;
+  const orbitingTasks = showQuests ? tasks : [];
 
   return (
     <div className="vibe-solar-stage">
       <div className="vibe-solar-info">
-        <div className="vibe-solar-pill">SYSTEM · {memberCount} MEMBERS</div>
         <h1 className="vibe-solar-title">{guildName}</h1>
-        <p className="vibe-solar-desc">
-          {guildDescription ?? 'A solar system of conversations and quests.'}
-        </p>
-        <div className="vibe-solar-stats">
-          <div className="vibe-solar-stat">
-            <div className="vibe-solar-stat-num">{completionPercent}%</div>
-            <div className="vibe-solar-stat-label">setup</div>
-          </div>
-          <div className="vibe-solar-stat">
-            <div className="vibe-solar-stat-num">{tasks.filter((t) => !t.completed).length}</div>
-            <div className="vibe-solar-stat-label">quests</div>
-          </div>
-        </div>
-        <button className="vibe-solar-btn" onClick={onOpenSettings}>
-          <Settings size={14} /> Customize
-        </button>
       </div>
 
       <div className="vibe-solar-system" aria-hidden={false}>
@@ -36,7 +22,7 @@ export default function SolarSystemVibe(props: PortalData) {
           <span className="vibe-solar-sun-letter">{guildName.charAt(0).toUpperCase()}</span>
           <div className="vibe-solar-sun-glow" />
         </div>
-        {tasks.map((t, i) => {
+        {orbitingTasks.map((t, i) => {
           const orbit = 110 + i * 70;
           const duration = 22 + i * 7;
           const phase = (i * 90) % 360;

@@ -32,6 +32,13 @@ export interface PortalData {
   completionPercent: number;
   onTaskAction: (taskId: string) => void;
   onOpenSettings: () => void;
+  /**
+   * Whether to render the in-vibe quest/task surface. False when setup is
+   * complete (or user dismissed) so the hero stays calm. The quests UI is
+   * surfaced separately in GuildOverview as a small "Next step" chip when
+   * incomplete.
+   */
+  showQuests?: boolean;
 }
 
 interface PortalProps {

@@ -5786,7 +5786,7 @@ body.gratonite-exp-reduced-motion *::after {
 /* Banner styling */
 .guild-banner {
   width: 100%;
-  height: 140px;
+  height: 112px;
   position: relative;
   overflow: hidden;
   flex-shrink: 0;

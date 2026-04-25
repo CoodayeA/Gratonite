@@ -1,12 +1,14 @@
 /**
  * HolographicVibe — perspective-tilted scene with a ringed planet and
  * floating quest cards that read as glass with iridescent edges.
+ *
+ * Identity-only hero: just the planet + guild name. Member count, description,
+ * and CTAs live elsewhere (members panel, ThemePickerButton).
  */
 import type { PortalData } from '../Portal';
-import { Settings, Plus } from 'lucide-react';
 
 export default function HolographicVibe(props: PortalData) {
-  const { guildName, guildDescription, memberCount, tasks, completionPercent, onTaskAction, onOpenSettings } = props;
+  const { guildName, tasks, completionPercent, onTaskAction, showQuests = true } = props;
 
   return (
     <div className="vibe-holo-stage">
@@ -20,23 +22,10 @@ export default function HolographicVibe(props: PortalData) {
         </div>
 
         <div className="vibe-holo-header-card">
-          <div className="vibe-holo-pill">PORTAL · {memberCount} MEMBERS</div>
           <h1 className="vibe-holo-title">{guildName}</h1>
-          {guildDescription ? (
-            <p className="vibe-holo-desc">{guildDescription}</p>
-          ) : (
-            <p className="vibe-holo-desc">A new portal in the network. Make it yours.</p>
-          )}
-          <div className="vibe-holo-actions">
-            <button className="vibe-holo-btn vibe-holo-btn-primary" onClick={onOpenSettings}>
-              <Settings size={14} /> Customize
-            </button>
-            <button className="vibe-holo-btn">
-              <Plus size={14} /> Invite people
-            </button>
-          </div>
         </div>
 
+        {showQuests && tasks.length > 0 && (
         <div className="vibe-holo-quests">
           <div className="vibe-holo-quests-head">
             <h2>First Quests</h2>
@@ -67,6 +56,7 @@ export default function HolographicVibe(props: PortalData) {
             ))}
           </ul>
         </div>
+        )}
       </div>
     </div>
   );
