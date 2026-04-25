@@ -232,20 +232,31 @@ function resolveUploadPath(storageKey: string): string | null {
   return relative && !relative.startsWith('..') && !path.isAbsolute(relative) ? resolved : null;
 }
 
-function findOrphanUpload(fileId: string): { storageKey: string; filePath: string; mimeType: string } | null {
+async function findOrphanUpload(fileId: string): Promise<{ storageKey: string; filePath: string; mimeType: string } | null> {
   if (!FILE_ID_PATTERN.test(fileId)) {
     return null;
   }
 
-  for (const [ext, mimeType] of Object.entries(FALLBACK_MIME_BY_EXT)) {
-    const storageKey = `${fileId}${ext}`;
-    const filePath = resolveUploadPath(storageKey);
-    if (filePath && fs.existsSync(filePath)) {
-      return { storageKey, filePath, mimeType };
-    }
-  }
+  const candidates = await Promise.all(
+    Object.entries(FALLBACK_MIME_BY_EXT).map(async ([ext, mimeType]) => {
+      const storageKey = `${fileId}${ext}`;
+      const filePath = resolveUploadPath(storageKey);
+      if (!filePath) {
+        return null;
+      }
+      try {
+        const stat = await fs.promises.stat(filePath);
+        return stat.isFile() ? { storageKey, filePath, mimeType } : null;
+      } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'code' in err && err.code === 'ENOENT') {
+          return null;
+        }
+        throw err;
+      }
+    }),
+  );
 
-  return null;
+  return candidates.find((candidate): candidate is NonNullable<typeof candidate> => candidate !== null) ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -455,7 +466,7 @@ filesRouter.get('/:fileId', publicFileRateLimit, (req: Request, res: Response, n
       .limit(1);
 
     if (!fileRecord) {
-      const orphanUpload = findOrphanUpload(fileId);
+      const orphanUpload = await findOrphanUpload(fileId);
       if (orphanUpload) {
         logger.warn('[files] serving upload without files row', {
           fileId,

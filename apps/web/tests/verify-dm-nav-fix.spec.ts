@@ -51,7 +51,7 @@ async function assertRouteContentVisible(page: Page, route: 'dm' | 'channel' | '
     const routeRoot = {
         dm: page.getByRole('log', { name: /^Direct messages with / }),
         channel: page.getByRole('log', { name: /^Messages in #/ }),
-        friends: page.getByRole('heading', { name: 'Friends' }),
+        friends: page.getByRole('button', { name: 'Online' }),
     }[route];
 
     await expect(
