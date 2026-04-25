@@ -32,18 +32,34 @@ export function ActivationProvider({ children }: { children: React.ReactNode }) 
     const saved = localStorage.getItem('activation-state');
     if (saved) {
       try {
-        const { tasks: savedTasks, dismissed } = JSON.parse(saved);
-        setTasks(savedTasks);
-        setIsDismissed(dismissed);
-      } catch {
-        // Ignore parse errors
+        const parsed = JSON.parse(saved);
+        // Validate structure
+        if (parsed.tasks && Array.isArray(parsed.tasks)) {
+          const validTasks = parsed.tasks.filter((t: any) => 
+            t.id && t.label && t.description && typeof t.completed === 'boolean'
+          );
+          if (validTasks.length > 0) {
+            setTasks(validTasks);
+          }
+        }
+        if (typeof parsed.dismissed === 'boolean') {
+          setIsDismissed(parsed.dismissed);
+        }
+      } catch (err) {
+        console.error('Failed to load activation state:', err);
+        // Silently fall back to default state
       }
     }
   }, []);
 
   // Save to localStorage on change
   useEffect(() => {
-    localStorage.setItem('activation-state', JSON.stringify({ tasks, dismissed: isDismissed }));
+    try {
+      localStorage.setItem('activation-state', JSON.stringify({ tasks, dismissed: isDismissed }));
+    } catch (err) {
+      console.warn('Failed to save activation state:', err);
+      // In a real app, you might emit a toast notification here
+    }
   }, [tasks, isDismissed]);
 
   const completionPercent = Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100);
