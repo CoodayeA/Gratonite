@@ -911,7 +911,7 @@ const SettingsModal = ({
 
                     {/* Right Panel */}
                     <div className="settings-content-panel" style={{ flex: 1, padding: isMobile ? '16px 12px' : '24px 32px', overflowY: 'auto', position: 'relative' }}>
-                        <button className="settings-close-btn" onClick={onClose} style={{ position: 'absolute', top: 24, right: 24, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                        <button className="settings-close-btn" aria-label="Close settings" onClick={onClose} style={{ position: 'absolute', top: 24, right: 24, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                             <X size={24} />
                         </button>
 

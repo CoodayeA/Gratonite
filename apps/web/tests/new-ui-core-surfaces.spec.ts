@@ -160,11 +160,15 @@ test.describe('New UI core chat surfaces', () => {
     await expect(page.locator('[data-ui-upload-affordance]')).toBeVisible();
   });
 
-  test('settings modal still opens under premium UI from a DM route', async ({ page }) => {
+  test('settings modal opens and closes under premium UI from a DM route', async ({ page }) => {
     await openDmWithExperience(page, 'premium-gamer-os');
 
     await page.getByTestId('settings-btn').click();
-    await expect(page.getByRole('dialog', { name: /settings/i })).toBeVisible();
+    const settingsDialog = page.getByRole('dialog', { name: /^settings$/i });
+    await expect(settingsDialog).toBeVisible();
+
+    await settingsDialog.getByRole('button', { name: /close settings/i }).click();
+    await expect(settingsDialog).toHaveCount(0);
   });
 
   test('premium UI keeps friends tabs and add friend action visible', async ({ page }) => {

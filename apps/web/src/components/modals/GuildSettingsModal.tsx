@@ -1256,7 +1256,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     return (
         <>
         <div className="modal-backdrop" onClick={onClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div role="dialog" aria-modal="true" aria-label="Server settings" onClick={e => e.stopPropagation()} style={{ width: 'min(900px, 95vw)', height: 'min(650px, 90vh)', display: 'flex', background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
+            <div role="dialog" aria-modal="true" aria-label="Server settings" className="settings-modal guild-settings-modal" onClick={e => e.stopPropagation()} style={{ width: 'min(900px, 95vw)', height: 'min(650px, 90vh)', display: 'flex', background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--stroke)', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
                 <GuildSettingsNavigation
                     serverName={serverName}
                     activeTab={activeTab}
@@ -1272,7 +1272,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
 
                 {/* Right Panel */}
                 <div className="settings-content-panel" style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', position: 'relative' }}>
-                    <button className="settings-close-btn" onClick={onClose}
+                    <button className="settings-close-btn" aria-label="Close server settings" onClick={onClose}
                         onMouseEnter={() => setHoveredBtn('close')} onMouseLeave={() => setHoveredBtn(null)}
                         style={{ position: 'absolute', top: 24, right: 24, background: 'none', border: 'none', color: hoveredBtn === 'close' ? 'var(--text-primary)' : 'var(--text-muted)', cursor: 'pointer' }}>
                         <X size={24} />
