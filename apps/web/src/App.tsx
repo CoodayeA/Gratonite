@@ -562,15 +562,12 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
                     } position="right">
                     <Link to={`/guild/${guild.id}`} style={{ textDecoration: 'none', position: 'relative' }} onContextMenu={(e) => handleGuildContext(e, guild)}>
                         <div className={`guild-icon ${activeGuildId === guild.id ? 'active' : ''}`}
-                             style={{ background: guild.iconHash ? 'transparent' : getDeterministicGradient(guild.name), color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: 600, overflow: 'hidden' }}>
-                            {guild.iconHash ? (
-                                <AnimatedGuildIcon
-                                    src={`${API_BASE}/files/${guild.iconHash}`}
-                                    alt={`${guild.name} server icon`}
-                                />
-                            ) : (
-                                guild.name.charAt(0).toUpperCase()
-                            )}
+                             style={{ background: 'transparent', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: 600, overflow: 'hidden' }}>
+                            <AnimatedGuildIcon
+                                src={guild.iconHash ? `${API_BASE}/files/${guild.iconHash}` : undefined}
+                                alt={`${guild.name} server icon`}
+                                letter={guild.name.charAt(0).toUpperCase()}
+                            />
                         </div>
                         {guildHasUnread && guildMentions === 0 && (
                             <span className="guild-unread-dot" style={{

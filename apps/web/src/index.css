@@ -6406,27 +6406,6 @@ body.gratonite-exp-reduced-motion *::after {
    PORTAL REDESIGN ANIMATIONS
    ======================== */
 
-/* Orbital System Animation for Guild Icons */
-@keyframes orbit {
-  0% {
-    transform: rotate(0deg) translateX(18px) rotate(0deg);
-    opacity: 1;
-  }
-  100% {
-    transform: rotate(360deg) translateX(18px) rotate(-360deg);
-    opacity: 1;
-  }
-}
-
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 8px rgba(0, 255, 136, 0.4), inset 0 0 8px rgba(0, 255, 136, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 16px rgba(0, 255, 136, 0.8), inset 0 0 12px rgba(0, 255, 136, 0.4);
-  }
-}
-
 /* Pulse Wave Animation for Sidebar Items */
 @keyframes pulse-wave {
   0%, 100% {
@@ -6452,24 +6431,54 @@ body.gratonite-exp-reduced-motion *::after {
 
 .orb-center {
   position: absolute;
-  width: 32px;
-  height: 32px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #00ff88, #00aa44);
-  box-shadow: 0 0 16px rgba(0, 255, 136, 0.8), inset 0 0 8px rgba(0, 255, 136, 0.3);
-  animation: pulse-glow 2s ease-in-out infinite;
+  background: radial-gradient(circle at 30% 30%, #00ff88, #00aa44 60%, #006622 100%);
+  box-shadow:
+    0 0 10px rgba(0, 255, 136, 0.6),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.4),
+    inset 2px 2px 3px rgba(150, 255, 200, 0.4);
+  animation: pulse-glow 2.4s ease-in-out infinite;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orb-letter {
+  font-family: var(--font-display, system-ui);
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0;
+  line-height: 1;
 }
 
 .orb-satellite {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #ff00ff;
   box-shadow: 0 0 8px rgba(255, 0, 255, 0.8);
   animation: orbit 4s linear infinite;
   z-index: 1;
+  margin: -4px 0 0 -4px;
+  transform-origin: 4px 4px;
+}
+
+@keyframes orbit {
+  from { transform: rotate(0deg) translateX(var(--orbit-radius, 17px)) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(var(--orbit-radius, 17px)) rotate(-360deg); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 255, 136, 0.5), inset -2px -2px 4px rgba(0, 0, 0, 0.4), inset 2px 2px 3px rgba(150, 255, 200, 0.4); }
+  50%      { box-shadow: 0 0 14px rgba(0, 255, 136, 0.85), inset -2px -2px 4px rgba(0, 0, 0, 0.4), inset 2px 2px 3px rgba(150, 255, 200, 0.4); }
 }
 
 /* Portal Sidebar Pulse Wave Animation */
