@@ -4,7 +4,9 @@ import { useActivationContext } from '../../hooks/useActivationContext';
 
 export function FirstRunChecklist() {
   const { tasks, completionPercent, markTaskComplete, dismissChecklist, isDismissed } = useActivationContext();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // Start collapsed by default — quiet header + progress bar only until user expands.
+  // Persisted state in localStorage still wins on subsequent loads.
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   // Load collapsed state from localStorage
   useEffect(() => {
