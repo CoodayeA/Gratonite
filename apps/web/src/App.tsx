@@ -113,15 +113,15 @@ import { OnboardingTour, useShouldShowTour } from './components/ui/OnboardingTou
 const BugReportModal = lazy(() => import('./components/modals/BugReportModal'));
 const KeyboardShortcutsModal = lazy(() => import('./components/modals/KeyboardShortcutsModal'));
 const NotificationModal = lazy(() => import('./components/modals/NotificationModal'));
-import CreateGuildModal from './components/modals/CreateGuildModal';
+const CreateGuildModal = lazy(() => import('./components/modals/CreateGuildModal'));
 import PresenceMenu, { PresenceType, PRESENCE_COLORS } from './components/modals/PresenceMenu';
-import ScreenShareModal from './components/modals/ScreenShareModal';
-import { ChannelSettingsModal } from './components/modals/ChannelSettingsModal';
-import MemberOptionsModal from './components/modals/MemberOptionsModal';
+const ScreenShareModal = lazy(() => import('./components/modals/ScreenShareModal'));
+const ChannelSettingsModal = lazy(() => import('./components/modals/ChannelSettingsModal').then(m => ({ default: m.ChannelSettingsModal })));
+const MemberOptionsModal = lazy(() => import('./components/modals/MemberOptionsModal'));
 import IncomingCallModal from './components/modals/IncomingCallModal';
-import InviteModal from './components/modals/InviteModal';
-import DMSearchModal from './components/modals/DMSearchModal';
-import GroupDmCreateModal from './components/modals/GroupDmCreateModal';
+const InviteModal = lazy(() => import('./components/modals/InviteModal'));
+const DMSearchModal = lazy(() => import('./components/modals/DMSearchModal'));
+const GroupDmCreateModal = lazy(() => import('./components/modals/GroupDmCreateModal'));
 import ExternalLinkModal from './components/modals/ExternalLinkModal';
 import { NotificationPrefsModal } from './components/modals/NotificationPrefsModal';
 import { Tooltip } from './components/ui/Tooltip';
@@ -2683,6 +2683,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
 
             {/* Channel Settings Modal */}
             {channelSettingsOpen && activeGuildId && (
+                <Suspense fallback={null}>
                 <ChannelSettingsModal
                     channelId={channelSettingsOpen.id}
                     channelName={channelSettingsOpen.name}
@@ -2699,6 +2700,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                         }
                     }}
                 />
+                </Suspense>
             )}
             {notifPrefs && (
                 <NotificationPrefsModal
