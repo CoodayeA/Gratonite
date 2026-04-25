@@ -155,12 +155,12 @@ export const TopBarActions = () => {
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginLeft: 'auto', position: 'relative' }}>
             {/* Search */}
-            <div className={`input-icon-btn ${searchOpen ? 'primary' : ''}`} onClick={() => { setSearchOpen(!searchOpen); setIsOpen(false); }}>
+            <button type="button" className={`input-icon-btn ${searchOpen ? 'primary' : ''}`} onClick={() => { setSearchOpen(!searchOpen); setIsOpen(false); }} aria-label="Search" aria-expanded={searchOpen}>
                 <Search size={20} />
-            </div>
+            </button>
 
             {/* Bell */}
-            <div className="input-icon-btn" style={{ position: 'relative' }} onClick={() => { setIsOpen(!isOpen); setSearchOpen(false); }}>
+            <button type="button" className="input-icon-btn" style={{ position: 'relative' }} onClick={() => { setIsOpen(!isOpen); setSearchOpen(false); }} aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`} aria-expanded={isOpen}>
                 <Bell size={20} />
                 {unreadCount > 0 && (
                     <div style={{
@@ -188,12 +188,12 @@ export const TopBarActions = () => {
                         </span>
                     </div>
                 )}
-            </div>
+            </button>
 
             {/* Help */}
-            <div className="input-icon-btn" onClick={() => navigate('/help-center')}>
+            <button type="button" className="input-icon-btn" onClick={() => navigate('/help-center')} aria-label="Help center">
                 <HelpCircle size={20} />
-            </div>
+            </button>
 
             {/* Search Panel */}
             {searchOpen && (
