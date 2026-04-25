@@ -670,18 +670,18 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
         if (activeTab === 'webhooks') fetchWebhooks();
         if (activeTab === 'automod') fetchAutomodRules();
         if (activeTab === 'bots' && guildId) {
-            api.get<any[]>(`/guilds/${guildId}/bots`).then((data: any) => {
+            setInstalledBotsLoading(true);
+            api.get<any[]>(`/bots/installs/${guildId}`).then((data: any) => {
                 const bots = Array.isArray(data) ? data : [];
                 setInstalledBots(bots.map((b: any) => ({
                     id: b.id,
-                    name: b.name || 'Unknown Bot',
-                    prefix: b.prefix || '!',
-                    status: b.status || 'active',
-                    avatar: b.avatarColor || '#526df5',
-                    installedAt: b.installedAt ? new Date(b.installedAt).toLocaleDateString() : 'Unknown',
-                    commands: b.commands ?? 0,
+                    applicationId: b.applicationId ?? null,
+                    name: b.botName || 'Unknown Bot',
+                    description: b.botShortDescription || '',
+                    iconUrl: b.botIconUrl || null,
+                    installedAt: b.createdAt ? new Date(b.createdAt).toLocaleDateString() : 'Unknown',
                 })));
-            }).catch(() => { /* bots endpoint may not exist yet */ });
+            }).catch(() => setInstalledBots([])).finally(() => setInstalledBotsLoading(false));
         }
         if (activeTab === 'overview' && guildId) {
             setVanityLoading(true);
@@ -924,7 +924,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const [viewDeliveriesId, setViewDeliveriesId] = useState<string | null>(null);
     const [deliveryLogs, setDeliveryLogs] = useState<Array<{ id: string; eventType: string; responseStatus: number | null; success: boolean; durationMs: number | null; attemptedAt: string }>>([]);
 
-    const [installedBots, setInstalledBots] = useState<{ id: string; name: string; prefix: string; status: string; avatar: string; installedAt: string; commands: number }[]>([]);
+    const [installedBots, setInstalledBots] = useState<{ id: string; applicationId: string | null; name: string; description: string; iconUrl: string | null; installedAt: string }[]>([]);
+    const [installedBotsLoading, setInstalledBotsLoading] = useState(false);
 
     const bannerInputRef = useRef<HTMLInputElement>(null);
     const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -3369,66 +3370,51 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>Installed Bots</h2>
                             <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Manage bots installed in this guild. Visit the Bot Store to discover and add new bots.</p>
 
-                            <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '32px' }}>
+                            <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '32px' }}>
                                 <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
                                     <div style={{ fontSize: '28px', fontWeight: 700, fontFamily: 'var(--font-display)' }}>{installedBots.length}</div>
                                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Installed</div>
                                 </div>
                                 <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '28px', fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--success)' }}>{installedBots.filter(b => b.status === 'active').length}</div>
+                                    <div style={{ fontSize: '28px', fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--success)' }}>{installedBots.length}</div>
                                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Active</div>
-                                </div>
-                                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '28px', fontWeight: 700, fontFamily: 'var(--font-display)' }}>{installedBots.reduce((sum, b) => sum + b.commands, 0)}</div>
-                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Total Commands</div>
                                 </div>
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {installedBotsLoading && installedBots.length === 0 && (
+                                    <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)', fontSize: '13px' }}>Loading…</div>
+                                )}
                                 {installedBots.map(bot => (
                                     <div key={bot.id} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                                        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: bot.avatar, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                            <Bot size={24} color="white" />
+                                        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: bot.iconUrl ? `center / cover no-repeat url(${bot.iconUrl})` : 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            {!bot.iconUrl && <Bot size={24} color="white" />}
                                         </div>
-                                        <div style={{ flex: 1 }}>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                                                 <span style={{ fontWeight: 600, fontSize: '15px' }}>{bot.name}</span>
-                                                <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '10px', background: bot.status === 'active' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)', color: bot.status === 'active' ? 'var(--success)' : '#f59e0b' }}>
-                                                    {bot.status === 'active' ? 'Active' : 'Paused'}
-                                                </span>
+                                                <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}>Active</span>
                                             </div>
-                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                                                Prefix: <code style={{ background: 'var(--bg-tertiary)', padding: '1px 6px', borderRadius: '4px', fontFamily: 'var(--font-mono, monospace)' }}>{bot.prefix}</code> &middot; {bot.commands} commands &middot; Installed {bot.installedAt}
+                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: bot.description ? '6px' : 0 }}>
+                                                Installed {bot.installedAt}
                                             </div>
-                                            {/* Permission scope breakdown */}
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                                {[
-                                                    { scope: 'Read Messages', granted: true, safe: true },
-                                                    { scope: 'Send Messages', granted: true, safe: true },
-                                                    { scope: 'Embed Links', granted: true, safe: true },
-                                                    { scope: 'Read Message History', granted: true, safe: true },
-                                                    { scope: 'Manage Messages', granted: false, safe: false },
-                                                    { scope: 'Manage Roles', granted: false, safe: false },
-                                                    { scope: 'Administrator', granted: false, safe: false },
-                                                ].map(s => (
-                                                    <span key={s.scope} style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '4px', fontWeight: 600, background: s.granted ? 'rgba(16,185,129,0.1)' : 'var(--bg-tertiary)', color: s.granted ? 'var(--success, #22c55e)' : 'var(--text-muted)', border: `1px solid ${s.granted ? 'rgba(16,185,129,0.3)' : 'var(--stroke)'}` }}>
-                                                        {s.granted ? '✓' : '○'} {s.scope}
-                                                    </span>
-                                                ))}
-                                            </div>
+                                            {bot.description && (
+                                                <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{bot.description}</div>
+                                            )}
                                         </div>
                                         <div style={{ display: 'flex', gap: '8px' }}>
-                                            <button onClick={() => setInstalledBots(prev => prev.map(b => b.id === bot.id ? { ...b, status: b.status === 'active' ? 'paused' : 'active' } : b))}
-                                                title={bot.status === 'active' ? 'Pause Bot' : 'Activate Bot'}
-                                                style={{ padding: '8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: bot.status === 'active' ? 'var(--warning)' : 'var(--success)', display: 'flex', alignItems: 'center' }}>
-                                                <Power size={16} />
-                                            </button>
-                                            <button title="Configure"
-                                                onClick={() => addAuditEntry('Bot Configuration Opened', actorName, bot.name, 'settings')}
-                                                style={{ padding: '8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
-                                                <Sliders size={16} />
-                                            </button>
-                                            <button onClick={() => { setInstalledBots(prev => prev.filter(b => b.id !== bot.id)); addAuditEntry('Bot Uninstalled', actorName, bot.name, 'settings'); }}
+                                            <button onClick={async () => {
+                                                if (!bot.applicationId || !guildId) return;
+                                                if (!confirm(`Uninstall ${bot.name} from this guild?`)) return;
+                                                try {
+                                                    await api.delete(`/bots/installs/${guildId}/${bot.applicationId}`);
+                                                    setInstalledBots(prev => prev.filter(b => b.id !== bot.id));
+                                                    addAuditEntry('Bot Uninstalled', actorName, bot.name, 'settings');
+                                                    addToast({ title: `${bot.name} uninstalled`, variant: 'success' });
+                                                } catch {
+                                                    addToast({ title: 'Failed to uninstall bot', variant: 'error' });
+                                                }
+                                            }}
                                                 title="Uninstall Bot"
                                                 style={{ padding: '8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: 'var(--error)', display: 'flex', alignItems: 'center' }}>
                                                 <Trash2 size={16} />
@@ -3437,11 +3423,11 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                     </div>
                                 ))}
 
-                                {installedBots.length === 0 && (
+                                {!installedBotsLoading && installedBots.length === 0 && (
                                     <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
                                         <Bot size={32} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
                                         <p style={{ fontSize: '14px', fontWeight: 600 }}>No bots installed</p>
-                                        <p style={{ fontSize: '13px', marginTop: '4px' }}>Use /invite to add bots to this server.</p>
+                                        <p style={{ fontSize: '13px', marginTop: '4px' }}>Browse the Bot Store to add bots to your server.</p>
                                     </div>
                                 )}
                             </div>
