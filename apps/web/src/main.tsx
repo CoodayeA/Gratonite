@@ -11,9 +11,8 @@ import './index.css'
 import './themes/overrides/theme-scrollbar.css'
 import './themes/overrides/theme-selection.css'
 import './themes/overrides/glass-optimization.css'
-import './design-system/styles/premium-gamer-os.css';
 import { ThemeProvider } from './components/ui/ThemeProvider'
-import { ActivationProvider } from './contexts/ActivationContext'
+import { TrustCardProvider } from './contexts/TrustCardContext'
 import { queryClient } from './lib/queryClient'
 import { init as initErrorReporter } from './lib/errorReporter'
 import { applyWebExperimentsToDocument } from './lib/experiments'
@@ -69,12 +68,12 @@ if (localStorage.getItem('gratonite:streamer-mode') === 'true') {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <Sentry.ErrorBoundary fallback={<p>Something went wrong</p>}>
-        <ActivationProvider>
-            <QueryClientProvider client={queryClient}>
-                <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+            <ThemeProvider>
+                <TrustCardProvider>
                     <App />
-                </ThemeProvider>
-            </QueryClientProvider>
-        </ActivationProvider>
+                </TrustCardProvider>
+            </ThemeProvider>
+        </QueryClientProvider>
     </Sentry.ErrorBoundary>,
 )
