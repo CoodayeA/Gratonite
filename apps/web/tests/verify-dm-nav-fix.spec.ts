@@ -58,6 +58,13 @@ async function assertRouteContentVisible(page: Page, route: 'dm' | 'channel' | '
         routeRoot,
         `${route} route content should be visible after navigation`,
     ).toBeVisible({ timeout: 5_000 });
+
+    if (route !== 'dm') {
+        await expect(
+            page.getByRole('log', { name: /^Direct messages with / }),
+            'DM content must not remain visible after leaving a DM route',
+        ).toHaveCount(0);
+    }
 }
 
 // ---------------------------------------------------------------------------

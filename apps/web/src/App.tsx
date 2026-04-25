@@ -4276,16 +4276,18 @@ export const AppLayout = () => {
         return () => window.removeEventListener('gratonite:request-timeout', handler);
     }, [addToast]);
 
+    const routePath = location.pathname.replace(/^\/app(?=\/|$)/, '') || '/';
+
     // Only chat/channel routes show the members sidebar
-    const isChatRoute = location.pathname.includes('/chat') || location.pathname.includes('/channel/');
-    const isVoiceRoute = location.pathname.includes('/voice');
-    const isDmRoute = location.pathname.match(/^\/dm\/[^/]+$/);
+    const isChatRoute = routePath.includes('/chat') || routePath.includes('/channel/');
+    const isVoiceRoute = routePath.includes('/voice');
+    const isDmRoute = routePath.match(/^\/dm\/[^/]+$/);
     const hideBottomNav = isChatRoute || isVoiceRoute || !!isDmRoute;
 
     // Derive a section key for page transitions
     // Include channel/voice ID in key so route changes force Outlet remount
     const transitionKey = useMemo(() => {
-        const path = location.pathname;
+        const path = routePath;
         // Guild channels and voice channels - include channel ID for proper remount
         const guildChannelMatch = path.match(/^\/guild\/([^/]+)\/(?:channel|voice)\/([^/]+)/);
         if (guildChannelMatch) return `guild-${guildChannelMatch[1]}-${guildChannelMatch[2]}`;
@@ -4298,14 +4300,14 @@ export const AppLayout = () => {
         // Top-level sections: /, /friends, /shop, /discover, etc.
         const section = path.split('/')[1] || 'home';
         return section;
-    }, [location.pathname]);
+    }, [routePath]);
 
     // Mobile swipe gestures
     useMobileSwipe(mainContentRef, {
         onSwipeRight: () => {
             haptic.swipe();
             if (isMobile) {
-                const guildMatch = location.pathname.match(/\/guild\/([^/]+)\/(?:channel|voice)\//);
+                const guildMatch = routePath.match(/\/guild\/([^/]+)\/(?:channel|voice)\//);
                 if (guildMatch) navigate(`/guild/${guildMatch[1]}`);
                 else if (isDmRoute) navigate('/friends');
                 return;
@@ -4324,7 +4326,7 @@ export const AppLayout = () => {
     // Screen reader: announce route changes
     useEffect(() => {
         if (!screenReaderMode || !routeAnnouncerRef.current) return;
-        const path = location.pathname;
+        const path = routePath;
         let label = 'Page changed';
         if (path === '/') label = 'Home page';
         else if (path === '/friends') label = 'Friends page';
@@ -4337,7 +4339,7 @@ export const AppLayout = () => {
         else if (path === '/marketplace') label = 'Marketplace';
         else if (path === '/me') label = 'Your profile';
         routeAnnouncerRef.current.textContent = label;
-    }, [location.pathname, screenReaderMode]);
+    }, [routePath, screenReaderMode]);
 
     // Screen reader: announce modal open/close
     const prevModalRef = useRef<ModalType>(null);
@@ -4481,11 +4483,11 @@ export const AppLayout = () => {
                 {/* Mobile Bottom Navigation (< 768px) — 5 tabs: Home, DMs, Search, Notifications, Settings */}
                 {!hideBottomNav && (
                 <nav className="mobile-bottom-nav" aria-label="Main navigation">
-                    <Link to="/" className={`mobile-nav-item ${location.pathname === '/' ? 'active' : ''}`} aria-current={location.pathname === '/' ? 'page' : undefined}>
+                    <Link to="/" className={`mobile-nav-item ${routePath === '/' ? 'active' : ''}`} aria-current={routePath === '/' ? 'page' : undefined}>
                         <Home size={20} aria-hidden="true" />
                         <span>Home</span>
                     </Link>
-                    <Link to="/friends" className={`mobile-nav-item ${location.pathname.startsWith('/dm') || location.pathname === '/friends' ? 'active' : ''}`} aria-current={location.pathname.startsWith('/dm') || location.pathname === '/friends' ? 'page' : undefined}>
+                    <Link to="/friends" className={`mobile-nav-item ${routePath.startsWith('/dm') || routePath === '/friends' ? 'active' : ''}`} aria-current={routePath.startsWith('/dm') || routePath === '/friends' ? 'page' : undefined}>
                         <MessageSquare size={20} aria-hidden="true" />
                         <span>DMs</span>
                     </Link>
