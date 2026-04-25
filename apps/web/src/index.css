@@ -109,7 +109,12 @@ button, [role="button"] {
    ROUTE & VIEW TRANSITIONS
    ------------------------ */
 .route-transition-wrapper {
-    animation: fadeInSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    /*
+     * CSS animation removed: Framer Motion's AnimatePresence already handles
+     * enter/exit on this wrapper (opacity + translateY via motion.div).
+     * Stacking both caused the old route tree to stay visible during the
+     * AnimatePresence mode="wait" exit phase, producing the DM freeze bug.
+     */
 }
 
 @keyframes fadeInSlideUp {
