@@ -190,6 +190,13 @@ export const guilds = pgTable('guilds', {
    * `notif:guild:<id>` preference yet (stored in Redis). Null = no server default.
    */
   defaultMemberNotificationLevel: varchar('default_member_notification_level', { length: 20 }),
+
+  /**
+   * Owner-defined Portal theme (vibe + accent + background + planet + density +
+   * font + animations + custom images). Null = use system default. See
+   * apps/web/src/portal/themes/types.ts for the JSON shape.
+   */
+  portalTheme: jsonb('portal_theme'),
 });
 
 /**
@@ -273,6 +280,12 @@ export const guildMembers = pgTable(
 
     /** FK to federated_instances — which instance this member joined via. */
     viaInstanceId: uuid('via_instance_id'),
+
+    /**
+     * Per-member override of the guild's Portal theme. Null = inherit guild default.
+     * Same JSON shape as guilds.portalTheme.
+     */
+    portalThemeOverride: jsonb('portal_theme_override'),
   },
   (table) => [
     /**

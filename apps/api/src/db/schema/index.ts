@@ -32,6 +32,7 @@ export * from './economy';
 export * from './cosmetics';
 export * from './bot-store';
 export * from './themes';
+export * from './portal-theme-presets';
 export * from './auctions';
 export * from './bot-applications';
 export * from './admin';
