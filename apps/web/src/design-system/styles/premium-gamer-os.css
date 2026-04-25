@@ -454,3 +454,154 @@
   background: var(--gt-experience-bg-surface-raised) !important;
   border-color: var(--gt-experience-border-subtle) !important;
 }
+
+/* Social and identity surfaces */
+.gt-new-ui [data-ui-social-surface],
+.gt-new-ui [data-ui-identity-surface] {
+  background:
+    radial-gradient(circle at 16% 0%, rgba(117, 145, 255, 0.14), transparent 28%),
+    radial-gradient(circle at 86% 10%, rgba(224, 179, 89, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(3, 6, 16, 0.2)) !important;
+}
+
+.gt-new-ui [data-ui-social-header] {
+  min-height: 64px;
+  border-bottom-color: var(--gt-experience-border-subtle) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.035));
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+.gt-new-ui [data-ui-social-tabs] .ft-tab {
+  color: rgba(224, 230, 255, 0.72);
+  border-radius: 14px 14px 0 0;
+  transition: color var(--gt-experience-motion-fast), background var(--gt-experience-motion-fast), border-color var(--gt-experience-motion-fast), box-shadow var(--gt-experience-motion-fast);
+}
+
+.gt-new-ui [data-ui-social-tabs] .ft-tab:hover {
+  color: rgba(246, 248, 255, 0.94) !important;
+  background: rgba(139, 164, 255, 0.08);
+}
+
+.gt-new-ui [data-ui-social-tabs] .ft-tab--active {
+  border-bottom-color: rgba(139, 164, 255, 0.86);
+  background: linear-gradient(180deg, rgba(105, 132, 255, 0.16), rgba(105, 132, 255, 0.04));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.gt-new-ui [data-ui-social-tabs] .ft-tab-add,
+.gt-new-ui .gt-add-friend-submit {
+  border: 1px solid rgba(89, 255, 158, 0.28) !important;
+  background: linear-gradient(135deg, rgba(45, 212, 111, 0.95), rgba(20, 184, 166, 0.84)) !important;
+  box-shadow: 0 0 24px rgba(45, 212, 111, 0.2);
+}
+
+.gt-new-ui [data-ui-social-content] {
+  scrollbar-color: rgba(139, 164, 255, 0.42) transparent;
+}
+
+.gt-new-ui .gt-social-referral,
+.gt-new-ui .gt-add-friend-card,
+.gt-new-ui .gt-identity-card,
+.gt-new-ui .gt-profile-modal,
+.gt-new-ui .gt-gift-modal {
+  border: 1px solid var(--gt-experience-border-subtle) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.035)),
+    var(--gt-experience-bg-surface-raised) !important;
+  box-shadow: var(--gt-experience-shadow-panel), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+.gt-new-ui [data-ui-friend-row],
+.gt-new-ui .gt-identity-menu-row,
+.gt-new-ui .gt-social-detail-panel {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  transition: transform var(--gt-experience-motion-fast), background var(--gt-experience-motion-fast), border-color var(--gt-experience-motion-fast), box-shadow var(--gt-experience-motion-fast);
+}
+
+.gt-new-ui [data-ui-friend-row]:hover,
+.gt-new-ui .gt-identity-menu-row:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(90deg, rgba(117, 145, 255, 0.13), rgba(255, 255, 255, 0.04)) !important;
+  border-color: var(--gt-experience-border-luminous) !important;
+  box-shadow: inset 1px 0 0 rgba(139, 164, 255, 0.35);
+}
+
+.gt-new-ui .gt-friend-action {
+  border: 1px solid var(--gt-experience-border-subtle);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(224, 230, 255, 0.82);
+}
+
+.gt-new-ui .gt-profile-modal__actions .auth-button {
+  border: 1px solid var(--gt-experience-border-subtle) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: rgba(224, 230, 255, 0.82) !important;
+}
+
+.gt-new-ui .gt-friend-action:hover,
+.gt-new-ui .gt-profile-modal__actions .auth-button:hover {
+  background: rgba(139, 164, 255, 0.14) !important;
+  color: rgba(246, 248, 255, 0.96) !important;
+  box-shadow: var(--gt-experience-glow-primary);
+}
+
+.gt-new-ui .gt-social-search,
+.gt-new-ui .gt-add-friend-input,
+.gt-new-ui [data-ui-profile-modal] textarea,
+.gt-new-ui [data-ui-gift-modal] input {
+  border-color: var(--gt-experience-border-subtle) !important;
+  background: var(--gt-experience-bg-surface-inset) !important;
+  color: rgba(246, 248, 255, 0.94) !important;
+}
+
+.gt-new-ui .gt-avatar[data-ui-avatar] .gt-avatar__core {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10), 0 0 24px rgba(117, 145, 255, 0.12);
+}
+
+.gt-new-ui .gt-avatar[data-avatar-status='online'] .gt-avatar__core {
+  box-shadow: inset 0 0 0 1px rgba(162, 255, 198, 0.18), 0 0 24px rgba(45, 212, 111, 0.18);
+}
+
+.gt-new-ui .gt-avatar__status {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 0 14px rgba(0, 0, 0, 0.32);
+}
+
+.gt-new-ui .gt-avatar__status-dot {
+  box-shadow: 0 0 12px currentColor;
+}
+
+.gt-new-ui [data-ui-profile-modal] {
+  border-radius: 24px !important;
+  overflow: hidden;
+}
+
+.gt-new-ui .gt-profile-modal__banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.14), transparent 30%);
+}
+
+.gt-new-ui .gt-profile-modal__content {
+  background: linear-gradient(180deg, rgba(3, 6, 16, 0.02), rgba(3, 6, 16, 0.16));
+}
+
+.gt-new-ui .gt-identity-shell {
+  padding-top: 40px !important;
+}
+
+.gt-new-ui .gt-identity-menu {
+  border: 1px solid var(--gt-experience-border-subtle);
+  border-radius: 18px;
+  padding: 6px;
+  background: var(--gt-experience-bg-surface);
+  box-shadow: var(--gt-experience-shadow-panel);
+}
+
+.gt-new-ui .gt-identity-menu-row--danger:hover {
+  background: rgba(255, 95, 110, 0.12) !important;
+  box-shadow: inset 1px 0 0 rgba(255, 95, 110, 0.35);
+}

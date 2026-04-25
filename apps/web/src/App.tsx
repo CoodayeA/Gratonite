@@ -1729,7 +1729,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
         overscan: 5,
     });
 
-    const UserPanel = () => (
+    const renderUserPanel = () => (
         <div className="user-panel">
             <span data-presence-toggle style={{ display: 'contents' }}>
                 <Avatar
@@ -2286,7 +2286,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     }
                 })}
 
-                <UserPanel />
+                {renderUserPanel()}
             </nav>
         );
     }
@@ -2672,7 +2672,7 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 </div>,
                 document.body
             )}
-            <UserPanel />
+            {renderUserPanel()}
 
             {/* Channel Settings Modal */}
             {channelSettingsOpen && activeGuildId && (

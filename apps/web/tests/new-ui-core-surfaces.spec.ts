@@ -91,11 +91,22 @@ async function mockCoreSurfaceApi(page: Page) {
   });
 }
 
+async function openFriendsWithExperience(page: Page, experience: 'classic' | 'premium-gamer-os') {
+  await page.addInitScript((value) => {
+    localStorage.setItem('gratonite:ui-experience', value);
+    localStorage.setItem('gratonite_tour_complete', '1');
+  }, experience);
+  await page.goto('/app/friends', { waitUntil: 'networkidle' });
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 10_000 });
+}
+
 async function openDmWithExperience(page: Page, experience: 'classic' | 'premium-gamer-os') {
+  await page.addInitScript((value) => {
+    localStorage.setItem('gratonite:ui-experience', value);
+    localStorage.setItem('gratonite_tour_complete', '1');
+  }, experience);
   await page.goto('/app/');
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 10_000 });
-  await page.evaluate((value) => localStorage.setItem('gratonite:ui-experience', value), experience);
-  await page.reload({ waitUntil: 'networkidle' });
 
   const dm = page.locator('a[href*="/dm/"]').first();
   await expect(dm, 'fixture requires at least one DM').toBeVisible({ timeout: 10_000 });
@@ -135,6 +146,17 @@ test.describe('New UI core chat surfaces', () => {
 
     await page.getByTestId('settings-btn').click();
     await expect(page.getByRole('dialog', { name: /settings/i })).toBeVisible();
+  });
+
+  test('premium UI keeps friends tabs and add friend action visible', async ({ page }) => {
+    await openFriendsWithExperience(page, 'premium-gamer-os');
+
+    await expect(page.locator('html')).toHaveAttribute('data-ui-experience', 'premium-gamer-os');
+    await expect(page.locator('[data-ui-social-surface]')).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Online$/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^All$/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Pending/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Add Friend/ })).toBeVisible();
   });
 
   test('classic fallback remains available on a DM route', async ({ page }) => {

@@ -28,10 +28,10 @@ const MeProfile = () => {
     };
 
     return (
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-            <div style={{ maxWidth: '480px', margin: '0 auto', padding: '32px 16px', width: '100%' }}>
+        <div className="gt-identity-surface" data-ui-identity-surface style={{ flex: 1, overflowY: 'auto' }}>
+            <div className="gt-identity-shell" style={{ maxWidth: '480px', margin: '0 auto', padding: '32px 16px', width: '100%' }}>
                 {/* Profile header */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
+                <div className="gt-identity-card" data-ui-profile-card style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
                     <Avatar
                         userId={userProfile?.id || ''}
                         avatarHash={userProfile?.avatarHash || null}
@@ -52,7 +52,7 @@ const MeProfile = () => {
                 </div>
 
                 {/* Menu rows */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <div className="gt-identity-menu" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     {menuItems.map((item) => (
                         <button
                             key={item.label}
@@ -76,7 +76,8 @@ const MeProfile = () => {
                                 textAlign: 'left',
                                 WebkitTapHighlightColor: 'transparent',
                             }}
-                            className="hover-lift"
+                            className="gt-identity-menu-row hover-lift"
+                            data-ui-identity-action
                         >
                             <item.icon size={20} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />
                             {item.label}
@@ -103,7 +104,8 @@ const MeProfile = () => {
                             textAlign: 'left',
                             WebkitTapHighlightColor: 'transparent',
                         }}
-                        className="hover-lift"
+                        className="gt-identity-menu-row gt-identity-menu-row--danger hover-lift"
+                        data-ui-identity-action
                     >
                         <LogOut size={20} style={{ flexShrink: 0 }} />
                         Log Out
