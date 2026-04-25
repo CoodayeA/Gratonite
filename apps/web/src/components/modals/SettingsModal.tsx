@@ -1,5 +1,5 @@
 ﻿import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { X, Check, ZoomIn, ZoomOut, RotateCw, Volume2, VolumeX, UserX, Copy, Info, Link2, Globe, Search, Download, Upload, Star, Sun, Moon, Dices, Eye, Sparkles, Palette, ShoppingBag, Edit3, Trash2, Share2 } from 'lucide-react';
+import { X, Check, ZoomIn, ZoomOut, RotateCw, Volume2, VolumeX, UserX, Copy, Info, Link2, Globe, Search, Download, Upload, Star, Sun, Moon, Dices, Eye, Sparkles, Palette, ShoppingBag, Edit3, Trash2, Share2, Trophy, BarChart3, Shirt } from 'lucide-react';
 import {
     useTheme,
     ButtonShape,
@@ -869,9 +869,9 @@ const SettingsModal = ({
                             {(!matchingTabs || matchingTabs.has('sessions')) && <button className={`sidebar-nav-item ${activeTab === 'sessions' ? 'active' : ''}`} onClick={() => { setActiveTab('sessions'); setSettingsSearch(''); }}>Sessions</button>}
                             {(!matchingTabs || matchingTabs.has('privacy')) && <button className={`sidebar-nav-item ${activeTab === 'privacy' ? 'active' : ''}`} onClick={() => { setActiveTab('privacy'); setSettingsSearch(''); }}>Privacy &amp; Safety</button>}
                             {(!matchingTabs || matchingTabs.has('connections')) && <button className={`sidebar-nav-item ${activeTab === 'connections' ? 'active' : ''}`} onClick={() => { setActiveTab('connections'); setSettingsSearch(''); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Link2 size={14} />Connections</button>}
-                            {(!matchingTabs || matchingTabs.has('achievements')) && <button className={`sidebar-nav-item ${activeTab === 'achievements' ? 'active' : ''}`} onClick={() => { setActiveTab('achievements'); setSettingsSearch(''); }}>🏆 Achievements</button>}
-                            {(!matchingTabs || matchingTabs.has('stats')) && <button className={`sidebar-nav-item ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => { setActiveTab('stats'); setSettingsSearch(''); }}>📊 Stats</button>}
-                            {(!matchingTabs || matchingTabs.has('wardrobe')) && <button className={`sidebar-nav-item ${activeTab === 'wardrobe' ? 'active' : ''}`} onClick={() => { setActiveTab('wardrobe'); setSettingsSearch(''); }}>👗 Wardrobe</button>}
+                            {(!matchingTabs || matchingTabs.has('achievements')) && <button className={`sidebar-nav-item ${activeTab === 'achievements' ? 'active' : ''}`} onClick={() => { setActiveTab('achievements'); setSettingsSearch(''); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Trophy size={14} />Achievements</button>}
+                            {(!matchingTabs || matchingTabs.has('stats')) && <button className={`sidebar-nav-item ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => { setActiveTab('stats'); setSettingsSearch(''); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><BarChart3 size={14} />Stats</button>}
+                            {(!matchingTabs || matchingTabs.has('wardrobe')) && <button className={`sidebar-nav-item ${activeTab === 'wardrobe' ? 'active' : ''}`} onClick={() => { setActiveTab('wardrobe'); setSettingsSearch(''); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Shirt size={14} />Wardrobe</button>}
                         </div>
                         )}
                         {(!matchingTabs || matchingTabs.has('theme') || matchingTabs.has('sound') || matchingTabs.has('accessibility')) && (

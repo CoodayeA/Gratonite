@@ -1658,6 +1658,11 @@ html .main-view.has-custom-bg .input-area {
 }
 
 .sidebar-nav-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
     font-size: 14px;
     color: var(--text-secondary);
     padding: 8px 12px;
@@ -1679,6 +1684,66 @@ html .main-view.has-custom-bg .input-area {
     border-left: 3px solid var(--accent-primary);
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
+}
+
+/* ── Settings consistent buttons ── */
+.settings-ghost-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    padding: 0 14px;
+    background: transparent;
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+}
+.settings-ghost-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--stroke-hover, var(--stroke));
+}
+.settings-primary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    padding: 0 16px;
+    background: var(--accent-primary);
+    border: 1px solid var(--accent-primary);
+    border-radius: var(--radius-sm);
+    color: var(--accent-on-primary, #fff);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 0.15s ease;
+    white-space: nowrap;
+}
+.settings-primary-btn:hover { filter: brightness(1.08); }
+.settings-danger-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    padding: 0 16px;
+    background: transparent;
+    border: 1px solid var(--error);
+    border-radius: var(--radius-sm);
+    color: var(--error);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+}
+.settings-danger-btn:hover {
+    background: var(--error);
+    color: #fff;
 }
 
 /* ── Auth Screen ── */
@@ -2156,14 +2221,12 @@ a {
 
 /* Sidebar nav item enhanced */
 .sidebar-nav-item {
-    transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease;
+    transition: background 0.2s ease, color 0.2s ease;
 }
 .sidebar-nav-item:hover {
     background: var(--bg-tertiary);
     color: var(--text-primary);
-    transform: translateX(2px);
 }
-.sidebar-nav-item.active { transform: translateX(3px); }
 
 /* Guild icon enhanced */
 .guild-icon {

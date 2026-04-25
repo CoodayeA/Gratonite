@@ -55,7 +55,7 @@ const SettingsAccountTab = ({ addToast, userProfile, setUserProfile, onNavigateT
           }}>
             {avatarStyle.includes('gradient') ? (editDisplayName?.[0]?.toUpperCase() || '?') : ''}
           </div>
-          <button className="auth-button" onClick={onNavigateToProfile} style={{ marginTop: 0, width: 'auto', padding: '0 16px', height: '36px', background: 'transparent', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)' }}>Edit User Profile</button>
+          <button onClick={onNavigateToProfile} className="settings-ghost-btn">Edit User Profile</button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -67,14 +67,14 @@ const SettingsAccountTab = ({ addToast, userProfile, setUserProfile, onNavigateT
                 {editingField !== 'displayName' && <div style={{ fontSize: '15px' }}>{editDisplayName}</div>}
               </div>
               {editingField !== 'displayName' && (
-                <button onClick={() => { setEditingField('displayName'); setTempEditValue(editDisplayName); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '6px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Edit</button>
+                <button onClick={() => { setEditingField('displayName'); setTempEditValue(editDisplayName); }} className="settings-ghost-btn">Edit</button>
               )}
             </div>
             {editingField === 'displayName' && (
               <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                 <input type="text" value={tempEditValue} onChange={e => setTempEditValue(e.target.value)} autoFocus style={{ flex: 1, padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--accent-primary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }} />
-                <button onClick={() => { api.users.updateAccountBasics({ displayName: tempEditValue }).then(() => { setEditDisplayName(tempEditValue); updateUser({ name: tempEditValue }); if (setUserProfile) setUserProfile((prev: UserProfileLike) => ({ ...prev, name: tempEditValue })); setEditingField(null); addToast({ title: 'Display name updated', variant: 'success' }); }).catch(() => addToast({ title: 'Failed to update display name. Try again.', variant: 'error' })); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Save</button>
-                <button onClick={() => setEditingField(null)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Cancel</button>
+                <button onClick={() => { api.users.updateAccountBasics({ displayName: tempEditValue }).then(() => { setEditDisplayName(tempEditValue); updateUser({ name: tempEditValue }); if (setUserProfile) setUserProfile((prev: UserProfileLike) => ({ ...prev, name: tempEditValue })); setEditingField(null); addToast({ title: 'Display name updated', variant: 'success' }); }).catch(() => addToast({ title: 'Failed to update display name. Try again.', variant: 'error' })); }} className="settings-primary-btn">Save</button>
+                <button onClick={() => setEditingField(null)} className="settings-ghost-btn">Cancel</button>
               </div>
             )}
           </div>
@@ -87,14 +87,14 @@ const SettingsAccountTab = ({ addToast, userProfile, setUserProfile, onNavigateT
                 {editingField !== 'username' && <div style={{ fontSize: '15px' }}>{editUsername}</div>}
               </div>
               {editingField !== 'username' && (
-                <button onClick={() => { setEditingField('username'); setTempEditValue(editUsername); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '6px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Edit</button>
+                <button onClick={() => { setEditingField('username'); setTempEditValue(editUsername); }} className="settings-ghost-btn">Edit</button>
               )}
             </div>
             {editingField === 'username' && (
               <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                 <input type="text" value={tempEditValue} onChange={e => setTempEditValue(e.target.value)} autoFocus style={{ flex: 1, padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--accent-primary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }} />
-                <button onClick={() => { api.users.updateAccountBasics({ username: tempEditValue }).then(() => { setEditUsername(tempEditValue); updateUser({ handle: tempEditValue }); setEditingField(null); addToast({ title: 'Username updated', variant: 'success' }); }).catch((e: unknown) => addToast({ title: 'Failed to update username. Try again.', description: (e as Record<string, string>)?.message || undefined, variant: 'error' })); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Save</button>
-                <button onClick={() => setEditingField(null)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Cancel</button>
+                <button onClick={() => { api.users.updateAccountBasics({ username: tempEditValue }).then(() => { setEditUsername(tempEditValue); updateUser({ handle: tempEditValue }); setEditingField(null); addToast({ title: 'Username updated', variant: 'success' }); }).catch((e: unknown) => addToast({ title: 'Failed to update username. Try again.', description: (e as Record<string, string>)?.message || undefined, variant: 'error' })); }} className="settings-primary-btn">Save</button>
+                <button onClick={() => setEditingField(null)} className="settings-ghost-btn">Cancel</button>
               </div>
             )}
           </div>
@@ -107,14 +107,14 @@ const SettingsAccountTab = ({ addToast, userProfile, setUserProfile, onNavigateT
                 {editingField !== 'email' && <div style={{ fontSize: '15px' }}>{editEmail}</div>}
               </div>
               {editingField !== 'email' && (
-                <button onClick={() => { setEditingField('email'); setTempEditValue(editEmail); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '6px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Edit</button>
+                <button onClick={() => { setEditingField('email'); setTempEditValue(editEmail); }} className="settings-ghost-btn">Edit</button>
               )}
             </div>
             {editingField === 'email' && (
               <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                 <input type="email" value={tempEditValue} onChange={e => setTempEditValue(e.target.value)} autoFocus style={{ flex: 1, padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--accent-primary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }} />
-                <button onClick={() => { api.users.updateAccountBasics({ email: tempEditValue }).then(() => { setEditEmail(tempEditValue); updateUser({ email: tempEditValue.toLowerCase(), emailVerified: false }); setEditingField(null); addToast({ title: 'Email updated', description: 'Please re-verify this address if required.', variant: 'success' }); }).catch((e: unknown) => addToast({ title: 'Failed to update email. Try again.', description: (e as Record<string, string>)?.message || undefined, variant: 'error' })); }} style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: '#000', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Save</button>
-                <button onClick={() => setEditingField(null)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', padding: '8px 16px', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>Cancel</button>
+                <button onClick={() => { api.users.updateAccountBasics({ email: tempEditValue }).then(() => { setEditEmail(tempEditValue); updateUser({ email: tempEditValue.toLowerCase(), emailVerified: false }); setEditingField(null); addToast({ title: 'Email updated', description: 'Please re-verify this address if required.', variant: 'success' }); }).catch((e: unknown) => addToast({ title: 'Failed to update email. Try again.', description: (e as Record<string, string>)?.message || undefined, variant: 'error' })); }} className="settings-primary-btn">Save</button>
+                <button onClick={() => setEditingField(null)} className="settings-ghost-btn">Cancel</button>
               </div>
             )}
           </div>
@@ -122,9 +122,9 @@ const SettingsAccountTab = ({ addToast, userProfile, setUserProfile, onNavigateT
       </div>
 
       <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Password & Authentication</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '48px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '48px', alignItems: 'flex-start' }}>
         {!showPasswordForm ? (
-          <button onClick={() => setShowPasswordForm(true)} className="auth-button" style={{ marginTop: 0, background: 'var(--accent-primary)', width: 'fit-content', padding: '0 24px' }}>Change Password</button>
+          <button onClick={() => setShowPasswordForm(true)} className="settings-primary-btn">Change Password</button>
         ) : (
           <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: '20px', border: '1px solid var(--stroke)' }}>
             <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px' }}>Change Password</div>
@@ -166,14 +166,14 @@ const SettingsAccountTab = ({ addToast, userProfile, setUserProfile, onNavigateT
             </div>
           </div>
         )}
-        <button className="auth-button" onClick={onNavigateToSecurity} style={{ marginTop: 0, background: 'var(--bg-tertiary)', color: 'white', border: '1px solid var(--stroke)', width: 'fit-content', padding: '0 24px' }}>Enable Two-Factor Auth</button>
+        <button className="settings-ghost-btn" onClick={onNavigateToSecurity}>Enable Two-Factor Auth</button>
       </div>
 
       <div style={{ paddingLeft: '16px', borderLeft: '4px solid var(--error)' }}>
         <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--error)', marginBottom: '8px' }}>Danger Zone</h3>
         <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Permanently delete your account and all data.</p>
         {!showDeleteConfirm ? (
-          <button onClick={() => setShowDeleteConfirm(true)} className="auth-button" style={{ marginTop: 0, background: 'transparent', border: '1px solid var(--error)', color: 'var(--error)', width: 'fit-content', padding: '0 24px' }}>Delete Account</button>
+          <button onClick={() => setShowDeleteConfirm(true)} className="settings-danger-btn">Delete Account</button>
         ) : (
           <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid var(--error)', borderRadius: 'var(--radius-md)', padding: '20px', marginTop: '8px' }}>
             <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--error)', marginBottom: '8px' }}>Are you absolutely sure?</div>
