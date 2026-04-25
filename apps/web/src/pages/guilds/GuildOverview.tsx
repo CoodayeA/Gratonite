@@ -518,8 +518,8 @@ const GuildOverview = () => {
                         )}
                     </div>
 
-                    {/* Setup Checklist Card (for owners only) */}
-                    {isOwner && (
+                    {/* Setup Checklist Card — only when chip dismissed and still incomplete (progressive disclosure) */}
+                    {isOwner && setupDismissed && !setupComplete && (
                         <div className="guild-setup-card">
                             <div className="setup-card-header">
                                 <div>
