@@ -3532,7 +3532,7 @@ body.electron-mac .modal-backdrop {
 }
 
 /* Skip links container - hidden by default */
-.skip-links-container {
+.skip-links {
   position: absolute;
   left: -9999px;
   top: 0;
@@ -3540,7 +3540,7 @@ body.electron-mac .modal-backdrop {
 }
 
 /* Skip links - hide off-screen by default */
-.sr-only-focusable {
+.skip-link {
   position: absolute;
   left: -9999px;
   top: 0;
@@ -3554,8 +3554,8 @@ body.electron-mac .modal-backdrop {
 }
 
 /* Show skip links on focus */
-.sr-only-focusable:focus,
-.sr-only-focusable:focus-visible {
+.skip-link:focus,
+.skip-link:focus-visible {
   position: fixed;
   left: 0;
   top: 0;
