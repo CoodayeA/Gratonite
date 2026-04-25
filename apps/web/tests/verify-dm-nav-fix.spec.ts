@@ -42,7 +42,7 @@ async function firstChannelLink(page: Page) {
 
 /** Return the first visible Friends nav link, or null. */
 async function friendsLink(page: Page) {
-    const link = page.locator('a[href="/friends"]').first();
+    const link = page.locator('a[href="/friends"], a[href="/app/friends"]').first();
     const visible = await link.isVisible().catch(() => false);
     return visible ? link : null;
 }
@@ -107,8 +107,7 @@ test.describe('DM navigation freeze regression', () => {
 
         await assertRouteContentVisible(page, 'channel');
 
-        // The route-transition-wrapper must exist and not be in a stuck exit state:
-        // if AnimatePresence mode="wait" froze, the wrapper stays display:none / opacity:0
+        // The route-transition-wrapper must contain the destination route, not the stale DM.
         const wrapper = page.locator('.route-transition-wrapper').first();
         await expect(wrapper).toBeVisible({ timeout: 3_000 });
     });

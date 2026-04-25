@@ -3,7 +3,6 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { createPortal } from 'react-dom';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
 import gsap from 'gsap';
 import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar, Compass, User, Columns, Paintbrush, PenLine, FileText, LayoutGrid } from 'lucide-react';
 import './components/chat.css';
@@ -4439,19 +4438,13 @@ export const AppLayout = () => {
                             return (
                                 <SplitViewContainer
                                     leftContent={
-                                        <AnimatePresence mode="wait" initial={false}>
-                                            <motion.div
-                                                key={transitionKey}
-                                                className="route-transition-wrapper route-container"
-                                                style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}
-                                                initial={reducedEffects ? false : { opacity: 0, y: 8 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={reducedEffects ? undefined : { opacity: 0 }}
-                                                transition={{ duration: 0.2, ease: 'easeOut' }}
-                                            >
-                                                <Outlet key={transitionKey} context={outletCtx} />
-                                            </motion.div>
-                                        </AnimatePresence>
+                                        <div
+                                            key={transitionKey}
+                                            className="route-transition-wrapper route-container"
+                                            style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}
+                                        >
+                                            <Outlet key={transitionKey} context={outletCtx} />
+                                        </div>
                                     }
                                     rightContent={
                                         <SplitViewRightPane
@@ -4468,19 +4461,13 @@ export const AppLayout = () => {
                             );
                         }
                         return (
-                            <AnimatePresence mode="wait" initial={false}>
-                                <motion.div
-                                    key={transitionKey}
-                                    className="route-transition-wrapper route-container"
-                                    style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}
-                                    initial={reducedEffects ? false : { opacity: 0, y: 8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={reducedEffects ? undefined : { opacity: 0 }}
-                                    transition={{ duration: 0.2, ease: 'easeOut' }}
-                                >
-                                    <Outlet key={transitionKey} context={outletCtx} />
-                                </motion.div>
-                            </AnimatePresence>
+                            <div
+                                key={transitionKey}
+                                className="route-transition-wrapper route-container"
+                                style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}
+                            >
+                                <Outlet key={transitionKey} context={outletCtx} />
+                            </div>
                         );
                     })()}
                     {isChatRoute && (isSidebarOpen || (isMobile && isMemberDrawerOpen)) && (
