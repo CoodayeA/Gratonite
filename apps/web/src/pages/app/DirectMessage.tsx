@@ -34,6 +34,8 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import { saveScrollPosition, getScrollPosition } from '../../store/scrollPositionStore';
 import { useVoice } from '../../contexts/VoiceContext';
 import { leaveVoiceSession } from '../../lib/voiceSession';
+import { TrustCard } from '../../components/onboarding/TrustCard';
+import { useTrustCards } from '../../contexts/TrustCardContext';
 
 type MediaType = 'image' | 'video';
 
@@ -204,6 +206,7 @@ const DirectMessage = () => {
     const { addToast } = useToast();
     const { openMenu } = useContextMenu();
     const voiceCtx = useVoice();
+    const { visible: trustCardsVisible, dismissCard } = useTrustCards();
 
     // Emoji picker state
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
@@ -3089,6 +3092,26 @@ const DirectMessage = () => {
                                     })}
                                 </div>
                             )}
+
+                            {/* Trust Cards */}
+                            <div style={{ padding: '0 16px', marginBottom: '16px' }}>
+                                {trustCardsVisible['dm-encryption'] && (
+                                    <TrustCard
+                                        type="encryption"
+                                        title="End-to-End Encrypted"
+                                        description="Your messages are encrypted with ECDH P-256 + AES-GCM-256. Only you and the recipient can read them."
+                                        onDismiss={() => dismissCard('dm-encryption')}
+                                    />
+                                )}
+                                {trustCardsVisible['federation-intro'] && (
+                                    <TrustCard
+                                        type="federation"
+                                        title="Federated Protocol"
+                                        description="You can connect with users across different Gratonite servers."
+                                        onDismiss={() => dismissCard('federation-intro')}
+                                    />
+                                )}
+                            </div>
 
                             {messages.length === 0 && (
                                 <EmptyState
