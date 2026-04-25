@@ -11,6 +11,7 @@ import { playSound, setSoundVolume, setSoundMuted, setSoundPack, isSoundMuted, g
 import { copyToClipboard } from './utils/clipboard';
 
 import AuthLayout from './layouts/AuthLayout';
+import { AppLayoutAccessibility } from './layouts/AppLayout';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Verify from './pages/auth/Verify';
@@ -151,6 +152,7 @@ import { RemoteBadge } from './components/ui/RemoteBadge';
 import UserProfilePopover from './components/ui/UserProfilePopover';
 import { useGuildSession, type GuildSessionErrorCode, type GuildSessionInfo, type GuildSessionChannel } from './hooks/useGuildSession';
 import { isAuthRuntimeExpired } from './lib/authRuntime';
+import { FirstRunChecklist } from './components/onboarding/FirstRunChecklist';
 import { useUnreadStore, setChannelHasUnread, incrementUnread, markRead as markReadStore, registerChannelGuild, hasGuildUnread, getGuildMentionCount } from './store/unreadStore';
 import { useDmUnreadStore, clearDmUnread } from './store/dmUnreadStore';
 
@@ -2316,6 +2318,10 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                     </div>
                     <div style={{ fontSize: '11px', fontWeight: 600, background: 'var(--bg-elevated)', padding: '2px 4px', borderRadius: '4px' }}>⌘K</div>
                 </div>
+            </div>
+
+            <div style={{ padding: '0 16px' }}>
+              <FirstRunChecklist />
             </div>
 
             <div ref={channelScrollRef} className="channel-list" role="listbox" aria-label="Channels" onKeyDown={(e) => {
@@ -4826,6 +4832,7 @@ function App() {
         <VoiceProvider>
         <ToastProvider>
             <AchievementToastProvider>
+            <AppLayoutAccessibility />
             <AmbientPlayer />
             <ThemePreviewBanner />
             <ConnectionBanner />
