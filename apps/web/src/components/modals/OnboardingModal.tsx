@@ -101,7 +101,7 @@ const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
     return (
         <div className="modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div role="dialog" aria-modal="true" aria-label="Get started" className="auth-card wide glass-panel" style={{ width: 'min(480px, 95vw)', position: 'relative', animation: 'slideIn 0.3s ease-out', maxHeight: '90vh', overflowY: 'auto' }}>
-                <button
+                <button aria-label="Close"
                     onClick={onClose}
                     style={{ position: 'absolute', top: 16, right: 16, background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
                 >

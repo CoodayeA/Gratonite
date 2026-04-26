@@ -119,7 +119,7 @@ export function JumpToDatePicker({ onSelect, onClose, loading }: Props) {
                         Jump to Date
                     </span>
                 </div>
-                <button
+                <button aria-label="Close"
                     onClick={onClose}
                     style={{
                         background: 'none', border: 'none', cursor: 'pointer',
@@ -137,7 +137,7 @@ export function JumpToDatePicker({ onSelect, onClose, loading }: Props) {
                 alignItems: 'center',
                 justifyContent: 'space-between',
             }}>
-                <button
+                <button aria-label="Previous month"
                     onClick={prevMonth}
                     className="hover-bg-tertiary"
                     style={{
@@ -151,7 +151,7 @@ export function JumpToDatePicker({ onSelect, onClose, loading }: Props) {
                 <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
                     {MONTHS[viewMonth]} {viewYear}
                 </span>
-                <button
+                <button aria-label="Next month"
                     onClick={canGoNext ? nextMonth : undefined}
                     style={{
                         background: 'none', border: 'none',

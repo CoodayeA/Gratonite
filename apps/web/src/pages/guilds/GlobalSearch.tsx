@@ -558,7 +558,7 @@ export default function GlobalSearch() {
                 color: 'var(--text-primary)', fontSize: 14, outline: 'none',
               }}
             />
-            <button
+            <button aria-label="Save search"
               onClick={saveCurrentSearch}
               disabled={!newSearchName.trim()}
               style={{
@@ -948,7 +948,7 @@ export default function GlobalSearch() {
                         >
                           <Check size={14} />
                         </button>
-                        <button
+                        <button aria-label="Cancel edit"
                           onClick={cancelEdit}
                           style={{
                             padding: 4, borderRadius: 4, border: '1px solid var(--stroke)',

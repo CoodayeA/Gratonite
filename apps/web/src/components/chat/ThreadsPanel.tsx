@@ -142,7 +142,7 @@ const ThreadsPanel = ({ channelId, onClose, onThreadSelect }: ThreadsPanelProps)
                         {activeCount}
                     </span>
                 </div>
-                <button onClick={onClose} style={{
+                <button aria-label="Close" onClick={onClose} style={{
                     background: 'transparent', border: 'none', cursor: 'pointer',
                     color: 'var(--text-muted)', padding: '4px', borderRadius: '4px',
                 }}>

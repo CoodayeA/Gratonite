@@ -165,7 +165,7 @@ export default function ConnectInstanceWizard({ onClose, onConnected }: Props) {
               <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>{stepLabels[step]}</p>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}>
+          <button aria-label="Close" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}>
             <X size={18} />
           </button>
         </div>

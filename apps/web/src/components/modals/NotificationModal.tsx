@@ -573,7 +573,7 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
                         <button onClick={clearAll} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} title="Clear all notifications">
                             <Trash2 size={14} />
                         </button>
-                        <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex' }}>
+                        <button aria-label="Close" onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex' }}>
                             <X size={18} />
                         </button>
                     </div>

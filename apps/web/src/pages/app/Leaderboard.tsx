@@ -68,7 +68,7 @@ export default function Leaderboard({ guildId, onClose }: Props) {
             <Trophy size={20} style={{ color: '#FFD700' }} />
             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>Leaderboard</h2>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', borderRadius: '4px' }}>
+          <button aria-label="Close" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', borderRadius: '4px' }}>
             <X size={18} />
           </button>
         </div>

@@ -110,7 +110,7 @@ export const SpinWheel = ({ onReward, onClose }: SpinWheelProps) => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', padding: '24px', background: 'var(--bg-elevated)', borderRadius: '16px', border: '1px solid var(--stroke)', position: 'relative' }}>
             {onClose && (
-                <button onClick={onClose} style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <button aria-label="Close" onClick={onClose} style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                     <X size={18} />
                 </button>
             )}

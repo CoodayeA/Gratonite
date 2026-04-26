@@ -160,7 +160,7 @@ const GuildWelcomeModal = ({
                 }}
             >
                 {/* Close button */}
-                <button
+                <button aria-label="Close"
                     onClick={onClose}
                     style={{
                         position: 'absolute', top: 16, right: 16, zIndex: 10,

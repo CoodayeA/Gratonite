@@ -83,7 +83,7 @@ const DMSearchModal = ({ onClose }: { onClose: () => void }) => {
                 <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid var(--stroke)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                         <h2 style={{ fontSize: '20px', fontWeight: 600, fontFamily: 'var(--font-display)', margin: 0 }}>Select Friends</h2>
-                        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                        <button aria-label="Close" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                             <X size={20} />
                         </button>
                     </div>

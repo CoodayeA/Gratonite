@@ -337,7 +337,7 @@ const EventScheduler = () => {
                         <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--accent-primary)', borderRadius: '16px', padding: '24px', marginBottom: '24px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                 <h3 style={{ fontSize: '18px', fontWeight: 600 }}>Create New Event</h3>
-                                <button onClick={resetForm} style={{ width: '32px', height: '32px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                                <button aria-label="Reset form" onClick={resetForm} style={{ width: '32px', height: '32px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}>
                                     <X size={16} />
                                 </button>
                             </div>

@@ -136,7 +136,7 @@ export function GifReactionPicker({ onSelect, onClose }: GifReactionPickerProps)
             </button>
           )}
         </div>
-        <button onClick={onClose} style={{
+        <button aria-label="Close" onClick={onClose} style={{
           background: 'none', border: 'none', color: 'var(--text-muted)',
           cursor: 'pointer', padding: '4px',
         }}>

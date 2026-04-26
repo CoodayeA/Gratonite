@@ -238,7 +238,7 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
 
                 {/* Content */}
                 <div style={{ flex: 1, padding: '32px 24px 24px', overflowY: 'auto', position: 'relative', boxSizing: 'border-box' }}>
-                    <button
+                    <button aria-label="Close"
                         onClick={onClose}
                         style={{ position: 'absolute', top: '18px', right: '18px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '6px', display: 'flex', borderRadius: '8px' }}
                     >

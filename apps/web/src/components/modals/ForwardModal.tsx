@@ -137,7 +137,7 @@ const ForwardModal = ({ message, onClose, onForward }: ForwardModalProps) => {
                             <Share2 size={20} color="var(--accent-primary)" />
                             <h2 style={{ fontSize: '18px', fontWeight: 600, fontFamily: 'var(--font-display)', margin: 0 }}>Forward Message</h2>
                         </div>
-                        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                        <button aria-label="Close" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                             <X size={20} />
                         </button>
                     </div>

@@ -152,7 +152,7 @@ const ConfessionBoard = ({ channelId, guildId, isOwnerOrAdmin }: { channelId: st
             rows={1}
             className="flex-1 bg-transparent text-white text-sm py-2 resize-none outline-none placeholder-gray-500 max-h-32"
           />
-          <button onClick={postConfession} disabled={!content.trim() || sending}
+          <button aria-label="Post confession" onClick={postConfession} disabled={!content.trim() || sending}
             className="px-3 py-2 text-purple-400 hover:text-purple-300 disabled:text-gray-600 transition-colors">
             <Send size={16} />
           </button>

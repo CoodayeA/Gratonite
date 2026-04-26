@@ -115,7 +115,7 @@ const BugReportModal = ({ onClose }: { onClose: () => void }) => {
                         <Bug size={20} style={{ color: 'var(--accent-purple, #a78bfa)' }} />
                         <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Report an Issue</h2>
                     </div>
-                    <button
+                    <button aria-label="Close"
                         onClick={onClose}
                         className="hover-bg-tertiary"
                         style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center' }}

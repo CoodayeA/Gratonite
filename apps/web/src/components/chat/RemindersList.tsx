@@ -76,7 +76,7 @@ export function RemindersList() {
             {reminders.length}
           </span>
         </div>
-        <button
+        <button aria-label="Refresh"
           onClick={loadReminders}
           style={{
             background: 'var(--bg-tertiary)', border: 'none',

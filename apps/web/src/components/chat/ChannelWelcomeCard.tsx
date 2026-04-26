@@ -56,7 +56,7 @@ export function ChannelWelcomeCard({ channelId, channelName, topic }: Props) {
                 position: 'relative',
             }}
         >
-            <button
+            <button aria-label="Dismiss"
                 onClick={handleDismiss}
                 style={{
                     position: 'absolute', top: '12px', right: '12px',

@@ -1037,7 +1037,7 @@ export const MemoizedMessageItem = memo(({
                         </Tooltip>
                         {!msg.system && (
                             <Tooltip content={famGiven ? 'FAME Given!' : 'Give FAME (+200 Gratonite)'} position="top">
-                                <button
+                                <button aria-label="Give FAME"
                                     className="message-action-btn"
                                     onClick={handleGiveFAME}
                                     style={{

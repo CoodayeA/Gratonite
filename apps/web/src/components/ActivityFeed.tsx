@@ -127,7 +127,7 @@ export function ActivityFeed() {
               {f.label}
             </button>
           ))}
-          <button
+          <button aria-label="Refresh"
             onClick={loadEvents}
             style={{
               background: 'var(--bg-tertiary)', border: 'none',

@@ -2895,7 +2895,7 @@ const DirectMessage = () => {
                                     <Settings size={20} />
                                 </button>
 
-                                <button
+                                <button aria-label="End call"
                                     onClick={handleEndCall}
                                     style={{
                                         width: '64px', height: '48px', borderRadius: 'var(--radius-sm)',

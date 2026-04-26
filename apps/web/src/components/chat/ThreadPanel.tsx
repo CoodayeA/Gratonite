@@ -825,7 +825,7 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
                     >
                         <Smile size={16} />
                     </button>
-                    <button
+                    <button aria-label="Send"
                         className={`input-icon-btn ${inputValue.trim() ? 'primary' : ''}`}
                         style={{ width: '28px', height: '28px', opacity: isSending ? 0.3 : inputValue.trim() ? 1 : 0.5, marginBottom: '6px' }}
                         onClick={handleSend}

@@ -120,7 +120,7 @@ const KeyboardShortcutsModal = ({ onClose }: { onClose: () => void }) => {
                                 <RotateCcw size={12} /> Reset All
                             </button>
                         )}
-                        <button onClick={onClose} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'white', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <button aria-label="Close" onClick={onClose} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'white', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <X size={16} />
                         </button>
                     </div>

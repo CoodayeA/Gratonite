@@ -135,7 +135,7 @@ const UserDetailPane = ({
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Close button */}
-                <button
+                <button aria-label="Close"
                     onClick={onClose}
                     style={{
                         position: 'absolute', top: '16px', right: '16px',

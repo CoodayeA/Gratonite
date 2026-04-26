@@ -310,7 +310,7 @@ export default function ThemeEditorModal({ onClose, editingThemeId }: ThemeEdito
             >
               <Save size={14} /> Save Theme
             </button>
-            <button onClick={onClose} style={{
+            <button aria-label="Close" onClick={onClose} style={{
               background: 'none', border: 'none', color: 'var(--text-muted)',
               cursor: 'pointer', padding: '6px', display: 'flex',
             }}>

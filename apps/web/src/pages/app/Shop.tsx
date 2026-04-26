@@ -825,7 +825,7 @@ const Shop = () => {
             {selectedItem && (
                 <div className="modal-overlay" style={{ zIndex: 999 }}>
                     <div className="auth-card wide glass-panel" style={{ width: 'min(480px, 95vw)', position: 'relative', animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)', maxHeight: '90vh', overflowY: 'auto' }}>
-                        <button
+                        <button aria-label="Close"
                             onClick={closeModal}
                             style={{ position: 'absolute', top: 16, right: 16, background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                             <X size={20} />

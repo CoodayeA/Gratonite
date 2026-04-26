@@ -351,7 +351,7 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                 onClick={e => e.stopPropagation()}
                 style={{ width: '400px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', position: 'relative' }}
             >
-                <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(0,0,0,0.5)', borderRadius: '50%', padding: '6px', border: 'none', color: 'white', cursor: 'pointer', zIndex: 10 }}>
+                <button aria-label="Close" onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(0,0,0,0.5)', borderRadius: '50%', padding: '6px', border: 'none', color: 'white', cursor: 'pointer', zIndex: 10 }}>
                     <X size={16} />
                 </button>
 

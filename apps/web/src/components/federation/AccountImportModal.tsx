@@ -57,7 +57,7 @@ export default function AccountImportModal({ onClose }: Props) {
       <div className="w-full max-w-md rounded-xl p-6" style={{ background: 'var(--color-card, #1e1e2e)' }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold" style={{ color: 'var(--color-text, #e2e8f0)' }}>Import Account</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-white/10">
+          <button aria-label="Close" onClick={onClose} className="p-1 rounded hover:bg-white/10">
             <X size={18} style={{ color: 'var(--color-text-secondary, #94a3b8)' }} />
           </button>
         </div>
