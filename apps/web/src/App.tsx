@@ -6,7 +6,7 @@ import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, N
 import { loadGsap } from './lib/gsapLazy';
 import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar, Compass, User, Columns, Paintbrush, PenLine, FileText, LayoutGrid } from 'lucide-react';
 import './components/chat.css';
-import CommandPalette from './components/ui/CommandPalette';
+const CommandPalette = lazy(() => import('./components/ui/CommandPalette'));
 import { playSound, setSoundVolume, setSoundMuted, setSoundPack, isSoundMuted, getSoundPack } from './utils/SoundManager';
 import { copyToClipboard } from './utils/clipboard';
 
@@ -4646,7 +4646,11 @@ export const AppLayout = () => {
                 </div>
             )}
 
-            <CommandPalette isOpen={activeModal === 'globalSearch'} onClose={() => setActiveModal(null)} guilds={guilds} dmChannels={dmChannels} onOpenSettings={() => setActiveModal('settings')} />
+            {activeModal === 'globalSearch' && (
+                <Suspense fallback={null}>
+                    <CommandPalette isOpen onClose={() => setActiveModal(null)} guilds={guilds} dmChannels={dmChannels} onOpenSettings={() => setActiveModal('settings')} />
+                </Suspense>
+            )}
             <ModalWrapper isOpen={activeModal === 'notifications'}>
                 <NotificationModal onClose={() => setActiveModal(null)} />
             </ModalWrapper>
