@@ -107,7 +107,8 @@ const SettingsModal = lazy(() => import('./components/modals/SettingsModal'));
 const UserProfileModal = lazy(() => import('./components/modals/UserProfileModal'));
 const GuildSettingsModal = lazy(() => import('./components/modals/GuildSettingsModal'));
 const WhatsNewModal = lazy(() => import('./components/modals/WhatsNewModal'));
-import { CHANGELOG } from './data/changelog';
+// CHANGELOG is dynamically imported below to keep the ~56KB array out of the index chunk.
+// WhatsNewModal lazy-loads it independently when shown.
 const OnboardingModal = lazy(() => import('./components/modals/OnboardingModal'));
 import { OnboardingTour, useShouldShowTour } from './components/ui/OnboardingTour';
 const BugReportModal = lazy(() => import('./components/modals/BugReportModal'));
@@ -3431,14 +3432,26 @@ export const AppLayout = () => {
         };
     }, [userLoading, ctxUser.id]);
 
-    // Show "What's New" modal if user hasn't seen the latest changelog
+    // Show "What's New" modal if user hasn't seen the latest changelog.
+    // Dynamically import the changelog to keep it out of the index chunk.
+    const latestChangelogIdRef = useRef<string>('');
     useEffect(() => {
-        const lastSeen = localStorage.getItem('gratonite:last-seen-changelog');
-        const latestId = CHANGELOG[0]?.id ?? '';
-        if (lastSeen !== latestId && ctxUser.id) {
-            const timer = setTimeout(() => setShowWhatsNew(true), 2000);
-            return () => clearTimeout(timer);
-        }
+        if (!ctxUser.id) return;
+        let cancelled = false;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        import('./data/changelog').then(({ CHANGELOG }) => {
+            if (cancelled) return;
+            const latestId = CHANGELOG[0]?.id ?? '';
+            latestChangelogIdRef.current = latestId;
+            const lastSeen = localStorage.getItem('gratonite:last-seen-changelog');
+            if (lastSeen !== latestId) {
+                timer = setTimeout(() => setShowWhatsNew(true), 2000);
+            }
+        }).catch(() => {});
+        return () => {
+            cancelled = true;
+            if (timer) clearTimeout(timer);
+        };
     }, [ctxUser.id]);
 
     // Fetch unread state when guild changes
@@ -4646,7 +4659,7 @@ export const AppLayout = () => {
             <ModalWrapper isOpen={activeModal === 'onboarding'}>
                 <OnboardingModal onClose={() => setActiveModal(null)} />
             </ModalWrapper>
-            {showWhatsNew && <WhatsNewModal onClose={() => { localStorage.setItem('gratonite:last-seen-changelog', CHANGELOG[0]?.id ?? ''); setShowWhatsNew(false); }} onOpenSettings={(tab) => { setShowWhatsNew(false); setSettingsInitialTab(tab); setActiveModal('settings'); }} />}
+            {showWhatsNew && <WhatsNewModal onClose={() => { if (latestChangelogIdRef.current) localStorage.setItem('gratonite:last-seen-changelog', latestChangelogIdRef.current); setShowWhatsNew(false); }} onOpenSettings={(tab) => { setShowWhatsNew(false); setSettingsInitialTab(tab); setActiveModal('settings'); }} />}
             {pendingExternalLink && (
                 <ExternalLinkModal url={pendingExternalLink} onClose={() => setPendingExternalLink(null)} />
             )}
