@@ -81,25 +81,6 @@
     z-index: var(--z-modal-backdrop);
 }
 
-.modal-close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 36px;
-    min-height: 36px;
-    border-radius: 8px;
-    border: none;
-    background: transparent;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-}
-
-.modal-close-btn:hover {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-}
-
 /* Button transition defaults */
 button, [role="button"] {
     transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
@@ -456,29 +437,6 @@ body {
 }
 
 /* ── BACKGROUND MEDIA ── */
-.custom-bg-media {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    z-index: 0;
-    pointer-events: none;
-}
-
-.custom-bg-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(4px);
-    z-index: 1;
-    pointer-events: none;
-}
-
 /* App Layout Grid */
 .app-container {
     display: flex;
@@ -902,20 +860,6 @@ p {
     transform: scale(1.05);
 }
 
-.status-ring {
-    position: absolute;
-    bottom: -3px;
-    right: -3px;
-    width: 18px;
-    height: 18px;
-    background: var(--bg-sidebar);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 3px solid var(--bg-sidebar);
-}
-
 .status-dot {
     width: 12px;
     height: 12px;
@@ -1164,22 +1108,6 @@ p {
 }
 
 /* Custom Background Media */
-.custom-bg-media {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    z-index: 0;
-    object-fit: cover;
-    background-size: cover;
-    background-position: center;
-    pointer-events: none;
-    opacity: 0.4;
-    transition: opacity 0.5s ease;
-}
-
 /* Base overlay for readability when media is applied */
 .main-content-wrapper.has-custom-bg {
     background: linear-gradient(180deg, rgba(10, 10, 14, 0.6) 0%, rgba(10, 10, 16, 0.85) 100%);
@@ -1236,17 +1164,6 @@ html .main-view.has-custom-bg .input-area {
     box-shadow: var(--shadow-hover);
 }
 
-.action-card-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: var(--radius-md);
-    background: var(--bg-tertiary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--accent-primary);
-}
-
 .action-title {
     font-size: 16px;
     font-weight: 600;
@@ -1275,23 +1192,6 @@ html .main-view.has-custom-bg .input-area {
 }
 
 /* Friends Page */
-.tab-pill {
-    padding: 6px 16px;
-    border-radius: var(--radius-xl);
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.tab-pill:hover {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-}
-
 .tab-pill.active {
     background: var(--accent-primary);
     color: #111;
@@ -1322,35 +1222,7 @@ html .main-view.has-custom-bg .input-area {
     opacity: 1;
 }
 
-.icon-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--bg-tertiary);
-    border: none;
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.icon-btn:hover {
-    background: var(--text-primary);
-    color: #111;
-}
-
 /* Guild Overview */
-.section-label {
-    font-size: 12px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    font-weight: 600;
-    margin-bottom: 12px;
-    letter-spacing: 0.5px;
-}
-
 .channels-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -1391,26 +1263,6 @@ html .main-view.has-custom-bg .input-area {
     background: var(--accent-primary);
     display: inline-block;
     box-shadow: 0 0 6px var(--accent-primary);
-}
-
-.voice-badge {
-    background: rgba(87, 242, 135, 0.15);
-    color: var(--success);
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: var(--radius-md);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.voice-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--success);
-    box-shadow: 0 0 6px var(--success);
 }
 
 /* Modals */
@@ -1644,10 +1496,6 @@ html .main-view.has-custom-bg .input-area {
     100% {
         transform: translate(0, 0) rotate(0deg);
     }
-}
-
-.hype-shake {
-    animation: screenShake 0.4s cubic-bezier(.36, .07, .19, .97) both;
 }
 
 /* scaleUpModal, scaleDownModal keyframes removed — now GSAP */
@@ -2207,25 +2055,11 @@ a {
    ============================================================ */
 
 /* Glow pulse on hover — for nav items, icons */
-.hover-glow {
-    transition: box-shadow 0.25s ease, transform 0.25s ease, filter 0.25s ease;
-}
-.hover-glow:hover {
-    box-shadow: 0 0 0 2px var(--accent-primary-alpha), 0 0 20px var(--accent-primary-alpha);
-    filter: brightness(1.12);
-}
-
 /* Press effect — for buttons */
-.hover-press {
-    transition: transform 0.12s ease, box-shadow 0.12s ease;
-}
 .hover-press:hover  { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
 .hover-press:active { transform: translateY(1px)  scale(0.97); box-shadow: none; }
 
 /* Scale bounce — for avatars, cards, icons */
-.hover-scale {
-    transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
 .hover-scale:hover { transform: scale(1.08); }
 
 /* Reveal underline for text links */
@@ -2370,10 +2204,6 @@ a {
 .channel-item:hover { transform: translateX(2px); background: var(--bg-hover, rgba(255,255,255,0.06)); }
 
 /* Interactive card surface — ripple-ready */
-.interactive-surface {
-    transition: background 0.2s ease, box-shadow 0.2s ease;
-    cursor: pointer;
-}
 .interactive-surface:hover { background: var(--hover-overlay); box-shadow: inset 0 0 0 1px var(--accent-primary-alpha); }
 .interactive-surface:active { background: var(--active-overlay); }
 
@@ -2415,10 +2245,6 @@ a {
     60%  { filter: drop-shadow(-4px 0 0 rgba(255,50,0,0.7)) drop-shadow(4px 0 0 rgba(0,100,255,0.7)); }
     75%  { filter: drop-shadow(2px 0 0 rgba(255,0,0,0.5)) drop-shadow(-2px 0 0 rgba(0,255,255,0.5)); }
     100% { filter: none; }
-}
-
-.legendary-chromatic {
-    animation: chromaticAberration 1s ease-in-out both;
 }
 
 @keyframes celebrationBurst {
@@ -2528,14 +2354,6 @@ a {
 }
 
 /* Theme preview card */
-.theme-preview-card {
-    position: relative;
-    border-radius: 10px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border: 2px solid transparent;
-}
 .theme-preview-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
 .theme-preview-card.selected { border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--accent-primary-alpha), 0 8px 24px rgba(0,0,0,0.4); }
 
@@ -2743,31 +2561,12 @@ a {
     to   { opacity: 1; clip-path: circle(150% at 50% 50%); }
 }
 
-.page-morph-in {
-    animation: viewTransitionMorph 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
 @keyframes confetti-fall {
     0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
     100% { transform: translateY(100vh)  rotate(720deg); opacity: 0; }
 }
 
-.confetti-piece {
-    position: fixed;
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
-    pointer-events: none;
-    z-index: var(--z-toast);
-    animation: confetti-fall linear forwards;
-}
-
 /* 3D Tilt effect using CSS custom props set by JS */
-.tilt-card {
-    transform-style: preserve-3d;
-    transition: transform 0.1s ease;
-}
-
 /* ============================================================
    PHASE 33: DISPLAY NAME STYLES
    ============================================================ */
@@ -3522,41 +3321,8 @@ body.electron-mac .modal-backdrop {
 }
 
 /* Item 41: Image gallery lightbox navigation */
-.image-lightbox-nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 201;
-  font-size: 18px;
-}
-.image-lightbox-nav:hover {
-  background: rgba(0, 0, 0, 0.8);
-}
 .image-lightbox-nav.prev { left: 16px; }
 .image-lightbox-nav.next { right: 16px; }
-.image-lightbox-counter {
-  position: absolute;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  z-index: 201;
-}
-
 /* ========================
    WAVE 4 — UI/UX Enhancements
    ======================== */
@@ -3730,15 +3496,7 @@ body.electron-mac .modal-backdrop {
 }
 
 /* ── Item 42: Mobile theme editor (future ThemeEditor) ── */
-.theme-editor-split {
-  display: flex;
-  gap: 24px;
-}
 .theme-editor-preview,
-.theme-editor-controls {
-  flex: 1;
-  min-width: 0;
-}
 @media (max-width: 768px) {
   .theme-editor-split {
     flex-direction: column;
@@ -3823,20 +3581,6 @@ body.electron-mac .modal-backdrop {
 }
 
 /* ── Item 44: Swipe indicator for sidebar ── */
-.swipe-indicator {
-  position: fixed;
-  top: 50%;
-  left: 0;
-  width: 4px;
-  height: 60px;
-  transform: translateY(-50%);
-  background: var(--accent-primary);
-  border-radius: 0 4px 4px 0;
-  opacity: 0;
-  transition: opacity 0.2s, width 0.2s;
-  z-index: 497;
-  pointer-events: none;
-}
 .swipe-indicator.active {
   opacity: 0.6;
   width: 6px;
@@ -4159,10 +3903,6 @@ html.low-data-mode .ambient-video {
 }
 
 /* Queued message indicator */
-.message-queued {
-  opacity: 0.6;
-  position: relative;
-}
 .message-queued::after {
   content: 'Sending...';
   position: absolute;
@@ -4199,19 +3939,6 @@ html.low-data-mode .ambient-video {
 }
 
 /* ── Item 137: Swipe edge indicator for sidebar ── */
-.swipe-edge-indicator {
-  position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: var(--accent-primary);
-  opacity: 0;
-  transition: opacity 0.15s ease, width 0.15s ease;
-  z-index: 600;
-  pointer-events: none;
-  border-radius: 0 4px 4px 0;
-}
 .swipe-edge-indicator.active {
   opacity: 0.7;
   width: 6px;
@@ -4310,11 +4037,6 @@ img[loading="lazy"][src] {
 }
 
 /* ── Performance: content-visibility for off-screen elements ── */
-.message-item {
-  content-visibility: auto;
-  contain-intrinsic-size: 0 60px;
-}
-
 /* ── Performance: GPU compositing for animated elements ── */
 .channel-sidebar,
 .guild-rail,
@@ -4353,13 +4075,6 @@ img[loading="lazy"][src] {
 }
 
 /* ── Search result text mark highlight ── */
-.search-match-text {
-  background: rgba(250, 204, 21, 0.35);
-  color: inherit;
-  border-radius: 2px;
-  padding: 0 1px;
-}
-
 /* ── Guild rail unread dot pulse animation ── */
 @keyframes guild-unread-pulse {
   0%, 100% { transform: translateY(-50%) scale(1); opacity: 1; }
@@ -4890,13 +4605,6 @@ textarea:focus-visible,
 }
 
 /* Generic: hover bg secondary (transparent → bg-secondary) */
-.hover-bg-secondary {
-    transition: background 0.12s;
-}
-.hover-bg-secondary:hover {
-    background: var(--bg-secondary) !important;
-}
-
 /* Generic: hover bg elevated */
 .hover-bg-elevated {
     transition: background 0.15s;
@@ -4964,14 +4672,6 @@ textarea:focus-visible,
 }
 
 /* Screen recorder btn: text primary + bg secondary on hover */
-.hover-recorder-btn {
-    transition: color 0.15s, background 0.15s;
-}
-.hover-recorder-btn:hover {
-    color: var(--text-primary) !important;
-    background: var(--bg-secondary) !important;
-}
-
 /* Hover opacity dim */
 .hover-opacity-dim {
     transition: opacity 0.15s;
@@ -5068,21 +4768,7 @@ textarea:focus-visible,
 }
 
 /* AccountSwitcher add button: transparent → bg-primary */
-.hover-bg-primary {
-    transition: background 0.15s;
-}
-.hover-bg-primary:hover {
-    background: var(--bg-primary) !important;
-}
-
 /* ProfilePet: scale up on hover */
-.hover-scale-up {
-    transition: transform 0.2s;
-}
-.hover-scale-up:hover {
-    transform: scale(1.2) !important;
-}
-
 /* Opacity 0.85 on hover */
 .hover-opacity-85 {
     transition: opacity 0.15s;
@@ -5272,19 +4958,6 @@ body.gratonite-exp-reduced-motion *::after {
   }
 }
 
-.trust-card {
-  position: relative;
-  padding: 16px;
-  border: 2px solid var(--stroke-light);
-  border-radius: 8px;
-  background: var(--background-secondary);
-  animation: trustCardFadeIn 0.5s ease-out forwards;
-  transition: all 0.2s ease-in-out;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
 .trust-card::before {
   content: '';
   position: absolute;
@@ -5300,45 +4973,8 @@ body.gratonite-exp-reduced-motion *::after {
   pointer-events: none;
 }
 
-.trust-card:hover {
-  border-color: var(--trust-color);
-  animation: trustCardHoverGlow 0.3s ease-out forwards;
-}
-
 .trust-card:hover::before {
   opacity: 0.1;
-}
-
-.trust-card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.trust-card-icon-wrapper {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  animation: trustCardFadeIn 0.6s ease-out;
-}
-
-.trust-card-badge {
-  display: inline-block;
-  padding: 4px 8px;
-  border: 1px solid;
-  border-color: var(--trust-color);
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--trust-color);
-  white-space: nowrap;
-  background: rgba(212, 175, 55, 0.05);
 }
 
 .trust-card-badge[style*="--trust-color: #9333ea"] {
@@ -5351,22 +4987,6 @@ body.gratonite-exp-reduced-motion *::after {
 
 .trust-card-badge[style*="--trust-color: #666666"] {
   background: rgba(102, 102, 102, 0.05);
-}
-
-.trust-card-title {
-  font-size: var(--text-lg);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-  animation: trustCardFadeIn 0.7s ease-out;
-}
-
-.trust-card-description {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  margin: 0;
-  line-height: var(--leading-normal);
-  animation: trustCardFadeIn 0.8s ease-out;
 }
 
 /* Responsive grid for trust cards */
@@ -5405,22 +5025,6 @@ body.gratonite-exp-reduced-motion *::after {
   }
 }
 
-.first-run-checklist-skeleton {
-  background: var(--background-secondary);
-  border: 2px solid var(--stroke-light);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.checklist-skeleton-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
 .skeleton-title {
   width: 200px;
   height: 24px;
@@ -5438,30 +5042,6 @@ body.gratonite-exp-reduced-motion *::after {
   animation-delay: 0.1s;
 }
 
-.skeleton-progress-bar {
-  width: 100%;
-  height: 8px;
-  background: var(--stroke);
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 16px;
-}
-
-.skeleton-progress-fill {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, var(--stroke) 0%, var(--stroke-light) 50%, var(--stroke) 100%);
-  animation: skeletonPulse 1.5s ease-in-out infinite;
-}
-
-.skeleton-task-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 8px 0;
-  animation: skeletonPulse 1.5s ease-in-out infinite;
-}
-
 .skeleton-icon {
   width: 18px;
   height: 18px;
@@ -5471,29 +5051,10 @@ body.gratonite-exp-reduced-motion *::after {
   animation-delay: 0.05s;
 }
 
-.skeleton-task-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
 .skeleton-text {
   background: linear-gradient(90deg, var(--stroke) 0%, var(--stroke-light) 50%, var(--stroke) 100%);
   border-radius: 4px;
   animation: skeletonPulse 1.5s ease-in-out infinite;
-}
-
-.skeleton-text-lg {
-  width: 100%;
-  height: 16px;
-  animation-delay: 0.1s;
-}
-
-.skeleton-text-sm {
-  width: 85%;
-  height: 12px;
-  animation-delay: 0.15s;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -6167,49 +5728,6 @@ body.gratonite-exp-reduced-motion *::after {
 }
 
 /* Guild identity card */
-.guild-identity-card {
-  padding: 24px;
-  border: 3px solid var(--stroke);
-  border-radius: 0;
-  background: var(--bg-elevated);
-  display: grid;
-  gap: 16px;
-  box-shadow: var(--shadow-panel, 8px 8px 0 #000);
-}
-
-.guild-icon-container {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 8px;
-}
-
-.guild-identity-icon {
-  width: 100px;
-  height: 100px;
-  border-radius: 16px;
-  border: 4px solid var(--accent-primary);
-  object-fit: cover;
-}
-
-.guild-identity-icon-fallback {
-  width: 100px;
-  height: 100px;
-  border-radius: 16px;
-  border: 4px solid var(--accent-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 40px;
-  font-weight: 800;
-  color: white;
-}
-
-.guild-identity-content {
-  display: grid;
-  gap: 12px;
-  text-align: center;
-}
-
 .guild-name {
   font-size: 20px;
   font-weight: 800;
@@ -6239,12 +5757,6 @@ body.gratonite-exp-reduced-motion *::after {
 
 .guild-owner {
   color: var(--text-secondary);
-}
-
-.owner-name {
-  color: var(--accent-primary);
-  font-weight: 700;
-  cursor: pointer;
 }
 
 .guild-description {
