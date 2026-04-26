@@ -190,12 +190,14 @@ const Inventory = () => {
                 // Persist nameplate to user profile
                 if (item.type === 'nameplate') {
                     const style = (cfg.nameplateStyle as string) ?? 'none';
-                    api.users.updateProfile({ nameplateStyle: style }).catch(() => {});
+                    api.users.updateProfile({ nameplateStyle: style })
+                        .catch(() => addToast({ title: "Couldn't save nameplate. Try again.", variant: 'error' }));
                 }
             } else {
                 clearEquippedItem(item.type, userId);
                 if (item.type === 'nameplate') {
-                    api.users.updateProfile({ nameplateStyle: 'none' }).catch(() => {});
+                    api.users.updateProfile({ nameplateStyle: 'none' })
+                        .catch(() => addToast({ title: "Couldn't clear nameplate. Try again.", variant: 'error' }));
                 }
             }
 

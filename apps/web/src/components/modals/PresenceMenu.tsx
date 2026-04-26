@@ -3,6 +3,7 @@ import { User, Smile, Check, Paintbrush, LogOut, Gamepad2, Headphones, Eye } fro
 import { useTheme, AppTheme } from '../ui/ThemeProvider';
 import { api } from '../../lib/api';
 import { getSocket } from '../../lib/socket';
+import { useToast } from '../ui/ToastManager';
 
 export type PresenceType = 'online' | 'idle' | 'dnd' | 'invisible';
 
@@ -44,6 +45,7 @@ const STATUS_EXPIRY_OPTIONS = [
 const STATUS_EMOJIS = ['😀','😊','😎','🤔','😴','🎮','💻','🎵','📚','🏃','🍕','☕','🎉','❤️','🔥','✨','👀','💯','🌙','🤖'];
 
 const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, customStatus, onChangeStatus, onOpenProfile, onLogout, userName, avatarUrl }: PresenceMenuProps) => {
+    const { addToast } = useToast();
     const [isEditingStatus, setIsEditingStatus] = useState(false);
     const [statusInput, setStatusInput] = useState(customStatus || '');
     const [statusEmoji, setStatusEmoji] = useState('');
@@ -87,19 +89,22 @@ const PresenceMenu = ({ isOpen, onClose, currentPresence, onChangePresence, cust
         else if (statusExpiry === '4h') expiresAt = new Date(Date.now() + 14400000).toISOString();
         else if (statusExpiry === 'today') { const d = new Date(); d.setHours(23, 59, 59, 999); expiresAt = d.toISOString(); }
         else if (statusExpiry === 'week') { const d = new Date(); d.setDate(d.getDate() + (7 - d.getDay())); d.setHours(23, 59, 59, 999); expiresAt = d.toISOString(); }
-        api.users.updateCustomStatus({ text, expiresAt, emoji: statusEmoji || null }).catch(() => {});
+        api.users.updateCustomStatus({ text, expiresAt, emoji: statusEmoji || null })
+            .catch(() => addToast({ title: "Couldn't update status. Try again.", variant: 'error' }));
         setIsEditingStatus(false);
     };
 
     const handleSetActivity = () => {
         if (activityName.trim()) {
             const activity = { type: activityType, name: activityName.trim() };
-            api.users.setActivity(activity).catch(() => {});
+            api.users.setActivity(activity)
+                .catch(() => addToast({ title: "Couldn't update activity. Try again.", variant: 'error' }));
             // Also emit via socket so presence updates in real-time
             const socket = getSocket();
             socket?.emit('PRESENCE_UPDATE', { status: currentPresence === 'invisible' ? 'invisible' : currentPresence, activity });
         } else {
-            api.users.clearActivity().catch(() => {});
+            api.users.clearActivity()
+                .catch(() => addToast({ title: "Couldn't clear activity. Try again.", variant: 'error' }));
             const socket = getSocket();
             socket?.emit('PRESENCE_UPDATE', { status: currentPresence === 'invisible' ? 'invisible' : currentPresence, activity: null });
         }

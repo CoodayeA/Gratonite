@@ -2389,6 +2389,7 @@ const DirectMessage = () => {
                 }
             }).catch(() => {
                 setMessages(prev => prev.filter(m => m.id !== optimisticId));
+                addToast({ title: "Couldn't send GIF. Try again.", variant: 'error' });
             });
         }
     };
