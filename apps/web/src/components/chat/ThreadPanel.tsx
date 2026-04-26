@@ -556,9 +556,12 @@ const ThreadPanel = ({ originalMessage, channelId, onClose, onJumpToParent }: Th
                         )}
                     </div>
                     {threadListLoading ? (
-                        <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-muted)', fontSize: '12px' }}>Loading threads...</div>
+                        <div style={{ textAlign: 'center', padding: '20px 12px', color: 'var(--text-muted)', fontSize: '12px' }}>Loading threads...</div>
                     ) : filteredThreads.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-muted)', fontSize: '12px' }}>No threads found</div>
+                        <div style={{ textAlign: 'center', padding: '20px 12px', color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.5 }}>
+                            <div style={{ fontWeight: 600, marginBottom: '2px' }}>No threads in this channel</div>
+                            <div style={{ fontSize: '11px', opacity: 0.8 }}>Reply to a message to start one.</div>
+                        </div>
                     ) : (
                         <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             {filteredThreads.map(t => (

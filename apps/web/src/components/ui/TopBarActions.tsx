@@ -319,7 +319,11 @@ export const TopBarActions = () => {
 
                     <div style={{ maxHeight: '300px', overflowY: 'auto', padding: '8px' }}>
                         {notifications.length === 0 ? (
-                            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>No notifications</div>
+                            <div style={{ padding: '32px 24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                <Bell size={32} style={{ opacity: 0.3, marginBottom: '10px' }} />
+                                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>You're all caught up</div>
+                                <div style={{ fontSize: '12px' }}>New mentions and replies will show up here.</div>
+                            </div>
                         ) : notifications.map(n => (
                             <div
                                 key={n.id}

@@ -2693,7 +2693,11 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 {filteredAudit.length === 0 && (
-                                    <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '14px' }}>No entries for this filter yet.</div>
+                                    <div style={{ textAlign: 'center', padding: '40px 24px', color: 'var(--text-muted)' }}>
+                                        <Activity size={32} style={{ opacity: 0.3, marginBottom: '10px' }} />
+                                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>No matching audit events</div>
+                                        <div style={{ fontSize: '12px' }}>Try widening the filter or selecting a different time range.</div>
+                                    </div>
                                 )}
                                 {filteredAudit.map(entry => (
                                     <div key={entry.id} onMouseEnter={() => setHoveredBtn(`audit-${entry.id}`)} onMouseLeave={() => setHoveredBtn(null)}
