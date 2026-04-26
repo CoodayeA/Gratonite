@@ -149,7 +149,7 @@ export default function AdminPortals() {
                 overflow: 'hidden', color: 'white', fontWeight: 700, fontSize: '18px',
               }}>
                 {portal.iconHash ? (
-                  <img src={`${API_BASE}/files/${portal.iconHash}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={`${API_BASE}/files/${portal.iconHash}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
                 ) : (
                   portal.name.charAt(0).toUpperCase()
                 )}

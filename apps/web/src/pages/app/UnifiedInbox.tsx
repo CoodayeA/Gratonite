@@ -345,8 +345,7 @@ const UnifiedInbox = () => {
                                             <img
                                                 src={`${API_BASE}/files/${group.guildIconHash}`}
                                                 alt=""
-                                                style={{ width: 24, height: 24, borderRadius: '6px', objectFit: 'cover' }}
-                                            />
+                                                style={{ width: 24, height: 24, borderRadius: '6px', objectFit: 'cover' }} loading="lazy" />
                                         ) : (
                                             <div style={{
                                                 width: 24, height: 24, borderRadius: '6px',

@@ -313,7 +313,7 @@ export default function FederationAdmin() {
                 <Card key={g.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {g.iconUrl ? (
-                      <img src={g.iconUrl} alt="" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }} />
+                      <img src={g.iconUrl} alt="" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }} loading="lazy" />
                     ) : (
                       <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '14px', color: 'var(--text-muted)' }}>
                         {g.name.charAt(0)}

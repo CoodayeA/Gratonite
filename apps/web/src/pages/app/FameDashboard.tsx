@@ -972,8 +972,7 @@ const FameDashboard = () => {
                                                     width: '52px', height: '52px', borderRadius: '14px',
                                                     objectFit: 'cover', flexShrink: 0
                                                 }}
-                                                onError={() => setBrokenServerIcons(prev => new Set([...prev, server.id]))}
-                                            />
+                                                onError={() => setBrokenServerIcons(prev => new Set([...prev, server.id]))} loading="lazy" />
                                         ) : (
                                             <div style={{
                                                 width: '52px', height: '52px', borderRadius: '14px',

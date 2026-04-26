@@ -49,7 +49,7 @@ export const ReactionBadge = ({ emoji, emojiUrl, isCustom, count, me, messageApi
                 className={bouncing ? 'reaction-bounce' : undefined}
                 style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '12px', background: me ? 'rgba(var(--accent-primary-rgb, 139,92,246), 0.15)' : 'var(--bg-tertiary)', border: `1px solid ${me ? 'var(--accent-primary)' : 'var(--stroke)'}`, cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', transition: 'all 0.15s', position: 'relative' }}
             >
-                {isCustom && emojiUrl ? <img src={emojiUrl} width={16} height={16} alt={emoji} style={{ verticalAlign: 'middle' }} /> : <span>{emoji}</span>} <span style={{ fontSize: '11px', fontWeight: 600 }}>{count}</span>
+                {isCustom && emojiUrl ? <img src={emojiUrl} width={16} height={16} alt={emoji} style={{ verticalAlign: 'middle' }} loading="lazy" /> : <span>{emoji}</span>} <span style={{ fontSize: '11px', fontWeight: 600 }}>{count}</span>
                 {tooltip && (
                     <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '8px 10px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', zIndex: 50, minWidth: '120px', fontSize: '12px', color: 'var(--text-primary)', pointerEvents: 'auto' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

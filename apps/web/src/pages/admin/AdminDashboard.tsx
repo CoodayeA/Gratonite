@@ -583,7 +583,7 @@ export default function AdminDashboard() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, overflow: 'hidden' }}>
                       {user.avatarHash ? (
-                        <img src={`${API_BASE}/files/${user.avatarHash}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={`${API_BASE}/files/${user.avatarHash}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
                       ) : (
                         user.username?.charAt(0).toUpperCase()
                       )}

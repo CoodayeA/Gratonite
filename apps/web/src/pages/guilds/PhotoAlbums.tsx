@@ -182,7 +182,7 @@ export default function PhotoAlbums({ guildId }: PhotoAlbumsProps) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
             {activeAlbum.photos.map((photo, i) => (
               <div key={photo.id} className="photo-grid-item" style={{ position: 'relative', aspectRatio: '1', cursor: 'pointer' }} onClick={() => setLightboxIndex(i)}>
-                <img src={photo.fileUrl} alt={photo.caption || ''} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />
+                <img src={photo.fileUrl} alt={photo.caption || ''} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} loading="lazy" />
                 <div className="photo-overlay" style={{ position: 'absolute', inset: 0, background: 'transparent', borderRadius: 8, transition: 'background 0.2s' }} />
                 {photo.caption && (
                   <div className="photo-caption" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 6, fontSize: 12, color: 'white', background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)', borderRadius: '0 0 8px 8px', opacity: 0, transition: 'opacity 0.2s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -292,7 +292,7 @@ export default function PhotoAlbums({ guildId }: PhotoAlbumsProps) {
             >
               <div style={{ aspectRatio: '16/9', background: 'var(--bg-tertiary)', position: 'relative' }}>
                 {album.coverUrl ? (
-                  <img src={album.coverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={album.coverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <ImagePlus style={{ width: 32, height: 32, color: 'var(--text-muted)' }} />

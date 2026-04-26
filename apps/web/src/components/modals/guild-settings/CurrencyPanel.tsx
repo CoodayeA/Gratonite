@@ -416,7 +416,7 @@ export default function CurrencyPanel({ guildId, addToast }: CurrencyPanelProps)
                                         <RankBadge rank={idx + 1} />
                                         <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: '#000', overflow: 'hidden', flexShrink: 0 }}>
                                             {avatar
-                                                ? <img src={`${API_BASE}/files/${avatar}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                ? <img src={`${API_BASE}/files/${avatar}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
                                                 : name.charAt(0).toUpperCase()}
                                         </div>
                                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -477,7 +477,7 @@ export default function CurrencyPanel({ guildId, addToast }: CurrencyPanelProps)
                                         >
                                             <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, color: '#000', overflow: 'hidden', flexShrink: 0 }}>
                                                 {m.avatarHash
-                                                    ? <img src={`${API_BASE}/files/${m.avatarHash}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ? <img src={`${API_BASE}/files/${m.avatarHash}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
                                                     : m.username.charAt(0).toUpperCase()}
                                             </div>
                                             {m.username}

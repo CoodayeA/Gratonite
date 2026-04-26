@@ -321,8 +321,7 @@ const CustomEmojiInline = ({ name, url }: { name: string; url: string }) => (
         style={{
             width: '22px', height: '22px', verticalAlign: 'middle',
             objectFit: 'contain', margin: '0 2px', display: 'inline-block',
-        }}
-    />
+        }} loading="lazy" />
 );
 
 // ─── Image URL detection ──────────────────────────────────────────────────────

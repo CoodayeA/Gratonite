@@ -516,7 +516,7 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                                                     const name = emoji.slice(1, -1);
                                                     const match = serverEmojis.find(e => e.name === name);
                                                     return match
-                                                        ? <img src={match.url} alt={name} style={{ width: '26px', height: '26px', borderRadius: '4px', objectFit: 'contain' }} />
+                                                        ? <img src={match.url} alt={name} style={{ width: '26px', height: '26px', borderRadius: '4px', objectFit: 'contain' }} loading="lazy" />
                                                         : <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{emoji}</span>;
                                                 })()
                                             ) : emoji}
@@ -555,7 +555,7 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                                                         const name = emoji.slice(1, -1);
                                                         const match = serverEmojis.find(e => e.name === name);
                                                         return match
-                                                            ? <img src={match.url} alt={name} style={{ width: '26px', height: '26px', borderRadius: '4px', objectFit: 'contain' }} />
+                                                            ? <img src={match.url} alt={name} style={{ width: '26px', height: '26px', borderRadius: '4px', objectFit: 'contain' }} loading="lazy" />
                                                             : <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{emoji}</span>;
                                                     })()
                                                 ) : emoji}
@@ -592,7 +592,7 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                                                 className="hover-bg-tertiary"
                                                 title={`:${emoji.name}:`}
                                             >
-                                                <img src={emoji.url} alt={emoji.name} style={{ width: '26px', height: '26px', borderRadius: '4px', objectFit: 'contain' }} />
+                                                <img src={emoji.url} alt={emoji.name} style={{ width: '26px', height: '26px', borderRadius: '4px', objectFit: 'contain' }} loading="lazy" />
                                             </button>
                                             );
                                         })}
@@ -632,7 +632,7 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                                                     const name = emoji.slice(1, -1);
                                                     const match = serverEmojis.find(e => e.name === name);
                                                     return match
-                                                        ? <img src={match.url} alt={name} style={{ width: '26px', height: '26px', borderRadius: '4px', objectFit: 'contain' }} />
+                                                        ? <img src={match.url} alt={name} style={{ width: '26px', height: '26px', borderRadius: '4px', objectFit: 'contain' }} loading="lazy" />
                                                         : <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{emoji}</span>;
                                                 })()
                                             ) : emoji}

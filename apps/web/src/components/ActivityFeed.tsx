@@ -171,7 +171,7 @@ export function ActivityFeed() {
                   flexShrink: 0,
                 }}>
                   {event.avatarHash ? (
-                    <img src={`${API_BASE}/files/${event.avatarHash}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={`${API_BASE}/files/${event.avatarHash}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
                   ) : (
                     <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)' }}>
                       {(event.displayName || event.username).charAt(0).toUpperCase()}

@@ -70,7 +70,7 @@ function GuildStickersPanel({ guildId, addToast }: { guildId: string; addToast: 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
                     {stickers.map(sticker => (
                         <div key={sticker.id} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '10px', padding: '12px', textAlign: 'center', position: 'relative' }}>
-                            <img src={sticker.assetUrl} alt={sticker.name} style={{ width: '80px', height: '80px', objectFit: 'contain', borderRadius: '8px', marginBottom: '8px' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                            <img src={sticker.assetUrl} alt={sticker.name} style={{ width: '80px', height: '80px', objectFit: 'contain', borderRadius: '8px', marginBottom: '8px' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} loading="lazy" />
                             <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{sticker.name}</div>
                             {sticker.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{sticker.description}</div>}
                             <button onClick={() => handleDelete(sticker.id)} style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(239, 68, 68, 0.15)', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ef4444' }}>

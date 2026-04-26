@@ -293,7 +293,7 @@ function GuildInvitesPanel({ guildId, addToast }: { guildId: string; addToast: A
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
                                     <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, color: '#000', flexShrink: 0, overflow: 'hidden' }}>
                                         {inv.inviterAvatar
-                                            ? <img src={`${API_BASE}/files/${inv.inviterAvatar}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ? <img src={`${API_BASE}/files/${inv.inviterAvatar}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
                                             : inv.inviterName.charAt(0).toUpperCase()}
                                     </div>
                                     <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.inviterName}</span>

@@ -954,7 +954,7 @@ export const MemoizedMessageItem = memo(({
                                                     <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', padding: '4px 6px', borderRadius: '6px' }}>
                                                         <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--accent-primary)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, color: '#fff', overflow: 'hidden' }}>
                                                             {r.avatarHash
-                                                                ? <img src={`${API_BASE}/files/${r.avatarHash}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                                                ? <img src={`${API_BASE}/files/${r.avatarHash}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} loading="lazy" />
                                                                 : r.author.charAt(0).toUpperCase()
                                                             }
                                                         </div>

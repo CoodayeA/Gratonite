@@ -3116,7 +3116,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                         <div key={emoji.id || emoji.name} onMouseEnter={() => setHoveredBtn(`emoji-${emoji.name}`)} onMouseLeave={() => setHoveredBtn(null)}
                                             style={{ background: hoveredBtn === `emoji-${emoji.name}` ? 'var(--hover-overlay)' : 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', position: 'relative', transition: 'background 0.15s' }}
                                         >
-                                            <img src={emoji.url} alt={emoji.name} style={{ width: '32px', height: '32px', borderRadius: '4px', objectFit: 'contain' }} />
+                                            <img src={emoji.url} alt={emoji.name} style={{ width: '32px', height: '32px', borderRadius: '4px', objectFit: 'contain' }} loading="lazy" />
                                             <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', wordBreak: 'break-all' }}>:{emoji.name}:</div>
                                             {/* Category selector */}
                                             {emojiCategories.length > 0 && (

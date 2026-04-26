@@ -373,7 +373,7 @@ export default function BoostsPanel({ guildId, addToast }: BoostsPanelProps) {
                             <div key={b.userId} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', borderBottom: idx < Math.min(boosters.length, 10) - 1 ? '1px solid var(--stroke)' : 'none' }}>
                                 <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: '#000', overflow: 'hidden', flexShrink: 0 }}>
                                     {b.avatarHash
-                                        ? <img src={`${API_BASE}/files/${b.avatarHash}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ? <img src={`${API_BASE}/files/${b.avatarHash}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
                                         : (b.username || 'U').charAt(0).toUpperCase()}
                                 </div>
                                 <span style={{ flex: 1, fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>

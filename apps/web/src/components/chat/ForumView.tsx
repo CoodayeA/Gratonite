@@ -166,7 +166,7 @@ function PendingAttachmentList({
                 return (
                     <div key={`${file.name}-${index}`} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 10px', background: 'var(--bg-tertiary)', border: `1px solid ${isFailed ? 'var(--error)' : 'var(--stroke)'}`, borderRadius: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                            {file.previewUrl ? <img src={file.previewUrl} alt="" style={{ width: 22, height: 22, borderRadius: 4, objectFit: 'cover' }} /> : <FileIcon size={13} />}
+                            {file.previewUrl ? <img src={file.previewUrl} alt="" style={{ width: 22, height: 22, borderRadius: 4, objectFit: 'cover' }} loading="lazy" /> : <FileIcon size={13} />}
                             <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
                             <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{file.sizeLabel}</span>
                             {isUploading && <span style={{ color: 'var(--accent-primary)', fontSize: '10px' }}>{pct}%</span>}
@@ -204,7 +204,7 @@ function ExistingAttachmentList({
             {attachments.map((attachment) => (
                 <div key={attachment.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 10px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                     {attachment.mimeType?.startsWith('image/')
-                        ? <img src={attachment.url} alt="" style={{ width: 22, height: 22, borderRadius: 4, objectFit: 'cover' }} />
+                        ? <img src={attachment.url} alt="" style={{ width: 22, height: 22, borderRadius: 4, objectFit: 'cover' }} loading="lazy" />
                         : <FileIcon size={13} />}
                     <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{attachment.filename}</span>
                     <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{formatFileSize(attachment.size)}</span>

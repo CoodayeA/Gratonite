@@ -141,7 +141,7 @@ export function ReactionSummaryPopover({ emoji, emojiUrl, isCustom, count, messa
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
                                 {isCustom && emojiUrl ? (
-                                    <img src={emojiUrl} width={20} height={20} alt={emoji} />
+                                    <img src={emojiUrl} width={20} height={20} alt={emoji} loading="lazy" />
                                 ) : (
                                     <span style={{ fontSize: '18px' }}>{emoji}</span>
                                 )}

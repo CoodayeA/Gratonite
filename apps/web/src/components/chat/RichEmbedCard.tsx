@@ -130,8 +130,7 @@ export function RichEmbedCard({ embed }: Props) {
               borderRadius: '6px',
               objectFit: 'cover',
             }}
-            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
+            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} loading="lazy" />
         </div>
       )}
     </div>

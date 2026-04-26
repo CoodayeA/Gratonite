@@ -1515,8 +1515,7 @@ const SettingsModal = ({
                                                                 <img
                                                                     src={`${API_BASE}/files/${server.iconHash}`}
                                                                     alt={server.name}
-                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px' }}
-                                                                />
+                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px' }} loading="lazy" />
                                                             ) : (
                                                                 server.name.charAt(0).toUpperCase()
                                                             )}
@@ -1832,8 +1831,7 @@ const SettingsModal = ({
                                                             <img
                                                                 src={`${API_BASE}/files/${ctxUser.avatarHash}`}
                                                                 alt="Avatar preview"
-                                                                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-                                                            />
+                                                                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} loading="lazy" />
                                                         ) : (
                                                             <div style={{
                                                                 width: '100%', height: '100%', borderRadius: '50%',

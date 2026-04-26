@@ -118,7 +118,7 @@ export function EmbedCard({ embed }: Props) {
         <div style={{ padding: '10px 14px 8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
             {faviconSrc && !faviconError && (
-              <img src={faviconSrc} width={14} height={14} alt="" style={{ borderRadius: '2px', flexShrink: 0 }} onError={() => setFaviconError(true)} />
+              <img src={faviconSrc} width={14} height={14} alt="" style={{ borderRadius: '2px', flexShrink: 0 }} onError={() => setFaviconError(true)} loading="lazy" />
             )}
             <span style={{ fontSize: '11px', color: accent, fontWeight: 600 }}>{embed.siteName || 'YouTube'}</span>
           </div>
@@ -310,7 +310,7 @@ export function EmbedCard({ embed }: Props) {
         <div className="embed-card-content" style={{ padding: '12px 14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
             {faviconSrc && !faviconError && (
-              <img src={faviconSrc} width={14} height={14} alt="" style={{ borderRadius: '2px', flexShrink: 0 }} onError={() => setFaviconError(true)} />
+              <img src={faviconSrc} width={14} height={14} alt="" style={{ borderRadius: '2px', flexShrink: 0 }} onError={() => setFaviconError(true)} loading="lazy" />
             )}
             <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
               {embed.siteName || domain}

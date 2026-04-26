@@ -296,7 +296,7 @@ const FederatedJoinModal = ({ portal, onClose }: { portal: FederatedPortalInfo; 
                     {/* Guild icon */}
                     <div style={{ position: 'absolute', bottom: -28, left: 24, width: '56px', height: '56px', borderRadius: '14px', background: 'var(--bg-elevated)', border: '3px solid var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
                         {portal.iconUrl ? (
-                            <img src={portal.iconUrl} alt={portal.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={portal.iconUrl} alt={portal.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
                         ) : (
                             portal.name.charAt(0).toUpperCase()
                         )}
@@ -800,9 +800,9 @@ const Discover = () => {
                     <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '14px', padding: '14px', borderRadius: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)' }}>
                         <div style={{ width: '44px', height: '44px', borderRadius: '10px', overflow: 'hidden', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '16px' }}>
                             {fedResolved.avatarUrl ? (
-                                <img src={fedResolved.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <img src={fedResolved.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
                             ) : fedResolved.avatarHash ? (
-                                <img src={`${API_BASE}/files/${fedResolved.avatarHash}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <img src={`${API_BASE}/files/${fedResolved.avatarHash}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
                             ) : (
                                 (fedResolved.displayName || fedResolved.username || '?').charAt(0).toUpperCase()
                             )}
@@ -874,7 +874,7 @@ const Discover = () => {
                                         {/* Guild icon */}
                                         <div style={{ position: 'absolute', bottom: '-20px', left: '16px', width: '44px', height: '44px', borderRadius: '10px', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.5)', border: '2px solid var(--stroke)', fontSize: '18px', overflow: 'hidden' }}>
                                             {portal.iconUrl ? (
-                                                <img src={portal.iconUrl} alt={portal.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                <img src={portal.iconUrl} alt={portal.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
                                             ) : (
                                                 portal.name.charAt(0).toUpperCase()
                                             )}
