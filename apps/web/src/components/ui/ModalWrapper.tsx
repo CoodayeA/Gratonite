@@ -35,15 +35,19 @@ const FOCUSABLE_SELECTOR = [
  */
 function useFocusTrap(isOpen: boolean, onEscape?: () => void) {
     const containerRef = useRef<HTMLDivElement>(null);
-    const previousFocusRef = useRef<Element | null>(null);
     const onCloseRef = useRef(onEscape);
     useEffect(() => { onCloseRef.current = onEscape; }, [onEscape]);
 
-    // Save the element that was focused before the modal opened
+    // Save the previously-focused element when the modal opens, then restore it
+    // when the modal closes (or this hook unmounts while still open).
     useEffect(() => {
-        if (isOpen) {
-            previousFocusRef.current = document.activeElement;
-        }
+        if (!isOpen) return;
+        const previouslyFocused = document.activeElement as HTMLElement | null;
+        return () => {
+            if (previouslyFocused && previouslyFocused instanceof HTMLElement && previouslyFocused.isConnected) {
+                try { previouslyFocused.focus(); } catch { /* ignore */ }
+            }
+        };
     }, [isOpen]);
 
     // Focus the first focusable element (or the container) when the modal opens
@@ -64,18 +68,20 @@ function useFocusTrap(isOpen: boolean, onEscape?: () => void) {
         return () => cancelAnimationFrame(raf);
     }, [isOpen]);
 
-    // Restore focus when modal closes
+    // Document-level ESC listener so it works regardless of which element has focus.
     useEffect(() => {
-        if (isOpen) return;
-        const prev = previousFocusRef.current;
-        return () => {
-            if (prev && prev instanceof HTMLElement && prev.isConnected) {
-                prev.focus();
+        if (!isOpen) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && onCloseRef.current) {
+                e.stopPropagation();
+                onCloseRef.current();
             }
         };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
     }, [isOpen]);
 
-    // Handle Tab / Shift+Tab cycling + Escape
+    // Handle Tab / Shift+Tab cycling (Escape also handled here as a safety net)
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Escape' && onCloseRef.current) {
             e.stopPropagation();
@@ -161,7 +167,24 @@ interface ModalWrapperProps {
 
 export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, onClose, ariaLabel }) => {
     const [shouldRender, setShouldRender] = useState(false);
-    const { containerRef, handleKeyDown } = useFocusTrap(isOpen, onClose);
+
+    // Many call-sites only pass `onClose` to the inner modal child rather than to
+    // ModalWrapper itself. Fall back to the child's `onClose` so ESC/backdrop close
+    // work uniformly without having to touch every call-site.
+    const effectiveOnClose = React.useMemo<(() => void) | undefined>(() => {
+        if (onClose) return onClose;
+        let found: (() => void) | undefined;
+        React.Children.forEach(children, (child) => {
+            if (found) return;
+            if (React.isValidElement(child)) {
+                const childOnClose = (child.props as { onClose?: () => void }).onClose;
+                if (typeof childOnClose === 'function') found = childOnClose;
+            }
+        });
+        return found;
+    }, [onClose, children]);
+
+    const { containerRef, handleKeyDown } = useFocusTrap(isOpen, effectiveOnClose);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const backdropRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
@@ -172,7 +195,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    const { dragOffset, handleTouchStart, handleTouchMove, handleTouchEnd } = useBottomSheetDrag(isMobile, onClose);
+    const { dragOffset, handleTouchStart, handleTouchMove, handleTouchEnd } = useBottomSheetDrag(isMobile, effectiveOnClose);
 
     const prefersReduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -265,7 +288,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
                 {/* Backdrop */}
                 <div
                     ref={backdropRef}
-                    onClick={onClose}
+                    onClick={effectiveOnClose}
                     style={{
                         position: 'absolute', inset: 0,
                         background: 'rgba(0,0,0,0.5)',
@@ -325,14 +348,14 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
         >
             <div
                 ref={backdropRef}
-                onClick={onClose}
+                onClick={effectiveOnClose}
                 style={{
                     position: 'absolute', inset: 0,
                     background: 'rgba(0,0,0,0.5)',
                     pointerEvents: 'auto',
                 }}
             />
-            <div onClick={onClose} style={{ pointerEvents: 'auto', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <div onClick={effectiveOnClose} style={{ pointerEvents: 'auto', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                 <div ref={contentRef} onClick={e => e.stopPropagation()} style={{ maxWidth: '95vw', maxHeight: '90dvh', overflowY: 'auto', width: '100%', height: '100%' }}>
                     {children}
                 </div>
