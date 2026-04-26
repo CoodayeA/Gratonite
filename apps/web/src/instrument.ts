@@ -1,18 +1,18 @@
-import * as Sentry from "@sentry/react";
-
 const rawApiBase = import.meta.env.VITE_API_URL ?? '/api/v1';
 const API_BASE = rawApiBase.endsWith('/api/v1')
   ? rawApiBase
   : `${rawApiBase.replace(/\/$/, '')}/api/v1`;
 const SENTRY_TUNNEL_URL = `${API_BASE.replace(/\/$/, '')}/sentry-tunnel`;
 
-// Expose for console testing
-(window as any).Sentry = Sentry;
-
 let initialized = false;
-export function initSentry() {
+export async function initSentry() {
   if (initialized) return;
   initialized = true;
+  const Sentry = await import('@sentry/react');
+
+  // Expose for console testing
+  (window as any).Sentry = Sentry;
+
   Sentry.init({
   dsn: "https://06e4ca4d04c520405630f744f70700b1@o4511074273329152.ingest.us.sentry.io/4511074372616192",
   tunnel: SENTRY_TUNNEL_URL,

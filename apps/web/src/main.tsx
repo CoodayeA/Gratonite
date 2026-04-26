@@ -2,7 +2,6 @@ import { initSentry } from "./instrument";
 
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import * as Sentry from '@sentry/react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import App from './App.tsx'
 import './index.css'
@@ -16,6 +15,7 @@ import { queryClient } from './lib/queryClient'
 import { init as initErrorReporter } from './lib/errorReporter'
 import { applyWebExperimentsToDocument } from './lib/experiments'
 import { loadGsap } from './lib/gsapLazy'
+import RootErrorBoundary from './components/RootErrorBoundary'
 
 applyWebExperimentsToDocument();
 
@@ -82,7 +82,7 @@ if (localStorage.getItem('gratonite:streamer-mode') === 'true') {
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-    <Sentry.ErrorBoundary fallback={<p>Something went wrong</p>}>
+    <RootErrorBoundary fallback={<p>Something went wrong</p>}>
         <QueryClientProvider client={queryClient}>
             <ThemeProvider>
                 <TrustCardProvider>
@@ -90,5 +90,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 </TrustCardProvider>
             </ThemeProvider>
         </QueryClientProvider>
-    </Sentry.ErrorBoundary>,
+    </RootErrorBoundary>,
 )
