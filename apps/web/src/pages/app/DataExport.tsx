@@ -77,7 +77,11 @@ export default function DataExport() {
       {loading ? (
         <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Loading...</p>
       ) : exports.length === 0 ? (
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No exports yet.</p>
+        <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)' }}>
+          <Download size={28} style={{ opacity: 0.3, marginBottom: '8px' }} />
+          <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 4px' }}>No exports yet</p>
+          <p style={{ fontSize: '12px', margin: 0 }}>Use the button above to request a copy of your data.</p>
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>Previous Exports</h4>

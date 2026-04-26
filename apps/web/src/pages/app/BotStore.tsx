@@ -345,7 +345,10 @@ const BotStore = () => {
             {loadingReviews ? (
               <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Loading reviews…</p>
             ) : reviews.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No reviews yet.</p>
+              <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', border: '1px dashed var(--stroke)', borderRadius: '10px' }}>
+                <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>No reviews yet</div>
+                <div style={{ fontSize: '12px' }}>Be the first to share what you think after trying it.</div>
+              </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {reviews.map((r) => (

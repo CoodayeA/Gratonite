@@ -126,9 +126,10 @@ export default function ActivityFeed({ onClose }: { onClose: () => void }) {
               <button onClick={load} style={{ background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: '6px', padding: '6px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
             </div>
           ) : events.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-              <p>No activity yet.</p>
-              <p style={{ fontSize: '13px' }}>Add friends to see their activity here.</p>
+            <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
+              <Users size={36} style={{ opacity: 0.3, marginBottom: '12px' }} />
+              <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>No activity yet</p>
+              <p style={{ fontSize: '13px' }}>Add friends to see their unlocks, pulls, and milestones here.</p>
             </div>
           ) : events.map(event => {
             const meta = EVENT_ICONS[event.type];
