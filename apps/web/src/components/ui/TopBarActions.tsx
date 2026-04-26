@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { Bell, Search, HelpCircle, X, Users, MessageSquare, Hash, Loader2, Trash2 } from 'lucide-react';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useNavigate } from 'react-router-dom';
@@ -29,10 +30,13 @@ export const TopBarActions = () => {
     const [searching, setSearching] = useState(false);
     const { addToast } = useToast();
     const navigate = useNavigate();
-    const popupRef = useRef<HTMLDivElement>(null);
-    const searchRef = useRef<HTMLDivElement>(null);
+    const popupRef = useRef<HTMLDivElement | null>(null);
+    const searchRef = useRef<HTMLDivElement | null>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
+    const [searchActiveIndex, setSearchActiveIndex] = useState(-1);
+    const [notifActiveIndex, setNotifActiveIndex] = useState(-1);
+    const notifPanelRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -105,6 +109,7 @@ export const TopBarActions = () => {
             }
             if (!cancelled) {
                 setSearchResults(results);
+                setSearchActiveIndex(results.length > 0 ? 0 : -1);
                 setSearching(false);
             }
         })();
@@ -152,6 +157,89 @@ export const TopBarActions = () => {
             })
             .catch(() => {});
     }, [isOpen]);
+
+    // Navigate to a search result (used by mouse and keyboard)
+    const goToSearchResult = useCallback(async (r: SearchResult) => {
+        if (r.type === 'user' && r.targetUserId) {
+            try {
+                const dmChannel = await api.relationships.openDm(r.targetUserId) as { id: string };
+                navigate(buildDmRoute(dmChannel.id));
+            } catch {
+                addToast({ title: 'Failed to open DM', variant: 'error' });
+                return;
+            }
+        } else {
+            navigate(normalizeLegacyRoute(r.route));
+        }
+        setSearchOpen(false);
+        setSearchQuery('');
+    }, [addToast, navigate]);
+
+    const onSearchInputKey = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Escape') { setSearchOpen(false); return; }
+        if (searchResults.length === 0) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setSearchActiveIndex(i => Math.min(searchResults.length - 1, i + 1));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setSearchActiveIndex(i => Math.max(0, i - 1));
+        } else if (e.key === 'Home') {
+            e.preventDefault();
+            setSearchActiveIndex(0);
+        } else if (e.key === 'End') {
+            e.preventDefault();
+            setSearchActiveIndex(searchResults.length - 1);
+        } else if (e.key === 'Enter') {
+            const idx = searchActiveIndex >= 0 ? searchActiveIndex : 0;
+            const r = searchResults[idx];
+            if (r) { e.preventDefault(); goToSearchResult(r); }
+        }
+    };
+
+    // Auto-focus notifications panel when opened so arrow keys work
+    useEffect(() => {
+        if (isOpen) {
+            setNotifActiveIndex(-1);
+            setTimeout(() => notifPanelRef.current?.focus(), 0);
+        }
+    }, [isOpen]);
+
+    const onNotifKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+        if (e.key === 'Escape') { e.preventDefault(); setIsOpen(false); return; }
+        if (notifications.length === 0) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setNotifActiveIndex(i => Math.min(notifications.length - 1, i + 1));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setNotifActiveIndex(i => Math.max(0, i < 0 ? 0 : i - 1));
+        } else if (e.key === 'Home') {
+            e.preventDefault();
+            setNotifActiveIndex(0);
+        } else if (e.key === 'End') {
+            e.preventDefault();
+            setNotifActiveIndex(notifications.length - 1);
+        } else if (e.key === 'Enter') {
+            const idx = notifActiveIndex >= 0 ? notifActiveIndex : 0;
+            const n = notifications[idx];
+            if (n) {
+                e.preventDefault();
+                api.notifications.markRead(n.id).catch(() => {});
+                setNotifications(prev => prev.map(notif => notif.id === n.id ? { ...notif, unread: false } : notif));
+                setUnreadCount(prev => Math.max(0, prev - (n.unread ? 1 : 0)));
+                const msgParam = n.messageId ? `?messageId=${n.messageId}` : '';
+                if (n.type === 'friend_request') {
+                    navigate('/friends');
+                } else if (n.guildId && n.channelId) {
+                    navigate(buildGuildChannelRoute(n.guildId, n.channelId) + msgParam);
+                } else if (n.channelId) {
+                    navigate(buildDmRoute(n.channelId) + msgParam);
+                }
+                setIsOpen(false);
+            }
+        }
+    };
 
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginLeft: 'auto', position: 'relative' }}>
@@ -213,7 +301,7 @@ export const TopBarActions = () => {
                             placeholder="Search messages, users, channels..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            onKeyDown={e => e.key === 'Escape' && setSearchOpen(false)}
+                            onKeyDown={onSearchInputKey}
                             style={{
                                 flex: 1, background: 'transparent', border: 'none',
                                 color: 'var(--text-primary)', fontSize: '14px', outline: 'none'
@@ -226,7 +314,7 @@ export const TopBarActions = () => {
                         )}
                     </div>
 
-                    <div style={{ maxHeight: '320px', overflowY: 'auto', padding: '8px' }}>
+                    <div role="listbox" aria-label="Search results" style={{ maxHeight: '320px', overflowY: 'auto', padding: '8px' }}>
                         {searchQuery.trim() === '' ? (
                             <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
                                 Type to search messages, users, and channels
@@ -248,24 +336,12 @@ export const TopBarActions = () => {
                                 No results for "{searchQuery}"
                             </div>
                         ) : (
-                            searchResults.map(r => (
-                                <div key={r.id} onClick={async () => {
-                                    if (r.type === 'user' && r.targetUserId) {
-                                        try {
-                                            const dmChannel = await api.relationships.openDm(r.targetUserId) as { id: string };
-                                            navigate(buildDmRoute(dmChannel.id));
-                                        } catch {
-                                            addToast({ title: 'Failed to open DM', variant: 'error' });
-                                            return;
-                                        }
-                                    } else {
-                                        navigate(normalizeLegacyRoute(r.route));
-                                    }
-                                    setSearchOpen(false);
-                                    setSearchQuery('');
-                                }} style={{
+                            searchResults.map((r, idx) => (
+                                <div key={r.id} role="option" aria-selected={searchActiveIndex === idx} onMouseEnter={() => setSearchActiveIndex(idx)} onClick={() => goToSearchResult(r)} style={{
                                     padding: '10px 12px', borderRadius: '8px', cursor: 'pointer',
-                                    transition: 'background 0.15s', display: 'flex', alignItems: 'center', gap: '12px'
+                                    transition: 'background 0.15s', display: 'flex', alignItems: 'center', gap: '12px',
+                                    background: searchActiveIndex === idx ? 'var(--bg-tertiary)' : 'transparent',
+                                    outline: searchActiveIndex === idx ? '1px solid var(--accent-primary)' : 'none',
                                 }} className="search-result-item">
                                     {r.type === 'user' ? (
                                         <Avatar userId={r.targetUserId || r.id} displayName={r.title} avatarHash={r.avatarHash} size={32} />
@@ -294,7 +370,12 @@ export const TopBarActions = () => {
 
             {/* Notifications Panel */}
             {isOpen && (
-                <div ref={popupRef} style={{
+                <div ref={el => { popupRef.current = el; notifPanelRef.current = el; }}
+                    tabIndex={-1}
+                    role="menu"
+                    aria-label="Notifications"
+                    onKeyDown={onNotifKey}
+                    style={{
                     position: 'absolute',
                     top: '100%',
                     right: '0',
@@ -307,7 +388,8 @@ export const TopBarActions = () => {
                     zIndex: 40,
                     overflow: 'hidden',
                     display: 'flex',
-                    flexDirection: 'column'
+                    flexDirection: 'column',
+                    outline: 'none',
                 }}>
                     <div style={{ padding: '16px', borderBottom: '1px solid var(--stroke)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)' }}>
                         <h3 style={{ fontSize: '14px', fontWeight: 600, margin: 0, fontFamily: 'var(--font-display)' }}>Notifications</h3>
@@ -324,10 +406,12 @@ export const TopBarActions = () => {
                                 <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>You're all caught up</div>
                                 <div style={{ fontSize: '12px' }}>New mentions and replies will show up here.</div>
                             </div>
-                        ) : notifications.map(n => (
+                        ) : notifications.map((n, idx) => (
                             <div
                                 key={n.id}
-                                onMouseEnter={() => setHoveredNotifId(Number(n.id) || 0)}
+                                role="menuitem"
+                                aria-current={notifActiveIndex === idx ? 'true' : undefined}
+                                onMouseEnter={() => { setHoveredNotifId(Number(n.id) || 0); setNotifActiveIndex(idx); }}
                                 onMouseLeave={() => setHoveredNotifId(null)}
                                 onClick={() => {
                                     // Mark as read
@@ -354,7 +438,10 @@ export const TopBarActions = () => {
                                     gap: '4px',
                                     position: 'relative',
                                     transition: 'background 0.2s, transform 0.2s',
-                                    background: n.unread ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
+                                    background: notifActiveIndex === idx
+                                        ? 'var(--bg-tertiary)'
+                                        : (n.unread ? 'rgba(59, 130, 246, 0.05)' : 'transparent'),
+                                    outline: notifActiveIndex === idx ? '1px solid var(--accent-primary)' : 'none',
                                 }}
                                 className="notif-item"
                             >

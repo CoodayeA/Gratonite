@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
 
 const DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -17,7 +18,13 @@ export function JumpToDatePicker({ onSelect, onClose, loading }: Props) {
     const now = new Date();
     const [viewYear, setViewYear] = useState(now.getFullYear());
     const [viewMonth, setViewMonth] = useState(now.getMonth());
+    const [activeDay, setActiveDay] = useState<number>(now.getDate());
     const panelRef = useRef<HTMLDivElement>(null);
+
+    // Focus the panel when mounted so arrow keys are received
+    useEffect(() => {
+        panelRef.current?.focus();
+    }, []);
 
     // Close on click-outside
     useEffect(() => {
@@ -86,9 +93,61 @@ export function JumpToDatePicker({ onSelect, onClose, loading }: Props) {
     // Can't navigate to future months
     const canGoNext = !(viewYear === today.getFullYear() && viewMonth === today.getMonth());
 
+    // Clamp activeDay if it falls outside the current month
+    useEffect(() => {
+        setActiveDay(d => Math.min(Math.max(1, d), daysInMonth));
+    }, [daysInMonth]);
+
+    const onKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+        // Escape is already handled by global listener; keep here for safety
+        if (e.key === 'Escape') { e.preventDefault(); onClose(); return; }
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            if (activeDay > 1) setActiveDay(activeDay - 1);
+            else { prevMonth(); setActiveDay(new Date(viewYear, viewMonth, 0).getDate()); }
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            const next = activeDay + 1;
+            if (next <= daysInMonth) {
+                if (!isFuture(next)) setActiveDay(next);
+            } else if (canGoNext) {
+                nextMonth();
+                setActiveDay(1);
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const next = activeDay - 7;
+            if (next >= 1) setActiveDay(next);
+            else { prevMonth(); const prevDays = new Date(viewYear, viewMonth, 0).getDate(); setActiveDay(Math.max(1, prevDays + next)); }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const next = activeDay + 7;
+            if (next <= daysInMonth) {
+                if (!isFuture(next)) setActiveDay(next);
+                else setActiveDay(activeDay);
+            } else if (canGoNext) {
+                nextMonth();
+                setActiveDay(Math.max(1, next - daysInMonth));
+            }
+        } else if (e.key === 'Home') {
+            e.preventDefault();
+            setActiveDay(1);
+        } else if (e.key === 'End') {
+            e.preventDefault();
+            setActiveDay(daysInMonth);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSelect(activeDay);
+        }
+    };
+
     return (
         <div
             ref={panelRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-label="Jump to date"
+            onKeyDown={onKey}
             style={{
                 position: 'absolute',
                 top: '100%',
@@ -102,6 +161,7 @@ export function JumpToDatePicker({ onSelect, onClose, loading }: Props) {
                 zIndex: 50,
                 overflow: 'hidden',
                 animation: 'fadeInSlideUp 0.2s ease-out',
+                outline: 'none',
             }}
         >
             {/* Header */}
@@ -187,10 +247,15 @@ export function JumpToDatePicker({ onSelect, onClose, loading }: Props) {
                 display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',
                 padding: '4px 12px 12px', gap: '2px',
             }}>
-                {cells.map((day, i) => (
+                {cells.map((day, i) => {
+                    const isActive = day === activeDay;
+                    return (
                     <div
                         key={i}
+                        role={day && !isFuture(day) ? 'button' : undefined}
+                        aria-current={day && isActive ? 'date' : undefined}
                         onClick={() => day && !isFuture(day) && handleSelect(day)}
+                        onMouseEnter={() => day && !isFuture(day) && setActiveDay(day)}
                         className={day && !isFuture(day) ? 'hover-bg-tertiary' : ''}
                         style={{
                             textAlign: 'center',
@@ -205,13 +270,17 @@ export function JumpToDatePicker({ onSelect, onClose, loading }: Props) {
                             borderRadius: '6px',
                             transition: 'background 0.15s',
                             opacity: !day ? 0 : isFuture(day) ? 0.3 : 1,
-                            background: day && isToday(day) ? 'rgba(var(--accent-primary-rgb, 139,92,246), 0.1)' : 'transparent',
+                            background: day && isActive && !isFuture(day)
+                                ? 'rgba(var(--accent-primary-rgb, 139,92,246), 0.25)'
+                                : (day && isToday(day) ? 'rgba(var(--accent-primary-rgb, 139,92,246), 0.1)' : 'transparent'),
+                            outline: day && isActive && !isFuture(day) ? '1px solid var(--accent-primary)' : 'none',
                             position: 'relative',
                         }}
                     >
                         {day || ''}
                     </div>
-                ))}
+                    );
+                })}
             </div>
 
             {/* Loading overlay */}

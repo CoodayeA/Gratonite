@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { Volume2, Play } from 'lucide-react';
 
 // ─── Web Audio API sound generators ──────────────────────────────────────────
@@ -196,10 +197,12 @@ interface SoundboardMenuProps {
 const RATE_LIMIT_MAX = 3;
 const RATE_LIMIT_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
 
-const SoundboardMenu = ({ isOpen, onPlaySound }: SoundboardMenuProps) => {
+const SoundboardMenu = ({ isOpen, onClose, onPlaySound }: SoundboardMenuProps) => {
     const [pressTimestamps, setPressTimestamps] = useState<number[]>([]);
     const [cooldownRemaining, setCooldownRemaining] = useState(0);
     const cooldownInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+    const [activeIndex, setActiveIndex] = useState(0);
+    const containerRef = useRef<HTMLDivElement>(null);
     const [volume, setVolume] = useState(() => {
         const stored = localStorage.getItem(SOUNDBOARD_VOLUME_KEY);
         return stored ? parseFloat(stored) : 0.7;
@@ -215,6 +218,11 @@ const SoundboardMenu = ({ isOpen, onPlaySound }: SoundboardMenuProps) => {
             }
         };
     }, []);
+
+    // Focus container on open so keyboard nav is immediately available
+    useEffect(() => {
+        if (isOpen) setTimeout(() => containerRef.current?.focus(), 0);
+    }, [isOpen]);
 
     const startCooldownTimer = useCallback((oldestTimestamp: number) => {
         if (cooldownInterval.current) {
@@ -265,8 +273,23 @@ const SoundboardMenu = ({ isOpen, onPlaySound }: SoundboardMenuProps) => {
 
     if (!isOpen) return null;
 
+    const SOUND_COLS = 2;
+    const onKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+        if (e.key === 'Escape') { e.preventDefault(); onClose(); return; }
+        if (e.key === 'ArrowRight') { e.preventDefault(); setActiveIndex(i => Math.min(sounds.length - 1, i + 1)); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); setActiveIndex(i => Math.max(0, i - 1)); }
+        else if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex(i => Math.min(sounds.length - 1, i + SOUND_COLS)); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex(i => Math.max(0, i - SOUND_COLS)); }
+        else if (e.key === 'Home') { e.preventDefault(); setActiveIndex(0); }
+        else if (e.key === 'End') { e.preventDefault(); setActiveIndex(sounds.length - 1); }
+        else if (e.key === 'Enter' || e.key === ' ') {
+            const s = sounds[activeIndex];
+            if (s && !isRateLimited) { e.preventDefault(); handlePlay(s); }
+        }
+    };
+
     return (
-        <div style={{
+        <div ref={containerRef} role="menu" aria-label="Soundboard" tabIndex={-1} onKeyDown={onKey} style={{
             position: 'absolute',
             bottom: '100%',
             right: '0',
@@ -288,15 +311,19 @@ const SoundboardMenu = ({ isOpen, onPlaySound }: SoundboardMenuProps) => {
 
             <div style={{ padding: '16px', overflowY: 'auto', maxHeight: '300px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                    {sounds.map(sound => (
+                    {sounds.map((sound, idx) => (
                         <button
                             key={sound.id}
                             onClick={() => handlePlay(sound)}
+                            onMouseEnter={() => setActiveIndex(idx)}
+                            onFocus={() => setActiveIndex(idx)}
                             disabled={isRateLimited}
+                            role="menuitem"
+                            aria-current={activeIndex === idx ? 'true' : undefined}
                             className="soundboard-btn"
                             style={{
                                 background: 'var(--bg-primary)',
-                                border: '1px solid var(--stroke)',
+                                border: activeIndex === idx ? '2px solid var(--accent-primary)' : '1px solid var(--stroke)',
                                 borderRadius: 'var(--radius-md)',
                                 padding: '12px',
                                 display: 'flex',
