@@ -4533,6 +4533,15 @@ textarea:focus-visible,
   justify-content: center;
 }
 
+@media (max-width: 768px) {
+  .input-icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+  }
+}
+
 /* Live region for screen reader announcements */
 [role="status"],
 [role="alert"],
@@ -6631,5 +6640,25 @@ body.gratonite-exp-reduced-motion *::after {
   textarea,
   select {
     font-size: 16px !important;
+  }
+}
+
+/* ── MOBILE: tap polish ── */
+@media (max-width: 768px) {
+  /* Suppress the gray iOS tap flash on interactive elements */
+  button,
+  a,
+  [role="button"],
+  [role="link"],
+  [role="tab"],
+  [role="menuitem"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent accidental horizontal scroll from off-screen elements */
+  html,
+  body {
+    overflow-x: hidden;
+    max-width: 100vw;
   }
 }
