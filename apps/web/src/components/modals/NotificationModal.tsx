@@ -531,7 +531,7 @@ const NotificationModal = ({ onClose }: { onClose: () => void }) => {
                     padding: 0,
                     animation: 'slideInRight 0.3s ease-out forwards',
                     height: 'max-content',
-                    maxHeight: 'calc(100vh - 48px)',
+                    maxHeight: 'calc(100dvh - 48px)',
                     background: 'var(--bg-primary)',
                 }}
             >

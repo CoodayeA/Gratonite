@@ -134,7 +134,7 @@ export default function Setup() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%)' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%)' }}>
       <div style={{ width: '100%', maxWidth: '512px', borderRadius: '16px', overflow: 'hidden', background: '#1e1e2e', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
         {/* Progress */}
         <div style={{ display: 'flex', borderBottom: '1px solid #2e2e3e' }}>

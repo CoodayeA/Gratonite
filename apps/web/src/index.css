@@ -483,6 +483,7 @@ body {
 .app-container {
     display: flex;
     height: 100vh;
+    height: 100dvh;
     width: 100vw;
     background: transparent;
     position: relative;
@@ -1169,6 +1170,7 @@ p {
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     z-index: 0;
     object-fit: cover;
     background-size: cover;
@@ -2051,6 +2053,13 @@ body.electron-mac .auth-container {
 
 .auth-input::placeholder {
     color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+    .auth-input,
+    .auth-input-group input {
+        font-size: 16px;
+    }
 }
 
 .auth-link {
@@ -4105,6 +4114,7 @@ html.low-data-mode .ambient-video {
   .image-lightbox img {
     max-width: 100vw !important;
     max-height: 100vh !important;
+    max-height: 100dvh !important;
     touch-action: pinch-zoom;
   }
 }
@@ -6606,5 +6616,20 @@ body.gratonite-exp-reduced-motion *::after {
   .setup-items-container {
     max-width: 100%;
     width: 100%;
+  }
+}
+
+/* ── MOBILE: prevent iOS Safari auto-zoom on input focus ── */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px !important;
   }
 }

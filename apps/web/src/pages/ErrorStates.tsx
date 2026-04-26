@@ -22,7 +22,7 @@ export const ErrorBoundary = () => {
 
     return (
         <div style={{
-            height: '100vh',
+            height: '100dvh',
             width: '100vw',
             display: 'flex',
             alignItems: 'center',
@@ -108,7 +108,7 @@ export const NotFound = () => {
     const nav = useNavigate();
     return (
         <div style={{
-            height: '100vh',
+            height: '100dvh',
             width: '100vw',
             display: 'flex',
             alignItems: 'center',

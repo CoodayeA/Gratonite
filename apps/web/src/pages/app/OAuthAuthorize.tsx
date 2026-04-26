@@ -66,7 +66,7 @@ export default function OAuthAuthorize() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-primary)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: 'var(--bg-primary)' }}>
         <div style={{ color: 'var(--text-muted)', fontSize: 16 }}>Loading...</div>
       </div>
     );
@@ -74,7 +74,7 @@ export default function OAuthAuthorize() {
 
   if (error || !app) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-primary)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: 'var(--bg-primary)' }}>
         <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: 32, maxWidth: 400, textAlign: 'center' }}>
           <XCircle size={48} style={{ color: 'var(--error)', marginBottom: 16 }} />
           <h2 style={{ color: 'var(--text-primary)', margin: '0 0 8px' }}>Error</h2>
@@ -85,7 +85,7 @@ export default function OAuthAuthorize() {
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-primary)' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: 'var(--bg-primary)' }}>
       <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: 32, maxWidth: 'min(440px, 95vw)', width: '100%', border: '1px solid var(--stroke)', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{

@@ -29,7 +29,7 @@ export default function MiniMode() {
   const containerStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    height: '100vh',
+    height: '100dvh',
     background: '#16162a',
     color: '#fff',
     fontFamily: 'system-ui, -apple-system, sans-serif',

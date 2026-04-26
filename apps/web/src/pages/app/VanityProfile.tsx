@@ -22,7 +22,7 @@ const VanityProfile = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-primary)' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100dvh', background: 'var(--bg-primary)' }}>
         <Loader size={32} style={{ animation: 'spin 1s linear infinite', color: 'var(--accent-primary)' }} />
       </div>
     );
@@ -30,7 +30,7 @@ const VanityProfile = () => {
 
   if (error || !profile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-primary)', color: 'var(--text-muted)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100dvh', background: 'var(--bg-primary)', color: 'var(--text-muted)' }}>
         <User size={48} style={{ opacity: 0.5, marginBottom: '16px' }} />
         <h2 style={{ fontSize: '24px', fontWeight: 600 }}>User Not Found</h2>
         <p style={{ fontSize: '14px', marginTop: '8px' }}>The profile "{vanityUrl}" does not exist.</p>
@@ -39,7 +39,7 @@ const VanityProfile = () => {
   }
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'var(--bg-primary)', padding: '24px' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100dvh', background: 'var(--bg-primary)', padding: '24px' }}>
       <div style={{ width: '100%', maxWidth: '480px', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--stroke)', background: 'var(--bg-secondary)' }}>
         {/* Banner */}
         <div style={{ height: '120px', background: 'linear-gradient(135deg, var(--accent-primary), rgba(0,0,0,0.3))' }} />

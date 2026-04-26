@@ -104,7 +104,7 @@ export default function VoicePopout() {
         <div style={{
             background: 'radial-gradient(circle at top, rgba(88, 101, 242, 0.2), transparent 45%), #111214',
             color: '#fff',
-            minHeight: '100vh',
+            minHeight: '100dvh',
             display: 'flex',
             flexDirection: 'column',
             padding: 24,

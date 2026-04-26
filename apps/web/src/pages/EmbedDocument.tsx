@@ -16,7 +16,7 @@ export default function EmbedDocument() {
   }
 
   return (
-    <div style={{ height: '100vh', width: '100vw', overflow: 'hidden', background: 'var(--bg-app)' }}>
+    <div style={{ height: '100dvh', width: '100vw', overflow: 'hidden', background: 'var(--bg-app)' }}>
       <Suspense fallback={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', gap: 8 }}>
           <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />

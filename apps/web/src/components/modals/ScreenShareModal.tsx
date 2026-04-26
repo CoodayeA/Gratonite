@@ -149,8 +149,8 @@ const ScreenShareModal = ({
             <div role="dialog" aria-modal="true" aria-labelledby="screen-share-modal-title" style={{
                 width: '100%',
                 maxWidth: isFullScreen ? '100vw' : '900px',
-                height: isFullScreen ? '100vh' : '80vh',
-                maxHeight: isFullScreen ? '100vh' : '700px',
+                height: isFullScreen ? '100dvh' : '80vh',
+                maxHeight: isFullScreen ? '100dvh' : '700px',
                 borderRadius: isFullScreen ? '0' : 'var(--radius-xl)',
                 display: 'flex',
                 flexDirection: 'column',
