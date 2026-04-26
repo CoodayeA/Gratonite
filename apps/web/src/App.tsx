@@ -116,7 +116,8 @@ const BugReportModal = lazy(() => import('./components/modals/BugReportModal'));
 const KeyboardShortcutsModal = lazy(() => import('./components/modals/KeyboardShortcutsModal'));
 const NotificationModal = lazy(() => import('./components/modals/NotificationModal'));
 const CreateGuildModal = lazy(() => import('./components/modals/CreateGuildModal'));
-import PresenceMenu, { PresenceType, PRESENCE_COLORS } from './components/modals/PresenceMenu';
+const PresenceMenu = lazy(() => import('./components/modals/PresenceMenu'));
+type PresenceType = 'online' | 'idle' | 'dnd' | 'invisible';
 const ScreenShareModal = lazy(() => import('./components/modals/ScreenShareModal'));
 const ChannelSettingsModal = lazy(() => import('./components/modals/ChannelSettingsModal').then(m => ({ default: m.ChannelSettingsModal })));
 const MemberOptionsModal = lazy(() => import('./components/modals/MemberOptionsModal'));
@@ -1819,6 +1820,8 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 </button>
             </div>
 
+            {presenceMenuOpen && (
+            <Suspense fallback={null}>
             <PresenceMenu
                 isOpen={presenceMenuOpen}
                 onClose={() => setPresenceMenuOpen(false)}
@@ -1838,6 +1841,8 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 userName={userProfile.name}
                 avatarUrl={userAvatarUrl}
             />
+            </Suspense>
+            )}
         </div>
     );
 
