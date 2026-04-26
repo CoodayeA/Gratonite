@@ -110,7 +110,8 @@ const WhatsNewModal = lazy(() => import('./components/modals/WhatsNewModal'));
 // CHANGELOG is dynamically imported below to keep the ~56KB array out of the index chunk.
 // WhatsNewModal lazy-loads it independently when shown.
 const OnboardingModal = lazy(() => import('./components/modals/OnboardingModal'));
-import { OnboardingTour, useShouldShowTour } from './components/ui/OnboardingTour';
+const OnboardingTour = lazy(() => import('./components/ui/OnboardingTour').then(m => ({ default: m.OnboardingTour })));
+import { useShouldShowTour } from './components/ui/useShouldShowTour';
 const BugReportModal = lazy(() => import('./components/modals/BugReportModal'));
 const KeyboardShortcutsModal = lazy(() => import('./components/modals/KeyboardShortcutsModal'));
 const NotificationModal = lazy(() => import('./components/modals/NotificationModal'));
@@ -4689,7 +4690,11 @@ export const AppLayout = () => {
                 style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}
                 id="sr-announcements"
             />
-            {tour.show && <OnboardingTour onClose={tour.dismiss} />}
+            {tour.show && (
+                <Suspense fallback={null}>
+                    <OnboardingTour onClose={tour.dismiss} />
+                </Suspense>
+            )}
             <DmNotificationToast />
         </ContextMenuProvider>
     );

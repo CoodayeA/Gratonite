@@ -355,20 +355,6 @@ export function OnboardingTour({ onClose }: { onClose: () => void }) {
     );
 }
 
-// Hook to check if tour should be shown
-export function useShouldShowTour() {
-    const [show, setShow] = useState(false);
-    useEffect(() => {
-        const done = localStorage.getItem(STORAGE_KEY);
-        if (!done) {
-            // Show after a short delay to let the UI settle
-            const t = setTimeout(() => setShow(true), 2000);
-            return () => clearTimeout(t);
-        }
-    }, []);
-    return {
-        show,
-        dismiss: () => { localStorage.setItem(STORAGE_KEY, '1'); setShow(false); },
-        reset: () => { localStorage.removeItem(STORAGE_KEY); setShow(true); },
-    };
-}
+// Note: `useShouldShowTour` lives in ./useShouldShowTour.ts so it can
+// be imported without pulling in this heavy component bundle.
+export { useShouldShowTour } from './useShouldShowTour';
