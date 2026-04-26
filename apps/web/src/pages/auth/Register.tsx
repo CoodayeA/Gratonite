@@ -146,6 +146,10 @@ const Register = () => {
                     <User size={18} className="auth-input-icon" />
                     <input
                         type="text"
+                        id="register-username"
+                        aria-label="Username"
+                        aria-invalid={touched.username && !!usernameError}
+                        aria-describedby={touched.username && usernameError ? 'register-username-error' : undefined}
                         placeholder="Username"
                         value={username}
                         onChange={e => setUsername(e.target.value)}
@@ -155,13 +159,17 @@ const Register = () => {
                     />
                 </div>
                 {touched.username && usernameError && (
-                    <p style={{ color: 'var(--danger, #ef4444)', fontSize: '12px', margin: '-8px 0 8px 0' }}>{usernameError}</p>
+                    <p id="register-username-error" role="alert" style={{ color: 'var(--danger, #ef4444)', fontSize: '12px', margin: '-8px 0 8px 0' }}>{usernameError}</p>
                 )}
 
                 <div className="auth-input-group">
                     <Mail size={18} className="auth-input-icon" />
                     <input
                         type="email"
+                        id="register-email"
+                        aria-label="Email"
+                        aria-invalid={touched.email && !!emailError}
+                        aria-describedby={touched.email && emailError ? 'register-email-error' : undefined}
                         placeholder="Email"
                         value={email}
                         onChange={e => setEmail(e.target.value)}
@@ -171,13 +179,17 @@ const Register = () => {
                     />
                 </div>
                 {touched.email && emailError && (
-                    <p style={{ color: 'var(--danger, #ef4444)', fontSize: '12px', margin: '-8px 0 8px 0' }}>{emailError}</p>
+                    <p id="register-email-error" role="alert" style={{ color: 'var(--danger, #ef4444)', fontSize: '12px', margin: '-8px 0 8px 0' }}>{emailError}</p>
                 )}
 
                 <div className="auth-input-group">
                     <Lock size={18} className="auth-input-icon" />
                     <input
                         type={showPw ? "text" : "password"}
+                        id="register-password"
+                        aria-label="Password"
+                        aria-invalid={touched.password && !!passwordError}
+                        aria-describedby={touched.password && passwordError ? 'register-password-error' : undefined}
                         placeholder="Password"
                         value={password}
                         onChange={e => setPassword(e.target.value)}
@@ -188,6 +200,7 @@ const Register = () => {
                     />
                     <button
                         type="button"
+                        aria-label={showPw ? 'Hide password' : 'Show password'}
                         onClick={() => setShowPw(!showPw)}
                         style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
                     >
@@ -195,7 +208,7 @@ const Register = () => {
                     </button>
                 </div>
                 {touched.password && passwordError && (
-                    <p style={{ color: 'var(--danger, #ef4444)', fontSize: '12px', margin: '-8px 0 8px 0' }}>{passwordError}</p>
+                    <p id="register-password-error" role="alert" style={{ color: 'var(--danger, #ef4444)', fontSize: '12px', margin: '-8px 0 8px 0' }}>{passwordError}</p>
                 )}
                 {password.length >= 8 && passwordStrength.label && (
                     <p style={{ color: passwordStrength.color, fontSize: '12px', margin: '-8px 0 8px 0', fontWeight: 500 }}>

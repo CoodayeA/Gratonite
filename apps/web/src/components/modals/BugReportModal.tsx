@@ -173,6 +173,7 @@ const BugReportModal = ({ onClose }: { onClose: () => void }) => {
                         {/* Title */}
                         <input
                             type="text"
+                            aria-label="Bug report title"
                             placeholder="Brief summary of the issue"
                             required
                             value={title}
@@ -196,6 +197,7 @@ const BugReportModal = ({ onClose }: { onClose: () => void }) => {
 
                         {/* Description */}
                         <textarea
+                            aria-label="Bug report description"
                             placeholder="What happened? What did you expect?"
                             required
                             value={description}
@@ -221,7 +223,7 @@ const BugReportModal = ({ onClose }: { onClose: () => void }) => {
                         />
 
                         {/* Attachments */}
-                        <input type="file" ref={fileInputRef} hidden accept="image/*" multiple onChange={handleFileChange} />
+                        <input type="file" aria-label="Bug report screenshots" ref={fileInputRef} hidden accept="image/*" multiple onChange={handleFileChange} />
 
                         {screenshots.length === 0 ? (
                             <div

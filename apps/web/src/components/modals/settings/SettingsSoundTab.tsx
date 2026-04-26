@@ -137,7 +137,7 @@ const SettingsSoundTab = ({ addToast }: Props) => {
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>Controls background ambient sounds (lo-fi, nature, space).</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <VolumeX size={16} color="var(--text-muted)" />
-            <input type="range" min="0" max="1" step="0.05" value={ambientVolume} onChange={(e) => {
+            <input type="range" aria-label="Ambient volume" min="0" max="1" step="0.05" value={ambientVolume} onChange={(e) => {
               const v = parseFloat(e.target.value);
               setAmbientVolume(v);
               localStorage.setItem('gratonite_ambient_volume', String(v));
@@ -154,7 +154,7 @@ const SettingsSoundTab = ({ addToast }: Props) => {
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>Controls message, mention, and join/leave sounds.</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <VolumeX size={16} color="var(--text-muted)" />
-            <input type="range" min="0" max="1" step="0.05" value={notificationVolume} onChange={(e) => {
+            <input type="range" aria-label="Notification volume" min="0" max="1" step="0.05" value={notificationVolume} onChange={(e) => {
               const v = parseFloat(e.target.value);
               setNotificationVolume(v);
               localStorage.setItem('gratonite_notification_volume', String(v));
@@ -306,7 +306,7 @@ const SettingsSoundTab = ({ addToast }: Props) => {
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>Gate Threshold</div>
                 <span style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: 600, fontFamily: 'monospace' }}>{noiseGateThreshold} dB</span>
               </div>
-              <input type="range" min={-60} max={-10} step={5} value={noiseGateThreshold}
+              <input type="range" aria-label="Noise gate threshold (dB)" min={-60} max={-10} step={5} value={noiseGateThreshold}
                 onChange={(e) => {
                   const v = parseInt(e.target.value, 10);
                   setNoiseGateThreshold(v);
@@ -332,7 +332,7 @@ const SettingsSoundTab = ({ addToast }: Props) => {
             </div>
             <span style={{ fontSize: '13px', color: 'var(--accent-primary)', fontWeight: 600, fontFamily: 'monospace', marginLeft: '16px', flexShrink: 0 }}>{micSensitivity}%</span>
           </div>
-          <input type="range" min={0} max={100} step={5} value={micSensitivity}
+          <input type="range" aria-label="Microphone sensitivity" min={0} max={100} step={5} value={micSensitivity}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10);
               setMicSensitivity(v);
@@ -424,6 +424,7 @@ const SettingsSoundTab = ({ addToast }: Props) => {
                 <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent-primary)', fontFamily: 'monospace', minWidth: '50px', textAlign: 'right' }}>{pttReleaseDelay}ms</span>
               </div>
               <input
+                aria-label="Push-to-talk release delay (ms)"
                 type="range"
                 min={0}
                 max={500}
@@ -482,7 +483,7 @@ const SettingsSoundTab = ({ addToast }: Props) => {
         </label>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>
           <span>Frequency:</span>
-          <select value={emailFrequency} onChange={e => {
+          <select aria-label="Email notification frequency" value={emailFrequency} onChange={e => {
             const val = e.target.value as 'instant' | 'daily' | 'never';
             setEmailFrequency(val);
             api.users.updateSettings({ emailNotifications: { mentions: emailMentions, dms: emailDms, frequency: val } }).catch(() => {

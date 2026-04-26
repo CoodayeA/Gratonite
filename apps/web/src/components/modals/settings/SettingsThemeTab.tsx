@@ -223,7 +223,7 @@ const SettingsThemeTab = ({ addToast }: Props) => {
         }} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--stroke)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
           <Download size={14} /> Export Current
         </button>
-        <input ref={themeImportRef} type="file" accept=".json" style={{ display: 'none' }} onChange={(e) => {
+        <input ref={themeImportRef} type="file" aria-label="Import theme JSON" accept=".json" style={{ display: 'none' }} onChange={(e) => {
           const file = e.target.files?.[0]; if (!file) return;
           const reader = new FileReader();
           reader.onload = () => {
@@ -291,7 +291,7 @@ const SettingsThemeTab = ({ addToast }: Props) => {
       {/* Search */}
       <div style={{ position: 'relative', marginBottom: '12px' }}>
         <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-        <input type="text" placeholder="Search themes..." value={themeSearchQuery} onChange={(e) => setThemeSearchQuery(e.target.value)} className="auth-input" style={{ width: '100%', padding: '10px 12px 10px 36px', margin: 0, fontSize: '13px' }} />
+        <input type="text" aria-label="Search themes" placeholder="Search themes..." value={themeSearchQuery} onChange={(e) => setThemeSearchQuery(e.target.value)} className="auth-input" style={{ width: '100%', padding: '10px 12px 10px 36px', margin: 0, fontSize: '13px' }} />
       </div>
 
       {/* Category pills */}
@@ -357,14 +357,15 @@ const SettingsThemeTab = ({ addToast }: Props) => {
           <button key={c.color} onClick={() => setAccentColor(c.color)} title={c.name} style={{ width: '32px', height: '32px', borderRadius: '50%', border: accentColor === c.color ? '3px solid var(--text-primary)' : '2px solid var(--stroke)', background: c.color, cursor: 'pointer', padding: 0, transition: 'all 0.15s' }} />
         ))}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '8px' }}>
-          <input type="text" value={customHex} onChange={(e) => { setCustomHex(e.target.value); setHexError(false); }} placeholder="#hex" style={{ width: '80px', padding: '6px 8px', borderRadius: 'var(--radius-md)', background: 'var(--bg-tertiary)', border: `1px solid ${hexError ? 'var(--error)' : 'var(--stroke)'}`, color: 'var(--text-primary)', fontSize: '12px' }} />
+          <input type="text" aria-label="Custom accent color hex" aria-invalid={hexError} aria-describedby={hexError ? 'theme-hex-error' : undefined} value={customHex} onChange={(e) => { setCustomHex(e.target.value); setHexError(false); }} placeholder="#hex" style={{ width: '80px', padding: '6px 8px', borderRadius: 'var(--radius-md)', background: 'var(--bg-tertiary)', border: `1px solid ${hexError ? 'var(--error)' : 'var(--stroke)'}`, color: 'var(--text-primary)', fontSize: '12px' }} />
           <button onClick={() => { if (/^#[0-9a-fA-F]{6}$/.test(customHex)) { setAccentColor(customHex); setHexError(false); } else { setHexError(true); } }} style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600 }}>Apply</button>
         </div>
       </div>
+      {hexError && <div id="theme-hex-error" role="alert" style={{ fontSize: '12px', color: 'var(--error)', marginTop: '-8px', marginBottom: '12px' }}>Invalid hex color (use #RRGGBB)</div>}
 
       {/* Font Family */}
       <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Font</h3>
-      <select value={fontFamily} onChange={(e) => setFontFamily(e.target.value as any)} className="auth-input" style={{ width: 'auto', padding: '8px 12px', margin: 0, marginBottom: '32px', height: '36px' }}>
+      <select aria-label="Font family" value={fontFamily} onChange={(e) => setFontFamily(e.target.value as any)} className="auth-input" style={{ width: 'auto', padding: '8px 12px', margin: 0, marginBottom: '32px', height: '36px' }}>
         <option value="inter">Inter (Default)</option>
         <option value="outfit">Outfit</option>
         <option value="space-grotesk">Space Grotesk</option>
@@ -400,7 +401,7 @@ const SettingsThemeTab = ({ addToast }: Props) => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)' }}>
           <span style={{ fontWeight: 600 }}>Glass Mode</span>
-          <select value={glassMode} onChange={(e) => setGlassMode(e.target.value as any)} className="auth-input" style={{ width: 'auto', padding: '6px 10px', margin: 0, height: '32px', fontSize: '13px' }}>
+          <select aria-label="Glass mode" value={glassMode} onChange={(e) => setGlassMode(e.target.value as any)} className="auth-input" style={{ width: 'auto', padding: '6px 10px', margin: 0, height: '32px', fontSize: '13px' }}>
             <option value="off">Off</option>
             <option value="subtle">Subtle</option>
             <option value="full">Full</option>
@@ -408,7 +409,7 @@ const SettingsThemeTab = ({ addToast }: Props) => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)' }}>
           <span style={{ fontWeight: 600 }}>Button Shape</span>
-          <select value={buttonShape} onChange={(e) => setButtonShape(e.target.value as any)} className="auth-input" style={{ width: 'auto', padding: '6px 10px', margin: 0, height: '32px', fontSize: '13px' }}>
+          <select aria-label="Button shape" value={buttonShape} onChange={(e) => setButtonShape(e.target.value as any)} className="auth-input" style={{ width: 'auto', padding: '6px 10px', margin: 0, height: '32px', fontSize: '13px' }}>
             <option value="rounded">Rounded</option>
             <option value="pill">Pill</option>
             <option value="square">Square</option>
@@ -436,7 +437,7 @@ const SettingsThemeTab = ({ addToast }: Props) => {
 
       {/* Code Theme */}
       <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Code Blocks</h3>
-      <select value={codeThemeId} onChange={(e) => { setCodeThemeId(e.target.value); setCodeThemePersist(e.target.value as any); }} className="auth-input" style={{ width: 'auto', padding: '8px 12px', margin: 0, marginBottom: '32px', height: '36px' }}>
+      <select aria-label="Code block theme" value={codeThemeId} onChange={(e) => { setCodeThemeId(e.target.value); setCodeThemePersist(e.target.value as any); }} className="auth-input" style={{ width: 'auto', padding: '8px 12px', margin: 0, marginBottom: '32px', height: '36px' }}>
         {CODE_THEMES.map(ct => <option key={ct.id} value={ct.id}>{ct.label}</option>)}
       </select>
 

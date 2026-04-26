@@ -175,6 +175,7 @@ const E2EKeyBackupSection = ({ userId }: { userId: string }) => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <input
             type="password"
+            aria-label="Backup password"
             placeholder="Set a strong password for this backup"
             value={exportPassword}
             onChange={e => setExportPassword(e.target.value)}
@@ -182,13 +183,16 @@ const E2EKeyBackupSection = ({ userId }: { userId: string }) => {
           />
           <input
             type="password"
+            aria-label="Confirm backup password"
+            aria-invalid={!!(exportPassword && exportConfirm && exportPassword !== exportConfirm)}
+            aria-describedby={exportPassword && exportConfirm && exportPassword !== exportConfirm ? 'privacy-export-confirm-error' : undefined}
             placeholder="Confirm password"
             value={exportConfirm}
             onChange={e => setExportConfirm(e.target.value)}
             style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--stroke)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
           />
           {exportPassword && exportConfirm && exportPassword !== exportConfirm && (
-            <div style={{ fontSize: '12px', color: 'var(--color-error, #ef4444)' }}>Passwords do not match</div>
+            <div id="privacy-export-confirm-error" role="alert" style={{ fontSize: '12px', color: 'var(--color-error, #ef4444)' }}>Passwords do not match</div>
           )}
           <button
             onClick={handleExport}
@@ -212,6 +216,7 @@ const E2EKeyBackupSection = ({ userId }: { userId: string }) => {
           <input
             ref={importFileRef}
             type="file"
+            aria-label="Encryption key backup file"
             accept=".json"
             style={{ display: 'none' }}
             onChange={e => setImportFile(e.target.files?.[0] ?? null)}
@@ -224,6 +229,7 @@ const E2EKeyBackupSection = ({ userId }: { userId: string }) => {
           </button>
           <input
             type="password"
+            aria-label="Password for backup"
             placeholder="Password for this backup"
             value={importPassword}
             onChange={e => setImportPassword(e.target.value)}

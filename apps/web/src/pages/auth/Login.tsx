@@ -122,6 +122,8 @@ const Login = () => {
                     <Mail size={18} className="auth-input-icon" />
                     <input
                         type="text"
+                        id="login-identifier"
+                        aria-label="Email or username"
                         placeholder="Email or Username"
                         value={login}
                         onChange={e => setLogin(e.target.value)}
@@ -132,6 +134,8 @@ const Login = () => {
                     <Lock size={18} className="auth-input-icon" />
                     <input
                         type={showPw ? "text" : "password"}
+                        id="login-password"
+                        aria-label="Password"
                         placeholder="Password"
                         value={password}
                         onChange={e => setPassword(e.target.value)}
@@ -139,6 +143,7 @@ const Login = () => {
                     />
                     <button
                         type="button"
+                        aria-label={showPw ? 'Hide password' : 'Show password'}
                         onClick={() => setShowPw(!showPw)}
                         style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
                     >
@@ -172,6 +177,8 @@ const Login = () => {
                         {useRecoveryCode ? (
                             <input
                                 type="text"
+                                id="login-recovery-code"
+                                aria-label="Recovery code"
                                 className="auth-input"
                                 placeholder="XXXX-XXXX"
                                 maxLength={9}
@@ -187,6 +194,8 @@ const Login = () => {
                         ) : (
                             <input
                                 type="text"
+                                id="login-mfa-code"
+                                aria-label="Two-factor authentication code"
                                 className="auth-input"
                                 placeholder="000000"
                                 maxLength={6}
@@ -230,6 +239,8 @@ const Login = () => {
                             <Mail size={16} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--text-muted)' }} />
                             <input
                                 type="email"
+                                id="login-reset-email"
+                                aria-label="Email address for password reset"
                                 className="auth-input"
                                 placeholder="Enter your email"
                                 value={resetEmail}

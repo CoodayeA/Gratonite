@@ -480,6 +480,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                                     </label>
                                     <input
                                         type="text"
+                                        aria-label={`${selectedTemplate.importSource} community ID or invite link`}
                                         placeholder={`Paste your ${selectedTemplate.importSource} invite link...`}
                                         style={{ width: '100%', height: '44px', background: 'var(--bg-app)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: '0 16px', fontSize: '14px', outline: 'none' }}
                                     />
@@ -511,8 +512,9 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                         <h2 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>Use a Template</h2>
                         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', textAlign: 'center' }}>Enter a template code to create a portal from an existing template.</p>
 
-                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Template Code</label>
+                        <label htmlFor="cg-template-code" style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Template Code</label>
                         <input
+                            id="cg-template-code"
                             type="text"
                             value={templateCode}
                             onChange={(e) => setTemplateCode(e.target.value)}
@@ -565,7 +567,7 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
 
                         {/* Icon upload */}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
-                            <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*,video/mp4,video/webm,image/gif" onChange={handleFileChange} />
+                            <input type="file" aria-label="Portal icon image" ref={fileInputRef} style={{ display: 'none' }} accept="image/*,video/mp4,video/webm,image/gif" onChange={handleFileChange} />
                             <div
                                 onClick={() => fileInputRef.current?.click()}
                                 style={{ width: '80px', height: '80px', borderRadius: '50%', background: iconUrl ? `url(${iconUrl}) center/cover` : 'var(--bg-tertiary)', border: '1px dashed var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginBottom: '12px', overflow: 'hidden' }}
@@ -594,16 +596,18 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                             </div>
                         )}
 
-                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Portal Name</label>
+                        <label htmlFor="cg-portal-name" style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Portal Name</label>
                         <input
+                            id="cg-portal-name"
                             type="text"
                             value={guildName}
                             onChange={(e) => setGuildName(e.target.value)}
                             style={{ width: '100%', height: '44px', background: 'var(--bg-app)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: '0 16px', fontSize: '14px', outline: 'none', marginBottom: '16px' }}
                         />
 
-                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Description (Optional)</label>
+                        <label htmlFor="cg-portal-desc" style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Description (Optional)</label>
                         <textarea
+                            id="cg-portal-desc"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             style={{ width: '100%', height: '80px', resize: 'none', marginBottom: '20px', background: 'var(--bg-app)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: '12px 16px', fontSize: '14px', outline: 'none' }}

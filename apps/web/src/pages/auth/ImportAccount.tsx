@@ -249,6 +249,7 @@ const ImportAccount = () => {
                         <input
                             ref={fileInputRef}
                             type="file"
+                            aria-label="Import account JSON file"
                             accept=".json"
                             style={{ display: 'none' }}
                             onChange={handleFileChange}

@@ -79,12 +79,13 @@ const InviteModal = ({ onClose, guildId }: { onClose: () => void; guildId: strin
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '14px' }}>Share this link with others to grant them access to this server.</p>
 
                 <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Send a Server Invite Link</label>
+                    <label htmlFor="invite-link-input" style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Send a Server Invite Link</label>
                     <div style={{ display: 'flex', background: 'var(--bg-tertiary)', borderRadius: '8px', border: `1px solid ${copied ? 'var(--success)' : 'var(--stroke)'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', background: 'rgba(0,0,0,0.2)' }}>
                             <LinkIcon size={18} color="var(--text-muted)" />
                         </div>
                         <input
+                            id="invite-link-input"
                             type="text"
                             readOnly
                             value={loading ? 'Generating...' : inviteLink}
@@ -124,7 +125,7 @@ const InviteModal = ({ onClose, guildId }: { onClose: () => void; guildId: strin
                                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{expireAfter}</div>
                             </div>
                         </div>
-                        <select value={expireAfter} onChange={e => setExpireAfter(e.target.value)} className="auth-input" style={{ width: '120px', margin: 0, height: '36px', padding: '0 12px' }}>
+                        <select aria-label="Expire invite after" value={expireAfter} onChange={e => setExpireAfter(e.target.value)} className="auth-input" style={{ width: '120px', margin: 0, height: '36px', padding: '0 12px' }}>
                             <option>30 minutes</option>
                             <option>1 hour</option>
                             <option>12 hours</option>
@@ -144,7 +145,7 @@ const InviteModal = ({ onClose, guildId }: { onClose: () => void; guildId: strin
                                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{maxUses}</div>
                             </div>
                         </div>
-                        <select value={maxUses} onChange={e => setMaxUses(e.target.value)} className="auth-input" style={{ width: '120px', margin: 0, height: '36px', padding: '0 12px' }}>
+                        <select aria-label="Maximum number of uses" value={maxUses} onChange={e => setMaxUses(e.target.value)} className="auth-input" style={{ width: '120px', margin: 0, height: '36px', padding: '0 12px' }}>
                             <option>No limit</option>
                             <option>1 use</option>
                             <option>5 uses</option>

@@ -67,9 +67,10 @@ const ResetPassword = () => {
             <h1 className="auth-heading">Reset Password</h1>
             <p className="auth-subtext">Choose a new password for your account.</p>
 
-            <label className="auth-label">New Password</label>
+            <label className="auth-label" htmlFor="reset-new-pw">New Password</label>
             <div style={{ position: 'relative' }}>
                 <input
+                    id="reset-new-pw"
                     type={showPw ? 'text' : 'password'}
                     className="auth-input"
                     placeholder="At least 8 characters"
@@ -78,14 +79,16 @@ const ResetPassword = () => {
                 />
                 <button
                     onClick={() => setShowPw(!showPw)}
+                    aria-label={showPw ? 'Hide password' : 'Show password'}
                     style={{ position: 'absolute', right: 16, top: 12, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
                 >
                     {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
             </div>
 
-            <label className="auth-label">Confirm Password</label>
+            <label className="auth-label" htmlFor="reset-confirm-pw">Confirm Password</label>
             <input
+                id="reset-confirm-pw"
                 type="password"
                 className="auth-input"
                 placeholder="Repeat your new password"

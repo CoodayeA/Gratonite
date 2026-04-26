@@ -74,6 +74,7 @@ function EarnRule({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                     <input
                         type="number"
+                        aria-label={`${label} value`}
                         min={0}
                         max={100}
                         value={value}
@@ -85,6 +86,7 @@ function EarnRule({
             </div>
             <input
                 type="range"
+                aria-label={`${label} slider`}
                 min={0}
                 max={100}
                 value={value}
@@ -297,25 +299,29 @@ export default function CurrencyPanel({ guildId, addToast }: CurrencyPanelProps)
 
                 <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
                     <div style={{ flex: 1, minWidth: '160px' }}>
-                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <label htmlFor="currency-name-input" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                             Currency Name <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>{config.name.length}/50</span>
                         </label>
                         <input
+                            id="currency-name-input"
                             type="text"
                             value={config.name}
                             maxLength={50}
                             onChange={e => setConfig(prev => ({ ...prev, name: e.target.value }))}
                             onBlur={() => setNameTouched(true)}
                             placeholder="e.g. Server Coins"
+                            aria-invalid={nameTouched && !config.name.trim()}
+                            aria-describedby={nameTouched && !config.name.trim() ? 'currency-name-error' : undefined}
                             style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: `1px solid ${nameTouched && !config.name.trim() ? 'var(--error)' : 'var(--stroke)'}`, color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
                         />
                         {nameTouched && !config.name.trim() && (
-                            <div style={{ fontSize: '12px', color: 'var(--error)', marginTop: '4px' }}>Name is required</div>
+                            <div id="currency-name-error" role="alert" style={{ fontSize: '12px', color: 'var(--error)', marginTop: '4px' }}>Name is required</div>
                         )}
                     </div>
                     <div style={{ width: '80px' }}>
-                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Emoji</label>
+                        <label htmlFor="currency-emoji-input" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Emoji</label>
                         <input
+                            id="currency-emoji-input"
                             type="text"
                             value={config.emoji}
                             onChange={e => setConfig(prev => ({ ...prev, emoji: e.target.value.slice(0, 4) }))}
@@ -453,10 +459,11 @@ export default function CurrencyPanel({ guildId, addToast }: CurrencyPanelProps)
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
                         {/* Member search */}
                         <div ref={dropdownRef} style={{ flex: '1', minWidth: '180px', position: 'relative' }}>
-                            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Member</label>
+                            <label htmlFor="currency-award-member" style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Member</label>
                             <div style={{ position: 'relative' }}>
                                 <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                                 <input
+                                    id="currency-award-member"
                                     type="text"
                                     value={memberSearch}
                                     onChange={e => { setMemberSearch(e.target.value); setMemberDropdownOpen(true); if (!e.target.value) setAwardUserId(''); }}
@@ -489,8 +496,9 @@ export default function CurrencyPanel({ guildId, addToast }: CurrencyPanelProps)
 
                         {/* Amount */}
                         <div style={{ width: '120px' }}>
-                            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Amount</label>
+                            <label htmlFor="currency-award-amount" style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Amount</label>
                             <input
+                                id="currency-award-amount"
                                 type="number"
                                 min={1}
                                 max={10000}

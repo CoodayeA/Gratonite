@@ -36,13 +36,13 @@ function SpamConfigPanel({ guildId, addToast }: { guildId: string; addToast: (t:
             </label>
 
             <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', marginBottom: '16px', opacity: config.enabled ? 1 : 0.5 }}>
-                <div style={rowStyle}><span style={{ fontSize: '13px' }}>Max duplicate messages</span><input type="number" value={config.maxDuplicateMessages} onChange={e => setConfig({ ...config, maxDuplicateMessages: +e.target.value })} style={inputStyle} /></div>
-                <div style={rowStyle}><span style={{ fontSize: '13px' }}>Duplicate window (sec)</span><input type="number" value={config.duplicateWindowSeconds} onChange={e => setConfig({ ...config, duplicateWindowSeconds: +e.target.value })} style={inputStyle} /></div>
-                <div style={rowStyle}><span style={{ fontSize: '13px' }}>Max mentions per message</span><input type="number" value={config.maxMentionsPerMessage} onChange={e => setConfig({ ...config, maxMentionsPerMessage: +e.target.value })} style={inputStyle} /></div>
-                <div style={rowStyle}><span style={{ fontSize: '13px' }}>Max links per message</span><input type="number" value={config.maxLinksPerMessage} onChange={e => setConfig({ ...config, maxLinksPerMessage: +e.target.value })} style={inputStyle} /></div>
+                <div style={rowStyle}><span style={{ fontSize: '13px' }}>Max duplicate messages</span><input type="number" aria-label="Max duplicate messages" value={config.maxDuplicateMessages} onChange={e => setConfig({ ...config, maxDuplicateMessages: +e.target.value })} style={inputStyle} /></div>
+                <div style={rowStyle}><span style={{ fontSize: '13px' }}>Duplicate window (sec)</span><input type="number" aria-label="Duplicate window in seconds" value={config.duplicateWindowSeconds} onChange={e => setConfig({ ...config, duplicateWindowSeconds: +e.target.value })} style={inputStyle} /></div>
+                <div style={rowStyle}><span style={{ fontSize: '13px' }}>Max mentions per message</span><input type="number" aria-label="Max mentions per message" value={config.maxMentionsPerMessage} onChange={e => setConfig({ ...config, maxMentionsPerMessage: +e.target.value })} style={inputStyle} /></div>
+                <div style={rowStyle}><span style={{ fontSize: '13px' }}>Max links per message</span><input type="number" aria-label="Max links per message" value={config.maxLinksPerMessage} onChange={e => setConfig({ ...config, maxLinksPerMessage: +e.target.value })} style={inputStyle} /></div>
                 <div style={rowStyle}>
                     <span style={{ fontSize: '13px' }}>Action on detection</span>
-                    <select value={config.action} onChange={e => setConfig({ ...config, action: e.target.value })} style={{ ...inputStyle, width: '120px' }}>
+                    <select aria-label="Action on detection" value={config.action} onChange={e => setConfig({ ...config, action: e.target.value })} style={{ ...inputStyle, width: '120px' }}>
                         <option value="flag">Flag only</option>
                         <option value="mute">Auto-mute</option>
                         <option value="kick">Auto-kick</option>
