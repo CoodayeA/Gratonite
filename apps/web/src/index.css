@@ -6246,3 +6246,32 @@ body.gratonite-exp-reduced-motion *::after {
         font-size: 12px;
     }
 }
+
+/* ===== Reduced motion (WCAG 2.3.3) ===== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ===== Focus-visible baseline ===== */
+*:focus {
+  outline: none;
+}
+*:focus-visible {
+  outline: 2px solid var(--accent, #5865F2);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Form inputs override radius to match their own */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-color: var(--accent, #5865F2);
+  outline-offset: 1px;
+}
