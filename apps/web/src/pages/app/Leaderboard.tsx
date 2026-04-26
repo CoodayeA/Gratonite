@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Trophy } from 'lucide-react';
 import { api } from '../../lib/api';
 import Avatar from '../../components/ui/Avatar';
-import LoadingRow from '../../components/ui/LoadingRow';
+import { SkeletonLeaderboardList } from '../../components/ui/SkeletonLoader';
 
 type LeaderboardEntry = {
   userId: string;
@@ -114,7 +114,7 @@ export default function Leaderboard({ guildId, onClose }: Props) {
         {/* List */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}><LoadingRow label="Loading leaderboard…" inline /></div>
+            <SkeletonLeaderboardList count={8} />
           ) : error ? (
             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
               <div style={{ marginBottom: '8px' }}>Failed to load leaderboard</div>

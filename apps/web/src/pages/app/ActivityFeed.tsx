@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Zap, Star, Users, Gift, RefreshCw } from 'lucide-react';
 import { api } from '../../lib/api';
 import Avatar from '../../components/ui/Avatar';
-import LoadingRow from '../../components/ui/LoadingRow';
+import { SkeletonActivityFeed } from '../../components/ui/SkeletonLoader';
 
 type FeedEvent = {
   id: string;
@@ -120,7 +120,7 @@ export default function ActivityFeed({ onClose }: { onClose: () => void }) {
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px 16px 16px' }}>
           {loading ? (
-            <div style={{ padding: '40px 24px' }}><LoadingRow inline label="Loading activity…" /></div>
+            <SkeletonActivityFeed count={6} />
           ) : error ? (
             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
               <p style={{ color: 'var(--error)', marginBottom: '8px' }}>Failed to load activity feed.</p>

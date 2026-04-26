@@ -227,6 +227,149 @@ export const SkeletonSettingsPanel = () => (
     </div>
 );
 
+/** Leaderboard row skeleton: rank + avatar + name + score */
+export const SkeletonLeaderboardRow = ({ highlighted = false }: { highlighted?: boolean }) => (
+    <div className="gt-skeleton-state gt-skeleton-leaderboard-row" style={{
+        display: 'flex', alignItems: 'center', gap: '12px',
+        padding: '10px 8px', borderRadius: 'var(--radius-md)',
+        background: highlighted ? 'var(--bg-elevated)' : 'transparent',
+        marginBottom: '4px',
+        border: highlighted ? '1px solid var(--stroke)' : 'none',
+    }}>
+        <Skeleton variant="text" width={20} height={14} />
+        <Skeleton variant="circle" width={36} height={36} style={{ flexShrink: 0 }} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <Skeleton variant="text" width={`${randomBetween(50, 80)}%`} height={14} />
+            <Skeleton variant="text" width={`${randomBetween(25, 45)}%`} height={10} />
+        </div>
+        <Skeleton variant="text" width={48} height={14} />
+    </div>
+);
+
+/** Leaderboard list skeleton: top-3 highlighted, rest plain */
+export const SkeletonLeaderboardList = ({ count = 8 }: { count?: number }) => (
+    <div className="gt-skeleton-state gt-skeleton-leaderboard-list">
+        {Array.from({ length: count }).map((_, i) => (
+            <SkeletonLeaderboardRow key={`skeleton-lb-${i}`} highlighted={i < 3} />
+        ))}
+    </div>
+);
+
+/** Activity feed row skeleton: avatar + 2 text lines + timestamp */
+export const SkeletonActivityFeed = ({ count = 6 }: { count?: number }) => (
+    <div className="gt-skeleton-state gt-skeleton-activity-feed" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {Array.from({ length: count }).map((_, i) => (
+            <div key={`skeleton-activity-${i}`} style={{
+                display: 'flex', alignItems: 'flex-start', gap: '12px',
+                padding: '12px 8px', borderBottom: '1px solid var(--stroke)',
+            }}>
+                <Skeleton variant="circle" width={36} height={36} style={{ flexShrink: 0 }} />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <Skeleton variant="text" width={`${randomBetween(60, 90)}%`} height={13} />
+                    <Skeleton variant="text" width={`${randomBetween(30, 55)}%`} height={10} />
+                </div>
+            </div>
+        ))}
+    </div>
+);
+
+/** Moderation actions list skeleton: stats cards + chart + recent actions list */
+export const SkeletonModDashboard = ({ rows = 6 }: { rows?: number }) => (
+    <div className="gt-skeleton-state gt-skeleton-mod-dashboard">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+                <div key={`skel-mod-stat-${i}`} style={{
+                    background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)',
+                    padding: '16px', border: '1px solid var(--stroke)',
+                    display: 'flex', flexDirection: 'column', gap: '8px',
+                }}>
+                    <Skeleton variant="text" width={120} height={11} />
+                    <Skeleton variant="text" width={48} height={22} />
+                </div>
+            ))}
+        </div>
+        <div style={{
+            background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: '16px',
+            border: '1px solid var(--stroke)', marginBottom: '24px',
+        }}>
+            <Skeleton variant="text" width={180} height={14} style={{ marginBottom: '12px' }} />
+            <Skeleton variant="rect" width="100%" height={120} />
+        </div>
+        <div style={{
+            background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: '16px',
+            border: '1px solid var(--stroke)',
+        }}>
+            <Skeleton variant="text" width={150} height={14} style={{ marginBottom: '12px' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {Array.from({ length: rows }).map((_, i) => (
+                    <div key={`skel-mod-row-${i}`} style={{
+                        display: 'flex', alignItems: 'center', gap: '10px', padding: '8px',
+                        borderRadius: 'var(--radius-sm)', background: 'var(--bg-secondary)',
+                    }}>
+                        <Skeleton variant="circle" width={24} height={24} style={{ flexShrink: 0 }} />
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <Skeleton variant="text" width={`${randomBetween(40, 70)}%`} height={12} />
+                            <Skeleton variant="text" width={`${randomBetween(20, 40)}%`} height={10} />
+                        </div>
+                        <Skeleton variant="text" width={56} height={10} />
+                    </div>
+                ))}
+            </div>
+        </div>
+    </div>
+);
+
+/** Bot store card grid skeleton: avatar + name + tagline + stats row */
+export const SkeletonBotCardGrid = ({ count = 8 }: { count?: number }) => (
+    <div className="gt-skeleton-state gt-skeleton-bot-grid" style={{
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gap: '16px', marginBottom: '32px',
+    }}>
+        {Array.from({ length: count }).map((_, i) => (
+            <div key={`skel-bot-${i}`} style={{
+                background: 'var(--bg-elevated)', border: '1px solid var(--stroke)',
+                borderRadius: '12px', padding: '24px',
+                display: 'flex', flexDirection: 'column', gap: '12px',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Skeleton variant="rect" width={48} height={48} style={{ borderRadius: '12px', flexShrink: 0 }} />
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <Skeleton variant="text" width={`${randomBetween(50, 80)}%`} height={14} />
+                        <Skeleton variant="text" width={`${randomBetween(30, 55)}%`} height={10} />
+                    </div>
+                </div>
+                <Skeleton variant="text" width="100%" height={12} />
+                <Skeleton variant="text" width={`${randomBetween(60, 90)}%`} height={12} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                    <Skeleton variant="text" width={70} height={11} />
+                    <Skeleton variant="rect" width={72} height={28} style={{ borderRadius: '8px' }} />
+                </div>
+            </div>
+        ))}
+    </div>
+);
+
+/** Data export list skeleton: status icon + status label + date + action */
+export const SkeletonExportList = ({ count = 3 }: { count?: number }) => (
+    <div className="gt-skeleton-state gt-skeleton-export-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <Skeleton variant="text" width={140} height={13} style={{ marginBottom: '4px' }} />
+        {Array.from({ length: count }).map((_, i) => (
+            <div key={`skel-export-${i}`} style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '10px 14px', borderRadius: '8px',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+            }}>
+                <Skeleton variant="circle" width={20} height={20} style={{ flexShrink: 0 }} />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <Skeleton variant="text" width={`${randomBetween(30, 55)}%`} height={12} />
+                    <Skeleton variant="text" width={`${randomBetween(20, 40)}%`} height={10} />
+                </div>
+                <Skeleton variant="rect" width={68} height={26} style={{ borderRadius: '6px' }} />
+            </div>
+        ))}
+    </div>
+);
+
 /* ── helpers ──────────────────────────────── */
 
 /** Return a deterministic-ish random int for widths. Uses a simple seeded approach

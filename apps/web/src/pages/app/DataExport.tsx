@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Download, Clock, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../components/ui/ToastManager';
+import { SkeletonExportList } from '../../components/ui/SkeletonLoader';
 
 interface ExportRecord {
   id: string;
@@ -75,7 +76,7 @@ export default function DataExport() {
       </button>
 
       {loading ? (
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Loading...</p>
+        <SkeletonExportList count={3} />
       ) : exports.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)' }}>
           <Download size={28} style={{ opacity: 0.3, marginBottom: '8px' }} />

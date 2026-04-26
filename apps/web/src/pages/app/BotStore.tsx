@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
+import { SkeletonBotCardGrid } from '../../components/ui/SkeletonLoader';
 import { api } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
 
@@ -438,11 +439,7 @@ const BotStore = () => {
         </div>
 
         {isLoading ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '64px', color: 'var(--text-muted)', gap: '12px', flexDirection: 'column' }}>
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-            <div style={{ width: '32px', height: '32px', border: '3px solid var(--stroke)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-            <span style={{ fontSize: '14px' }}>Loading...</span>
-          </div>
+          <SkeletonBotCardGrid count={9} />
         ) : (
           <>
             {paginated.length === 0 ? (
