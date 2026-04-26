@@ -705,9 +705,10 @@ const EmojiPicker = ({ onSelectEmoji, onSendGif, onStickerSelect, guildId }: {
                             </div>
                         )}
                         {!stickersLoading && stickers.length === 0 && (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: '32px 0' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: '32px 16px', textAlign: 'center' }}>
                                 <span style={{ fontSize: '32px', opacity: 0.3, marginBottom: '12px' }}>&#127915;</span>
-                                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No stickers available</p>
+                                <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>No stickers yet</p>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Server admins can upload stickers from Server Settings → Stickers.</p>
                             </div>
                         )}
                         {!stickersLoading && stickers.length > 0 && (

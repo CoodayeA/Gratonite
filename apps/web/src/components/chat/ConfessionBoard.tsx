@@ -83,7 +83,8 @@ const ConfessionBoard = ({ channelId, guildId, isOwnerOrAdmin }: { channelId: st
         ) : confessions.length === 0 ? (
           <div className="text-center text-gray-500 py-12">
             <EyeOff size={32} className="mx-auto mb-2 opacity-50" />
-            <p>No confessions yet. Be the first!</p>
+            <p className="font-semibold mb-1">No confessions yet</p>
+            <p className="text-sm opacity-80">Drop the first one — it stays anonymous.</p>
           </div>
         ) : (
           confessions.map(c => (

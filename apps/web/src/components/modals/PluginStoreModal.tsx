@@ -156,7 +156,8 @@ export default function PluginStoreModal({ onClose, installedPlugins: propPlugin
                                 {installedPlugins.length === 0 ? (
                                     <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-muted)' }}>
                                         <Package size={40} style={{ marginBottom: 12, opacity: 0.5 }} />
-                                        <p style={{ fontSize: 14 }}>No plugins installed yet. Browse the store to get started!</p>
+                                        <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>No plugins installed</p>
+                                        <p style={{ fontSize: 13 }}>Browse the store tab to find extensions and add them here.</p>
                                     </div>
                                 ) : (
                                     installedPlugins.map(({ manifest, enabled }) => (
