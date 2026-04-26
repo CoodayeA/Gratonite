@@ -142,7 +142,6 @@ import AnimatedGuildIcon from './components/ui/AnimatedGuildIcon';
 import { SkeletonChannelGroup, SkeletonDmList, SkeletonMemberList } from './components/ui/SkeletonLoader';
 import AmbientPlayer from './components/ui/AmbientPlayer';
 import ConnectionBanner from './components/ui/ConnectionBanner';
-import OfflineBanner from './components/OfflineBanner';
 import ThemePreviewBanner from './components/ui/ThemePreviewBanner';
 import SeasonalOverlay from './components/ui/SeasonalOverlay';
 import LiveAnnouncer, { announce } from './components/ui/LiveAnnouncer';
@@ -4849,7 +4848,6 @@ function App() {
             <AmbientPlayer />
             <ThemePreviewBanner />
             <ConnectionBanner />
-            <OfflineBanner />
             {(window as any).gratoniteDesktop?.isDesktop && <UpdateBanner />}
             <SeasonalOverlay />
             <LiveAnnouncer />
