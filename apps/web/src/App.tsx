@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { createPortal } from 'react-dom';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, Navigate, Outlet, Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import gsap from 'gsap';
+import { loadGsap } from './lib/gsapLazy';
 import { Home, Settings, Hash as HashIcon, Mic, Plus, ChevronDown, ChevronRight, MessageSquare, Search, Bell, BellOff, Bug, Circle, Volume1, Volume2, Copy, Lock, Trash2, X, Check, Minus, ShieldAlert, LogOut, Activity, Ban, Link2, ShoppingBag, Store, Package, HelpCircle, Users, Folder as FolderIcon, Star, Zap, Calendar, Compass, User, Columns, Paintbrush, PenLine, FileText, LayoutGrid } from 'lucide-react';
 import './components/chat.css';
 import CommandPalette from './components/ui/CommandPalette';
@@ -407,18 +407,23 @@ const GuildRail = ({ isOpen, onOpenCreateGuild, onOpenNotifications, onOpenBugRe
         const icons = rail.querySelectorAll('.guild-icon');
         const enters: Array<(e: Event) => void> = [];
         const leaves: Array<(e: Event) => void> = [];
-        icons.forEach((icon) => {
-            const enter = () => gsap.to(icon, { scale: 1.08, borderRadius: '16px', duration: 0.25, ease: 'back.out(2)' });
-            const leave = () => gsap.to(icon, { scale: 1, borderRadius: '24px', duration: 0.25, ease: 'power2.out' });
-            icon.addEventListener('mouseenter', enter);
-            icon.addEventListener('mouseleave', leave);
-            enters.push(enter);
-            leaves.push(leave);
+        let cancelled = false;
+        loadGsap().then((gsap) => {
+            if (cancelled) return;
+            icons.forEach((icon) => {
+                const enter = () => gsap.to(icon, { scale: 1.08, borderRadius: '16px', duration: 0.25, ease: 'back.out(2)' });
+                const leave = () => gsap.to(icon, { scale: 1, borderRadius: '24px', duration: 0.25, ease: 'power2.out' });
+                icon.addEventListener('mouseenter', enter);
+                icon.addEventListener('mouseleave', leave);
+                enters.push(enter);
+                leaves.push(leave);
+            });
         });
         return () => {
+            cancelled = true;
             icons.forEach((icon, i) => {
-                icon.removeEventListener('mouseenter', enters[i]);
-                icon.removeEventListener('mouseleave', leaves[i]);
+                if (enters[i]) icon.removeEventListener('mouseenter', enters[i]);
+                if (leaves[i]) icon.removeEventListener('mouseleave', leaves[i]);
             });
         };
     }, [guilds]);
@@ -1432,7 +1437,9 @@ const ChannelSidebar = ({ isOpen, onOpenSettings, onOpenProfile, onOpenGlobalSea
                 // Expanding: animate children in with stagger
                 const items = container.children;
                 if (items.length) {
-                    gsap.from(items, { y: -8, opacity: 0, stagger: 0.03, duration: 0.25, ease: 'power2.out' });
+                    loadGsap().then((gsap) => {
+                        gsap.from(items, { y: -8, opacity: 0, stagger: 0.03, duration: 0.25, ease: 'power2.out' });
+                    });
                 }
             }
         });

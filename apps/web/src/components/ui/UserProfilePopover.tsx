@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import gsap from 'gsap';
+import { loadGsap } from '../../lib/gsapLazy';
 import { MessageSquare, UserPlus, MoreHorizontal, Gamepad2, Headphones, Eye, Star, Clock, Music, Cake, Link2, Shield, Code, Tv, Play, VolumeX, ShieldOff, Flag, Copy } from 'lucide-react';
 import { api, API_BASE } from '../../lib/api';
 import { getDeterministicGradient } from '../../utils/colors';
@@ -274,13 +274,18 @@ const UserProfilePopover = ({
         const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (prefersReduced) return;
 
-        gsap.fromTo(el, { scale: 0.95, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.25, ease: 'back.out(2)' });
+        let cancelled = false;
+        loadGsap().then((gsap) => {
+            if (cancelled || !el.isConnected) return;
+            gsap.fromTo(el, { scale: 0.95, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.25, ease: 'back.out(2)' });
 
-        // Stagger badge pills after card appears
-        const badges = el.querySelectorAll('[data-badge-pill]');
-        if (badges.length) {
-            gsap.from(badges, { scale: 0, opacity: 0, stagger: 0.05, duration: 0.25, ease: 'back.out(2)', delay: 0.15 });
-        }
+            // Stagger badge pills after card appears
+            const badges = el.querySelectorAll('[data-badge-pill]');
+            if (badges.length) {
+                gsap.from(badges, { scale: 0, opacity: 0, stagger: 0.05, duration: 0.25, ease: 'back.out(2)', delay: 0.15 });
+            }
+        });
+        return () => { cancelled = true; };
     }, []);
 
     return (

@@ -1,11 +1,9 @@
-import "./instrument";               // Sentry must init before everything else
+import { initSentry } from "./instrument";
 
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import * as Sentry from '@sentry/react'
 import { QueryClientProvider } from '@tanstack/react-query'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import App from './App.tsx'
 import './index.css'
 import './themes/overrides/theme-scrollbar.css'
@@ -17,12 +15,28 @@ import { TrustCardProvider } from './contexts/TrustCardContext'
 import { queryClient } from './lib/queryClient'
 import { init as initErrorReporter } from './lib/errorReporter'
 import { applyWebExperimentsToDocument } from './lib/experiments'
+import { loadGsap } from './lib/gsapLazy'
 
 applyWebExperimentsToDocument();
 
-// GSAP global setup
-gsap.registerPlugin(ScrollTrigger);
-gsap.defaults({ ease: 'power3.out', duration: 0.6 });
+// Defer Sentry init + GSAP plugin/defaults setup off the critical render path.
+// Errors thrown before this fires won't be captured — acceptable trade-off.
+const scheduleIdle = (cb: () => void) => {
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(cb, { timeout: 2000 });
+    } else {
+        setTimeout(cb, 1);
+    }
+};
+
+scheduleIdle(() => {
+    initSentry();
+    loadGsap().then(async (gsap) => {
+        const { ScrollTrigger } = await import('gsap/ScrollTrigger');
+        gsap.registerPlugin(ScrollTrigger);
+        gsap.defaults({ ease: 'power3.out', duration: 0.6 });
+    });
+});
 
 // Initialize global error reporting (window.onerror + unhandledrejection)
 initErrorReporter();

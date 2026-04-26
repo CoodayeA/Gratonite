@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import gsap from 'gsap';
+import { loadGsap } from '../../lib/gsapLazy';
 
 /**
  * Custom hook to delay unmounting of a component to allow for exit animations
@@ -186,11 +186,19 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
                 setShouldRender(false);
                 return;
             }
-            const tl = gsap.timeline({
-                onComplete: () => setShouldRender(false),
+            let cancelled = false;
+            loadGsap().then((gsap) => {
+                if (cancelled) {
+                    setShouldRender(false);
+                    return;
+                }
+                const tl = gsap.timeline({
+                    onComplete: () => setShouldRender(false),
+                });
+                if (backdropRef.current) tl.to(backdropRef.current, { opacity: 0, duration: 0.2 }, 0);
+                if (contentRef.current) tl.to(contentRef.current, { scale: 0.95, opacity: 0, y: 10, duration: 0.2 }, 0);
             });
-            if (backdropRef.current) tl.to(backdropRef.current, { opacity: 0, duration: 0.2 }, 0);
-            if (contentRef.current) tl.to(contentRef.current, { scale: 0.95, opacity: 0, y: 10, duration: 0.2 }, 0);
+            return () => { cancelled = true; };
         }
     }, [isOpen]);
 
@@ -198,23 +206,31 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
     useEffect(() => {
         if (!shouldRender || !isOpen) return;
         if (prefersReduced) return;
-        // Wait for DOM to be ready
-        const raf = requestAnimationFrame(() => {
-            if (backdropRef.current) {
-                gsap.fromTo(backdropRef.current, { opacity: 0 }, { opacity: 1, duration: 0.2 });
-            }
-            if (contentRef.current) {
-                if (isMobile) {
-                    gsap.fromTo(contentRef.current, { y: '100%' }, { y: 0, duration: 0.3, ease: 'power3.out' });
-                } else {
-                    gsap.fromTo(contentRef.current,
-                        { scale: 0.95, opacity: 0, y: 10 },
-                        { scale: 1, opacity: 1, y: 0, duration: 0.3, ease: 'back.out(1.4)' }
-                    );
+        let cancelled = false;
+        let raf = 0;
+        loadGsap().then((gsap) => {
+            if (cancelled) return;
+            // Wait for DOM to be ready
+            raf = requestAnimationFrame(() => {
+                if (backdropRef.current) {
+                    gsap.fromTo(backdropRef.current, { opacity: 0 }, { opacity: 1, duration: 0.2 });
                 }
-            }
+                if (contentRef.current) {
+                    if (isMobile) {
+                        gsap.fromTo(contentRef.current, { y: '100%' }, { y: 0, duration: 0.3, ease: 'power3.out' });
+                    } else {
+                        gsap.fromTo(contentRef.current,
+                            { scale: 0.95, opacity: 0, y: 10 },
+                            { scale: 1, opacity: 1, y: 0, duration: 0.3, ease: 'back.out(1.4)' }
+                        );
+                    }
+                }
+            });
         });
-        return () => cancelAnimationFrame(raf);
+        return () => {
+            cancelled = true;
+            if (raf) cancelAnimationFrame(raf);
+        };
     }, [shouldRender, isMobile]);
 
     // Prevent background scrolling while modal is open

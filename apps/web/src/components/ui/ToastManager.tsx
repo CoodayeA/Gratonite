@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { CheckCircle, AlertCircle, Info, Trophy, X, Undo2 } from 'lucide-react';
 import { playSound } from '../../utils/SoundManager';
-import gsap from 'gsap';
+import { loadGsap } from '../../lib/gsapLazy';
 
 export type ToastVariant = 'success' | 'error' | 'info' | 'achievement' | 'undo';
 
@@ -122,9 +122,12 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
         setExiting(true);
         const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (toastRef.current && !prefersReduced) {
-            gsap.to(toastRef.current, {
-                x: 120, opacity: 0, duration: 0.3, ease: 'power2.in',
-                onComplete: onRemove,
+            const node = toastRef.current;
+            loadGsap().then((gsap) => {
+                gsap.to(node, {
+                    x: 120, opacity: 0, duration: 0.3, ease: 'power2.in',
+                    onComplete: onRemove,
+                });
             });
         } else {
             setTimeout(onRemove, 300);
@@ -183,10 +186,13 @@ const ToastItem = ({ toast, onRemove, style }: { toast: Toast, onRemove: () => v
     useEffect(() => {
         const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (toastRef.current && !prefersReduced) {
-            gsap.fromTo(toastRef.current,
-                { x: 120, opacity: 0 },
-                { x: 0, opacity: 1, duration: 0.4, ease: 'back.out(1.4)' }
-            );
+            const node = toastRef.current;
+            loadGsap().then((gsap) => {
+                gsap.fromTo(node,
+                    { x: 120, opacity: 0 },
+                    { x: 0, opacity: 1, duration: 0.4, ease: 'back.out(1.4)' }
+                );
+            });
         }
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {

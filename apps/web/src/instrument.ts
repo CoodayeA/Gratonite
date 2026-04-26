@@ -9,7 +9,11 @@ const SENTRY_TUNNEL_URL = `${API_BASE.replace(/\/$/, '')}/sentry-tunnel`;
 // Expose for console testing
 (window as any).Sentry = Sentry;
 
-Sentry.init({
+let initialized = false;
+export function initSentry() {
+  if (initialized) return;
+  initialized = true;
+  Sentry.init({
   dsn: "https://06e4ca4d04c520405630f744f70700b1@o4511074273329152.ingest.us.sentry.io/4511074372616192",
   tunnel: SENTRY_TUNNEL_URL,
   release: `gratonite-web@${import.meta.env.VITE_APP_VERSION || '0.0.0'}`,
@@ -59,4 +63,5 @@ Sentry.init({
     }
     return event;
   },
-});
+  });
+}
