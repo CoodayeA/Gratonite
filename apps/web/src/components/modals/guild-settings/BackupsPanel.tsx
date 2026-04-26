@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../../lib/api';
+import LoadingRow from '../../ui/LoadingRow';
 
 function BackupsPanel({ guildId, addToast }: { guildId: string; addToast: (t: any) => void }) {
     const [backups, setBackups] = useState<any[]>([]);
@@ -69,7 +70,7 @@ function BackupsPanel({ guildId, addToast }: { guildId: string; addToast: (t: an
             </div>
 
             {loading ? (
-                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
+                <div style={{ padding: '48px 16px' }}><LoadingRow inline /></div>
             ) : backups.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>No backups yet.</div>
             ) : (

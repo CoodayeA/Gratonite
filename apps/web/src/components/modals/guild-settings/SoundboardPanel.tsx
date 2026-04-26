@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../../lib/api';
+import LoadingRow from '../../ui/LoadingRow';
 
 function SoundboardPanel({ guildId, addToast }: { guildId: string; addToast: (t: any) => void }) {
     const [clips, setClips] = useState<any[]>([]);
@@ -55,7 +56,7 @@ function SoundboardPanel({ guildId, addToast }: { guildId: string; addToast: (t:
             </div>
 
             {loading ? (
-                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
+                <div style={{ padding: '48px 16px' }}><LoadingRow inline /></div>
             ) : clips.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>No sound clips yet. Upload one above.</div>
             ) : (

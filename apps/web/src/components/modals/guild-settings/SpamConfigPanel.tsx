@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../../lib/api';
+import LoadingRow from '../../ui/LoadingRow';
 
 function SpamConfigPanel({ guildId, addToast }: { guildId: string; addToast: (t: any) => void }) {
     const [config, setConfig] = useState<any>(null);
@@ -9,7 +10,7 @@ function SpamConfigPanel({ guildId, addToast }: { guildId: string; addToast: (t:
         api.spamConfig.get(guildId).then(setConfig).catch(() => {});
     }, [guildId]);
 
-    if (!config) return <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>;
+    if (!config) return <div style={{ padding: '48px 16px' }}><LoadingRow inline /></div>;
 
     const save = async () => {
         setSaving(true);

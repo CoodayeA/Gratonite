@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../../lib/api';
+import LoadingRow from '../../ui/LoadingRow';
 
 function ModQueuePanel({ guildId, addToast }: { guildId: string; addToast: (t: any) => void }) {
     const [items, setItems] = useState<any[]>([]);
@@ -44,7 +45,7 @@ function ModQueuePanel({ guildId, addToast }: { guildId: string; addToast: (t: a
             </div>
 
             {loading ? (
-                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
+                <div style={{ padding: '48px 16px' }}><LoadingRow inline /></div>
             ) : items.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>No items in this queue.</div>
             ) : (

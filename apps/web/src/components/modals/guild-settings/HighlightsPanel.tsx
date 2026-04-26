@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../../lib/api';
+import LoadingRow from '../../ui/LoadingRow';
 
 function HighlightsPanel({ guildId, addToast }: { guildId: string; addToast: (t: any) => void }) {
     const [highlights, setHighlights] = useState<any[]>([]);
@@ -30,7 +31,7 @@ function HighlightsPanel({ guildId, addToast }: { guildId: string; addToast: (t:
             </button>
 
             {loading ? (
-                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
+                <div style={{ padding: '48px 16px' }}><LoadingRow inline /></div>
             ) : highlights.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>No highlights yet. Generate one above.</div>
             ) : (

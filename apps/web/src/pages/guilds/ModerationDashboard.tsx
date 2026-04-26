@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Shield, AlertTriangle, Ban, Clock, Activity, Filter, RefreshCw } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../components/ui/ToastManager';
+import LoadingRow from '../../components/ui/LoadingRow';
 
 interface ModAction {
     id: string;
@@ -364,7 +365,7 @@ export default function ModerationDashboard() {
             </div>
 
             {loading ? (
-                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
+                <div style={{ padding: '48px 16px' }}><LoadingRow label="Loading moderation actions…" inline /></div>
             ) : activeTab === 'overview' ? (
                 <>
                     {/* Stats cards */}
