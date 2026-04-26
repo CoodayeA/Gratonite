@@ -151,7 +151,7 @@ import VoiceBar from './components/ui/VoiceBar';
 import { useVoiceSounds } from './hooks/useVoiceSounds';
 import Avatar from './components/ui/Avatar';
 import { RemoteBadge } from './components/ui/RemoteBadge';
-import UserProfilePopover from './components/ui/UserProfilePopover';
+const UserProfilePopover = lazy(() => import('./components/ui/UserProfilePopover'));
 import { useGuildSession, type GuildSessionErrorCode, type GuildSessionInfo, type GuildSessionChannel } from './hooks/useGuildSession';
 import { isAuthRuntimeExpired } from './lib/authRuntime';
 import { FirstRunChecklist } from './components/onboarding/FirstRunChecklist';
@@ -3130,6 +3130,7 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile, isMobileOpen, onCloseMo
             )}
 
             {popoverUser && (
+                <Suspense fallback={null}>
                 <UserProfilePopover
                     user={{
                         id: popoverUser.member.userId,
@@ -3144,6 +3145,7 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile, isMobileOpen, onCloseMo
                     onMessage={handlePopoverMessage}
                     onAddFriend={handlePopoverAddFriend}
                 />
+                </Suspense>
             )}
 
             {/* Ban Confirmation Dialog */}
