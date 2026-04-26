@@ -184,10 +184,11 @@ const Trading = () => {
                     loading ? (
                         <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading trades...</div>
                     ) : trades.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
-                            <ArrowLeftRight size={48} style={{ marginBottom: '12px', opacity: 0.3 }} />
-                            <p>No pending trades</p>
-                            <button onClick={startCreate} style={{ marginTop: '12px', padding: '8px 20px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 600, cursor: 'pointer' }}>
+                        <div style={{ textAlign: 'center', padding: '40px 24px', color: 'var(--text-muted)' }}>
+                            <ArrowLeftRight size={32} style={{ marginBottom: '12px', opacity: 0.3 }} />
+                            <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>No pending trades</p>
+                            <p style={{ fontSize: '13px' }}>Propose a swap with a friend to exchange cosmetics and Grats.</p>
+                            <button onClick={startCreate} style={{ marginTop: '16px', padding: '8px 20px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: '#000', fontWeight: 600, cursor: 'pointer' }}>
                                 Start a Trade
                             </button>
                         </div>

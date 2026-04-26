@@ -6662,3 +6662,75 @@ body.gratonite-exp-reduced-motion *::after {
     max-width: 100vw;
   }
 }
+
+/* ===== Mobile @375px polish ===== */
+/* Tighten layout for small iPhones (≤375px wide).
+   Targets the guild/server rail, the channel/DM sidebar drawer,
+   and message density in chat. CSS-only, additive on top of the
+   existing @media (max-width: 768px) drawer rules above. */
+@media (max-width: 375px) {
+    /* 1) Guild/server rail — narrower drawer, tighter icons */
+    .guild-rail,
+    .server-list {
+        width: 64px !important;
+        padding: 12px 0 !important;
+        gap: 10px !important;
+    }
+    .guild-rail .guild-icon,
+    .server-list .guild-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 20px;
+        font-size: 1rem;
+    }
+    .guild-rail .guild-icon::before,
+    .server-list .guild-icon::before {
+        left: -12px;
+    }
+
+    /* 2) Channel sheet / DM sidebar — cap at 85vw so close
+          buttons stay reachable on small phones */
+    .channel-sidebar,
+    .channels-bar,
+    .dm-sidebar {
+        width: 85vw !important;
+        max-width: 320px !important;
+    }
+    .channel-sidebar .sidebar-header,
+    .channels-bar .sidebar-header,
+    .dm-sidebar .sidebar-header {
+        padding: 0 16px;
+        font-size: 1.05rem;
+    }
+    .channel-sidebar .channel-list,
+    .channels-bar .channel-list,
+    .dm-sidebar .channel-list {
+        padding: 12px 8px;
+    }
+
+    /* 3) Message density — keep avatars readable but tighten
+          spacing, padding, and metadata fonts */
+    .message-row {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+        margin-top: 3px !important;
+        margin-bottom: 3px !important;
+    }
+    .message-row .message-avatar {
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px;
+        flex-shrink: 0;
+    }
+    .message-row .message-content,
+    .message-row .message-content-wrapper {
+        font-size: 14px;
+        line-height: 1.4;
+    }
+    .message-row .message-author {
+        font-size: 14px;
+    }
+    .message-row .message-timestamp {
+        font-size: 12px;
+    }
+}

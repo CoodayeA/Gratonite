@@ -1211,7 +1211,13 @@ const Discover = () => {
                 <div style={{ marginBottom: '24px' }}>
                     <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Start your server with a pre-built template. Channels, roles, and permissions included.</p>
                 </div>
-                {filtered.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', padding: '32px' }}>No templates match "{searchQuery}"</p>}
+                {filtered.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '40px 24px', color: 'var(--text-muted)' }}>
+                        <Search size={32} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                        <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>No templates match "{searchQuery}"</p>
+                        <p style={{ fontSize: '13px' }}>Try a different search term or browse all categories.</p>
+                    </div>
+                )}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
                     {filtered.map(template => (
                         <div key={template.id} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', transition: 'border-color 0.2s' }}
@@ -1244,7 +1250,13 @@ const Discover = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Click any theme to instantly apply it.</p>
             </div>
-            {filteredThemes.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', padding: '32px' }}>No themes match "{searchQuery}"</p>}
+            {filteredThemes.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '40px 24px', color: 'var(--text-muted)' }}>
+                    <Palette size={32} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                    <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>No themes match "{searchQuery}"</p>
+                    <p style={{ fontSize: '13px' }}>Try a different search term to find your style.</p>
+                </div>
+            )}
             <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
                 {filteredThemes.map((theme) => (
                     <div key={theme.id}

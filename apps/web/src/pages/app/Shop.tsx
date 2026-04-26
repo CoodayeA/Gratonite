@@ -443,9 +443,10 @@ const Shop = () => {
                             <Skeleton key={`shop-skeleton-${i}`} variant="card" height="300px" />
                         ))
                     ) : filteredItems.length === 0 ? (
-                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
-                            <p style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>No Items Available</p>
-                            <p style={{ fontSize: '13px' }}>No cosmetics are currently available for this category.</p>
+                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px 24px', color: 'var(--text-muted)' }}>
+                            <Package size={32} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                            <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>No items available</p>
+                            <p style={{ fontSize: '13px' }}>Check back soon — new cosmetics drop regularly in this category.</p>
                         </div>
                     ) : view === 'nameplates' ? (
                         filteredItems.map(item => (

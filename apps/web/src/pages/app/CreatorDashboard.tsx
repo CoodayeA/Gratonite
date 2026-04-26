@@ -312,9 +312,10 @@ const CreatorDashboard = () => {
                         )}
 
                         {!loading && !error && submissions.length === 0 && (
-                            <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
-                                <p style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>No submissions yet</p>
-                                <p style={{ fontSize: '13px' }}>Submit your first cosmetic item to start earning revenue!</p>
+                            <div style={{ textAlign: 'center', padding: '40px 24px', color: 'var(--text-muted)' }}>
+                                <FileUp size={32} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                                <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>No submissions yet</p>
+                                <p style={{ fontSize: '13px' }}>Submit your first cosmetic item to start earning revenue.</p>
                             </div>
                         )}
 
