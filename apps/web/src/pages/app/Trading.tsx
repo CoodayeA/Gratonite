@@ -262,7 +262,11 @@ const Trading = () => {
                                             </div>
                                         </button>
                                     ))}
-                                    {filteredFriends.length === 0 && <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '16px' }}>No friends found</p>}
+                                    {filteredFriends.length === 0 && (
+                                        <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 16px', fontSize: '13px' }}>
+                                            No friends match that search.
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ) : (

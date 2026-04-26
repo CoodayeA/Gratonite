@@ -33,9 +33,11 @@ const FOCUSABLE_SELECTOR = [
  * Traps keyboard focus inside a container element while the modal is open.
  * Saves and restores the previously focused element on mount/unmount.
  */
-function useFocusTrap(isOpen: boolean) {
+function useFocusTrap(isOpen: boolean, onEscape?: () => void) {
     const containerRef = useRef<HTMLDivElement>(null);
     const previousFocusRef = useRef<Element | null>(null);
+    const onCloseRef = useRef(onEscape);
+    useEffect(() => { onCloseRef.current = onEscape; }, [onEscape]);
 
     // Save the element that was focused before the modal opened
     useEffect(() => {
@@ -73,8 +75,13 @@ function useFocusTrap(isOpen: boolean) {
         };
     }, [isOpen]);
 
-    // Handle Tab / Shift+Tab cycling
+    // Handle Tab / Shift+Tab cycling + Escape
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Escape' && onCloseRef.current) {
+            e.stopPropagation();
+            onCloseRef.current();
+            return;
+        }
         if (e.key !== 'Tab' || !containerRef.current) return;
 
         const focusableEls = Array.from(
@@ -154,7 +161,7 @@ interface ModalWrapperProps {
 
 export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, onClose, ariaLabel }) => {
     const [shouldRender, setShouldRender] = useState(false);
-    const { containerRef, handleKeyDown } = useFocusTrap(isOpen);
+    const { containerRef, handleKeyDown } = useFocusTrap(isOpen, onClose);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const backdropRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
@@ -261,7 +268,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
                         position: 'relative',
                         background: 'var(--bg-primary)',
                         borderRadius: '16px 16px 0 0',
-                        maxHeight: '90vh',
+                        maxHeight: '90dvh',
                         overflowY: 'auto',
                         transform: dragOffset ? `translateY(${dragOffset}px)` : undefined,
                     }}
@@ -310,7 +317,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({ isOpen, children, on
                 }}
             />
             <div onClick={onClose} style={{ pointerEvents: 'auto', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                <div ref={contentRef} onClick={e => e.stopPropagation()} style={{ maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', width: '100%', height: '100%' }}>
+                <div ref={contentRef} onClick={e => e.stopPropagation()} style={{ maxWidth: '95vw', maxHeight: '90dvh', overflowY: 'auto', width: '100%', height: '100%' }}>
                     {children}
                 </div>
             </div>

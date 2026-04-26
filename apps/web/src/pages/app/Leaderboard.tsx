@@ -120,7 +120,11 @@ export default function Leaderboard({ guildId, onClose }: Props) {
               <button onClick={() => { setError(false); setRetryCount(c => c + 1); }} style={{ background: 'var(--accent-primary)', color: '#000', border: 'none', borderRadius: '6px', padding: '6px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
             </div>
           ) : entries.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>No data yet</div>
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+              <Trophy size={48} style={{ opacity: 0.3, marginBottom: '12px' }} />
+              <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>No leaderboard yet</div>
+              <div style={{ fontSize: '13px' }}>Send messages, react, and play games to climb the ranks.</div>
+            </div>
           ) : entries.map((entry, i) => (
             <div key={entry.userId} style={{
               display: 'flex', alignItems: 'center', gap: '12px',
