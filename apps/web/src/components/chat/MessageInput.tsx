@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useId, lazy, Suspense } from 'react';
 import JSZip from 'jszip';
 import {
     Send, Smile, Image as ImageIcon, Reply, X, Plus, Mic, BarChart2, Clock,
@@ -259,6 +259,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
     draftSaveTimerRef,
     processEmojis,
 }) => {
+    const baseId = useId();
+    const scheduleDateId = `${baseId}-schedule-date`;
+    const scheduleTimeId = `${baseId}-schedule-time`;
+    const pollQuestionId = `${baseId}-poll-question`;
+    const pollDurationId = `${baseId}-poll-duration`;
     const [isOffline, setIsOffline] = useState(() => !navigator.onLine);
     useEffect(() => {
         const onOnline = () => setIsOffline(false);
@@ -1146,12 +1151,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <div style={{ flex: 1 }}>
-                                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Date</label>
-                                <input type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'white', padding: '8px', borderRadius: '6px', fontSize: '13px', outline: 'none' }} />
+                                <label htmlFor={scheduleDateId} style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Date</label>
+                                <input id={scheduleDateId} type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'white', padding: '8px', borderRadius: '6px', fontSize: '13px', outline: 'none' }} />
                             </div>
                             <div style={{ flex: 1 }}>
-                                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Time</label>
-                                <input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'white', padding: '8px', borderRadius: '6px', fontSize: '13px', outline: 'none' }} />
+                                <label htmlFor={scheduleTimeId} style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Time</label>
+                                <input id={scheduleTimeId} type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'white', padding: '8px', borderRadius: '6px', fontSize: '13px', outline: 'none' }} />
                             </div>
                         </div>
 
@@ -1189,8 +1194,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
                         </div>
 
                         <div>
-                            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Question</label>
+                            <label htmlFor={pollQuestionId} style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Question</label>
                             <input
+                                id={pollQuestionId}
                                 type="text"
                                 value={pollQuestion}
                                 onChange={e => setPollQuestion(e.target.value)}
@@ -1200,7 +1206,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Options</label>
+                            <div style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Options</div>
                             {pollOptions.map((option, index) => (
                                 <div key={index} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                                     <input
@@ -1241,8 +1247,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
                         </label>
 
                         <div>
-                            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>Poll Duration</label>
+                            <label htmlFor={pollDurationId} style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>Poll Duration</label>
                             <select
+                                id={pollDurationId}
                                 value={pollDuration ?? ''}
                                 onChange={e => setPollDuration(e.target.value ? Number(e.target.value) : null)}
                                 style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', padding: '8px 10px', fontSize: '13px', outline: 'none' }}

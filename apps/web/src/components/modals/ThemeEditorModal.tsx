@@ -5,7 +5,7 @@
  * Shows color harmony suggestions (Item 28) and WCAG contrast checking (Item 29).
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useId } from 'react';
 import { X, Save, ChevronDown, Check, AlertTriangle, Info } from 'lucide-react';
 import { useTheme } from '../ui/ThemeProvider';
 import { useToast } from '../ui/ToastManager';
@@ -118,6 +118,11 @@ function getDefaultDarkVars(): ThemeVariables {
 }
 
 export default function ThemeEditorModal({ onClose, editingThemeId }: ThemeEditorModalProps) {
+  const baseId = useId();
+  const nameId = `${baseId}-name`;
+  const categoryId = `${baseId}-category`;
+  const descriptionId = `${baseId}-description`;
+  const baseThemeIdInputId = `${baseId}-base`;
   const { setTheme, colorMode } = useTheme();
   const toast = useToast();
 
@@ -332,8 +337,9 @@ export default function ThemeEditorModal({ onClose, editingThemeId }: ThemeEdito
             <div style={{ marginBottom: '20px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Name</label>
+                  <label htmlFor={nameId} style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Name</label>
                   <input
+                    id={nameId}
                     value={themeName}
                     onChange={e => setThemeName(e.target.value)}
                     className="auth-input"
@@ -342,8 +348,9 @@ export default function ThemeEditorModal({ onClose, editingThemeId }: ThemeEdito
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Category</label>
+                  <label htmlFor={categoryId} style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Category</label>
                   <select
+                    id={categoryId}
                     value={themeCategory}
                     onChange={e => setThemeCategory(e.target.value as ThemeCategory)}
                     className="auth-input"
@@ -356,8 +363,9 @@ export default function ThemeEditorModal({ onClose, editingThemeId }: ThemeEdito
                 </div>
               </div>
               <div style={{ marginBottom: '12px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Description</label>
+                <label htmlFor={descriptionId} style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Description</label>
                 <input
+                  id={descriptionId}
                   value={themeDescription}
                   onChange={e => setThemeDescription(e.target.value)}
                   className="auth-input"
@@ -369,8 +377,9 @@ export default function ThemeEditorModal({ onClose, editingThemeId }: ThemeEdito
 
             {/* Start from existing (Item 27) */}
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Start from existing theme</label>
+              <label htmlFor={baseThemeIdInputId} style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>Start from existing theme</label>
               <select
+                id={baseThemeIdInputId}
                 value={baseThemeId}
                 onChange={e => handleBaseThemeChange(e.target.value)}
                 className="auth-input"

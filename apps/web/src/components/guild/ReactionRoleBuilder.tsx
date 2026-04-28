@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { Shield, Plus, Trash2, Smile } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
@@ -34,6 +34,10 @@ const COMMON_EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6
   '✅', '❌', '⭐', '🎮', '🎵', '🎨', '💻', '📚', '🏆', '💬'];
 
 export default function ReactionRoleBuilder({ guildId, roles, channels }: ReactionRoleBuilderProps) {
+  const baseId = useId();
+  const channelSelectId = `${baseId}-channel`;
+  const messageInputId = `${baseId}-message`;
+  const modeSelectId = `${baseId}-mode`;
   const [reactionRoles, setReactionRoles] = useState<ReactionRoleMessage[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [messageId, setMessageId] = useState('');
@@ -120,8 +124,9 @@ export default function ReactionRoleBuilder({ guildId, roles, channels }: Reacti
       {showCreate && (
         <div className="bg-gray-800 rounded-lg p-4 space-y-3">
           <div>
-            <label className="text-sm text-gray-400 block mb-1">Channel</label>
+            <label htmlFor={channelSelectId} className="text-sm text-gray-400 block mb-1">Channel</label>
             <select
+              id={channelSelectId}
               value={channelId}
               onChange={e => setChannelId(e.target.value)}
               className="w-full bg-gray-700 text-white rounded px-3 py-2 text-sm"
@@ -134,8 +139,9 @@ export default function ReactionRoleBuilder({ guildId, roles, channels }: Reacti
           </div>
 
           <div>
-            <label className="text-sm text-gray-400 block mb-1">Message ID</label>
+            <label htmlFor={messageInputId} className="text-sm text-gray-400 block mb-1">Message ID</label>
             <input
+              id={messageInputId}
               type="text"
               value={messageId}
               onChange={e => setMessageId(e.target.value)}
@@ -145,8 +151,9 @@ export default function ReactionRoleBuilder({ guildId, roles, channels }: Reacti
           </div>
 
           <div>
-            <label className="text-sm text-gray-400 block mb-1">Mode</label>
+            <label htmlFor={modeSelectId} className="text-sm text-gray-400 block mb-1">Mode</label>
             <select
+              id={modeSelectId}
               value={mode}
               onChange={e => setMode(e.target.value as 'single' | 'multi' | 'verify')}
               className="w-full bg-gray-700 text-white rounded px-3 py-2 text-sm"
@@ -158,7 +165,7 @@ export default function ReactionRoleBuilder({ guildId, roles, channels }: Reacti
           </div>
 
           <div>
-            <label className="text-sm text-gray-400 block mb-1">Emoji → Role Mappings</label>
+            <div className="text-sm text-gray-400 block mb-1">Emoji → Role Mappings</div>
             <div className="space-y-2">
               {mappings.map((m, i) => (
                 <div key={i} className="flex items-center gap-2">

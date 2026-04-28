@@ -2,7 +2,7 @@
  * ProfileThemeEditor — Item 102: Custom profile card themes
  * Users can create and preview profile card theme configurations.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { Palette, Save, RotateCw } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
@@ -31,6 +31,10 @@ interface Props {
 }
 
 export const ProfileThemeEditor = ({ username, displayName, avatarUrl, onSave }: Props) => {
+  const baseId = useId();
+  const primaryId = `${baseId}-primary`;
+  const secondaryId = `${baseId}-secondary`;
+  const styleId = `${baseId}-style`;
   const [theme, setTheme] = useState<ProfileTheme>(PRESETS[0].theme);
   const [saving, setSaving] = useState(false);
   const { addToast } = useToast();
@@ -90,7 +94,7 @@ export const ProfileThemeEditor = ({ username, displayName, avatarUrl, onSave }:
 
       {/* Presets */}
       <div style={{ marginBottom: '16px' }}>
-        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Presets</label>
+        <div style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Presets</div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {PRESETS.map(p => (
             <button key={p.name} onClick={() => setTheme(p.theme)} style={{
@@ -105,16 +109,16 @@ export const ProfileThemeEditor = ({ username, displayName, avatarUrl, onSave }:
       {/* Controls */}
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>Primary</label>
-          <input type="color" value={theme.primaryColor} onChange={e => setTheme({ ...theme, primaryColor: e.target.value })} style={{ width: '50px', height: '32px', border: 'none', borderRadius: '4px', cursor: 'pointer' }} />
+          <label htmlFor={primaryId} style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>Primary</label>
+          <input id={primaryId} type="color" value={theme.primaryColor} onChange={e => setTheme({ ...theme, primaryColor: e.target.value })} style={{ width: '50px', height: '32px', border: 'none', borderRadius: '4px', cursor: 'pointer' }} />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>Secondary</label>
-          <input type="color" value={theme.secondaryColor} onChange={e => setTheme({ ...theme, secondaryColor: e.target.value })} style={{ width: '50px', height: '32px', border: 'none', borderRadius: '4px', cursor: 'pointer' }} />
+          <label htmlFor={secondaryId} style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>Secondary</label>
+          <input id={secondaryId} type="color" value={theme.secondaryColor} onChange={e => setTheme({ ...theme, secondaryColor: e.target.value })} style={{ width: '50px', height: '32px', border: 'none', borderRadius: '4px', cursor: 'pointer' }} />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>Style</label>
-          <select value={theme.cardStyle} onChange={e => setTheme({ ...theme, cardStyle: e.target.value as any })} style={{ padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px' }}>
+          <label htmlFor={styleId} style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px' }}>Style</label>
+          <select id={styleId} value={theme.cardStyle} onChange={e => setTheme({ ...theme, cardStyle: e.target.value as any })} style={{ padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px' }}>
             <option value="default">Default</option>
             <option value="glass">Glass</option>
             <option value="solid">Solid</option>

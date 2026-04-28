@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { Upload, DollarSign, Image as ImageIcon, BarChart3, Clock, CheckCircle2, X, Loader2, AlertCircle, RefreshCw, FileUp } from 'lucide-react';
 import { api, CommunityShopItem } from '../../lib/api';
 import { useToast } from '../../components/ui/ToastManager';
@@ -41,6 +41,11 @@ function mapApiCosmetic(r: any): CosmeticItem {
 }
 
 const CreatorDashboard = () => {
+    const baseId = useId();
+    const itemNameId = `${baseId}-item-name`;
+    const itemTypeId = `${baseId}-item-type`;
+    const itemPriceId = `${baseId}-item-price`;
+    const itemAssetsId = `${baseId}-item-assets`;
     const { addToast } = useToast();
     const [submissions, setSubmissions] = useState<CosmeticItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -403,12 +408,13 @@ const CreatorDashboard = () => {
                         ) : (
                             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                 <div className="input-group">
-                                    <label className="input-label">Item Name</label>
-                                    <input type="text" className="auth-input" placeholder="e.g. Neon Horizon Frame" required value={itemName} onChange={e => setItemName(e.target.value)} />
+                                    <label htmlFor={itemNameId} className="input-label">Item Name</label>
+                                    <input id={itemNameId} type="text" className="auth-input" placeholder="e.g. Neon Horizon Frame" required value={itemName} onChange={e => setItemName(e.target.value)} />
                                 </div>
                                 <div className="input-group">
-                                    <label className="input-label">Item Type</label>
+                                    <label htmlFor={itemTypeId} className="input-label">Item Type</label>
                                     <select
+                                        id={itemTypeId}
                                         className="auth-input"
                                         required
                                         style={{ appearance: 'none' }}
@@ -424,12 +430,13 @@ const CreatorDashboard = () => {
                                     </select>
                                 </div>
                                 <div className="input-group">
-                                    <label className="input-label">Proposed Price (Gratonites)</label>
-                                    <input type="number" className="auth-input" placeholder="e.g. 500" required min="100" value={itemPrice} onChange={e => setItemPrice(e.target.value)} />
+                                    <label htmlFor={itemPriceId} className="input-label">Proposed Price (Gratonites)</label>
+                                    <input id={itemPriceId} type="number" className="auth-input" placeholder="e.g. 500" required min="100" value={itemPrice} onChange={e => setItemPrice(e.target.value)} />
                                 </div>
                                 <div className="input-group">
-                                    <label className="input-label">Upload Assets (optional)</label>
+                                    <label htmlFor={itemAssetsId} className="input-label">Upload Assets (optional)</label>
                                     <input
+                                        id={itemAssetsId}
                                         ref={fileInputRef}
                                         type="file"
                                         accept="image/*,.zip,.glb,.gltf"
