@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useId } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Search,
@@ -87,6 +87,8 @@ const QAChannel = () => {
   const { user: ctxUser } = useUser();
   const { channelId } = useParams<{ channelId: string; guildId: string }>();
   const CURRENT_USER = ctxUser.name || ctxUser.handle || 'You';
+  const askTitleId = useId();
+  const askBodyId = useId();
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -710,8 +712,9 @@ const QAChannel = () => {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>Title</label>
+                <label htmlFor={askTitleId} style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>Title</label>
                 <input
+                  id={askTitleId}
                   type="text"
                   placeholder="What's your question?"
                   value={newTitle}
@@ -720,8 +723,9 @@ const QAChannel = () => {
                 />
               </div>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>Body</label>
+                <label htmlFor={askBodyId} style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>Body</label>
                 <textarea
+                  id={askBodyId}
                   placeholder="Describe your question in detail..."
                   value={newBody}
                   onChange={(e) => setNewBody(e.target.value)}

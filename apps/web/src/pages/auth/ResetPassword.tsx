@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
@@ -14,6 +14,8 @@ const ResetPassword = () => {
     const [done, setDone] = useState(false);
     const { addToast } = useToast();
     const navigate = useNavigate();
+    const newPasswordId = useId();
+    const confirmPasswordId = useId();
 
     if (!token) {
         return (
@@ -67,9 +69,10 @@ const ResetPassword = () => {
             <h1 className="auth-heading">Reset Password</h1>
             <p className="auth-subtext">Choose a new password for your account.</p>
 
-            <label className="auth-label">New Password</label>
+            <label htmlFor={newPasswordId} className="auth-label">New Password</label>
             <div style={{ position: 'relative' }}>
                 <input
+                    id={newPasswordId}
                     type={showPw ? 'text' : 'password'}
                     className="auth-input"
                     placeholder="At least 8 characters"
@@ -84,8 +87,9 @@ const ResetPassword = () => {
                 </button>
             </div>
 
-            <label className="auth-label">Confirm Password</label>
+            <label htmlFor={confirmPasswordId} className="auth-label">Confirm Password</label>
             <input
+                id={confirmPasswordId}
                 type="password"
                 className="auth-input"
                 placeholder="Repeat your new password"

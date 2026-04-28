@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { Link2, Copy, Clock, Users, AlertCircle, RefreshCw, Plus, X, Check } from 'lucide-react';
 import { api, API_BASE } from '../../../lib/api';
 
@@ -55,6 +55,8 @@ function SkeletonRow() {
 }
 
 function GuildInvitesPanel({ guildId, addToast }: { guildId: string; addToast: AddToastFn }) {
+    const channelSelectId = useId();
+    const expirySelectId = useId();
     const [invites, setInvites] = useState<InviteRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -187,8 +189,9 @@ function GuildInvitesPanel({ guildId, addToast }: { guildId: string; addToast: A
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
                         {channels.length > 0 && (
                             <div style={{ flex: '1', minWidth: '160px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Channel</label>
+                                <label htmlFor={channelSelectId} style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Channel</label>
                                 <select
+                                    id={channelSelectId}
                                     value={selectedChannel}
                                     onChange={e => setSelectedChannel(e.target.value)}
                                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
@@ -200,8 +203,9 @@ function GuildInvitesPanel({ guildId, addToast }: { guildId: string; addToast: A
                             </div>
                         )}
                         <div style={{ flex: '1', minWidth: '160px' }}>
-                            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Expires after</label>
+                            <label htmlFor={expirySelectId} style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Expires after</label>
                             <select
+                                id={expirySelectId}
                                 value={selectedExpiry}
                                 onChange={e => setSelectedExpiry(Number(e.target.value))}
                                 style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}

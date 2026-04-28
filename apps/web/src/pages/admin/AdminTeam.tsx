@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
   Users,
@@ -115,6 +115,8 @@ function formatDate(dateStr: string): string {
 export default function AdminTeam() {
   useOutletContext();
   const { addToast } = useToast();
+  const inviteEmailId = useId();
+  const inviteRoleId = useId();
 
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [search, setSearch] = useState('');
@@ -353,6 +355,7 @@ export default function AdminTeam() {
                 {/* Email */}
                 <div>
                   <label
+                    htmlFor={inviteEmailId}
                     style={{
                       display: 'block',
                       fontSize: '12px',
@@ -379,6 +382,7 @@ export default function AdminTeam() {
                       }}
                     />
                     <input
+                      id={inviteEmailId}
                       type="email"
                       placeholder="colleague@example.com"
                       value={inviteEmail}
@@ -392,6 +396,7 @@ export default function AdminTeam() {
                 {/* Role */}
                 <div>
                   <label
+                    htmlFor={inviteRoleId}
                     style={{
                       display: 'block',
                       fontSize: '12px',
@@ -406,6 +411,7 @@ export default function AdminTeam() {
                     Role
                   </label>
                   <select
+                    id={inviteRoleId}
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value as Role)}
                     style={{

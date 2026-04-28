@@ -1,7 +1,7 @@
 /**
  * 116. Workflow Automations — IFTTT-style UI for workflow management.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { Plus, Trash2, ToggleLeft, ToggleRight, Zap, ArrowRight } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
@@ -25,6 +25,8 @@ const ACTION_TYPES = [
 interface Workflow { id: string; name: string; enabled: boolean; triggers: Array<{ type: string; config: Record<string, unknown> }>; actions: Array<{ type: string; config: Record<string, unknown>; orderIndex: number }>; }
 
 export default function WorkflowBuilder({ guildId }: { guildId: string }) {
+  const triggerSelectId = useId();
+  const actionSelectId = useId();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState('');
@@ -74,15 +76,15 @@ export default function WorkflowBuilder({ guildId }: { guildId: string }) {
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Workflow name" className="w-full bg-gray-700 text-white text-sm rounded px-3 py-2 border border-gray-600" />
           <div className="flex items-center gap-3">
             <div className="flex-1">
-              <label className="text-xs text-gray-400 block mb-1">When...</label>
-              <select value={triggerType} onChange={e => setTriggerType(e.target.value)} className="w-full bg-gray-700 text-white text-sm rounded px-2 py-1.5 border border-gray-600">
+              <label htmlFor={triggerSelectId} className="text-xs text-gray-400 block mb-1">When...</label>
+              <select id={triggerSelectId} value={triggerType} onChange={e => setTriggerType(e.target.value)} className="w-full bg-gray-700 text-white text-sm rounded px-2 py-1.5 border border-gray-600">
                 {TRIGGER_TYPES.map(t => <option key={t.type} value={t.type}>{t.label}</option>)}
               </select>
             </div>
             <ArrowRight className="w-5 h-5 text-gray-500 mt-4" />
             <div className="flex-1">
-              <label className="text-xs text-gray-400 block mb-1">Then...</label>
-              <select value={actionType} onChange={e => setActionType(e.target.value)} className="w-full bg-gray-700 text-white text-sm rounded px-2 py-1.5 border border-gray-600">
+              <label htmlFor={actionSelectId} className="text-xs text-gray-400 block mb-1">Then...</label>
+              <select id={actionSelectId} value={actionType} onChange={e => setActionType(e.target.value)} className="w-full bg-gray-700 text-white text-sm rounded px-2 py-1.5 border border-gray-600">
                 {ACTION_TYPES.map(a => <option key={a.type} value={a.type}>{a.label}</option>)}
               </select>
             </div>

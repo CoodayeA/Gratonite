@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { MoreHorizontal, MessageSquare, X, Star, Palette, Lock, Copy, ShieldOff, ShieldCheck, Flag, Check, Loader2, Code, Tv, Gamepad2, Play, Headphones, Eye, Music, Globe } from 'lucide-react';
 import { onPresenceUpdate, type PresenceUpdatePayload } from '../../lib/socket';
 import { Tooltip } from '../ui/Tooltip';
@@ -163,6 +163,8 @@ const StarfieldCanvas = ({ width, height }: { width: number; height: number }) =
 // ─── Main Component ─────────────────────────────────────────────────────────────
 
 const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userProfile: any }) => {
+    const giftAmountId = useId();
+    const giftMessageId = useId();
     const [activeCanvas, setActiveCanvas] = useState<CanvasType>('gradient-pulse');
     const [showCanvasPicker, setShowCanvasPicker] = useState(false);
     const [showUserOptions, setShowUserOptions] = useState(false);
@@ -862,16 +864,18 @@ const UserProfileModal = ({ onClose, userProfile }: { onClose: () => void; userP
                         Gift coins to <strong>{profile?.displayName}</strong>
                     </p>
                     <div style={{ marginBottom: '12px' }}>
-                        <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Amount (min 10)</label>
+                        <label htmlFor={giftAmountId} style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Amount (min 10)</label>
                         <input
+                            id={giftAmountId}
                             type="number" min={10} step={10} value={giftAmount}
                             onChange={e => setGiftAmount(parseInt(e.target.value) || 10)}
                             style={{ width: '100%', padding: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', boxSizing: 'border-box' as const }}
                         />
                     </div>
                     <div style={{ marginBottom: '16px' }}>
-                        <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Message (optional)</label>
+                        <label htmlFor={giftMessageId} style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Message (optional)</label>
                         <input
+                            id={giftMessageId}
                             value={giftMessage} onChange={e => setGiftMessage(e.target.value)}
                             placeholder="Add a note..."
                             style={{ width: '100%', padding: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', boxSizing: 'border-box' as const }}

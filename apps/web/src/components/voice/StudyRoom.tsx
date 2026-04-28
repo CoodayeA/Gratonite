@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useId } from 'react';
 import { Play, Pause, Square, Clock, Flame, Trophy, Settings, Volume2, Coffee, BookOpen } from 'lucide-react';
 import { useToast } from '../ui/ToastManager';
 import { api } from '../../lib/api';
@@ -28,6 +28,8 @@ type Settings = {
 };
 
 const StudyRoom = ({ channelId, guildId }: { channelId: string; guildId: string }) => {
+  const workDurationId = useId();
+  const breakDurationId = useId();
   const [settings, setSettings] = useState<Settings>({ pomodoroWork: 25, pomodoroBreak: 5, ambientSound: null });
   const [phase, setPhase] = useState<Phase>('idle');
   const [timeLeft, setTimeLeft] = useState(0);
@@ -241,12 +243,12 @@ const StudyRoom = ({ channelId, guildId }: { channelId: string; guildId: string 
         {showSettings && (
           <div className="w-full max-w-xs bg-gray-800 rounded-lg p-4 border border-gray-700">
             <h4 className="text-sm font-medium text-white mb-3">Timer Settings</h4>
-            <label className="block text-xs text-gray-400 mb-1">Work duration (min)</label>
-            <input type="number" min={1} max={120} value={settings.pomodoroWork}
+            <label htmlFor={workDurationId} className="block text-xs text-gray-400 mb-1">Work duration (min)</label>
+            <input id={workDurationId} type="number" min={1} max={120} value={settings.pomodoroWork}
               onChange={e => setSettings(s => ({ ...s, pomodoroWork: Number(e.target.value) }))}
               className="w-full bg-gray-700 text-white rounded px-3 py-1.5 text-sm mb-2 border border-gray-600" />
-            <label className="block text-xs text-gray-400 mb-1">Break duration (min)</label>
-            <input type="number" min={1} max={60} value={settings.pomodoroBreak}
+            <label htmlFor={breakDurationId} className="block text-xs text-gray-400 mb-1">Break duration (min)</label>
+            <input id={breakDurationId} type="number" min={1} max={60} value={settings.pomodoroBreak}
               onChange={e => setSettings(s => ({ ...s, pomodoroBreak: Number(e.target.value) }))}
               className="w-full bg-gray-700 text-white rounded px-3 py-1.5 text-sm mb-3 border border-gray-600" />
             <button onClick={() => saveSettings(settings)}

@@ -113,7 +113,7 @@ export function NotificationPrefsModal({ type, id, name, onClose }: Props) {
         </div>
         <div className="modal-body">
           <div className="notif-section" style={{ marginBottom: '16px' }}>
-            <label className="notif-section-title">Quick Profiles</label>
+            <div className="notif-section-title">Quick Profiles</div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
               {PROFILES.map(p => (
                 <button
@@ -141,7 +141,7 @@ export function NotificationPrefsModal({ type, id, name, onClose }: Props) {
             </div>
           </div>
           <div className="notif-section">
-            <label className="notif-section-title">Notifications</label>
+            <div className="notif-section-title">Notifications</div>
             {effectiveSummary && (
               <div style={{ marginBottom: '10px', padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-tertiary)', color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.45 }}>
                 {effectiveSummary}

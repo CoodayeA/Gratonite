@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { ArrowLeftRight, ArrowLeft, Plus, X, Check, XCircle, Search, Gem } from 'lucide-react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { api } from '../../lib/api';
@@ -30,6 +30,8 @@ const Trading = () => {
     const navigate = useNavigate();
     const { addToast } = useToast();
     const { gratoniteBalance } = useOutletContext<any>();
+    const myGratonitesId = useId();
+    const theirGratonitesId = useId();
 
     const [view, setView] = useState<'list' | 'create'>('list');
     const [trades, setTrades] = useState<Trade[]>([]);
@@ -283,16 +285,16 @@ const Trading = () => {
                                             </div>
                                         ))}
                                         <div style={{ marginTop: '8px' }}>
-                                            <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Gratonites</label>
-                                            <input type="number" min={0} value={myGratonites} onChange={e => setMyGratonites(Math.max(0, parseInt(e.target.value) || 0))} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', boxSizing: 'border-box' }} />
+                                            <label htmlFor={myGratonitesId} style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Gratonites</label>
+                                            <input id={myGratonitesId} type="number" min={0} value={myGratonites} onChange={e => setMyGratonites(Math.max(0, parseInt(e.target.value) || 0))} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', boxSizing: 'border-box' }} />
                                         </div>
                                     </div>
                                     <div style={{ padding: '16px', background: 'var(--bg-elevated)', borderRadius: '12px', border: '1px solid var(--stroke)' }}>
                                         <h4 style={{ fontSize: '13px', fontWeight: 700, marginBottom: '12px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>You Request</h4>
                                         <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>The other party will add their items when reviewing.</p>
                                         <div style={{ marginTop: '8px' }}>
-                                            <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Gratonites</label>
-                                            <input type="number" min={0} value={theirGratonites} onChange={e => setTheirGratonites(Math.max(0, parseInt(e.target.value) || 0))} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', boxSizing: 'border-box' }} />
+                                            <label htmlFor={theirGratonitesId} style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Gratonites</label>
+                                            <input id={theirGratonitesId} type="number" min={0} value={theirGratonites} onChange={e => setTheirGratonites(Math.max(0, parseInt(e.target.value) || 0))} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', boxSizing: 'border-box' }} />
                                         </div>
                                     </div>
                                 </div>

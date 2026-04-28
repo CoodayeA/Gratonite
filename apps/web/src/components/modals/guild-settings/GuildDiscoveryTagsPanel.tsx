@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { api } from '../../../lib/api';
 
 function GuildDiscoveryTagsPanel({ guildId, addToast, guildTags, setGuildTags, guildCategory, setGuildCategory }: { guildId: string; addToast: (t: any) => void; guildTags: string[]; setGuildTags: (t: string[]) => void; guildCategory: string; setGuildCategory: (c: string) => void }) {
+    const categorySelectId = useId();
     const [tagInput, setTagInput] = useState('');
     const SUGGESTED_TAGS = ['gaming', 'music', 'art', 'technology', 'education', 'community', 'anime', 'memes', 'programming', 'social', 'roleplay', 'science'];
     const CATEGORIES = ['gaming', 'music', 'art', 'tech', 'community', 'anime', 'education', 'other'];
@@ -35,8 +36,8 @@ function GuildDiscoveryTagsPanel({ guildId, addToast, guildTags, setGuildTags, g
             </p>
 
             <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>CATEGORY</label>
-                <select value={guildCategory} onChange={e => setGuildCategory(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}>
+                <label htmlFor={categorySelectId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>CATEGORY</label>
+                <select id={categorySelectId} value={guildCategory} onChange={e => setGuildCategory(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}>
                     <option value="">Select a category...</option>
                     {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>)}
                 </select>
@@ -64,7 +65,7 @@ function GuildDiscoveryTagsPanel({ guildId, addToast, guildTags, setGuildTags, g
             </div>
 
             <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>SUGGESTED TAGS</label>
+                <div style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>SUGGESTED TAGS</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                     {SUGGESTED_TAGS.filter(t => !guildTags.includes(t)).map(tag => (
                         <button

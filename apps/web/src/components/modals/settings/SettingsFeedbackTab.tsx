@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { Check } from 'lucide-react';
 import { api } from '../../../lib/api';
 import type { SettingsTabProps } from './types';
@@ -8,6 +8,7 @@ const SettingsFeedbackTab = ({ addToast }: SettingsTabProps) => {
   const [feedbackBody, setFeedbackBody] = useState('');
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
+  const feedbackBodyId = useId();
 
   return (
     <>
@@ -28,7 +29,7 @@ const SettingsFeedbackTab = ({ addToast }: SettingsTabProps) => {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Category</label>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Category</div>
             <div className="grid-mobile-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
               {[
                 { id: 'general', label: 'General' },
@@ -48,8 +49,9 @@ const SettingsFeedbackTab = ({ addToast }: SettingsTabProps) => {
           </div>
 
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Your Feedback</label>
+            <label htmlFor={feedbackBodyId} style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Your Feedback</label>
             <textarea
+              id={feedbackBodyId}
               value={feedbackBody}
               onChange={e => setFeedbackBody(e.target.value)}
               placeholder="Describe your feedback, bug, or suggestion in detail..."
