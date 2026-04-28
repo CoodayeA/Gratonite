@@ -68,6 +68,7 @@ Use this for a **structured** accessibility pass. Target is **WCAG 2.1 Level AA*
 
 **Pass 1 completed: 2026-04-03**
 **Pass 2 started: 2026-04-04**
+**Pass 4 completed: 2026-04-27** — all 191 `label-has-associated-control` warnings eliminated; lint ceiling lowered 250 → 5
 
 ### Completed in Pass 1
 
@@ -89,3 +90,20 @@ Use this for a **structured** accessibility pass. Target is **WCAG 2.1 Level AA*
 2. Add focus trap to all modal dialogs (use `@radix-ui/react-focus-scope` or `focus-trap-react`)
 3. Add skip link to main layout (`App.tsx`)
 4. Lower lint budget: 250 → 100
+
+### Completed in Pass 4 (label association)
+
+- ✅ **52 files, 191 warnings → 0** for `jsx-a11y/label-has-associated-control` (7 batches)
+- ✅ Three patterns applied per-site:
+  - **Pattern A** (`htmlFor` + `id` via `useId()`): the majority — single label/control pairs
+  - **Pattern B** (`<fieldset>` + `<legend>` with `border-0 p-0 m-0` reset): checkbox/radio groups
+  - **Pattern C** (`<label>` → `<div>` / `<span>`): section headers carrying icons but no control
+- ✅ Tests still 17/17 green
+- ✅ Lint ceiling lowered: `--max-warnings=250` → `--max-warnings=5` (1 unrelated `img-redundant-alt` remains)
+- ✅ Plan: `docs/a11y/PASS-4-LABEL-ASSOCIATION-PLAN.md`
+
+### Next pass targets (Pass 5)
+
+1. Resolve final `img-redundant-alt` in `RichTextRenderer.tsx:526`; lower ceiling to `0`
+2. Add `lint:a11y:strict` to `pre-commit` / CI required check
+3. Audit remaining `aria-label` text for i18n coverage (the new `useId`-driven labels are visible text already, but the `aria-label` fallbacks added in Setup.tsx and SettingsPrivacyTab.tsx should be wired through `t()`)
