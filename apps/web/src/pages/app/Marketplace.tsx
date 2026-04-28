@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect, useId } from 'react';
 import { ShoppingBag, Search, Filter, Gavel, ArrowUpRight, Clock, Star, Users, X, Gem, Check, Package, Plus, ChevronRight, TrendingUp, Minus, Upload, ChevronDown, Sparkles, Frame, Type, Volume2 } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import { useToast } from '../../components/ui/ToastManager';
@@ -184,6 +184,12 @@ const CreateItemModal = ({ onClose }: { onClose: () => void }) => {
     const [creating, setCreating] = useState(false);
     const { addToast } = useToast();
 
+    const itemNameId = useId();
+    const descriptionId = useId();
+    const priceId = useId();
+    const color1Id = useId();
+    const color2Id = useId();
+
     const canSubmit = itemName.trim() && description.trim() && price && Number(price) >= 10;
 
     const handleSubmit = async () => {
@@ -262,8 +268,8 @@ const CreateItemModal = ({ onClose }: { onClose: () => void }) => {
                         </div>
                         <div style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
                             {/* Type Selector */}
-                            <div>
-                                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Item Type</label>
+                            <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+                                <legend style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px', padding: 0 }}>Item Type</legend>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     {typeOptions.map(opt => (
                                         <button key={opt.value} onClick={() => setItemType(opt.value)}
@@ -271,49 +277,49 @@ const CreateItemModal = ({ onClose }: { onClose: () => void }) => {
                                         >{opt.icon} {opt.label}</button>
                                     ))}
                                 </div>
-                            </div>
+                            </fieldset>
 
                             {/* Item Name */}
                             <div>
-                                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Item Name</label>
-                                <input type="text" placeholder="e.g. Neon Vortex Frame" value={itemName} onChange={e => setItemName(e.target.value)}
+                                <label htmlFor={itemNameId} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Item Name</label>
+                                <input id={itemNameId} type="text" placeholder="e.g. Neon Vortex Frame" value={itemName} onChange={e => setItemName(e.target.value)}
                                     style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                             </div>
 
                             {/* Description */}
                             <div>
-                                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Description</label>
-                                <textarea placeholder="Describe your creation..." value={description} onChange={e => setDescription(e.target.value)} rows={3}
+                                <label htmlFor={descriptionId} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Description</label>
+                                <textarea id={descriptionId} placeholder="Describe your creation..." value={description} onChange={e => setDescription(e.target.value)} rows={3}
                                     style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }} />
                             </div>
 
                             {/* Price */}
                             <div>
-                                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Price (Gratonite)</label>
+                                <label htmlFor={priceId} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Price (Gratonite)</label>
                                 <div style={{ position: 'relative' }}>
                                     <Gem size={16} style={{ position: 'absolute', left: 12, top: 11, color: '#10b981' }} />
-                                    <input type="number" min="10" placeholder="Min. 10" value={price} onChange={e => setPrice(e.target.value)}
+                                    <input id={priceId} type="number" min="10" placeholder="Min. 10" value={price} onChange={e => setPrice(e.target.value)}
                                         style={{ width: '100%', padding: '10px 14px 10px 36px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                                 </div>
                             </div>
 
                             {/* Gradient Preview Picker */}
-                            <div>
-                                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Preview Gradient</label>
+                            <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+                                <legend style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px', padding: 0 }}>Preview Gradient</legend>
                                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
-                                        <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Color 1</label>
-                                        <input type="color" value={gradientColor1} onChange={e => setGradientColor1(e.target.value)}
+                                        <label htmlFor={color1Id} style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Color 1</label>
+                                        <input id={color1Id} type="color" value={gradientColor1} onChange={e => setGradientColor1(e.target.value)}
                                             style={{ width: '48px', height: '36px', border: '1px solid var(--stroke)', borderRadius: '6px', cursor: 'pointer', background: 'none', padding: 0 }} />
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
-                                        <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Color 2</label>
-                                        <input type="color" value={gradientColor2} onChange={e => setGradientColor2(e.target.value)}
+                                        <label htmlFor={color2Id} style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Color 2</label>
+                                        <input id={color2Id} type="color" value={gradientColor2} onChange={e => setGradientColor2(e.target.value)}
                                             style={{ width: '48px', height: '36px', border: '1px solid var(--stroke)', borderRadius: '6px', cursor: 'pointer', background: 'none', padding: 0 }} />
                                     </div>
                                     <div style={{ flex: 1, height: '64px', borderRadius: '10px', background: `linear-gradient(135deg, ${gradientColor1}, ${gradientColor2})`, border: '1px solid var(--stroke)' }} />
                                 </div>
-                            </div>
+                            </fieldset>
 
                             {/* Info note */}
                             <div style={{ background: 'var(--bg-elevated)', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: 'var(--text-secondary)', border: '1px solid var(--stroke)' }}>

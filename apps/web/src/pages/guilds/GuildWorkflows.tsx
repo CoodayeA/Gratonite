@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { useParams } from 'react-router-dom';
 import { Plus, Trash2, Edit2, Zap, ToggleLeft, ToggleRight, X, Check } from 'lucide-react';
 import { api } from '../../lib/api';
@@ -71,6 +71,12 @@ interface ActionConfigProps {
 function ActionConfigFields({ type, config, onChange }: ActionConfigProps) {
     const set = (key: string, value: string) => onChange({ ...config, [key]: value });
 
+    const channelIdId = useId();
+    const contentId = useId();
+    const roleIdId = useId();
+    const threadChannelId = useId();
+    const threadNameId = useId();
+
     const inputStyle: React.CSSProperties = {
         flex: 1,
         background: 'var(--bg-app)',
@@ -95,8 +101,9 @@ function ActionConfigFields({ type, config, onChange }: ActionConfigProps) {
             return (
                 <>
                     <div>
-                        <label style={labelStyle}>Channel ID</label>
+                        <label htmlFor={channelIdId} style={labelStyle}>Channel ID</label>
                         <input
+                            id={channelIdId}
                             style={inputStyle}
                             placeholder="Channel ID"
                             value={config.channelId ?? ''}
@@ -104,8 +111,9 @@ function ActionConfigFields({ type, config, onChange }: ActionConfigProps) {
                         />
                     </div>
                     <div>
-                        <label style={labelStyle}>Message Content</label>
+                        <label htmlFor={contentId} style={labelStyle}>Message Content</label>
                         <textarea
+                            id={contentId}
                             style={{ ...inputStyle, minHeight: '60px', resize: 'vertical', width: '100%', boxSizing: 'border-box' }}
                             placeholder="Message to send..."
                             value={config.content ?? ''}
@@ -118,8 +126,9 @@ function ActionConfigFields({ type, config, onChange }: ActionConfigProps) {
         case 'remove_role':
             return (
                 <div>
-                    <label style={labelStyle}>Role ID</label>
+                    <label htmlFor={roleIdId} style={labelStyle}>Role ID</label>
                     <input
+                        id={roleIdId}
                         style={inputStyle}
                         placeholder="Role ID"
                         value={config.roleId ?? ''}
@@ -131,8 +140,9 @@ function ActionConfigFields({ type, config, onChange }: ActionConfigProps) {
             return (
                 <>
                     <div>
-                        <label style={labelStyle}>Channel ID</label>
+                        <label htmlFor={threadChannelId} style={labelStyle}>Channel ID</label>
                         <input
+                            id={threadChannelId}
                             style={inputStyle}
                             placeholder="Channel ID"
                             value={config.channelId ?? ''}
@@ -140,8 +150,9 @@ function ActionConfigFields({ type, config, onChange }: ActionConfigProps) {
                         />
                     </div>
                     <div>
-                        <label style={labelStyle}>Thread Name</label>
+                        <label htmlFor={threadNameId} style={labelStyle}>Thread Name</label>
                         <input
+                            id={threadNameId}
                             style={inputStyle}
                             placeholder="Thread name"
                             value={config.name ?? ''}
@@ -193,6 +204,7 @@ interface WorkflowFormProps {
 
 function WorkflowFormPanel({ initial, onSave, onCancel, saving }: WorkflowFormProps) {
     const [form, setForm] = useState<WorkflowForm>(initial ?? emptyForm());
+    const workflowNameId = useId();
 
     const setName = (name: string) => setForm((f) => ({ ...f, name }));
 
@@ -272,8 +284,9 @@ function WorkflowFormPanel({ initial, onSave, onCancel, saving }: WorkflowFormPr
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* Name */}
             <div>
-                <label style={labelStyle}>Workflow Name</label>
+                <label htmlFor={workflowNameId} style={labelStyle}>Workflow Name</label>
                 <input
+                    id={workflowNameId}
                     style={inputStyle}
                     placeholder="e.g. Welcome new members"
                     value={form.name}
@@ -282,9 +295,9 @@ function WorkflowFormPanel({ initial, onSave, onCancel, saving }: WorkflowFormPr
             </div>
 
             {/* Triggers */}
-            <div>
+            <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <label style={{ ...labelStyle, margin: 0 }}>Triggers</label>
+                    <legend style={{ ...labelStyle, margin: 0, padding: 0 }}>Triggers</legend>
                     <button
                         type="button"
                         onClick={addTrigger}
@@ -317,12 +330,12 @@ function WorkflowFormPanel({ initial, onSave, onCancel, saving }: WorkflowFormPr
                         </div>
                     ))}
                 </div>
-            </div>
+            </fieldset>
 
             {/* Actions */}
-            <div>
+            <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <label style={{ ...labelStyle, margin: 0 }}>Actions</label>
+                    <legend style={{ ...labelStyle, margin: 0, padding: 0 }}>Actions</legend>
                     <button
                         type="button"
                         onClick={addAction}
@@ -366,7 +379,7 @@ function WorkflowFormPanel({ initial, onSave, onCancel, saving }: WorkflowFormPr
                         </div>
                     ))}
                 </div>
-            </div>
+            </fieldset>
 
             {/* Buttons */}
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid var(--stroke)' }}>

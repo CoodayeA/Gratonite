@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Bot, ArrowLeft, Upload, Check, X, Send, Shield,
@@ -106,6 +106,16 @@ const SecretRevealModal = ({ title, fields, onClose }: {
 const BotBuilder = () => {
     const navigate = useNavigate();
     const { addToast } = useToast();
+
+    const linkedAppId = useId();
+    const storeDescId = useId();
+    const botNameId = useId();
+    const botDescId = useId();
+    const botPrefixId = useId();
+    const botColorId = useId();
+    const webhookNameId = useId();
+    const webhookDescId = useId();
+    const webhookUrlId = useId();
 
     // Native bot state (existing)
     const [nativeTab, setNativeTab] = useState<'general' | 'commands' | 'permissions' | 'preview'>('general');
@@ -441,7 +451,7 @@ const BotBuilder = () => {
                         </div>
 
                         <div style={{ marginBottom: '16px' }}>
-                            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Linked Bot Application</label>
+                            <label htmlFor={linkedAppId} style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Linked Bot Application</label>
                             {webhookBotsLoading ? (
                                 <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Loading applications...</div>
                             ) : webhookBots.length === 0 ? (
@@ -450,6 +460,7 @@ const BotBuilder = () => {
                                 </div>
                             ) : (
                                 <select
+                                    id={linkedAppId}
                                     value={selectedApplicationId}
                                     onChange={e => setSelectedApplicationId(e.target.value)}
                                     style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
@@ -467,8 +478,9 @@ const BotBuilder = () => {
                         </div>
 
                         <div style={{ marginBottom: '16px' }}>
-                            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Store Description</label>
+                            <label htmlFor={storeDescId} style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Store Description</label>
                             <textarea
+                                id={storeDescId}
                                 value={botDesc}
                                 onChange={e => setBotDesc(e.target.value)}
                                 placeholder="Describe what your bot does and why people should add it..."
@@ -583,22 +595,22 @@ const BotBuilder = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                     <div style={{ background: 'var(--bg-elevated)', borderRadius: '12px', padding: '16px', border: '1px solid var(--stroke)' }}>
-                                        <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'block' }}>Bot Name</label>
-                                        <input type="text" value={botName} onChange={e => setBotName(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                                        <label htmlFor={botNameId} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'block' }}>Bot Name</label>
+                                        <input id={botNameId} type="text" value={botName} onChange={e => setBotName(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                                     </div>
                                     <div style={{ background: 'var(--bg-elevated)', borderRadius: '12px', padding: '16px', border: '1px solid var(--stroke)' }}>
-                                        <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'block' }}>Description</label>
-                                        <textarea value={botDesc} onChange={e => setBotDesc(e.target.value)} placeholder="What does your bot do?" rows={3} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                                        <label htmlFor={botDescId} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'block' }}>Description</label>
+                                        <textarea id={botDescId} value={botDesc} onChange={e => setBotDesc(e.target.value)} placeholder="What does your bot do?" rows={3} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                         <div style={{ background: 'var(--bg-elevated)', borderRadius: '12px', padding: '16px', border: '1px solid var(--stroke)' }}>
-                                            <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'block' }}>Prefix</label>
-                                            <input type="text" value={botPrefix} onChange={e => setBotPrefix(e.target.value.slice(0, 3))} maxLength={3} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '16px', outline: 'none', fontFamily: 'monospace', textAlign: 'center', boxSizing: 'border-box' }} />
+                                            <label htmlFor={botPrefixId} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'block' }}>Prefix</label>
+                                            <input id={botPrefixId} type="text" value={botPrefix} onChange={e => setBotPrefix(e.target.value.slice(0, 3))} maxLength={3} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '16px', outline: 'none', fontFamily: 'monospace', textAlign: 'center', boxSizing: 'border-box' }} />
                                         </div>
                                         <div style={{ background: 'var(--bg-elevated)', borderRadius: '12px', padding: '16px', border: '1px solid var(--stroke)' }}>
-                                            <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'block' }}>Accent Color</label>
+                                            <label htmlFor={botColorId} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', display: 'block' }}>Accent Color</label>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <input type="color" value={botColor} onChange={e => setBotColor(e.target.value)} style={{ width: '36px', height: '36px', border: 'none', cursor: 'pointer', borderRadius: '8px', padding: 0 }} />
+                                                <input id={botColorId} type="color" value={botColor} onChange={e => setBotColor(e.target.value)} style={{ width: '36px', height: '36px', border: 'none', cursor: 'pointer', borderRadius: '8px', padding: 0 }} />
                                                 <span style={{ fontFamily: 'monospace', fontSize: '13px', color: 'var(--text-secondary)' }}>{botColor}</span>
                                             </div>
                                         </div>
@@ -607,7 +619,7 @@ const BotBuilder = () => {
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                     <div style={{ background: 'var(--bg-elevated)', borderRadius: '12px', padding: '16px', border: '1px solid var(--stroke)' }}>
-                                        <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', display: 'block' }}>Avatar</label>
+                                        <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>Avatar</div>
                                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                             {avatarOptions.map(a => (
                                                 <button key={a} onClick={() => setBotAvatar(a)} style={{ width: '44px', height: '44px', borderRadius: '10px', border: botAvatar === a ? `2px solid ${botColor}` : '2px solid var(--stroke)', background: botAvatar === a ? botColor + '22' : 'var(--bg-tertiary)', cursor: 'pointer', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>{a}</button>
@@ -615,7 +627,7 @@ const BotBuilder = () => {
                                         </div>
                                     </div>
                                     <div style={{ background: 'var(--bg-elevated)', borderRadius: '12px', padding: '16px', border: '1px solid var(--stroke)' }}>
-                                        <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', display: 'block' }}>Category</label>
+                                        <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>Category</div>
                                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                                             {CATEGORIES.map(c => (
                                                 <button key={c.value} onClick={() => setBotCategory(c.value)} style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid var(--stroke)', background: botCategory === c.value ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: botCategory === c.value ? '#111' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '12px', fontWeight: 600, transition: 'all 0.15s' }}>{c.label}</button>
@@ -704,8 +716,9 @@ const BotBuilder = () => {
                             </h3>
                             <form onSubmit={handleCreateWebhookBot} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                                 <div>
-                                    <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Bot Name *</label>
+                                    <label htmlFor={webhookNameId} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Bot Name *</label>
                                     <input
+                                        id={webhookNameId}
                                         type="text"
                                         required
                                         placeholder="e.g. My Awesome Bot"
@@ -715,8 +728,9 @@ const BotBuilder = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Description</label>
+                                    <label htmlFor={webhookDescId} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Description</label>
                                     <textarea
+                                        id={webhookDescId}
                                         placeholder="What does your bot do? (optional)"
                                         value={webhookForm.description}
                                         onChange={e => setWebhookForm(p => ({ ...p, description: e.target.value }))}
@@ -725,8 +739,9 @@ const BotBuilder = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Webhook URL *</label>
+                                    <label htmlFor={webhookUrlId} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Webhook URL *</label>
                                     <input
+                                        id={webhookUrlId}
                                         type="url"
                                         required
                                         placeholder="https://your-server.com/webhook"

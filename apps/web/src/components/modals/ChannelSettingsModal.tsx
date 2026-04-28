@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { X, Check, Minus } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
@@ -93,6 +93,14 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
     const [expandedRole, setExpandedRole] = useState<string | null>(null);
     const [viewAsRole, setViewAsRole] = useState<string>('');
     const [permsSaving, setPermsSaving] = useState(false);
+
+    const nameId = useId();
+    const topicId = useId();
+    const slowmodeId = useId();
+    const disappearTimerId = useId();
+    const autoArchiveId = useId();
+    const userLimitId = useId();
+    const viewAsRoleId = useId();
 
     useEffect(() => {
         api.guilds.getRoles(guildId).then((r: any[]) => setRoles(r)).catch(() => {});
@@ -250,10 +258,11 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                             <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginTop: 0, marginBottom: '20px' }}>Channel Overview</h2>
 
                             <div style={{ marginBottom: '16px' }}>
-                                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
+                                <label htmlFor={nameId} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
                                     Channel Name
                                 </label>
                                 <input
+                                    id={nameId}
                                     value={name}
                                     onChange={e => setName(e.target.value)}
                                     style={{
@@ -265,10 +274,11 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                             </div>
 
                             <div style={{ marginBottom: '16px' }}>
-                                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
+                                <label htmlFor={topicId} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
                                     Channel Topic
                                 </label>
                                 <textarea
+                                    id={topicId}
                                     value={topic}
                                     onChange={e => setTopic(e.target.value)}
                                     rows={3}
@@ -282,10 +292,11 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                             </div>
 
                             <div style={{ marginBottom: '16px' }}>
-                                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
+                                <label htmlFor={slowmodeId} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
                                     Slowmode
                                 </label>
                                 <select
+                                    id={slowmodeId}
                                     value={slowmode}
                                     onChange={e => setSlowmode(Number(e.target.value))}
                                     style={{
@@ -320,10 +331,11 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
 
                             {/* Disappearing Messages */}
                             <div style={{ marginBottom: '16px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                                <label htmlFor={disappearTimerId} style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
                                     Disappearing Messages
                                 </label>
                                 <select
+                                    id={disappearTimerId}
                                     value={disappearTimer ?? 0}
                                     onChange={e => {
                                         const val = Number(e.target.value);
@@ -478,10 +490,11 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
 
                             {/* Auto-Archive After */}
                             <div style={{ marginBottom: '16px' }}>
-                                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
+                                <label htmlFor={autoArchiveId} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
                                     Auto-Archive After
                                 </label>
                                 <select
+                                    id={autoArchiveId}
                                     value={autoArchiveDays ?? 0}
                                     onChange={e => {
                                         const v = Number(e.target.value);
@@ -508,10 +521,11 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
                             {isVoice && (
                                 <>
                                     <div style={{ marginBottom: '24px' }}>
-                                        <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
+                                        <label htmlFor={userLimitId} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
                                             User Limit
                                         </label>
                                         <input
+                                            id={userLimitId}
                                             type="number"
                                             value={userLimit}
                                             onChange={e => setUserLimit(Math.max(0, Math.min(99, Number(e.target.value) || 0)))}
@@ -604,10 +618,11 @@ export function ChannelSettingsModal({ channelId, channelName, channelTopic, cha
 
                             {/* View as role */}
                             <div style={{ marginBottom: '16px' }}>
-                                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
+                                <label htmlFor={viewAsRoleId} style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
                                     View as Role
                                 </label>
                                 <select
+                                    id={viewAsRoleId}
                                     value={viewAsRole}
                                     onChange={e => setViewAsRole(e.target.value)}
                                     style={{
