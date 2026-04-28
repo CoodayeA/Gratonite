@@ -259,14 +259,14 @@ export default function Setup() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '8px', cursor: 'pointer', background: enableFederation ? '#818cf815' : '#0f0f1a', border: `1px solid ${enableFederation ? '#818cf850' : '#2e2e3e'}` }}>
-                  <input type="checkbox" checked={enableFederation} onChange={e => setEnableFederation(e.target.checked)} style={{ width: '16px', height: '16px' }} />
+                  <input type="checkbox" aria-label="Enable Federation" checked={enableFederation} onChange={e => setEnableFederation(e.target.checked)} style={{ width: '16px', height: '16px' }} />
                   <span>
                     <span style={{ display: 'block', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Enable Federation</span>
                     <span style={{ display: 'block', fontSize: '12px', color: '#94a3b8' }}>Let users from other servers join your communities</span>
                   </span>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '8px', cursor: 'pointer', background: enableRelay ? '#818cf815' : '#0f0f1a', border: `1px solid ${enableRelay ? '#818cf850' : '#2e2e3e'}` }}>
-                  <input type="checkbox" checked={enableRelay} onChange={e => setEnableRelay(e.target.checked)} style={{ width: '16px', height: '16px' }} />
+                  <input type="checkbox" aria-label="Connect via Relay" checked={enableRelay} onChange={e => setEnableRelay(e.target.checked)} style={{ width: '16px', height: '16px' }} />
                   <span>
                     <span style={{ display: 'block', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Connect via Relay</span>
                     <span style={{ display: 'block', fontSize: '12px', color: '#94a3b8' }}>Works even behind NAT — no port forwarding needed</span>

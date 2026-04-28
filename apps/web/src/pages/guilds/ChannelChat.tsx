@@ -4792,7 +4792,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                         Add Option
                                     </button>
                                 )}
-                            </div>
+                            </fieldset>
 
                             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer', color: 'var(--text-secondary)' }}>
                                 <input type="checkbox" checked={pollMultiselect} onChange={e => setPollMultiselect(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
@@ -4800,8 +4800,9 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                             </label>
 
                             <div>
-                                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>Poll Duration</label>
+                                <label htmlFor={pollDurationId} style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>Poll Duration</label>
                                 <select
+                                    id={pollDurationId}
                                     value={pollDuration ?? ''}
                                     onChange={e => setPollDuration(e.target.value ? Number(e.target.value) : null)}
                                     style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', padding: '8px 10px', fontSize: '13px', outline: 'none' }}

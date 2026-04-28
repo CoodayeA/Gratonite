@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { Camera, ChevronRight, X, Sparkles, Plus, Check, Moon, Sun, Type, LayoutTemplate, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../ui/ThemeProvider';
@@ -16,6 +16,9 @@ const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const displayNameId = useId();
+    const bioId = useId();
+    const fontFamilyId = useId();
     const { theme, setTheme, colorMode, setColorMode, fontFamily, setFontFamily } = useTheme();
     const { user, updateUser, refetchUser } = useUser();
     const navigate = useNavigate();
@@ -157,12 +160,13 @@ const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
                         <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>Tell us about yourself</h2>
                         <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Your name and bio appear on your profile and in chat.</p>
 
-                        <label className="auth-label">Display Name</label>
-                        <input type="text" className="auth-input" value={displayName} onChange={e => setDisplayName(e.target.value)} />
+                        <label className="auth-label" htmlFor={displayNameId}>Display Name</label>
+                        <input id={displayNameId} type="text" className="auth-input" value={displayName} onChange={e => setDisplayName(e.target.value)} />
 
-                        <label className="auth-label" style={{ marginTop: '16px' }}>Bio</label>
+                        <label className="auth-label" htmlFor={bioId} style={{ marginTop: '16px' }}>Bio</label>
                         <div style={{ position: 'relative' }}>
                             <textarea
+                                id={bioId}
                                 className="auth-input"
                                 style={{ height: '100px', paddingTop: '16px', resize: 'none' }}
                                 placeholder="Tell us about yourself..."
@@ -185,9 +189,9 @@ const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             {/* Color Mode */}
                             <div>
-                                <label className="auth-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                <div className="auth-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                                     <Sun size={14} /> Color Mode
-                                </label>
+                                </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                     <button
                                         onClick={() => setColorMode('light')}
@@ -202,9 +206,9 @@ const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
 
                             {/* Theme Base */}
                             <div>
-                                <label className="auth-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                <div className="auth-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                                     <LayoutTemplate size={14} /> Theme Style
-                                </label>
+                                </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                     <button
                                         onClick={() => setTheme('neobrutalism')}
@@ -219,10 +223,11 @@ const OnboardingModal = ({ onClose }: { onClose: () => void }) => {
 
                             {/* Typography */}
                             <div>
-                                <label className="auth-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                <label className="auth-label" htmlFor={fontFamilyId} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                                     <Type size={14} /> Typography
                                 </label>
                                 <select
+                                    id={fontFamilyId}
                                     value={fontFamily}
                                     onChange={(e) => setFontFamily(e.target.value as any)}
                                     className="auth-input"
