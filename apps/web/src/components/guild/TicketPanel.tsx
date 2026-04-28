@@ -163,7 +163,7 @@ export default function TicketPanel({ guildId, isStaff, onNavigateToChannel }: {
             autoFocus
           />
           <div className="flex items-center gap-3">
-            <label className="text-sm text-gray-400">Priority:</label>
+            <span className="text-sm text-gray-400">Priority:</span>
             {['low', 'medium', 'high'].map(p => (
               <button
                 key={p}

@@ -298,8 +298,9 @@ const FormBuilder = ({ guildId, isAdmin }: { guildId: string; isAdmin?: boolean 
                   style={{ width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', borderRadius: 4, padding: '6px 12px', fontSize: 14, border: '1px solid var(--border)', outline: 'none', boxSizing: 'border-box' }} />
                 {['multiple_choice', 'checkbox', 'dropdown'].includes(field.type) && (
                   <div style={{ marginTop: 8 }}>
-                    <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Options (one per line)</label>
+                    <label htmlFor={`field-options-${field.id}`} style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Options (one per line)</label>
                     <textarea
+                      id={`field-options-${field.id}`}
                       value={(field.options || []).join('\n')}
                       onChange={e => updateField(field.id, { options: e.target.value.split('\n').filter(Boolean) })}
                       rows={3}

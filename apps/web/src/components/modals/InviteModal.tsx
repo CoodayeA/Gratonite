@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { X, Copy, Check, Clock, Users, Link as LinkIcon, RefreshCw, Loader } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
@@ -24,6 +24,7 @@ const USES_MAP: Record<string, number | undefined> = {
 };
 
 const InviteModal = ({ onClose, guildId }: { onClose: () => void; guildId: string | null }) => {
+    const inviteLinkId = useId();
     const [copied, setCopied] = useState(false);
     const [loading, setLoading] = useState(false);
     const { addToast } = useToast();
@@ -79,12 +80,13 @@ const InviteModal = ({ onClose, guildId }: { onClose: () => void; guildId: strin
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '14px' }}>Share this link with others to grant them access to this server.</p>
 
                 <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Send a Server Invite Link</label>
+                    <label htmlFor={inviteLinkId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Send a Server Invite Link</label>
                     <div style={{ display: 'flex', background: 'var(--bg-tertiary)', borderRadius: '8px', border: `1px solid ${copied ? 'var(--success)' : 'var(--stroke)'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', background: 'rgba(0,0,0,0.2)' }}>
                             <LinkIcon size={18} color="var(--text-muted)" />
                         </div>
                         <input
+                            id={inviteLinkId}
                             type="text"
                             readOnly
                             value={loading ? 'Generating...' : inviteLink}

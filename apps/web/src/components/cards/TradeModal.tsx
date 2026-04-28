@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { X, ArrowRightLeft, Check, XCircle, Send } from 'lucide-react';
 import { api } from '../../lib/api';
 
@@ -38,6 +38,7 @@ interface Props {
 export default function TradeModal({ open, onClose, ownedCards, currentUserId, onTradeComplete }: Props) {
   const [tab, setTab] = useState<'new' | 'pending'>('new');
   const [recipientId, setRecipientId] = useState('');
+  const recipientInputId = useId();
   const [selectedOfferIds, setSelectedOfferIds] = useState<string[]>([]);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loadingTrades, setLoadingTrades] = useState(false);
@@ -175,10 +176,11 @@ export default function TradeModal({ open, onClose, ownedCards, currentUserId, o
               ) : (
                 <>
                   {/* Recipient */}
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                  <label htmlFor={recipientInputId} style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
                     Recipient User ID
                   </label>
                   <input
+                    id={recipientInputId}
                     value={recipientId}
                     onChange={e => setRecipientId(e.target.value)}
                     placeholder="Paste user ID..."

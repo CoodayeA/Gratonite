@@ -4,11 +4,12 @@ import DataExportWidget from '../../../pages/app/DataExport';
 import type { SettingsTabProps, UserProfileLike } from './types';
 
 // PrivacyToggle — self-contained toggle with localStorage + API sync
-import { useState, useRef } from 'react';
+import { useState, useRef, useId } from 'react';
 import { api } from '../../../lib/api';
 import { exportKeyBundle, importKeyBundle } from '../../../lib/e2e';
 
 const ProfileVisibilitySelect = () => {
+  const radioGroupId = useId();
   const [visibility, setVisibility] = useState<'public' | 'friends' | 'hidden'>(() => {
     const stored = localStorage.getItem('privacy-profile-visibility');
     if (stored === 'friends' || stored === 'hidden') return stored;
@@ -27,8 +28,8 @@ const ProfileVisibilitySelect = () => {
       <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.4', marginBottom: '12px' }}>Control who can view your full profile page, including bio, connections, and activity.</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {(['public', 'friends', 'hidden'] as const).map(opt => (
-          <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '8px 10px', borderRadius: '8px', background: visibility === opt ? 'rgba(var(--accent-primary-rgb,139,92,246),0.1)' : 'transparent', border: `1px solid ${visibility === opt ? 'var(--accent-primary)' : 'transparent'}` }}>
-            <input type="radio" name="profile-visibility" value={opt} checked={visibility === opt} onChange={() => handleChange(opt)} style={{ accentColor: 'var(--accent-primary)' }} />
+          <label key={opt} htmlFor={`${radioGroupId}-${opt}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '8px 10px', borderRadius: '8px', background: visibility === opt ? 'rgba(var(--accent-primary-rgb,139,92,246),0.1)' : 'transparent', border: `1px solid ${visibility === opt ? 'var(--accent-primary)' : 'transparent'}` }}>
+            <input id={`${radioGroupId}-${opt}`} type="radio" name="profile-visibility" value={opt} checked={visibility === opt} onChange={() => handleChange(opt)} aria-label={opt === 'friends' ? 'Friends only' : opt} style={{ accentColor: 'var(--accent-primary)' }} />
             <div>
               <div style={{ fontSize: '13px', fontWeight: 600, textTransform: 'capitalize' }}>{opt === 'friends' ? 'Friends only' : opt}</div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>

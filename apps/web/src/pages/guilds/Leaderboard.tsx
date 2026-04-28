@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { Trophy, TrendingUp, TrendingDown, Minus, Crown, Zap, Star, Settings2, ChevronDown } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
 import { api } from '../../lib/api';
@@ -42,6 +42,7 @@ const Leaderboard = () => {
     const [showConfig, setShowConfig] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [resetPeriod, setResetPeriod] = useState('Weekly (Monday reset)');
+    const resetPeriodId = useId();
     const [users, setUsers] = useState<UserEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -174,8 +175,8 @@ const Leaderboard = () => {
                             ))}
                         </div>
                         <div style={{ marginTop: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                            <label style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Reset period:</label>
-                            <select value={resetPeriod} onChange={e => setResetPeriod(e.target.value)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-primary)', padding: '6px 10px', fontSize: '13px' }}>
+                            <label htmlFor={resetPeriodId} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Reset period:</label>
+                            <select id={resetPeriodId} value={resetPeriod} onChange={e => setResetPeriod(e.target.value)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-primary)', padding: '6px 10px', fontSize: '13px' }}>
                                 <option>Weekly (Monday reset)</option>
                                 <option>Monthly (1st of month)</option>
                                 <option>Never (manual reset)</option>

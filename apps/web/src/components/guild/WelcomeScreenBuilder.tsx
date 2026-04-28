@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { Plus, Trash2, GripVertical, Hash, BookOpen, Link2, MessageSquare, ChevronUp, ChevronDown, Save, Eye, EyeOff } from 'lucide-react';
 import { api } from '../../lib/api';
 
@@ -23,6 +23,7 @@ const BLOCK_TYPES = [
 ];
 
 export default function WelcomeScreenBuilder({ guildId, channels = [] }: Props) {
+  const descriptionId = useId();
   const [enabled, setEnabled] = useState(false);
   const [description, setDescription] = useState('');
   const [blocks, setBlocks] = useState<WelcomeBlock[]>([]);
@@ -150,10 +151,11 @@ export default function WelcomeScreenBuilder({ guildId, channels = [] }: Props) 
 
       {/* Description */}
       <div style={{ marginBottom: '16px' }}>
-        <label style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+        <label htmlFor={descriptionId} style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
           Server Description
         </label>
         <textarea
+          id={descriptionId}
           value={description}
           onChange={e => setDescription(e.target.value)}
           maxLength={500}

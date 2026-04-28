@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { X, Gift, Zap, Crown, Coins, Send, CheckCircle, Package } from 'lucide-react';
 import { api } from '../../lib/api';
 
@@ -25,6 +25,7 @@ export default function GiftModal({ recipientId, recipientName, onClose }: GiftM
   const [selectedType, setSelectedType] = useState<string>('premium_month');
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState('');
+  const messageId = useId();
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
@@ -159,10 +160,11 @@ export default function GiftModal({ recipientId, recipientName, onClose }: GiftM
 
           {/* Message */}
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+            <label htmlFor={messageId} style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
               PERSONAL MESSAGE (OPTIONAL)
             </label>
             <textarea
+              id={messageId}
               value={message}
               onChange={e => setMessage(e.target.value)}
               maxLength={500}

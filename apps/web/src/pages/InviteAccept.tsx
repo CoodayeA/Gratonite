@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Users, LogIn, AlertCircle, ArrowLeft } from 'lucide-react';
 import { api, getAccessToken } from '../lib/api';
@@ -181,6 +181,7 @@ function ErrorState({ message, onBack }: { message: string; onBack: () => void }
     const [appealText, setAppealText] = useState('');
     const [appealSent, setAppealSent] = useState(false);
     const [appealSending, setAppealSending] = useState(false);
+    const appealTextId = useId();
     const { addToast } = useToast();
 
     const handleAppeal = async () => {
@@ -242,10 +243,11 @@ function ErrorState({ message, onBack }: { message: string; onBack: () => void }
             </div>
             {isBanned && !appealSent && (
                 <div style={{ width: '100%', textAlign: 'left', marginTop: '8px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    <label htmlFor={appealTextId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
                         Submit a Ban Appeal
                     </label>
                     <textarea
+                        id={appealTextId}
                         value={appealText}
                         onChange={e => setAppealText(e.target.value)}
                         rows={3}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { UserPlus, Plus, Trash2, Edit2, Check, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
@@ -30,6 +30,9 @@ const TRIGGER_LABELS: Record<string, string> = {
 };
 
 export default function AutoRoleConfig({ guildId, roles }: AutoRoleConfigProps) {
+  const roleSelectId = useId();
+  const triggerSelectId = useId();
+  const triggerValueId = useId();
   const [rules, setRules] = useState<AutoRoleRule[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -125,8 +128,9 @@ export default function AutoRoleConfig({ guildId, roles }: AutoRoleConfigProps) 
     return (
       <div className="bg-gray-800 rounded-lg p-4 space-y-3">
         <div>
-          <label className="text-sm text-gray-400 block mb-1">Role to assign</label>
+          <label htmlFor={roleSelectId} className="text-sm text-gray-400 block mb-1">Role to assign</label>
           <select
+            id={roleSelectId}
             value={roleId}
             onChange={e => setRoleId(e.target.value)}
             className="w-full bg-gray-700 text-white rounded px-3 py-2 text-sm"
@@ -139,8 +143,9 @@ export default function AutoRoleConfig({ guildId, roles }: AutoRoleConfigProps) 
         </div>
 
         <div>
-          <label className="text-sm text-gray-400 block mb-1">Trigger</label>
+          <label htmlFor={triggerSelectId} className="text-sm text-gray-400 block mb-1">Trigger</label>
           <select
+            id={triggerSelectId}
             value={triggerType}
             onChange={e => setTriggerType(e.target.value)}
             className="w-full bg-gray-700 text-white rounded px-3 py-2 text-sm"
@@ -152,10 +157,11 @@ export default function AutoRoleConfig({ guildId, roles }: AutoRoleConfigProps) 
         </div>
 
         <div>
-          <label className="text-sm text-gray-400 block mb-1">
+          <label htmlFor={triggerValueId} className="text-sm text-gray-400 block mb-1">
             {triggerType === 'days_in_server' ? 'Days' : triggerType === 'message_count' ? 'Messages' : 'Level'}
           </label>
           <input
+            id={triggerValueId}
             type="number"
             min={1}
             value={triggerValue}

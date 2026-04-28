@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { ScrollText, Save } from 'lucide-react';
 import { API_BASE, getAccessToken } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
@@ -29,6 +29,7 @@ export default function ActivityLogConfig({ guildId, channels }: {
   channels: Channel[];
 }) {
   const { addToast } = useToast();
+  const channelSelectId = useId();
   const [channelId, setChannelId] = useState('');
   const [enabledEvents, setEnabledEvents] = useState<string[]>(ALL_EVENTS.map(e => e.key));
   const [loading, setLoading] = useState(true);
@@ -87,8 +88,9 @@ export default function ActivityLogConfig({ guildId, channels }: {
       </div>
 
       <div>
-        <label className="text-sm text-gray-400 mb-1 block">Log Channel</label>
+        <label htmlFor={channelSelectId} className="text-sm text-gray-400 mb-1 block">Log Channel</label>
         <select
+          id={channelSelectId}
           value={channelId}
           onChange={e => setChannelId(e.target.value)}
           className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm"
@@ -98,8 +100,8 @@ export default function ActivityLogConfig({ guildId, channels }: {
         </select>
       </div>
 
-      <div>
-        <label className="text-sm text-gray-400 mb-2 block">Events to Log</label>
+      <fieldset className="border-0 p-0 m-0">
+        <legend className="text-sm text-gray-400 mb-2 block">Events to Log</legend>
         <div className="grid grid-cols-2 gap-2">
           {ALL_EVENTS.map(evt => (
             <label key={evt.key} className="flex items-center gap-2 p-2 bg-gray-900 rounded border border-gray-700 cursor-pointer hover:border-gray-600">
@@ -113,7 +115,7 @@ export default function ActivityLogConfig({ guildId, channels }: {
             </label>
           ))}
         </div>
-      </div>
+      </fieldset>
     </div>
   );
 }

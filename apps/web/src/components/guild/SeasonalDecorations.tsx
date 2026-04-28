@@ -161,9 +161,9 @@ export function SeasonalDecorationSettings() {
 
   return (
     <div className="space-y-2">
-      <label className="text-sm text-gray-300 flex items-center gap-1">
+      <div className="text-sm text-gray-300 flex items-center gap-1">
         <Snowflake className="w-4 h-4" /> Seasonal Effects
-      </label>
+      </div>
       <div className="flex gap-2 flex-wrap">
         <button
           onClick={() => handleChange('none')}

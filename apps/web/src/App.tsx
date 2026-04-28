@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, type Dispatch, type SetStateAction } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useId, lazy, Suspense, type Dispatch, type SetStateAction } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { createPortal } from 'react-dom';
 import { UserProvider, useUser } from './contexts/UserContext';
@@ -2740,6 +2740,8 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile, isMobileOpen, onCloseMo
     const [banReason, setBanReason] = useState('');
     const [banDuration, setBanDuration] = useState(0);
     const [banSubmitting, setBanSubmitting] = useState(false);
+    const banReasonId = useId();
+    const banDurationId = useId();
     const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
         if (!guildId) return {};
         try {
@@ -3165,11 +3167,12 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile, isMobileOpen, onCloseMo
                         </div>
 
                         <div>
-                            <label style={{
+                            <label htmlFor={banReasonId} style={{
                                 display: 'block', fontSize: '12px', textTransform: 'uppercase',
                                 color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px',
                             }}>REASON (OPTIONAL)</label>
                             <textarea
+                                id={banReasonId}
                                 value={banReason}
                                 onChange={(e) => setBanReason(e.target.value)}
                                 placeholder="Enter a ban reason..."
@@ -3184,11 +3187,12 @@ const MembersSidebar = ({ onOpenProfile: _onOpenProfile, isMobileOpen, onCloseMo
                         </div>
 
                         <div>
-                            <label style={{
+                            <label htmlFor={banDurationId} style={{
                                 display: 'block', fontSize: '12px', textTransform: 'uppercase',
                                 color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px',
                             }}>BAN DURATION</label>
                             <select
+                                id={banDurationId}
                                 value={banDuration}
                                 onChange={(e) => setBanDuration(Number(e.target.value))}
                                 style={{

@@ -2,7 +2,7 @@
  * 119. Timezone Display — Show user's local time on profile.
  * 120. AFK / Away Mode — Auto-reply message display.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { Clock, Moon, Globe } from 'lucide-react';
 import { api } from '../../lib/api';
 
@@ -24,6 +24,7 @@ export function TimezoneDisplay({ userId }: { userId: string }) {
 }
 
 export function TimezoneSettings() {
+  const timezoneInputId = useId();
   const [timezone, setTimezone] = useState('');
   const [saved, setSaved] = useState(false);
 
@@ -47,9 +48,9 @@ export function TimezoneSettings() {
 
   return (
     <div className="space-y-2">
-      <label className="text-sm text-gray-300 flex items-center gap-1"><Globe className="w-4 h-4" /> Timezone</label>
+      <label htmlFor={timezoneInputId} className="text-sm text-gray-300 flex items-center gap-1"><Globe className="w-4 h-4" /> Timezone</label>
       <div className="flex gap-2">
-        <input value={timezone} onChange={e => setTimezone(e.target.value)} placeholder="e.g. America/New_York" className="flex-1 bg-gray-700 text-white text-sm rounded px-3 py-2 border border-gray-600" />
+        <input id={timezoneInputId} value={timezone} onChange={e => setTimezone(e.target.value)} placeholder="e.g. America/New_York" className="flex-1 bg-gray-700 text-white text-sm rounded px-3 py-2 border border-gray-600" />
         <button onClick={detectTimezone} className="px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded">Detect</button>
         <button onClick={save} className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded">
           {saved ? 'Saved!' : 'Save'}
@@ -77,6 +78,7 @@ export function AfkDisplay({ userId }: { userId: string }) {
 }
 
 export function AfkSettings() {
+  const afkInputId = useId();
   const [afk, setAfk] = useState<{ message: string; since: string } | null>(null);
   const [message, setMessage] = useState('');
 
@@ -96,9 +98,9 @@ export function AfkSettings() {
 
   return (
     <div className="space-y-2">
-      <label className="text-sm text-gray-300 flex items-center gap-1"><Moon className="w-4 h-4" /> AFK / Away Mode</label>
+      <label htmlFor={afkInputId} className="text-sm text-gray-300 flex items-center gap-1"><Moon className="w-4 h-4" /> AFK / Away Mode</label>
       <div className="flex gap-2">
-        <input value={message} onChange={e => setMessage(e.target.value)} placeholder="AFK message..." className="flex-1 bg-gray-700 text-white text-sm rounded px-3 py-2 border border-gray-600" />
+        <input id={afkInputId} value={message} onChange={e => setMessage(e.target.value)} placeholder="AFK message..." className="flex-1 bg-gray-700 text-white text-sm rounded px-3 py-2 border border-gray-600" />
         <button onClick={toggleAfk} className={`px-3 py-2 text-white text-sm rounded ${afk ? 'bg-red-600 hover:bg-red-500' : 'bg-yellow-600 hover:bg-yellow-500'}`}>
           {afk ? 'Disable AFK' : 'Enable AFK'}
         </button>

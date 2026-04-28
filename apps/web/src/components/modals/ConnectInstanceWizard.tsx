@@ -4,7 +4,7 @@
  * Step 2: Preview /.well-known/gratonite response
  * Step 3: Confirm and send federation handshake
  */
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { Globe, ChevronRight, Check, X, AlertCircle, Loader2, Server } from 'lucide-react';
 import { api } from '../../lib/api';
 
@@ -106,6 +106,7 @@ const InfoRow = ({ label, value }: { label: string; value: React.ReactNode }) =>
 );
 
 export default function ConnectInstanceWizard({ onClose, onConnected }: Props) {
+  const instanceUrlId = useId();
   const [step, setStep] = useState<Step>(1);
   const [instanceUrl, setInstanceUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -180,10 +181,11 @@ export default function ConnectInstanceWizard({ onClose, onConnected }: Props) {
               We'll verify it supports federation before sending a handshake.
             </p>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+              <label htmlFor={instanceUrlId} style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
                 Instance domain or URL
               </label>
               <input
+                id={instanceUrlId}
                 type="text"
                 placeholder="example.social"
                 value={instanceUrl}
