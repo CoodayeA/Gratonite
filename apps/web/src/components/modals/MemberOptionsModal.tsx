@@ -302,7 +302,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
                     {/* Invite People */}
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>Invite People</label>
+                    <div style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>Invite People</div>
                     <button
                         onClick={handleCopyInvite}
                         className="auth-button"
@@ -314,7 +314,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
                     <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />
 
                     {/* Notifications */}
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>Notifications</label>
+                    <div style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>Notifications</div>
                     <SectionRow
                         icon={muted ? <BellOff size={16} /> : <Bell size={16} />}
                         label="Mute this Server"
@@ -351,7 +351,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
                     <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />
 
                     {/* Hide Muted Channels */}
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>Channel Display</label>
+                    <div style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>Channel Display</div>
                     <SectionRow
                         icon={<EyeOff size={16} />}
                         label="Hide Muted Channels"
@@ -364,7 +364,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
                             <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />
 
                             {/* Warn Member */}
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>Warn Member</label>
+                            <div style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>Warn Member</div>
 
                             <select
                                 value={warnTarget}
@@ -408,7 +408,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
                             <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />
 
                             {/* Timeout Member */}
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>Timeout Member</label>
+                            <div style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>Timeout Member</div>
 
                             <select
                                 value={timeoutTarget}
@@ -464,7 +464,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
                             <div style={{ height: '1px', background: 'var(--stroke)', margin: '4px 0' }} />
 
                             {/* Mod Notes */}
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>Mod Notes</label>
+                            <div style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '4px' }}>Mod Notes</div>
 
                             <select
                                 value={modNoteTarget}
@@ -507,9 +507,9 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
                                     background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                                 }}
                             >
-                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                                <span style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', cursor: 'pointer' }}>
                                     Incident History
-                                </label>
+                                </span>
                                 <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: incidentOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                             </button>
 
@@ -598,7 +598,7 @@ const MemberOptionsModal = ({ onClose, guildId, guildName, userId }: { onClose: 
                             <div style={{ height: '1px', background: 'var(--stroke)', margin: '8px 0' }} />
 
                             {/* Leave Server */}
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--error)', marginBottom: '4px' }}>Danger Zone</label>
+                            <div style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--error)', marginBottom: '4px' }}>Danger Zone</div>
                             {leaveConfirm ? (
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <button

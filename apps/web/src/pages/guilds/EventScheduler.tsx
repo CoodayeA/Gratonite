@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import { useParams } from 'react-router-dom';
 import { Calendar, Clock, MapPin, Users, Plus, MoreHorizontal, X, Link, Share2, Trash2, Edit3, List, Grid } from 'lucide-react';
 import { useToast } from '../../components/ui/ToastManager';
@@ -140,6 +140,11 @@ const EventScheduler = () => {
     const [locationType, setLocationType] = useState<'voice' | 'custom'>('custom');
     const [selectedChannelId, setSelectedChannelId] = useState('');
     const [voiceChannels, setVoiceChannels] = useState<Array<{ id: string; name: string }>>([]);
+    const titleId = useId();
+    const dateId = useId();
+    const timeId = useId();
+    const locationId = useId();
+    const descriptionId = useId();
 
     // Fetch voice channels for location dropdown
     useEffect(() => {
@@ -344,29 +349,29 @@ const EventScheduler = () => {
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>Event Title *</label>
-                                    <input type="text" placeholder="e.g. Community Game Night" value={newTitle} onChange={e => setNewTitle(e.target.value)} style={inputStyle} />
+                                    <label htmlFor={titleId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>Event Title *</label>
+                                    <input id={titleId} type="text" placeholder="e.g. Community Game Night" value={newTitle} onChange={e => setNewTitle(e.target.value)} style={inputStyle} />
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '12px' }}>
                                     <div style={{ flex: 1 }}>
-                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>Date *</label>
+                                        <label htmlFor={dateId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>Date *</label>
                                         <div style={{ position: 'relative' }}>
                                             <Calendar size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none', zIndex: 1 }} />
-                                            <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} style={{ ...inputStyle, paddingLeft: '36px', colorScheme: 'dark' }} />
+                                            <input id={dateId} type="date" value={newDate} onChange={e => setNewDate(e.target.value)} style={{ ...inputStyle, paddingLeft: '36px', colorScheme: 'dark' }} />
                                         </div>
                                     </div>
                                     <div style={{ flex: 1 }}>
-                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>Time *</label>
+                                        <label htmlFor={timeId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>Time *</label>
                                         <div style={{ position: 'relative' }}>
                                             <Clock size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none', zIndex: 1 }} />
-                                            <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)} style={{ ...inputStyle, paddingLeft: '36px', colorScheme: 'dark' }} />
+                                            <input id={timeId} type="time" value={newTime} onChange={e => setNewTime(e.target.value)} style={{ ...inputStyle, paddingLeft: '36px', colorScheme: 'dark' }} />
                                         </div>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>Location</label>
+                                    <label htmlFor={locationId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>Location</label>
                                     <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                                         <button
                                             type="button"
@@ -395,6 +400,7 @@ const EventScheduler = () => {
                                     </div>
                                     {locationType === 'voice' ? (
                                         <select
+                                            id={locationId}
                                             value={selectedChannelId}
                                             onChange={e => setSelectedChannelId(e.target.value)}
                                             style={{ ...inputStyle, cursor: 'pointer', appearance: 'auto' } as React.CSSProperties}
@@ -405,13 +411,13 @@ const EventScheduler = () => {
                                             ))}
                                         </select>
                                     ) : (
-                                        <input type="text" placeholder="e.g. Voice: Lounge" value={newLocation} onChange={e => setNewLocation(e.target.value)} style={inputStyle} />
+                                        <input id={locationId} type="text" placeholder="e.g. Voice: Lounge" value={newLocation} onChange={e => setNewLocation(e.target.value)} style={inputStyle} />
                                     )}
                                 </div>
 
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>Description</label>
-                                    <textarea placeholder="What's this event about?" value={newDescription} onChange={e => setNewDescription(e.target.value)} rows={3} style={{ ...inputStyle, height: 'auto', padding: '10px 12px', resize: 'vertical', fontFamily: 'inherit' }} />
+                                    <label htmlFor={descriptionId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>Description</label>
+                                    <textarea id={descriptionId} placeholder="What's this event about?" value={newDescription} onChange={e => setNewDescription(e.target.value)} rows={3} style={{ ...inputStyle, height: 'auto', padding: '10px 12px', resize: 'vertical', fontFamily: 'inherit' }} />
                                 </div>
                             </div>
 

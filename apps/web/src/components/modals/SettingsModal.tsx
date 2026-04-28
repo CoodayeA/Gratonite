@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+﻿import { useState, useRef, useEffect, useCallback, useMemo, useId } from 'react';
 import { X, Check, ZoomIn, ZoomOut, RotateCw, Volume2, VolumeX, UserX, Copy, Info, Link2, Globe, Search, Download, Upload, Star, Sun, Moon, Dices, Eye, Sparkles, Palette, ShoppingBag, Edit3, Trash2, Share2 } from 'lucide-react';
 import {
     useTheme,
@@ -2545,6 +2545,7 @@ function SettingsMutedUsersPanel({ addToast }: { addToast: (t: any) => void }) {
 function SettingsReferralsPanel({ addToast }: { addToast: (t: any) => void }) {
     const [data, setData] = useState<{ code: string; referralLink: string; count: number } | null>(null);
     const [loading, setLoading] = useState(true);
+    const referralLinkId = useId();
 
     useEffect(() => {
         api.referrals.get().then(setData).catch(() => {}).finally(() => setLoading(false));
@@ -2570,9 +2571,9 @@ function SettingsReferralsPanel({ addToast }: { addToast: (t: any) => void }) {
                     <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px' }}>people joined using your link</div>
 
                     <div style={{ marginBottom: '16px' }}>
-                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>YOUR REFERRAL LINK</label>
+                        <label htmlFor={referralLinkId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>YOUR REFERRAL LINK</label>
                         <div style={{ display: 'flex', gap: '8px' }}>
-                            <input type="text" readOnly value={data.referralLink} style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }} />
+                            <input id={referralLinkId} type="text" readOnly value={data.referralLink} style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }} />
                             <button onClick={copyLink} style={{ padding: '10px 16px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <Copy size={14} /> Copy
                             </button>
@@ -2601,6 +2602,9 @@ function SettingsDeveloperPanel({ addToast }: { addToast: (t: any) => void }) {
     const [newDesc, setNewDesc] = useState('');
     const [newRedirectUris, setNewRedirectUris] = useState('');
     const [createdSecret, setCreatedSecret] = useState<string | null>(null);
+    const newNameId = useId();
+    const newDescId = useId();
+    const newRedirectUrisId = useId();
 
     useEffect(() => {
         api.oauthApps.list().then(data => setApps(Array.isArray(data) ? data : [])).catch(() => {}).finally(() => setLoading(false));
@@ -2660,16 +2664,16 @@ function SettingsDeveloperPanel({ addToast }: { addToast: (t: any) => void }) {
             {showCreate && (
                 <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--stroke)', padding: '20px', marginBottom: '24px' }}>
                     <div style={{ marginBottom: '12px' }}>
-                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>NAME</label>
-                        <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="My Application" style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                        <label htmlFor={newNameId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>NAME</label>
+                        <input id={newNameId} value={newName} onChange={e => setNewName(e.target.value)} placeholder="My Application" style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                     <div style={{ marginBottom: '12px' }}>
-                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>DESCRIPTION</label>
-                        <textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="What does your app do?" rows={2} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
+                        <label htmlFor={newDescId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>DESCRIPTION</label>
+                        <textarea id={newDescId} value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="What does your app do?" rows={2} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
                     </div>
                     <div style={{ marginBottom: '16px' }}>
-                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>REDIRECT URIS (one per line)</label>
-                        <textarea value={newRedirectUris} onChange={e => setNewRedirectUris(e.target.value)} placeholder="https://example.com/callback" rows={2} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
+                        <label htmlFor={newRedirectUrisId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>REDIRECT URIS (one per line)</label>
+                        <textarea id={newRedirectUrisId} value={newRedirectUris} onChange={e => setNewRedirectUris(e.target.value)} placeholder="https://example.com/callback" rows={2} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <button onClick={handleCreate} style={{ padding: '8px 18px', borderRadius: '8px', background: 'var(--accent-primary)', border: 'none', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>Create</button>
@@ -2739,6 +2743,9 @@ function SettingsDndSchedulePanel({ addToast }: { addToast: (t: any) => void }) 
     const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const startTimeId = useId();
+    const endTimeId = useId();
+    const timezoneId = useId();
 
     useEffect(() => {
         api.get('/users/@me/dnd-schedule').then((r: any) => {
@@ -2786,21 +2793,21 @@ function SettingsDndSchedulePanel({ addToast }: { addToast: (t: any) => void }) 
                 <div style={{ background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--stroke)', padding: '20px' }}>
                     <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
                         <div style={{ flex: 1 }}>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Start Time</label>
-                            <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
+                            <label htmlFor={startTimeId} style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Start Time</label>
+                            <input id={startTimeId} type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
                                 style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box' }}
                             />
                         </div>
                         <div style={{ flex: 1 }}>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>End Time</label>
-                            <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
+                            <label htmlFor={endTimeId} style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>End Time</label>
+                            <input id={endTimeId} type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
                                 style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box' }}
                             />
                         </div>
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>
-                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Active Days</label>
+                        <div style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Active Days</div>
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                             {DAYS_OF_WEEK.map((day, i) => (
                                 <button key={i} onClick={() => toggleDay(i)}
@@ -2817,8 +2824,8 @@ function SettingsDndSchedulePanel({ addToast }: { addToast: (t: any) => void }) 
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>
-                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Timezone</label>
-                        <select value={timezone} onChange={e => setTimezone(e.target.value)}
+                        <label htmlFor={timezoneId} style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Timezone</label>
+                        <select id={timezoneId} value={timezone} onChange={e => setTimezone(e.target.value)}
                             style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box' }}
                         >
                             {(typeof (Intl as any).supportedValuesOf === 'function' ? (Intl as any).supportedValuesOf('timeZone') as string[] : ['UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Berlin', 'Europe/Paris', 'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Kolkata', 'Australia/Sydney']).map((tz: string) => <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>)}

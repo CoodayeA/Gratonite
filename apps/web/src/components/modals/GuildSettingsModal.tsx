@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Shield, Plus, Check, Search, ChevronDown, Trash2, Edit2, Ban, UserPlus, Hash, Mic, Settings, AlertTriangle, Clock, Save, Link2, Copy, RefreshCw, Bot, Power, Sliders, GripVertical, Upload, UserX, Lock, Eye, Type, ExternalLink, ArrowUp, ArrowDown, BookOpen, Activity, Globe } from 'lucide-react';
 import { useToast } from '../ui/ToastManager';
@@ -144,6 +144,59 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
     const { user: currentUser } = useUser();
     const navigate = useNavigate();
     const actorName = currentUser.name || currentUser.handle || 'Unknown';
+    // useId for accessible label/control association
+    const serverNameId = useId();
+    const serverDescId = useId();
+    const guildCategoryId = useId();
+    const guildTagsId = useId();
+    const verificationLevelId = useId();
+    const systemChannelId = useId();
+    const afkChannelId_ = useId();
+    const afkTimeoutId = useId();
+    const welcomeChannelId = useId();
+    const inviteMaxUsesId = useId();
+    const inviteMaxAgeId = useId();
+    const inviteChannelId = useId();
+    const slowmodeId = useId();
+    const explicitFilterId = useId();
+    const defaultNotifId = useId();
+    const mfaLevelId = useId();
+    const localeId = useId();
+    const memberPruneDaysId = useId();
+    const auditFilterId = useId();
+    const auditFromId = useId();
+    const auditToId = useId();
+    const integrationNameId = useId();
+    const integrationUrlId = useId();
+    const integrationTokenId = useId();
+    const integrationEventId = useId();
+    const webhookNameId = useId();
+    const webhookChannelId = useId();
+    const webhookUrlId = useId();
+    const announceChannelId = useId();
+    const announceTitleId = useId();
+    const announceBodyId = useId();
+    const previewRoleHookId = useId();
+    const roleNameId = useId();
+    const roleColorId = useId();
+    const roleIconId = useId();
+    const slowmodeBId = useId();
+    const slowmodeCId = useId();
+    const channelTopicId = useId();
+    const channelNameEditId = useId();
+    const blockedWordsId = useId();
+    const wordFilterActionId = useId();
+    const regexPatternsId = useId();
+    const regexTestId = useId();
+    const emojiNameId = useId();
+    const newWebhookNameId = useId();
+    const newWebhookChannelId = useId();
+    const rulesTextId = useId();
+    const welcomeBlockTextId = useId();
+    const welcomeBlockChannelsId = useId();
+    const welcomeBlockRulesId = useId();
+    const welcomeBlockLinksId = useId();
+    const welcomeEnabledId = useId();
     const [activeTab, setActiveTab] = useState<SettingsTab>('overview');
     const [roles, setRoles] = useState<Role[]>([]);
     const [activeRole, setActiveRole] = useState<Role | null>(null);
@@ -1309,12 +1362,12 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 </div>
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>SERVER NAME</label>
-                                        <input type="text" value={serverName} onChange={e => setServerName(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                                        <label htmlFor={serverNameId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>SERVER NAME</label>
+                                        <input id={serverNameId} type="text" value={serverName} onChange={e => setServerName(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>SERVER DESCRIPTION</label>
-                                        <textarea value={serverDesc} onChange={e => setServerDesc(e.target.value)} rows={3} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                                        <label htmlFor={serverDescId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>SERVER DESCRIPTION</label>
+                                        <textarea id={serverDescId} value={serverDesc} onChange={e => setServerDesc(e.target.value)} rows={3} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
                                     </div>
 
                                 </div>
@@ -1338,8 +1391,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
 
                             {/* Category & Tags */}
                             <div style={{ marginBottom: '24px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>CATEGORY</label>
+                                <label htmlFor={guildCategoryId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>CATEGORY</label>
                                 <select
+                                    id={guildCategoryId}
                                     value={guildCategory}
                                     onChange={e => setGuildCategory(e.target.value)}
                                     style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: guildCategory ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}
@@ -1358,7 +1412,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             </div>
 
                             <div style={{ marginBottom: '24px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>TAGS</label>
+                                <label htmlFor={guildTagsId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>TAGS</label>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
                                     {guildTags.map(tag => (
                                         <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--bg-tertiary)', borderRadius: '999px', border: '1px solid var(--stroke)', fontSize: '12px', color: 'var(--text-secondary)' }}>
@@ -1374,6 +1428,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <input
+                                        id={guildTagsId}
                                         type="text"
                                         value={tagInput}
                                         onChange={e => setTagInput(e.target.value)}
@@ -1454,8 +1509,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>Safety & Verification</h3>
 
                             <div style={{ marginBottom: '24px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>VERIFICATION LEVEL</label>
-                                <select value={verificationLevel} onChange={e => setVerificationLevel(e.target.value as any)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}>
+                                <label htmlFor={verificationLevelId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>VERIFICATION LEVEL</label>
+                                <select id={verificationLevelId} value={verificationLevel} onChange={e => setVerificationLevel(e.target.value as any)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}>
                                     <option value="none">None — Unrestricted</option>
                                     <option value="low">Low — Verified email required</option>
                                     <option value="medium">Medium — Registered for 5+ minutes</option>
@@ -1469,8 +1524,8 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
 
                             {/* System Messages Channel */}
                             <div style={{ marginBottom: '24px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>SYSTEM MESSAGES CHANNEL</label>
-                                <select value={systemChannel} onChange={e => setSystemChannel(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}>
+                                <label htmlFor={systemChannelId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>SYSTEM MESSAGES CHANNEL</label>
+                                <select id={systemChannelId} value={systemChannel} onChange={e => setSystemChannel(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}>
                                     {channelsList.filter(c => c.type === 'GUILD_TEXT' || c.type === 'text').length === 0 ? (
                                         <option value="">No text channels</option>
                                     ) : (
@@ -1495,8 +1550,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             <div style={{ height: '1px', background: 'var(--stroke)', margin: '24px 0' }} />
                             <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '16px' }}>AFK Channel</h3>
                             <div style={{ marginBottom: '16px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>AFK VOICE CHANNEL</label>
+                                <label htmlFor={afkChannelId_} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>AFK VOICE CHANNEL</label>
                                 <select
+                                    id={afkChannelId_}
                                     value={afkChannelId}
                                     onChange={e => setAfkChannelId(e.target.value)}
                                     style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}
@@ -1512,8 +1568,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Members idle longer than the timeout will be moved to this channel.</div>
                             </div>
                             <div style={{ marginBottom: '16px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>AFK TIMEOUT</label>
+                                <label htmlFor={afkTimeoutId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>AFK TIMEOUT</label>
                                 <select
+                                    id={afkTimeoutId}
                                     value={afkTimeout}
                                     onChange={e => setAfkTimeout(Number(e.target.value))}
                                     style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}
@@ -1798,8 +1855,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
 
                             {/* Preview as Role */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Preview as Role:</label>
+                                <label htmlFor={previewRoleHookId} style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Preview as Role:</label>
                                 <select
+                                    id={previewRoleHookId}
                                     value={previewRoleId ?? ''}
                                     onChange={e => setPreviewRoleId(e.target.value || null)}
                                     style={{ padding: '6px 10px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', maxWidth: '200px' }}
@@ -2229,16 +2287,16 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                         {editingRule === rule.id ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                                 <div>
-                                                    <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Rule Name</label>
-                                                    <input type="text" value={editRuleName} onChange={e => setEditRuleName(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--accent-primary)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} autoFocus />
+                                                    <label htmlFor={`rule-name-${rule.id}`} style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Rule Name</label>
+                                                    <input id={`rule-name-${rule.id}`} type="text" value={editRuleName} onChange={e => setEditRuleName(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--accent-primary)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} autoFocus />
                                                 </div>
                                                 <div>
-                                                    <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Keywords (comma-separated)</label>
-                                                    <input type="text" value={editRuleKeywords} onChange={e => setEditRuleKeywords(e.target.value)} placeholder="e.g. spam, scam, phishing" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                                                    <label htmlFor={`rule-keywords-${rule.id}`} style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Keywords (comma-separated)</label>
+                                                    <input id={`rule-keywords-${rule.id}`} type="text" value={editRuleKeywords} onChange={e => setEditRuleKeywords(e.target.value)} placeholder="e.g. spam, scam, phishing" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                                                 </div>
                                                 <div>
-                                                    <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Action</label>
-                                                    <select value={editRuleAction} onChange={e => setEditRuleAction(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}>
+                                                    <label htmlFor={`rule-action-${rule.id}`} style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Action</label>
+                                                    <select id={`rule-action-${rule.id}`} value={editRuleAction} onChange={e => setEditRuleAction(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}>
                                                         <option value="Delete Message">Delete Message</option>
                                                     </select>
                                                 </div>
@@ -2309,7 +2367,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '13px' }}>Block or filter messages containing specific words or phrases.</p>
 
                             <div style={{ marginBottom: '24px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>BLOCKED WORDS</label>
+                                <label htmlFor={blockedWordsId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>BLOCKED WORDS</label>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
                                     {wordFilterWords.map((word, i) => (
                                         <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--bg-tertiary)', borderRadius: '999px', border: '1px solid var(--stroke)', fontSize: '12px', color: 'var(--text-secondary)' }}>
@@ -2320,6 +2378,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <input
+                                        id={blockedWordsId}
                                         type="text"
                                         value={wordFilterInput}
                                         onChange={e => setWordFilterInput(e.target.value)}
@@ -2350,8 +2409,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             </div>
 
                             <div style={{ marginBottom: '24px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>ACTION</label>
+                                <label htmlFor={wordFilterActionId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>ACTION</label>
                                 <select
+                                    id={wordFilterActionId}
                                     value={wordFilterAction}
                                     onChange={e => setWordFilterAction(e.target.value as any)}
                                     style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const }}
@@ -2364,7 +2424,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                             </div>
 
                             <div style={{ marginBottom: '24px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>EXEMPT ROLES</label>
+                                <div style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>EXEMPT ROLES</div>
                                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Members with these roles will bypass the word filter.</p>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                     {roles.map(role => (
@@ -2393,7 +2453,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
 
                             {/* Regex Patterns */}
                             <div style={{ marginBottom: '24px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>REGEX PATTERNS</label>
+                                <label htmlFor={regexPatternsId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>REGEX PATTERNS</label>
                                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Advanced: use regular expressions for complex matching.</p>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
                                     {(wordFilterRegexPatterns || []).map((pat: string, i: number) => (
@@ -2405,6 +2465,7 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <input
+                                        id={regexPatternsId}
                                         type="text"
                                         value={wordFilterRegexInput || ''}
                                         onChange={e => setWordFilterRegexInput(e.target.value)}
@@ -2440,9 +2501,10 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
 
                                 {/* Test regex */}
                                 <div style={{ marginTop: '12px', padding: '12px', background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--stroke)' }}>
-                                    <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>TEST YOUR PATTERNS</label>
+                                    <label htmlFor={regexTestId} style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>TEST YOUR PATTERNS</label>
                                     <div style={{ display: 'flex', gap: '8px' }}>
                                         <input
+                                            id={regexTestId}
                                             type="text"
                                             value={wordFilterTestInput || ''}
                                             onChange={e => setWordFilterTestInput(e.target.value)}
@@ -3006,12 +3068,13 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                             {emojiFilePreview && <img src={emojiFilePreview} alt="preview" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />}
                                         </div>
                                         <div style={{ flex: 1 }}>
-                                            <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>
+                                            <label htmlFor={emojiNameId} style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>
                                                 Emoji Name (alphanumeric, 2+ chars)
                                             </label>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px' }}>
                                                 <span style={{ color: 'var(--text-muted)', fontSize: '14px' }}>:</span>
                                                 <input
+                                                    id={emojiNameId}
                                                     type="text"
                                                     value={emojiNameInput}
                                                     onChange={e => setEmojiNameInput(e.target.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase())}
@@ -3214,12 +3277,12 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--stroke)', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                                         <div>
-                                            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Webhook Name</label>
-                                            <input type="text" value={newWebhookName} onChange={e => setNewWebhookName(e.target.value)} placeholder="e.g. GitHub Alerts" style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '14px' }} />
+                                            <label htmlFor={newWebhookNameId} style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Webhook Name</label>
+                                            <input id={newWebhookNameId} type="text" value={newWebhookName} onChange={e => setNewWebhookName(e.target.value)} placeholder="e.g. GitHub Alerts" style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '14px' }} />
                                         </div>
                                         <div>
-                                            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Channel</label>
-                                            <select value={newWebhookChannel} onChange={e => setNewWebhookChannel(e.target.value)} style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '14px', appearance: 'none' }}>
+                                            <label htmlFor={newWebhookChannelId} style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Channel</label>
+                                            <select id={newWebhookChannelId} value={newWebhookChannel} onChange={e => setNewWebhookChannel(e.target.value)} style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '14px', appearance: 'none' }}>
                                                 {channelsList.filter(c => c.type === 'GUILD_TEXT' || c.type === 'text').length === 0 ? (
                                                     <option value="">No text channels</option>
                                                 ) : (
@@ -3662,8 +3725,9 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 Define server rules that new members must agree to before participating.
                             </p>
                             <div style={{ marginBottom: '24px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>RULES TEXT</label>
+                                <label htmlFor={rulesTextId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>RULES TEXT</label>
                                 <textarea
+                                    id={rulesTextId}
                                     value={rulesText}
                                     onChange={e => setRulesText(e.target.value)}
                                     placeholder="Enter your server rules here. One rule per line recommended."
@@ -3784,12 +3848,10 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                 </div>
                                 <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '13px' }}>Design the welcome screen new members see when they join. Reorder blocks with the arrows.</p>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', padding: '12px 16px', background: 'var(--bg-tertiary)', borderRadius: '10px', border: '1px solid var(--stroke)' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1 }}>
-                                        <input type="checkbox" checked={welcomeEnabled} onChange={toggleWelcomeEnabled} style={{ accentColor: 'var(--accent-primary)' }} />
-                                        <div>
-                                            <div style={{ fontWeight: 600, fontSize: '14px' }}>Enable Welcome Screen</div>
-                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Show a customized welcome screen to new members</div>
-                                        </div>
+                                    <input id={welcomeEnabledId} type="checkbox" checked={welcomeEnabled} onChange={toggleWelcomeEnabled} style={{ accentColor: 'var(--accent-primary)', cursor: 'pointer' }} />
+                                    <label htmlFor={welcomeEnabledId} style={{ display: 'flex', flexDirection: 'column', cursor: 'pointer', flex: 1 }}>
+                                        <span style={{ fontWeight: 600, fontSize: '14px' }}>Enable Welcome Screen</span>
+                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Show a customized welcome screen to new members</span>
                                     </label>
                                 </div>
                                 {welcomePreview ? (
@@ -3855,21 +3917,19 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                             <div style={{ fontWeight: 600, fontSize: '14px' }}>{meta.label}</div>
                                                             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{meta.desc}</div>
                                                         </div>
-                                                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                                                            <input type="checkbox" checked={block.enabled} onChange={e => updateBlock(block.id, { enabled: e.target.checked })} style={{ accentColor: 'var(--accent-primary)' }} />
-                                                        </label>
+                                                        <input type="checkbox" aria-label={`Enable ${meta.label}`} checked={block.enabled} onChange={e => updateBlock(block.id, { enabled: e.target.checked })} style={{ accentColor: 'var(--accent-primary)', cursor: 'pointer' }} />
                                                         <button onClick={() => setEditingBlockId(isBlockEditing ? null : block.id)} style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: isBlockEditing ? 'var(--accent-primary)' : 'var(--text-muted)', display: 'flex' }}><Edit2 size={14} /></button>
                                                     </div>
                                                     {isBlockEditing && block.type === 'message' && (
                                                         <div>
-                                                            <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>WELCOME TEXT</label>
-                                                            <textarea value={block.data.text || ''} onChange={e => updateBlock(block.id, { data: { ...block.data, text: e.target.value } })} rows={3} placeholder={welcomeMessage || 'Welcome to our server!'} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                                                            <label htmlFor={`wb-text-${block.id}`} style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>WELCOME TEXT</label>
+                                                            <textarea id={`wb-text-${block.id}`} value={block.data.text || ''} onChange={e => updateBlock(block.id, { data: { ...block.data, text: e.target.value } })} rows={3} placeholder={welcomeMessage || 'Welcome to our server!'} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
                                                             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Leave empty to use the server welcome message.</div>
                                                         </div>
                                                     )}
                                                     {isBlockEditing && block.type === 'channels' && (
                                                         <div>
-                                                            <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>SELECT CHANNELS TO HIGHLIGHT</label>
+                                                            <div style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>SELECT CHANNELS TO HIGHLIGHT</div>
                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '200px', overflowY: 'auto' }}>
                                                                 {wTextChannels.map(ch => {
                                                                     const sel = (block.data.channelIds || []).includes(ch.id);
@@ -3886,14 +3946,14 @@ const GuildSettingsModal = ({ onClose, guildId }: { onClose: () => void; guildId
                                                     )}
                                                     {isBlockEditing && block.type === 'rules' && (
                                                         <div>
-                                                            <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>RULES SUMMARY</label>
-                                                            <textarea value={block.data.summary || ''} onChange={e => updateBlock(block.id, { data: { ...block.data, summary: e.target.value } })} rows={4} placeholder={"1. Be respectful\n2. No spam\n3. Stay on topic"} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                                                            <label htmlFor={`wb-rules-${block.id}`} style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>RULES SUMMARY</label>
+                                                            <textarea id={`wb-rules-${block.id}`} value={block.data.summary || ''} onChange={e => updateBlock(block.id, { data: { ...block.data, summary: e.target.value } })} rows={4} placeholder={"1. Be respectful\n2. No spam\n3. Stay on topic"} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-primary)', border: '1px solid var(--stroke)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
                                                             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Brief rules summary shown on the welcome screen.</div>
                                                         </div>
                                                     )}
                                                     {isBlockEditing && block.type === 'links' && (
                                                         <div>
-                                                            <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>RESOURCE LINKS</label>
+                                                            <div style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '6px' }}>RESOURCE LINKS</div>
                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
                                                                 {(block.data.items || []).map((item: { label: string; url: string }, li: number) => (
                                                                     <div key={li} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>

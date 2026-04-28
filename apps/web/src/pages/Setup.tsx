@@ -3,7 +3,7 @@
  * Shown when the instance is unconfigured. Non-technical friendly.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Globe, User, Wifi, Check, ArrowRight, ArrowLeft, Server, Lock } from 'lucide-react';
 import { api } from '../lib/api';
@@ -32,6 +32,10 @@ export default function Setup() {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
+  const domainId = useId();
+  const usernameId = useId();
+  const emailId = useId();
+  const passwordId = useId();
 
   useEffect(() => {
     // Redirect to app if setup is already complete
@@ -167,8 +171,9 @@ export default function Setup() {
                 <p style={{ fontSize: '14px', marginTop: '8px', color: '#94a3b8' }}>Let's set up your server. What's your domain?</p>
               </div>
               <div>
-                <label style={{ ...labelStyle, marginBottom: '8px' }}>Server Domain</label>
+                <label htmlFor={domainId} style={{ ...labelStyle, marginBottom: '8px' }}>Server Domain</label>
                 <input
+                  id={domainId}
                   type="text"
                   value={domain}
                   onChange={e => { setDomain(e.target.value); setDomainValid(null); }}
@@ -208,8 +213,8 @@ export default function Setup() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
-                  <label style={labelStyle}>Username</label>
-                  <input type="text" value={adminUsername} onChange={e => setAdminUsername(e.target.value)} placeholder="admin" style={inputStyle} />
+                  <label htmlFor={usernameId} style={labelStyle}>Username</label>
+                  <input id={usernameId} type="text" value={adminUsername} onChange={e => setAdminUsername(e.target.value)} placeholder="admin" style={inputStyle} />
                   {adminUsername.toLowerCase().includes('admin') && (
                     <p style={{ fontSize: '12px', color: '#f59e0b', marginTop: '4px' }}>
                       Tip: Consider a less predictable username for better security.
@@ -217,12 +222,12 @@ export default function Setup() {
                   )}
                 </div>
                 <div>
-                  <label style={labelStyle}>Email</label>
-                  <input type="email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} placeholder="admin@example.com" style={inputStyle} />
+                  <label htmlFor={emailId} style={labelStyle}>Email</label>
+                  <input id={emailId} type="email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} placeholder="admin@example.com" style={inputStyle} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Password</label>
-                  <input type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} placeholder="At least 8 characters" style={inputStyle} />
+                  <label htmlFor={passwordId} style={labelStyle}>Password</label>
+                  <input id={passwordId} type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} placeholder="At least 8 characters" style={inputStyle} />
                   {(() => {
                     const strength = getPasswordStrength(adminPassword);
                     return strength ? (
@@ -255,17 +260,17 @@ export default function Setup() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '8px', cursor: 'pointer', background: enableFederation ? '#818cf815' : '#0f0f1a', border: `1px solid ${enableFederation ? '#818cf850' : '#2e2e3e'}` }}>
                   <input type="checkbox" checked={enableFederation} onChange={e => setEnableFederation(e.target.checked)} style={{ width: '16px', height: '16px' }} />
-                  <div>
-                    <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Enable Federation</p>
-                    <p style={{ fontSize: '12px', color: '#94a3b8' }}>Let users from other servers join your communities</p>
-                  </div>
+                  <span>
+                    <span style={{ display: 'block', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Enable Federation</span>
+                    <span style={{ display: 'block', fontSize: '12px', color: '#94a3b8' }}>Let users from other servers join your communities</span>
+                  </span>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '8px', cursor: 'pointer', background: enableRelay ? '#818cf815' : '#0f0f1a', border: `1px solid ${enableRelay ? '#818cf850' : '#2e2e3e'}` }}>
                   <input type="checkbox" checked={enableRelay} onChange={e => setEnableRelay(e.target.checked)} style={{ width: '16px', height: '16px' }} />
-                  <div>
-                    <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Connect via Relay</p>
-                    <p style={{ fontSize: '12px', color: '#94a3b8' }}>Works even behind NAT — no port forwarding needed</p>
-                  </div>
+                  <span>
+                    <span style={{ display: 'block', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Connect via Relay</span>
+                    <span style={{ display: 'block', fontSize: '12px', color: '#94a3b8' }}>Works even behind NAT — no port forwarding needed</span>
+                  </span>
                 </label>
               </div>
               {error && <p style={{ fontSize: '14px', color: 'var(--danger)' }}>{error}</p>}

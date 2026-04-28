@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useId } from 'react';
 import { useOutletContext, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion } from 'framer-motion';
@@ -196,6 +196,11 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const scheduleDateId = useId();
+    const scheduleTimeId = useId();
+    const pollQuestionId = useId();
+    const pollOptionsId = useId();
+    const pollDurationId = useId();
     const [showScrollButton, setShowScrollButton] = useState(false);
     const [newMsgCount, setNewMsgCount] = useState(0);
     const [inputValue, setInputValue] = useState('');
@@ -4664,12 +4669,12 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
 
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <div style={{ flex: 1 }}>
-                                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Date</label>
-                                    <input type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'white', padding: '8px', borderRadius: '6px', fontSize: '13px', outline: 'none' }} />
+                                    <label htmlFor={scheduleDateId} style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Date</label>
+                                    <input id={scheduleDateId} type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'white', padding: '8px', borderRadius: '6px', fontSize: '13px', outline: 'none' }} />
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Time</label>
-                                    <input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'white', padding: '8px', borderRadius: '6px', fontSize: '13px', outline: 'none' }} />
+                                    <label htmlFor={scheduleTimeId} style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Time</label>
+                                    <input id={scheduleTimeId} type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} style={{ width: '100%', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', color: 'white', padding: '8px', borderRadius: '6px', fontSize: '13px', outline: 'none' }} />
                                 </div>
                             </div>
 
@@ -4742,8 +4747,9 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Question</label>
+                                <label htmlFor={pollQuestionId} style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Question</label>
                                 <input
+                                    id={pollQuestionId}
                                     type="text"
                                     value={pollQuestion}
                                     onChange={e => setPollQuestion(e.target.value)}
@@ -4752,8 +4758,8 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
                                 />
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Options</label>
+                            <fieldset style={{ display: 'flex', flexDirection: 'column', gap: '8px', border: 'none', padding: 0, margin: 0 }}>
+                                <legend style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', padding: 0 }}>Options</legend>
                                 {pollOptions.map((option, index) => (
                                     <div key={index} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                                         <input
