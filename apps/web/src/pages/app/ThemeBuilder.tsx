@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Palette, Eye, Upload, ArrowLeft, Check, Copy,
@@ -116,6 +116,8 @@ const ThemeBuilder = () => {
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [previewMode, setPreviewMode] = useState<'chat' | 'profile' | 'cards'>('chat');
+    const themeNameId = useId();
+    const themeDescId = useId();
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
     const updateColor = (key: keyof ThemeColors, value: string) => {
@@ -304,8 +306,9 @@ const ThemeBuilder = () => {
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
                             <div>
-                                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Theme Name</label>
+                                <label htmlFor={themeNameId} style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Theme Name</label>
                                 <input
+                                    id={themeNameId}
                                     type="text"
                                     value={themeName}
                                     onChange={e => setThemeName(e.target.value)}
@@ -313,8 +316,9 @@ const ThemeBuilder = () => {
                                 />
                             </div>
                             <div>
-                                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Description</label>
+                                <label htmlFor={themeDescId} style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Description</label>
                                 <textarea
+                                    id={themeDescId}
                                     value={themeDesc}
                                     onChange={e => setThemeDesc(e.target.value)}
                                     placeholder="Describe your theme's mood and style..."
@@ -323,7 +327,7 @@ const ThemeBuilder = () => {
                                 />
                             </div>
                             <div>
-                                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Tags</label>
+                                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Tags</div>
                                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                                     {['Dark', 'Light', 'Neon', 'Minimal', 'Gradient', 'Pastel', 'Retro', 'Nature'].map(tag => (
                                         <span

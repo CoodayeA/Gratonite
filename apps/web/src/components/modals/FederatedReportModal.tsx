@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { X, Globe, Flag, ChevronDown } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
@@ -35,6 +35,8 @@ export function FederatedReportModal({
     const [submitted, setSubmitted] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+    const instanceId = useId();
+    const descriptionId = useId();
 
     const selectedCategory = CATEGORIES.find(c => c.value === category)!;
 
@@ -136,7 +138,7 @@ export function FederatedReportModal({
                         <>
                             {/* Originating instance */}
                             <div style={{ marginBottom: '16px' }}>
-                                <label style={{
+                                <label htmlFor={instanceId} style={{
                                     display: 'block', fontSize: '12px', fontWeight: 700,
                                     textTransform: 'uppercase', letterSpacing: '0.05em',
                                     color: 'var(--text-muted)', marginBottom: '6px',
@@ -152,6 +154,7 @@ export function FederatedReportModal({
                                         }}
                                     />
                                     <input
+                                        id={instanceId}
                                         type="text"
                                         value={instanceDomain}
                                         onChange={e => setInstanceDomain(e.target.value)}
@@ -173,13 +176,13 @@ export function FederatedReportModal({
 
                             {/* Category */}
                             <div style={{ marginBottom: '16px', position: 'relative' }}>
-                                <label style={{
+                                <div style={{
                                     display: 'block', fontSize: '12px', fontWeight: 700,
                                     textTransform: 'uppercase', letterSpacing: '0.05em',
                                     color: 'var(--text-muted)', marginBottom: '6px',
                                 }}>
                                     Category
-                                </label>
+                                </div>
                                 <button
                                     type="button"
                                     onClick={() => setShowCategoryDropdown(p => !p)}
@@ -225,7 +228,7 @@ export function FederatedReportModal({
 
                             {/* Description */}
                             <div style={{ marginBottom: '20px' }}>
-                                <label style={{
+                                <label htmlFor={descriptionId} style={{
                                     display: 'block', fontSize: '12px', fontWeight: 700,
                                     textTransform: 'uppercase', letterSpacing: '0.05em',
                                     color: 'var(--text-muted)', marginBottom: '6px',
@@ -233,6 +236,7 @@ export function FederatedReportModal({
                                     Description <span style={{ color: '#ef4444' }}>*</span>
                                 </label>
                                 <textarea
+                                    id={descriptionId}
                                     value={description}
                                     onChange={e => setDescription(e.target.value)}
                                     placeholder="Describe the issue in detail. Include what happened and any relevant context."

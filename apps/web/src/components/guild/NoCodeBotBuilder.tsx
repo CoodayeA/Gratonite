@@ -2,7 +2,7 @@
  * NoCodeBotBuilder — Item 100: Visual auto-response, welcome message, role reaction builder
  * No-code tool for server admins to create simple bot behaviors.
  */
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { Plus, Trash2, Save, Zap, MessageSquare, UserPlus, Shield } from 'lucide-react';
 
 interface AutoResponse {
@@ -32,6 +32,8 @@ export const NoCodeBotBuilder = ({ guildId, channels, roles, onSave }: Props) =>
   const [tab, setTab] = useState<'responses' | 'welcome' | 'reactions'>('responses');
   const [responses, setResponses] = useState<AutoResponse[]>([]);
   const [welcome, setWelcome] = useState<WelcomeConfig>({ enabled: false, message: 'Welcome to the server, {user}!', assignRoles: [] });
+  const welcomeMessageId = useId();
+  const welcomeChannelId = useId();
 
   const addResponse = () => {
     setResponses(prev => [...prev, {
@@ -119,25 +121,25 @@ export const NoCodeBotBuilder = ({ guildId, channels, roles, onSave }: Props) =>
           </label>
 
           <div style={{ opacity: welcome.enabled ? 1 : 0.5 }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>
+            <label htmlFor={welcomeMessageId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>
               Welcome Message
             </label>
-            <textarea value={welcome.message} onChange={e => setWelcome({ ...welcome, message: e.target.value })}
+            <textarea id={welcomeMessageId} value={welcome.message} onChange={e => setWelcome({ ...welcome, message: e.target.value })}
               placeholder="Welcome {user} to {server}!" rows={3}
               style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit', marginBottom: '12px' }} />
 
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>
+            <label htmlFor={welcomeChannelId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>
               Welcome Channel
             </label>
-            <select value={welcome.channelId || ''} onChange={e => setWelcome({ ...welcome, channelId: e.target.value || undefined })}
+            <select id={welcomeChannelId} value={welcome.channelId || ''} onChange={e => setWelcome({ ...welcome, channelId: e.target.value || undefined })}
               style={{ ...inputStyle, marginBottom: '12px' }}>
               <option value="">Select channel...</option>
               {channels.map(ch => <option key={ch.id} value={ch.id}>#{ch.name}</option>)}
             </select>
 
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>
+            <div style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>
               Auto-Assign Roles
-            </label>
+            </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               {roles.map(role => (
                 <button key={role.id} onClick={() => {

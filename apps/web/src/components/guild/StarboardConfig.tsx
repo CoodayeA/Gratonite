@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { Star, Save } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
@@ -22,6 +22,7 @@ export default function StarboardConfig({ guildId, channels }: StarboardConfigPr
   const [enabled, setEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const { addToast } = useToast();
+  const channelId = useId();
 
   useEffect(() => {
     loadConfig();
@@ -64,7 +65,7 @@ export default function StarboardConfig({ guildId, channels }: StarboardConfigPr
 
       <div className="bg-gray-800 rounded-lg p-4 space-y-4">
         <div className="flex items-center justify-between">
-          <label className="text-sm text-gray-300">Enable Starboard</label>
+          <span className="text-sm text-gray-300">Enable Starboard</span>
           <button
             onClick={() => setEnabled(!enabled)}
             className={`w-11 h-6 rounded-full transition-colors ${enabled ? 'bg-indigo-600' : 'bg-gray-600'}`}
@@ -74,8 +75,9 @@ export default function StarboardConfig({ guildId, channels }: StarboardConfigPr
         </div>
 
         <div>
-          <label className="text-sm text-gray-400 block mb-1">Starboard Channel</label>
+          <label htmlFor={channelId} className="text-sm text-gray-400 block mb-1">Starboard Channel</label>
           <select
+            id={channelId}
             value={targetChannelId}
             onChange={e => setTargetChannelId(e.target.value)}
             className="w-full bg-gray-700 text-white rounded px-3 py-2 text-sm"
@@ -88,7 +90,7 @@ export default function StarboardConfig({ guildId, channels }: StarboardConfigPr
         </div>
 
         <div>
-          <label className="text-sm text-gray-400 block mb-1">Reaction Emoji</label>
+          <div className="text-sm text-gray-400 block mb-1">Reaction Emoji</div>
           <div className="flex gap-2 flex-wrap">
             {STAR_EMOJIS.map(e => (
               <button

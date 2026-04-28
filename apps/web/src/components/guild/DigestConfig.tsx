@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { Newspaper, Save, Eye, Calendar, ChevronDown } from 'lucide-react';
 import { API_BASE, getAccessToken } from '../../lib/api';
 import { useToast } from '../ui/ToastManager';
@@ -51,6 +51,8 @@ export default function DigestConfig({ guildId, channels }: {
   const [pastDigests, setPastDigests] = useState<PastDigest[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [loading, setLoading] = useState(true);
+  const targetChannelDomId = useId();
+  const dayOfWeekId = useId();
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -135,18 +137,20 @@ export default function DigestConfig({ guildId, channels }: {
           type="checkbox"
           checked={enabled}
           onChange={e => setEnabled(e.target.checked)}
+          aria-label="Enable Weekly Digest"
           className="rounded border-gray-600 bg-gray-800 text-indigo-500"
         />
-        <div>
+        <span>
           <span className="text-white text-sm">Enable Weekly Digest</span>
           <p className="text-gray-500 text-xs">Automatically post a weekly summary to a channel</p>
-        </div>
+        </span>
       </label>
 
       {/* Channel picker */}
       <div>
-        <label className="text-sm text-gray-400 mb-1 block">Target Channel</label>
+        <label htmlFor={targetChannelDomId} className="text-sm text-gray-400 mb-1 block">Target Channel</label>
         <select
+          id={targetChannelDomId}
           value={targetChannelId}
           onChange={e => setTargetChannelId(e.target.value)}
           className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm"
@@ -158,8 +162,9 @@ export default function DigestConfig({ guildId, channels }: {
 
       {/* Day of week */}
       <div>
-        <label className="text-sm text-gray-400 mb-1 block flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Day of Week</label>
+        <label htmlFor={dayOfWeekId} className="text-sm text-gray-400 mb-1 block flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Day of Week</label>
         <select
+          id={dayOfWeekId}
           value={dayOfWeek}
           onChange={e => setDayOfWeek(parseInt(e.target.value))}
           className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm"
@@ -170,7 +175,7 @@ export default function DigestConfig({ guildId, channels }: {
 
       {/* Section toggles */}
       <div>
-        <label className="text-sm text-gray-400 mb-2 block">Digest Sections</label>
+        <div className="text-sm text-gray-400 mb-2 block">Digest Sections</div>
         <div className="space-y-1">
           {ALL_SECTIONS.map(s => (
             <label key={s.key} className="flex items-center gap-2 p-2 bg-gray-900 rounded border border-gray-700 cursor-pointer hover:border-gray-600">

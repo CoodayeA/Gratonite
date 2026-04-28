@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import { Camera, X, Users, Music, Briefcase, Gamepad2, Server, ChevronDown, ChevronUp, Shield, Database, Globe, Plus, FileCode, Palette, GraduationCap, Video, Code2, Dices, Building2 } from 'lucide-react';
 import { useToast } from '../ui/ToastManager';
 import { useNavigate } from 'react-router-dom';
@@ -227,6 +227,9 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
     const [iconFile, setIconFile] = useState<File | null>(null);
     const [importProgress, setImportProgress] = useState(0);
     const [importing, setImporting] = useState(false);
+    const templateCodeId = useId();
+    const guildNameId = useId();
+    const guildDescId = useId();
     const [creating, setCreating] = useState(false);
     const createInFlightRef = useRef(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -511,8 +514,9 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                         <h2 style={{ fontSize: '22px', fontWeight: 600, fontFamily: 'var(--font-display)', marginBottom: '6px', textAlign: 'center' }}>Use a Template</h2>
                         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', textAlign: 'center' }}>Enter a template code to create a portal from an existing template.</p>
 
-                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Template Code</label>
+                        <label htmlFor={templateCodeId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Template Code</label>
                         <input
+                            id={templateCodeId}
                             type="text"
                             value={templateCode}
                             onChange={(e) => setTemplateCode(e.target.value)}
@@ -594,16 +598,18 @@ const CreateGuildModal = ({ onClose, onGuildCreated }: { onClose: () => void; on
                             </div>
                         )}
 
-                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Portal Name</label>
+                        <label htmlFor={guildNameId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Portal Name</label>
                         <input
+                            id={guildNameId}
                             type="text"
                             value={guildName}
                             onChange={(e) => setGuildName(e.target.value)}
                             style={{ width: '100%', height: '44px', background: 'var(--bg-app)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: '0 16px', fontSize: '14px', outline: 'none', marginBottom: '16px' }}
                         />
 
-                        <label style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Description (Optional)</label>
+                        <label htmlFor={guildDescId} style={{ display: 'block', fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>Description (Optional)</label>
                         <textarea
+                            id={guildDescId}
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             style={{ width: '100%', height: '80px', resize: 'none', marginBottom: '20px', background: 'var(--bg-app)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: '12px 16px', fontSize: '14px', outline: 'none' }}

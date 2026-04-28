@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { User, Music, Award, Link2, Server, Users, MapPin, Calendar, Edit2, X } from 'lucide-react';
 import { api, API_BASE } from '../lib/api';
 import { useToast } from './ui/ToastManager';
@@ -36,6 +36,9 @@ export function UserProfileV2({ userId, onClose, editable }: UserProfileV2Props)
   const [editStatus, setEditStatus] = useState('');
   const [editNowPlaying, setEditNowPlaying] = useState('');
   const { addToast } = useToast();
+  const bioId = useId();
+  const statusId = useId();
+  const nowPlayingId = useId();
 
   useEffect(() => {
     // Load profile data
@@ -362,8 +365,9 @@ export function UserProfileV2({ userId, onClose, editable }: UserProfileV2Props)
               <h3 style={{ fontSize: '16px', fontWeight: 600 }}>Edit Profile</h3>
 
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Bio</label>
+                <label htmlFor={bioId} style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Bio</label>
                 <textarea
+                  id={bioId}
                   value={editBio}
                   onChange={e => setEditBio(e.target.value)}
                   maxLength={500}
@@ -379,8 +383,9 @@ export function UserProfileV2({ userId, onClose, editable }: UserProfileV2Props)
               </div>
 
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Custom Status</label>
+                <label htmlFor={statusId} style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Custom Status</label>
                 <input
+                  id={statusId}
                   type="text"
                   value={editStatus}
                   onChange={e => setEditStatus(e.target.value)}
@@ -396,10 +401,11 @@ export function UserProfileV2({ userId, onClose, editable }: UserProfileV2Props)
               </div>
 
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                <label htmlFor={nowPlayingId} style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                   Now Playing (display-only)
                 </label>
                 <input
+                  id={nowPlayingId}
                   type="text"
                   value={editNowPlaying}
                   onChange={e => setEditNowPlaying(e.target.value)}

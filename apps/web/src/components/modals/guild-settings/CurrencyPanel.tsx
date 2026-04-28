@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useId } from 'react';
 import { Coins, Trophy, AlertCircle, Check, Trash2, Gift, Search, Settings2 } from 'lucide-react';
 import { api, API_BASE } from '../../../lib/api';
 
@@ -129,6 +129,9 @@ export default function CurrencyPanel({ guildId, addToast }: CurrencyPanelProps)
     const [memberSearch, setMemberSearch] = useState('');
     const [memberDropdownOpen, setMemberDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const emojiId = useId();
+    const memberId = useId();
+    const amountId = useId();
 
     const filteredMembers = memberSearch.trim()
         ? members.filter(m =>
@@ -314,8 +317,9 @@ export default function CurrencyPanel({ guildId, addToast }: CurrencyPanelProps)
                         )}
                     </div>
                     <div style={{ width: '80px' }}>
-                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Emoji</label>
+                        <label htmlFor={emojiId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Emoji</label>
                         <input
+                            id={emojiId}
                             type="text"
                             value={config.emoji}
                             onChange={e => setConfig(prev => ({ ...prev, emoji: e.target.value.slice(0, 4) }))}
@@ -453,10 +457,11 @@ export default function CurrencyPanel({ guildId, addToast }: CurrencyPanelProps)
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
                         {/* Member search */}
                         <div ref={dropdownRef} style={{ flex: '1', minWidth: '180px', position: 'relative' }}>
-                            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Member</label>
+                            <label htmlFor={memberId} style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Member</label>
                             <div style={{ position: 'relative' }}>
                                 <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                                 <input
+                                    id={memberId}
                                     type="text"
                                     value={memberSearch}
                                     onChange={e => { setMemberSearch(e.target.value); setMemberDropdownOpen(true); if (!e.target.value) setAwardUserId(''); }}
@@ -489,8 +494,9 @@ export default function CurrencyPanel({ guildId, addToast }: CurrencyPanelProps)
 
                         {/* Amount */}
                         <div style={{ width: '120px' }}>
-                            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Amount</label>
+                            <label htmlFor={amountId} style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Amount</label>
                             <input
+                                id={amountId}
                                 type="number"
                                 min={1}
                                 max={10000}
