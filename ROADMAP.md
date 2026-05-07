@@ -2,9 +2,9 @@
 
 Planned direction for Gratonite. Priorities may shift based on community feedback.
 
-## Current Status — v1.0.x (April 2026)
+## Current Status — v1.0.x (May 2026)
 
-Gratonite has a live production deployment and self-hosting stack with **140** database schemas, **134** API route modules, **70+** frontend pages, **50+** mobile screens, and **23** background jobs across 7 app surfaces (web, mobile, desktop, API, server, landing, relay).
+Gratonite has a live production deployment and self-hosting stack with **23 Drizzle migrations** (140+ database tables), **155+** API route modules, **66 web page modules** (70+ React Router routes, lazy-loaded), **118 mobile screens**, and **26 background jobs** across 7 app surfaces (web, mobile, desktop, API, server, landing, relay).
 
 ### How this roadmap is verified
 
