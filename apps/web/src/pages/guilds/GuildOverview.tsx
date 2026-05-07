@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Hash as HashIcon, Mic, Users, Zap, Calendar, ArrowLeft } from 'lucide-react';
+import { Hash as HashIcon, Mic, Users, Zap, Calendar, ArrowLeft, Settings, Link2 } from 'lucide-react';
 import { useOutletContext, Link, useParams, useNavigate } from 'react-router-dom';
 import { api, API_BASE, getAccessToken } from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
@@ -160,52 +160,10 @@ const GuildOverview = () => {
     const textChannels = channels.filter(c => c.type !== 'category' && c.type !== 'GUILD_CATEGORY' && c.type !== 'voice' && c.type !== 'GUILD_VOICE' && c.type !== 'stage' && c.type !== 'GUILD_STAGE_VOICE');
     const voiceChannels = channels.filter(c => c.type === 'voice' || c.type === 'GUILD_VOICE' || c.type === 'stage' || c.type === 'GUILD_STAGE_VOICE');
     const isOwner = guild?.ownerId === currentUser.id;
-    const openPortalSettings = () => setActiveModal('guildSettings');
-    const setupChecklist = [
-        {
-            id: 'identity',
-            label: 'Add an icon and description so people know what this portal is for.',
-            hint: 'A clear icon, short description, and welcome note do most of the work for first impressions.',
-            done: Boolean(guild?.iconHash && guild?.description),
-            actionLabel: 'Open settings',
-            onAction: openPortalSettings,
-        },
-        {
-            id: 'text',
-            label: 'Create at least one text channel for conversation.',
-            hint: 'Start with a simple chat channel and one forum or help space before you branch out.',
-            done: textChannels.length > 0,
-            actionLabel: 'Add channels',
-            onAction: openPortalSettings,
-        },
-        {
-            id: 'voice',
-            label: 'Create at least one voice channel for drop-ins.',
-            hint: 'One open hangout room is enough for launch. You can add events or stage rooms later.',
-            done: voiceChannels.length > 0,
-            actionLabel: 'Add voice room',
-            onAction: openPortalSettings,
-        },
-        {
-            id: 'invite',
-            label: 'Invite your first people so the space stops feeling empty.',
-            hint: 'Send invites only after the basics are ready so newcomers land somewhere that already feels welcoming.',
-            done: (guild?.memberCount ?? 0) > 1,
-            actionLabel: 'Create invite',
-            onAction: () => setActiveModal('invite'),
-        },
-    ];
-    const completedSetupCount = setupChecklist.filter((item) => item.done).length;
-    const nextSetupStep = setupChecklist.find((item) => !item.done);
-    const ownerLaunchTips = [
-        'Pin one welcome thread or forum prompt so the first visitors know exactly where to speak.',
-        'Keep your first launch small: a general chat, one help or topic channel, and one voice room is enough.',
-        'After a few people join, watch which channels stay quiet and archive the extras before the layout sprawls.',
-    ];
-
     const guildName = guild?.name || 'Loading...';
     const guildInitial = guildName.charAt(0).toUpperCase();
     const createdDate = guild?.createdAt ? new Date(guild.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
+    const ownerLabel = ownerUser ? (ownerUser.displayName || ownerUser.username || '').trim() : '';
 
     const bannerUrl = guild?.bannerHash ? `${API_BASE}/files/${guild.bannerHash}` : null;
     const isBannerVideo = bannerUrl?.endsWith('.mp4') || bannerUrl?.endsWith('.webm');
@@ -295,22 +253,66 @@ const GuildOverview = () => {
                     <span>{guildName}</span>
                 </div>
             )}
-            <div className="guild-main-content">
-                {/* Left Column: Channels */}
-                <div className="guild-channels-section">
-                    <div className="guild-hero">
-                        <h1>Welcome to {guildName}</h1>
-                        <p className="guild-subtitle">
-                            {isOwner && textChannels.length === 0 && voiceChannels.length === 0
-                                ? 'This portal is still in setup mode. Knock out the basics below, then invite people in.'
-                                : 'Select a channel below to jump into the conversation.'}
-                        </p>
+            <div className="guild-main-content guild-overview-layout">
+                <section className="guild-overview-panel" aria-label={`${guildName} overview`}>
+                    <div className="guild-overview-avatar" style={{ background: getDeterministicGradient(guildName) }}>
+                        {(guild?.iconHash && !iconImgError) ? (
+                            <img
+                                src={`${API_BASE}/files/${guild.iconHash}`}
+                                alt=""
+                                onError={() => setIconImgError(true)}
+                            />
+                        ) : (
+                            <span>{guildInitial}</span>
+                        )}
                     </div>
+                    <div className="guild-overview-copy">
+                        <h1>{guildName}</h1>
+                        <div className="guild-overview-meta">
+                            <span>{guild?.memberCount ?? 0} members</span>
+                            {createdDate && <span>Since {createdDate}</span>}
+                            {ownerLabel && <span>By @{ownerLabel}</span>}
+                        </div>
+                        {guild?.description ? (
+                            <p>{guild.description}</p>
+                        ) : (
+                            <p>Choose a channel below to start chatting, ask a question, or drop into voice.</p>
+                        )}
+                    </div>
+                </section>
 
-                    {/* Text Channels Grid */}
+                <nav className="guild-quick-actions" aria-label="Community actions">
+                    <button className="guild-quick-action guild-quick-action-primary" onClick={() => setActiveModal('invite')}>
+                        <Link2 size={16} />
+                        Invite
+                    </button>
+                    {isOwner ? (
+                        <>
+                            <button className="guild-quick-action" onClick={() => setActiveModal('guildSettings')}>
+                                <Settings size={16} />
+                                Settings
+                            </button>
+                            <Link to={`/guild/${guildId}/workflows`} className="guild-quick-action">
+                                <Zap size={16} />
+                                Automations
+                            </Link>
+                            <Link to={`/guild/${guildId}/events`} className="guild-quick-action">
+                                <Calendar size={16} />
+                                Events
+                            </Link>
+                        </>
+                    ) : (
+                        <button className="guild-quick-action" onClick={() => setActiveModal('memberOptions')}>
+                            <Settings size={16} />
+                            Options
+                        </button>
+                    )}
+                </nav>
+
+                <div className="guild-channels-section">
                     <div className="guild-section">
                         <h3 className="guild-section-title">Text Channels</h3>
-                        <div className="channels-grid">
+                        <div className="channels-list">
                             {textChannels.length === 0 && (
                                 <div className="empty-state">
                                     <div className="empty-state-title">No text channels yet</div>
@@ -332,22 +334,22 @@ const GuildOverview = () => {
                                 </div>
                             )}
                             {textChannels.map(ch => (
-                                <Link key={ch.id} to={`/guild/${guildId}/channel/${ch.id}`} className="channel-card-link">
-                                    <div className="channel-card">
-                                        <div className="channel-card-header">
-                                            <HashIcon size={16} className="channel-icon" /> {ch.name}
+                                <Link key={ch.id} to={`/guild/${guildId}/channel/${ch.id}`} className="channel-row-link">
+                                    <div className="channel-row">
+                                        <HashIcon size={18} className="channel-icon" />
+                                        <div className="channel-row-copy">
+                                            <div className="channel-row-name">{ch.name}</div>
+                                            {ch.topic && <p className="channel-topic">{ch.topic}</p>}
                                         </div>
-                                        {ch.topic && <p className="channel-topic">{ch.topic}</p>}
                                     </div>
                                 </Link>
                             ))}
                         </div>
                     </div>
 
-                    {/* Voice Channels Grid */}
                     <div className="guild-section">
                         <h3 className="guild-section-title">Voice Channels</h3>
-                        <div className="channels-grid">
+                        <div className="channels-list">
                             {voiceChannels.length === 0 && (
                                 <div className="empty-state">
                                     <div className="empty-state-title">No voice channels yet</div>
@@ -366,10 +368,11 @@ const GuildOverview = () => {
                             {voiceChannels.map(ch => {
                                 const participantCount = voiceParticipants[ch.id] || 0;
                                 return (
-                                    <Link key={ch.id} to={`/guild/${guildId}/voice/${ch.id}`} className="channel-card-link">
-                                        <div className="channel-card">
-                                            <div className="channel-card-header">
-                                                <Mic size={16} className="channel-icon" /> {ch.name}
+                                    <Link key={ch.id} to={`/guild/${guildId}/voice/${ch.id}`} className="channel-row-link">
+                                        <div className="channel-row">
+                                            <Mic size={18} className="channel-icon" />
+                                            <div className="channel-row-copy">
+                                                <div className="channel-row-name">{ch.name}</div>
                                             </div>
                                             {participantCount > 0 && (
                                                 <div className="voice-participants-badge">
@@ -384,130 +387,6 @@ const GuildOverview = () => {
                         </div>
                     </div>
                 </div>
-
-                {/* Right Column: Guild Identity & Actions */}
-                <aside className="guild-sidebar">
-                    {/* Guild Identity Card */}
-                    <div className="guild-identity-card">
-                        <div className="guild-icon-container">
-                            {(guild?.iconHash && !iconImgError) ? (
-                                <img
-                                    src={`${API_BASE}/files/${guild.iconHash}`}
-                                    alt={guildName}
-                                    className="guild-icon"
-                                    onError={() => setIconImgError(true)}
-                                />
-                            ) : (
-                                <div className="guild-icon-fallback" style={{ background: getDeterministicGradient(guildName) }}>
-                                    {guildInitial}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="guild-identity-content">
-                            <h2 className="guild-name">{guildName}</h2>
-                            <div className="guild-meta">
-                                {createdDate && <span>Est. {createdDate}</span>}
-                                <span className="guild-member-badge">
-                                    {guild?.memberCount ?? 0} Members
-                                </span>
-                                {ownerUser && (
-                                    <span className="guild-owner">Owned by <span className="owner-name">@{ownerUser.displayName || ownerUser.username}</span></span>
-                                )}
-                            </div>
-                            {guild?.description && (
-                                <p className="guild-description">{guild.description}</p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Primary Actions */}
-                    <div className="guild-actions">
-                        <button className="auth-button guild-action-primary" onClick={() => setActiveModal('invite')}>Create Invite</button>
-                        {isOwner ? (
-                            <>
-                                <button className="auth-button guild-action-secondary" onClick={() => setActiveModal('guildSettings')}>Portal Settings</button>
-                                <Link to={`/guild/${guildId}/workflows`} style={{ textDecoration: 'none' }}>
-                                    <button className="auth-button guild-action-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%' }}>
-                                        <Zap size={16} /> Automations
-                                    </button>
-                                </Link>
-                                <Link to={`/guild/${guildId}/events`} style={{ textDecoration: 'none' }}>
-                                    <button className="auth-button guild-action-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%' }}>
-                                        <Calendar size={16} /> Events
-                                    </button>
-                                </Link>
-                            </>
-                        ) : (
-                            <button className="auth-button guild-action-secondary" onClick={() => setActiveModal('memberOptions')}>Community options</button>
-                        )}
-                    </div>
-
-                    {/* Setup Checklist Card (for owners only) */}
-                    {isOwner && (
-                        <div className="guild-setup-card">
-                            <div className="setup-card-header">
-                                <div>
-                                    <div className="setup-card-label">Setup Checklist</div>
-                                    <div className="setup-card-title">Get this portal ready</div>
-                                    <div className="setup-card-description">
-                                        {completedSetupCount}/{setupChecklist.length} basics done. Finish the essentials, then share an invite.
-                                    </div>
-                                </div>
-                                <div className="progress-bar">
-                                    <div className="progress-fill" style={{ width: `${(completedSetupCount / setupChecklist.length) * 100}%` }} />
-                                </div>
-                            </div>
-
-                            <div className="setup-checklist-items">
-                                {setupChecklist.map((item) => (
-                                    <div key={item.id} className={`setup-item ${item.done ? 'setup-item-done' : ''}`}>
-                                        <div className="setup-item-checkbox">
-                                            {item.done ? '✓' : ''}
-                                        </div>
-                                        <div className="setup-item-content">
-                                            <div className="setup-item-label">{item.label}</div>
-                                            {!item.done && (
-                                                <div className="setup-item-hint">{item.hint}</div>
-                                            )}
-                                        </div>
-                                        {!item.done && (
-                                            <button className="auth-button setup-item-action" onClick={item.onAction}>
-                                                {item.actionLabel}
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Tips Section */}
-                            <div className="setup-tips-section">
-                                <div className="setup-tip-card">
-                                    <div className="setup-tip-label">Next best step</div>
-                                    <div className="setup-tip-title">
-                                        {nextSetupStep ? nextSetupStep.label : 'Your launch basics are done.'}
-                                    </div>
-                                    <div className="setup-tip-description">
-                                        {nextSetupStep
-                                            ? nextSetupStep.hint
-                                            : 'Now focus on seeding a first conversation, checking your moderation settings, and inviting people in waves.'}
-                                    </div>
-                                </div>
-                                <div className="setup-tip-card">
-                                    <div className="setup-tip-title">Launch tips for admins</div>
-                                    <div className="setup-tips-list">
-                                        {ownerLaunchTips.map((tip) => (
-                                            <div key={tip} className="setup-tip-item">
-                                                <span className="setup-tip-bullet">•</span>
-                                                <span>{tip}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </aside>
             </div>
         </div>
     );
