@@ -884,7 +884,7 @@ export const MemoizedMessageItem = memo(({
                         )}
                         {/* Text Reactions */}
                         {msg.apiId && msgChannelId && !msg.system && (
-                            <TextReaction messageId={msg.apiId} channelId={msgChannelId} guildId={guildId} currentUserId={currentUserId} />
+                            <TextReaction messageId={msg.apiId} channelId={msgChannelId} guildId={guildId} currentUserId={currentUserId} initialReactions={msg.textReactions} />
                         )}
                         {/* Disappearing message countdown */}
                         {msg.expiresAt && (

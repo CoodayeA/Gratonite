@@ -1089,6 +1089,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
             attachments,
             ...(isVoice ? { type: 'voice' as const } : {}),
             reactions: Array.isArray(m.reactions) && m.reactions.length > 0 ? m.reactions : undefined,
+            textReactions: Array.isArray(m.textReactions) ? m.textReactions : undefined,
             embeds: Array.isArray(m.embeds) && m.embeds.length > 0 ? m.embeds : undefined,
             authorRoleColor: m.authorId ? roleColorCacheRef.current.get(m.authorId) : undefined,
             authorAvatarHash: m.author?.avatarHash ?? null,
@@ -1494,9 +1495,7 @@ const ChannelChat = ({ channelIdProp, guildIdProp }: { channelIdProp?: string; g
     // Feature 19: Fetch guild stickers
     useEffect(() => {
         if (!guildId) { setGuildStickers([]); return; }
-        fetch(`${API_BASE}/guilds/${guildId}/stickers`, {
-            headers: { Authorization: `Bearer ${getAccessToken() ?? ''}` },
-        }).then(r => r.ok ? r.json() : []).then(data => {
+        api.stickers.getGuildStickers(guildId).then(data => {
             if (Array.isArray(data)) {
                 setGuildStickers(data.map((s: any) => ({
                     id: s.id,

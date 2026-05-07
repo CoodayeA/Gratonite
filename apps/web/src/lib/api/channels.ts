@@ -4,6 +4,8 @@
 import { apiFetch } from './_core';
 import type { Channel } from './_core';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 type EffectiveNotificationPreference = {
   effectiveLevel: 'all' | 'mentions' | 'nothing';
   sourceScope: 'channel' | 'guild' | 'guild_default' | 'app_default' | 'direct' | 'system';
@@ -20,7 +22,7 @@ type ChannelNotificationPrefResponse = {
 };
 
 function assertGuildId(guildId: string): asserts guildId is string {
-  if (!guildId || guildId === 'null' || guildId === 'undefined') {
+  if (!guildId || guildId === 'null' || guildId === 'undefined' || !UUID_RE.test(guildId)) {
     throw new Error(`Invalid guildId: ${guildId}`);
   }
 }
