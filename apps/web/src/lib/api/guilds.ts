@@ -4,8 +4,10 @@
 import { apiFetch } from './_core';
 import type { Guild, GuildMember, GuildEmoji, Role } from './_core';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function assertGuildId(guildId: string): asserts guildId is string {
-  if (!guildId || guildId === 'null' || guildId === 'undefined') {
+  if (!guildId || guildId === 'null' || guildId === 'undefined' || !UUID_RE.test(guildId)) {
     throw new Error(`Invalid guildId: ${guildId}`);
   }
 }

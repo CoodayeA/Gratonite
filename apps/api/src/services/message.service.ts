@@ -19,6 +19,7 @@ import { users } from '../db/schema/users';
 import { guilds } from '../db/schema/guilds';
 import { guildMembers } from '../db/schema/guilds';
 import { messageReactions } from '../db/schema/reactions';
+import { textReactions } from '../db/schema/text-reactions';
 import { channelPins } from '../db/schema/pins';
 import { threads, threadMembers } from '../db/schema/threads';
 import { messageEditHistory } from '../db/schema/messageEditHistory';
@@ -78,8 +79,9 @@ export class ServiceError extends Error {
 async function resolveChannel(
   channelId: string,
   userId: string,
+  database: typeof db = db,
 ): Promise<typeof channels.$inferSelect> {
-  const [channel] = await db
+  const [channel] = await database
     .select()
     .from(channels)
     .where(eq(channels.id, channelId))
@@ -90,7 +92,7 @@ async function resolveChannel(
   }
 
   if (channel.guildId) {
-    const [membership] = await db
+    const [membership] = await database
       .select({ id: guildMembers.id })
       .from(guildMembers)
       .where(and(eq(guildMembers.guildId, channel.guildId), eq(guildMembers.userId, userId)))
@@ -100,7 +102,7 @@ async function resolveChannel(
       throw new ServiceError('FORBIDDEN', 'You are not a member of this guild');
     }
   } else {
-    const [participation] = await db
+    const [participation] = await database
       .select({ id: dmChannelMembers.id })
       .from(dmChannelMembers)
       .where(and(eq(dmChannelMembers.channelId, channelId), eq(dmChannelMembers.userId, userId)))
@@ -240,15 +242,16 @@ export class MessageService {
     channelId: string,
     userId: string,
     options?: { before?: string; limit?: number },
+    database: typeof db = db,
   ) {
-    await resolveChannel(channelId, userId);
+    await resolveChannel(channelId, userId, database);
 
     const limit = Math.min(options?.limit ?? 50, 100);
     const beforeId = options?.before;
 
     let cursorCondition = undefined;
     if (beforeId) {
-      const [cursorMsg] = await db
+      const [cursorMsg] = await database
         .select({ createdAt: messages.createdAt })
         .from(messages)
         .where(eq(messages.id, beforeId))
@@ -259,7 +262,7 @@ export class MessageService {
       }
     }
 
-    const rows = await db
+    const rows = await database
       .select({
         id: messages.id,
         channelId: messages.channelId,
@@ -301,11 +304,24 @@ export class MessageService {
     // Fetch reactions for all returned messages in one query
     const messageIds = rows.map((r: any) => r.id);
     let reactionRows: { messageId: string; userId: string; emoji: string }[] = [];
+    let textReactionRows: { messageId: string; textContent: string; userId: string; username: string; displayName: string }[] = [];
     if (messageIds.length > 0) {
-      reactionRows = await db
+      reactionRows = await database
         .select({ messageId: messageReactions.messageId, userId: messageReactions.userId, emoji: messageReactions.emoji })
         .from(messageReactions)
         .where(inArray(messageReactions.messageId, messageIds));
+
+      textReactionRows = await database
+        .select({
+          messageId: textReactions.messageId,
+          textContent: textReactions.textContent,
+          userId: textReactions.userId,
+          username: users.username,
+          displayName: users.displayName,
+        })
+        .from(textReactions)
+        .innerJoin(users, eq(users.id, textReactions.userId))
+        .where(inArray(textReactions.messageId, messageIds));
     }
 
     // Group reactions by messageId -> emoji
@@ -319,10 +335,20 @@ export class MessageService {
       entry.userIds.push(r.userId);
     }
 
+    const textReactionsByMessage = new Map<string, Map<string, { text: string; count: number; users: Array<{ id: string; username: string; displayName: string }> }>>();
+    for (const r of textReactionRows) {
+      if (!textReactionsByMessage.has(r.messageId)) textReactionsByMessage.set(r.messageId, new Map());
+      const textMap = textReactionsByMessage.get(r.messageId)!;
+      if (!textMap.has(r.textContent)) textMap.set(r.textContent, { text: r.textContent, count: 0, users: [] });
+      const entry = textMap.get(r.textContent)!;
+      entry.count++;
+      entry.users.push({ id: r.userId, username: r.username, displayName: r.displayName });
+    }
+
     // Fetch pinned message IDs for this channel in one query
     let pinnedSet = new Set<string>();
     if (messageIds.length > 0) {
-      const pinRows = await db
+      const pinRows = await database
         .select({ messageId: channelPins.messageId })
         .from(channelPins)
         .where(inArray(channelPins.messageId, messageIds));
@@ -332,7 +358,7 @@ export class MessageService {
     // Fetch thread reply counts
     const threadReplyCountMap = new Map<string, number>();
     if (messageIds.length > 0) {
-      const threadRows = await db
+      const threadRows = await database
         .select({
           originMessageId: threads.originMessageId,
           replyCount: sql<number>`cast(count(${messages.id}) as int)`,
@@ -355,6 +381,8 @@ export class MessageService {
             me: e.userIds.includes(userId),
           }))
         : [];
+      const textReactionMap = textReactionsByMessage.get(row.id);
+      const groupedTextReactions = textReactionMap ? Array.from(textReactionMap.values()) : [];
 
       return {
         id: row.id,
@@ -375,6 +403,7 @@ export class MessageService {
         pinned: pinnedSet.has(row.id),
         threadReplyCount: threadReplyCountMap.get(row.id) ?? 0,
         reactions,
+        textReactions: groupedTextReactions,
         author: row.authorId
           ? {
               id: row.authorId,
