@@ -20,7 +20,7 @@ jest.mock('expo-secure-store', () => ({
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
-import { forum, messages, search, setTokens, getAccessToken, loadTokens } from '../src/lib/api';
+import { auth, forum, messages, refreshAccessToken, search, setTokens, getAccessToken, loadTokens } from '../src/lib/api';
 
 beforeEach(async () => {
   jest.clearAllMocks();
@@ -51,6 +51,94 @@ describe('Token Management', () => {
     expect(getAccessToken()).toBe('token');
     await setTokens(null, null);
     expect(getAccessToken()).toBeNull();
+  });
+
+  it('marks login requests as mobile clients so the API returns a refresh token', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: { get: jest.fn() },
+      json: jest.fn().mockResolvedValue({ accessToken: 'access', refreshToken: 'refresh', user: { id: 'user-1' } }),
+    });
+
+    await auth.login({ login: 'ada', password: 'password' });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.gratonite.chat/api/v1/auth/login',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ 'X-Gratonite-Client': 'mobile' }),
+      }),
+    );
+  });
+
+  it('refreshes access tokens with the stored native refresh token', async () => {
+    await setTokens('expired-access', 'stored-refresh');
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: { get: jest.fn() },
+      json: jest.fn().mockResolvedValue({ accessToken: 'fresh-access' }),
+    });
+
+    await refreshAccessToken();
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.gratonite.chat/api/v1/auth/refresh',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ 'Content-Type': 'application/json', 'X-Gratonite-Client': 'mobile' }),
+        body: JSON.stringify({ refreshToken: 'stored-refresh' }),
+      }),
+    );
+    expect(getAccessToken()).toBe('fresh-access');
+    expect(mockStore['gratonite_refresh_token']).toBe('stored-refresh');
+  });
+
+  it('keeps the existing access token when refresh fails from a network error', async () => {
+    await setTokens('existing-access', 'stored-refresh');
+    mockFetch.mockRejectedValueOnce(new Error('offline'));
+
+    await refreshAccessToken();
+
+    expect(getAccessToken()).toBe('existing-access');
+    expect(mockStore['gratonite_refresh_token']).toBe('stored-refresh');
+  });
+
+  it('clears the in-memory access token when the refresh token is rejected', async () => {
+    await setTokens('existing-access', 'stored-refresh');
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      headers: { get: jest.fn() },
+      json: jest.fn().mockResolvedValue({ code: 'UNAUTHORIZED', message: 'Invalid refresh token' }),
+    });
+
+    await refreshAccessToken();
+
+    expect(getAccessToken()).toBeNull();
+    expect(mockStore['gratonite_refresh_token']).toBe('stored-refresh');
+  });
+
+  it('logs out with the stored native refresh token so the server can revoke the session', async () => {
+    await setTokens('access-token', 'stored-refresh');
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 204,
+      headers: { get: jest.fn() },
+      json: jest.fn(),
+    });
+
+    await auth.logout();
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.gratonite.chat/api/v1/auth/logout',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ 'Content-Type': 'application/json', 'X-Gratonite-Client': 'mobile' }),
+        body: JSON.stringify({ refreshToken: 'stored-refresh' }),
+      }),
+    );
   });
 });
 
