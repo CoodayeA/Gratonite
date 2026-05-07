@@ -419,7 +419,7 @@ export const wikiApi = {
 };
 
 function assertGuildId(guildId: string): asserts guildId is string {
-  if (!guildId || guildId === 'null' || guildId === 'undefined') {
+  if (!guildId || guildId === 'null' || guildId === 'undefined' || !UUID_RE.test(guildId)) {
     throw new Error(`Invalid guildId: ${guildId}`);
   }
 }
@@ -785,7 +785,7 @@ export const stageApi = {
 
 export const stickersApi = {
   getDefault: () => apiFetch<any[]>('/stickers/default'),
-  getGuildStickers: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/stickers`),
+  getGuildStickers: (guildId: string) => { assertGuildId(guildId); return apiFetch<any[]>(`/guilds/${guildId}/stickers`); },
 };
 
 export const pushApi = {
@@ -934,7 +934,7 @@ export const textReactionsApi = {
     apiFetch<void>(`/channels/${channelId}/messages/${messageId}/text-reactions/${encodeURIComponent(text)}`, { method: 'DELETE' }),
   get: (channelId: string, messageId: string) =>
     apiFetch<any[]>(`/channels/${channelId}/messages/${messageId}/text-reactions`),
-  popular: (guildId: string) => apiFetch<any[]>(`/guilds/${guildId}/text-reactions/popular`),
+  popular: (guildId: string) => { assertGuildId(guildId); return apiFetch<any[]>(`/guilds/${guildId}/text-reactions/popular`); },
 };
 
 export const timelineApi = {

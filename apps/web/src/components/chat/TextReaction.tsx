@@ -19,11 +19,12 @@ interface TextReactionProps {
   channelId: string;
   guildId?: string;
   currentUserId: string;
+  initialReactions?: TextReactionGroup[];
 }
 
-export default function TextReaction({ messageId, channelId, guildId, currentUserId }: TextReactionProps) {
+export default function TextReaction({ messageId, channelId, guildId, currentUserId, initialReactions }: TextReactionProps) {
   const { addToast } = useToast();
-  const [reactions, setReactions] = useState<TextReactionGroup[]>([]);
+  const [reactions, setReactions] = useState<TextReactionGroup[]>(() => initialReactions ?? []);
   const [showInput, setShowInput] = useState(false);
   const [inputText, setInputText] = useState('');
   const [popular, setPopular] = useState<PopularReaction[]>([]);
@@ -33,8 +34,12 @@ export default function TextReaction({ messageId, channelId, guildId, currentUse
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (initialReactions) {
+      setReactions(initialReactions);
+      return;
+    }
     loadReactions();
-  }, [messageId]);
+  }, [messageId, initialReactions]);
 
   useEffect(() => {
     if (showInput && guildId) loadPopular();
@@ -67,7 +72,7 @@ export default function TextReaction({ messageId, channelId, guildId, currentUse
   async function loadPopular() {
     if (!guildId) return;
     try {
-      const data = await api.get<PopularReaction[]>(`/guilds/${guildId}/text-reactions/popular`);
+      const data = await api.textReactions.popular(guildId) as PopularReaction[];
       setPopular(data);
     } catch { /* ignore */ }
   }

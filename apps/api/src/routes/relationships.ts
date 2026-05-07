@@ -28,7 +28,7 @@
 
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { eq, and, or, desc, asc } from 'drizzle-orm';
+import { eq, and, or, desc, asc, inArray, sql } from 'drizzle-orm';
 
 import { db } from '../db/index';
 import { relationships, friendGroups, friendGroupMembers } from '../db/schema/relationships';
@@ -400,66 +400,79 @@ relationshipsRouter.get(
 
       const channelIds = participations.map((p) => p.channelId);
 
-      // For each DM channel, get channel info + other participant + last message.
-      const result = await Promise.all(
-        channelIds.map(async (channelId) => {
-          // Channel row.
-          const [channel] = await db
-            .select()
-            .from(channels)
-            .where(eq(channels.id, channelId))
-            .limit(1);
+      const [channelRows, participantRows, messageRows] = await Promise.all([
+        db.select().from(channels).where(inArray(channels.id, channelIds)),
+        db
+          .select({
+            channelId: dmChannelMembers.channelId,
+            id: users.id,
+            username: users.username,
+            displayName: users.displayName,
+            avatarHash: users.avatarHash,
+            status: users.status,
+          })
+          .from(dmChannelMembers)
+          .innerJoin(users, eq(users.id, dmChannelMembers.userId))
+          .where(inArray(dmChannelMembers.channelId, channelIds)),
+        db
+          .select({
+            channelId: messages.channelId,
+            content: messages.content,
+            createdAt: messages.createdAt,
+            authorId: messages.authorId,
+            authorUsername: users.displayName,
+          })
+          .from(messages)
+          .leftJoin(users, eq(messages.authorId, users.id))
+          .where(and(
+            inArray(messages.channelId, channelIds),
+            sql`${messages.id} IN (
+              SELECT DISTINCT ON (channel_id) id
+              FROM messages
+              WHERE channel_id IN (${sql.join(channelIds.map((id) => sql`${id}`), sql`, `)})
+              ORDER BY channel_id, created_at DESC, id DESC
+            )`,
+          ))
+          .orderBy(asc(messages.channelId)),
+      ]);
 
-          if (!channel) return null;
+      const participantsByChannel = new Map<string, Array<Omit<(typeof participantRows)[number], 'channelId'>>>();
+      for (const participant of participantRows) {
+        const { channelId, ...participantInfo } = participant;
+        const existing = participantsByChannel.get(participant.channelId) ?? [];
+        if (existing.length < 10) existing.push(participantInfo);
+        participantsByChannel.set(channelId, existing);
+      }
 
-          // Get all participants.
-          const allParticipants = await db
-            .select({
-              id: users.id,
-              username: users.username,
-              displayName: users.displayName,
-              avatarHash: users.avatarHash,
-              status: users.status,
-            })
-            .from(dmChannelMembers)
-            .innerJoin(users, eq(users.id, dmChannelMembers.userId))
-            .where(eq(dmChannelMembers.channelId, channelId))
-            .limit(10);
-          const other = allParticipants.find((r) => r.id !== userId) ?? null;
+      const lastMessageByChannel = new Map<string, Omit<(typeof messageRows)[number], 'channelId'>>();
+      for (const message of messageRows) {
+        if (!lastMessageByChannel.has(message.channelId)) {
+          const { channelId: _channelId, ...lastMessage } = message;
+          lastMessageByChannel.set(message.channelId, lastMessage);
+        }
+      }
 
-          // Last message.
-          const [lastMsg] = await db
-            .select({
-              content: messages.content,
-              createdAt: messages.createdAt,
-              authorId: messages.authorId,
-              authorUsername: users.displayName,
-            })
-            .from(messages)
-            .leftJoin(users, eq(messages.authorId, users.id))
-            .where(eq(messages.channelId, channelId))
-            .orderBy(desc(messages.createdAt))
-            .limit(1);
+      const result = channelRows.map((channel) => {
+        const allParticipants = participantsByChannel.get(channel.id) ?? [];
+        const other = allParticipants.find((r) => r.id !== userId) ?? null;
 
-          return {
-            id: channel.id,
-            name: channel.name,
-            type: channel.type,
-            createdAt: channel.createdAt,
-            isGroup: channel.isGroup,
-            groupName: channel.groupName,
-            groupIcon: channel.groupIcon,
-            ownerId: channel.ownerId,
-            otherUser: other,
-            participants: channel.isGroup ? allParticipants : undefined,
-            lastMessage: lastMsg ?? null,
-          };
-        }),
-      );
+        return {
+          id: channel.id,
+          name: channel.name,
+          type: channel.type,
+          createdAt: channel.createdAt,
+          isGroup: channel.isGroup,
+          groupName: channel.groupName,
+          groupIcon: channel.groupIcon,
+          ownerId: channel.ownerId,
+          otherUser: other,
+          participants: channel.isGroup ? allParticipants : undefined,
+          lastMessage: lastMessageByChannel.get(channel.id) ?? null,
+        };
+      });
 
       // Filter nulls and sort by lastMessage.createdAt desc.
       const filtered = result
-        .filter((r): r is NonNullable<typeof r> => r !== null)
         .sort((a, b) => {
           const aTime = a.lastMessage?.createdAt?.getTime() ?? 0;
           const bTime = b.lastMessage?.createdAt?.getTime() ?? 0;

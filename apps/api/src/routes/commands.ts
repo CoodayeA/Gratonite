@@ -15,6 +15,8 @@ import { logger } from '../lib/logger';
 
 export const commandsRouter = Router({ mergeParams: true });
 
+const uuidSchema = z.string().uuid();
+
 const createCommandSchema = z.object({
   name: z.string().min(1).max(32),
   description: z.string().min(1).max(100),
@@ -25,6 +27,9 @@ const createCommandSchema = z.object({
 /** GET /guilds/:guildId/commands */
 commandsRouter.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { guildId } = req.params as Record<string, string>;
+  if (!uuidSchema.safeParse(guildId).success) {
+    res.status(400).json({ code: 'VALIDATION_ERROR', message: 'guildId must be a valid UUID' }); return;
+  }
 
   const commands = await db.select().from(applicationCommands)
     .where(or(eq(applicationCommands.guildId, guildId), isNull(applicationCommands.guildId)));

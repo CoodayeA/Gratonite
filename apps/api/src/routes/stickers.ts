@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../db/index';
 import { stickers } from '../db/schema/stickers';
@@ -9,6 +10,8 @@ import { hasPermission } from './roles';
 
 export const stickersRouter = Router({ mergeParams: true });
 
+const uuidSchema = z.string().uuid();
+
 // GET /default — platform sticker packs (future)
 stickersRouter.get('/default', (_req: Request, res: Response) => {
   res.json([]);
@@ -18,6 +21,9 @@ stickersRouter.get('/default', (_req: Request, res: Response) => {
 stickersRouter.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { guildId } = req.params as Record<string, string>;
   if (!guildId) { res.json([]); return; }
+  if (!uuidSchema.safeParse(guildId).success) {
+    res.status(400).json({ code: 'VALIDATION_ERROR', message: 'guildId must be a valid UUID' }); return;
+  }
 
   // Verify membership
   const [member] = await db

@@ -36,6 +36,7 @@ export type Message = {
     content: string;
     edited?: boolean;
     reactions?: Array<{ emoji: string; emojiUrl?: string; isCustom?: boolean; count: number; me: boolean }>;
+    textReactions?: Array<{ text: string; count: number; users: Array<{ id: string; username: string; displayName: string }> }>;
     type?: 'text' | 'voice' | 'poll' | 'media';
     mediaUrl?: string;
     mediaAspectRatio?: number;
