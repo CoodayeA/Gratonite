@@ -46,6 +46,7 @@ import { ServiceError } from '../services/guild.service';
 import * as authService from '../services/auth.service';
 import { handleAppError } from '../lib/errors';
 import { clearRefreshCookies, readRefreshCookie, REFRESH_COOKIE } from '../lib/authCookies';
+import { isNativeAuthClient, readRefreshTokenFromRequest } from '../lib/authTokenTransport';
 
 export const authRouter = Router();
 
@@ -565,10 +566,15 @@ authRouter.post('/login', authRateLimit, asyncHandler(async (req: Request, res: 
       path: '/',
     });
 
-    res.status(200).json({
+    const body: { accessToken: string; refreshToken?: string; user: typeof result.user } = {
       accessToken: result.accessToken,
       user: result.user,
-    });
+    };
+    if (isNativeAuthClient(req)) {
+      body.refreshToken = result.rawRefreshToken;
+    }
+
+    res.status(200).json(body);
   } catch (err) {
     if (err instanceof ServiceError) {
       const codeMap: Record<string, { status: number; code: string }> = {
@@ -605,7 +611,7 @@ authRouter.post('/login', authRateLimit, asyncHandler(async (req: Request, res: 
  * the JWT hasn't expired yet.
  */
 authRouter.post('/refresh', asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const rawToken = readRefreshCookie(req.cookies);
+  const rawToken = readRefreshTokenFromRequest(req);
 
   if (!rawToken) {
     res.status(401).json({ code: 'UNAUTHORIZED', message: 'No refresh token provided' });
@@ -641,7 +647,7 @@ authRouter.post('/refresh', asyncHandler(async (req: Request, res: Response): Pr
  * client with errors it can't recover from.
  */
 authRouter.post('/logout', asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const rawToken = readRefreshCookie(req.cookies);
+  const rawToken = readRefreshTokenFromRequest(req);
 
   await authService.logout(rawToken);
 
