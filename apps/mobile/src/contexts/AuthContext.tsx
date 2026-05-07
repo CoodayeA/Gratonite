@@ -8,8 +8,28 @@ import { clearKeyPairFromSecureStore } from '../lib/crypto';
 import { publicKeyCache } from '../lib/publicKeyCache';
 import { clearCacheEncryptionKey, closeDb } from '../lib/offlineDb';
 import { themeStore } from '../lib/themeStore';
+import { restoreAuthSession } from './authRestore';
 import type { ThemeName } from '../lib/themes';
 import type { User, PresenceStatus } from '../types';
+
+const CACHED_USER_KEY = 'gratonite_cached_user';
+
+async function loadCachedUser(): Promise<User | null> {
+  try {
+    const raw = await SecureStore.getItemAsync(CACHED_USER_KEY);
+    return raw ? JSON.parse(raw) as User : null;
+  } catch {
+    return null;
+  }
+}
+
+async function saveCachedUser(user: User): Promise<void> {
+  await SecureStore.setItemAsync(CACHED_USER_KEY, JSON.stringify(user)).catch(() => {});
+}
+
+async function clearCachedUser(): Promise<void> {
+  await SecureStore.deleteItemAsync(CACHED_USER_KEY).catch(() => {});
+}
 
 interface AuthContextType {
   user: User | null;
@@ -38,28 +58,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const savedTheme = await SecureStore.getItemAsync('gratonite_theme');
         if (savedTheme) themeStore.setTheme(savedTheme as ThemeName);
 
-        // Always try to refresh — access tokens expire after 15 min
-        let token = await auth.refresh().catch(() => null);
-        if (!token) {
-          token = getAccessToken();
-        }
-
-        if (token) {
-          const me = await users.getMe();
-          setUser(me);
-          connectSocket();
-          // Restore saved font size from user settings
-          try {
+        const restored = await restoreAuthSession({
+          refresh: () => auth.refresh(),
+          getAccessToken,
+          getMe: () => users.getMe(),
+          loadCachedUser,
+          saveCachedUser,
+          clearCachedUser,
+          clearTokens: () => setTokens(null, null),
+          connectSocket,
+          restoreSettings: async () => {
             const s = await settingsApi.get();
             if (s.fontSize) themeStore.setFontSize(s.fontSize);
-          } catch {
-            // non-critical
-          }
+          },
+        });
+
+        if (restored.status === 'authenticated') {
+          setUser(restored.user);
         }
       } catch (err: any) {
         // Only clear tokens on auth errors, not network failures
         if (err.status === 401 || err.status === 403) {
           await setTokens(null, null);
+          await clearCachedUser();
         }
       } finally {
         setLoading(false);
@@ -72,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await setTokens(res.accessToken, res.refreshToken);
     const me = await users.getMe();
     setUser(me);
+    await saveCachedUser(me);
     connectSocket();
   };
 
@@ -92,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await clearKeyPairFromSecureStore().catch(() => {});
     await clearCacheEncryptionKey().catch(() => {});
     await closeDb().catch(() => {});
+    await clearCachedUser();
     publicKeyCache.clearAll();
     setUser(null);
   };
@@ -100,6 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const me = await users.getMe();
       setUser(me);
+      await saveCachedUser(me);
     } catch {
       // ignore
     }
@@ -108,11 +132,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = async (data: Partial<Pick<User, 'displayName' | 'bio' | 'pronouns'>>) => {
     const updated = await users.updateMe(data);
     setUser(updated);
+    await saveCachedUser(updated);
   };
 
   const updateStatus = async (status: PresenceStatus) => {
     await users.updatePresence(status);
-    setUser(prev => prev ? { ...prev, status } : prev);
+    setUser(prev => {
+      if (!prev) return prev;
+      const next = { ...prev, status };
+      saveCachedUser(next);
+      return next;
+    });
     if (user) presenceStore.set(user.id, status);
   };
 

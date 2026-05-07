@@ -194,6 +194,7 @@ let refreshPromise: Promise<string | null> | null = null;
 
 const TOKEN_KEY = 'gratonite_access_token';
 const REFRESH_KEY = 'gratonite_refresh_token';
+const MOBILE_CLIENT_HEADER = { 'X-Gratonite-Client': 'mobile' };
 
 export async function loadTokens(): Promise<void> {
   accessToken = await SecureStore.getItemAsync(TOKEN_KEY);
@@ -299,14 +300,20 @@ export async function refreshAccessToken(): Promise<string | null> {
       }
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...MOBILE_CLIENT_HEADER },
         body: JSON.stringify({ refreshToken }),
       });
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          accessToken = null;
+        }
+        return accessToken;
+      }
+      const data = (await res.json()) as { accessToken: string; refreshToken?: string };
+      if (!data.accessToken) {
         accessToken = null;
         return null;
       }
-      const data = (await res.json()) as { accessToken: string; refreshToken?: string };
       accessToken = data.accessToken;
       if (data.refreshToken) {
         refreshToken = data.refreshToken;
@@ -316,8 +323,7 @@ export async function refreshAccessToken(): Promise<string | null> {
       scheduleProactiveRefresh();
       return accessToken;
     } catch {
-      accessToken = null;
-      return null;
+      return accessToken;
     }
   })();
 
@@ -350,6 +356,7 @@ export async function apiFetch<T>(
   }
 
   const headers: Record<string, string> = {
+    ...MOBILE_CLIENT_HEADER,
     ...((options.headers as Record<string, string>) ?? {}),
   };
 
@@ -464,7 +471,10 @@ export const auth = {
   },
 
   logout() {
-    return apiFetch<void>('/auth/logout', { method: 'POST' });
+    return apiFetch<void>('/auth/logout', {
+      method: 'POST',
+      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
+    });
   },
 
   refresh() {

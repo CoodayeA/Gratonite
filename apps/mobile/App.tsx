@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, AppState, BackHandler, View } from 'react-native';
+import { AppState, BackHandler, View } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -12,11 +12,11 @@ import AuthNavigator from './src/navigation/AuthNavigator';
 import AppNavigator from './src/navigation/AppNavigator';
 import OfflineBanner from './src/components/OfflineBanner';
 import ErrorBoundary from './src/components/ErrorBoundary';
+import LoadingScreen from './src/components/LoadingScreen';
 import { connectSocket, disconnectSocket } from './src/lib/socket';
 import { refreshAccessToken, getAccessToken } from './src/lib/api';
-import { colors } from './src/lib/theme';
 import { useTheme, themeStore } from './src/lib/themeStore';
-import { registerForPushNotifications, setupNotificationHandlers } from './src/lib/notifications';
+import { setupNotificationHandlers } from './src/lib/notifications';
 import { ToastProvider } from './src/contexts/ToastContext';
 import { VoiceProvider } from './src/contexts/VoiceContext';
 import { appLockStore } from './src/lib/appLockStore';
@@ -65,11 +65,7 @@ function RootNavigator() {
   }, []);
 
   if (loading || themePickDone === null || onboardingDone === null) {
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={colors.accentPrimary} />
-      </View>
-    );
+    return <LoadingScreen title="Restoring session" subtitle="Keeping your place ready" />;
   }
 
   // First launch: pick your style
@@ -202,7 +198,6 @@ function ThemedApp() {
   }, []);
 
   React.useEffect(() => {
-    registerForPushNotifications();
     const cleanup = setupNotificationHandlers(navigationRef);
     return cleanup;
   }, []);

@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -11,8 +11,13 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../lib/theme';
 
-export default function LoadingScreen() {
-  const { colors } = useTheme();
+type LoadingScreenProps = {
+  title?: string;
+  subtitle?: string;
+};
+
+export default function LoadingScreen({ title = 'Loading Gratonite', subtitle }: LoadingScreenProps) {
+  const { colors, spacing, fontSize } = useTheme();
   const rotation = useSharedValue(0);
   const scale = useSharedValue(1);
 
@@ -54,7 +59,20 @@ export default function LoadingScreen() {
       backgroundColor: colors.accentPrimary,
       opacity: 0.1,
     },
-  }), [colors]);
+    title: {
+      color: colors.textPrimary,
+      fontSize: fontSize.lg,
+      fontWeight: '800',
+      marginTop: spacing.lg,
+      letterSpacing: 0.2,
+    },
+    subtitle: {
+      color: colors.textSecondary,
+      fontSize: fontSize.sm,
+      marginTop: spacing.xs,
+      textAlign: 'center',
+    },
+  }), [colors, fontSize, spacing]);
 
   return (
     <View style={styles.container}>
@@ -62,6 +80,8 @@ export default function LoadingScreen() {
       <Animated.View style={animStyle}>
         <Ionicons name="planet" size={48} color={colors.accentPrimary} />
       </Animated.View>
+      <Text style={styles.title}>{title}</Text>
+      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
   );
 }
