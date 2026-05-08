@@ -516,7 +516,45 @@ function createWindow() {
   });
 
   // Open external links in default browser
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+  mainWindow.webContents.setWindowOpenHandler(({ url, frameName }) => {
+    // Allow the in-app voice pop-out (and any future internal pop-outs) to open
+    // as a real Electron BrowserWindow that inherits our preload + session,
+    // so it can talk to the parent renderer over postMessage and access mic/cam.
+    let parsed;
+    try { parsed = new URL(url); } catch { parsed = null; }
+    const expectedOrigin = (() => {
+      try { return new URL(isDev ? DEV_URL : PROD_URL).origin; } catch { return null; }
+    })();
+    const isInternalPopout =
+      parsed &&
+      expectedOrigin &&
+      parsed.origin === expectedOrigin &&
+      (parsed.pathname === '/app/voice-popout' || parsed.pathname.startsWith('/app/voice-popout'));
+
+    if (isInternalPopout || frameName === 'gratoniteVoicePopout') {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 420,
+          height: 580,
+          minWidth: 320,
+          minHeight: 400,
+          alwaysOnTop: true,
+          frame: false,
+          backgroundColor: '#111214',
+          title: 'Gratonite Voice',
+          autoHideMenuBar: true,
+          webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false,
+            backgroundThrottling: false,
+          },
+        },
+      };
+    }
+
+    // External http(s) links open in the user's default browser
     if (url.startsWith('http')) {
       shell.openExternal(url);
     }
@@ -718,51 +756,113 @@ function updateTrayMenu() {
 
 // --- Item 260: Notification Badge on Dock/Taskbar ---
 function updateBadgeCount(count) {
+  const safeCount = Math.max(0, Math.min(9999, Math.floor(Number(count) || 0)));
   if (process.platform === 'darwin') {
-    // macOS: dock badge
-    app.setBadgeCount(count);
-  } else if (process.platform === 'win32' && mainWindow) {
-    // Windows: overlay icon on taskbar
-    if (count > 0) {
-      // Create a small badge overlay with the count
-      const badgeIcon = createBadgeOverlay(count);
-      mainWindow.setOverlayIcon(badgeIcon, `${count} unread notifications`);
+    // macOS: dock badge (Electron renders the number)
+    app.setBadgeCount(safeCount);
+  } else if (process.platform === 'linux') {
+    // Linux: Unity / KDE-style launcher badge. Electron no-ops on unsupported DEs.
+    try { app.setBadgeCount(safeCount); } catch {}
+  } else if (process.platform === 'win32' && mainWindow && !mainWindow.isDestroyed()) {
+    // Windows: overlay icon on taskbar with the actual number rendered into it.
+    if (safeCount > 0) {
+      const badgeIcon = createBadgeOverlay(safeCount);
+      mainWindow.setOverlayIcon(badgeIcon, `${safeCount} unread notifications`);
     } else {
       mainWindow.setOverlayIcon(null, '');
     }
   }
   // Also update tray tooltip
   if (tray) {
-    tray.setToolTip(count > 0 ? `Gratonite (${count} unread)` : 'Gratonite');
+    tray.setToolTip(safeCount > 0 ? `Gratonite (${safeCount} unread)` : 'Gratonite');
   }
 }
 
-// Creates a small numbered badge overlay for Windows taskbar
+// 5x7 bitmap font for digits and the '+' glyph. Each row is 5 bits, MSB = leftmost pixel.
+const BADGE_FONT = {
+  '0': [0b01110, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b01110],
+  '1': [0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110],
+  '2': [0b01110, 0b10001, 0b00001, 0b00010, 0b00100, 0b01000, 0b11111],
+  '3': [0b11110, 0b00001, 0b00001, 0b01110, 0b00001, 0b00001, 0b11110],
+  '4': [0b00010, 0b00110, 0b01010, 0b10010, 0b11111, 0b00010, 0b00010],
+  '5': [0b11111, 0b10000, 0b11110, 0b00001, 0b00001, 0b10001, 0b01110],
+  '6': [0b00110, 0b01000, 0b10000, 0b11110, 0b10001, 0b10001, 0b01110],
+  '7': [0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b01000, 0b01000],
+  '8': [0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110],
+  '9': [0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b01100],
+  '+': [0b00000, 0b00100, 0b00100, 0b11111, 0b00100, 0b00100, 0b00000],
+};
+
+// Creates a small numbered badge overlay for the Windows taskbar.
+// Renders a red circle with the count drawn in white; uses "9+" for >9.
 function createBadgeOverlay(count) {
-  const size = 16;
-  // Use a canvas-like approach via nativeImage
-  // For simplicity, create a red dot; full number rendering would need a canvas lib
-  const canvas = Buffer.alloc(size * size * 4);
-  const cx = size / 2;
-  const cy = size / 2;
+  const size = 32; // 32x32 is the native overlay icon size on Windows
+  const buf = Buffer.alloc(size * size * 4);
+  const cx = (size - 1) / 2;
+  const cy = (size - 1) / 2;
   const radius = size / 2;
 
+  // Draw red filled circle with subtle anti-aliased edge.
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
       const idx = (y * size + x) * 4;
-      if (dist <= radius) {
-        // Red circle (RGBA)
-        canvas[idx] = 220;     // R
-        canvas[idx + 1] = 50;  // G
-        canvas[idx + 2] = 50;  // B
-        canvas[idx + 3] = 255; // A
+      const edge = radius - dist;
+      if (edge >= 1) {
+        buf[idx]     = 220; // R
+        buf[idx + 1] = 50;  // G
+        buf[idx + 2] = 50;  // B
+        buf[idx + 3] = 255; // A
+      } else if (edge > 0) {
+        const a = Math.round(edge * 255);
+        buf[idx]     = 220;
+        buf[idx + 1] = 50;
+        buf[idx + 2] = 50;
+        buf[idx + 3] = a;
       } else {
-        canvas[idx + 3] = 0;   // transparent
+        buf[idx + 3] = 0;
       }
     }
   }
-  return nativeImage.createFromBuffer(canvas, { width: size, height: size });
+
+  // Choose label: 1..9 as-is, otherwise "9+"
+  const label = count <= 9 ? String(count) : '9+';
+
+  // Each glyph is 5x7. Scale 2x → 10x14. Total width = label.length * 10 + (label.length-1)*2 spacing.
+  const scale = 2;
+  const glyphW = 5 * scale;
+  const glyphH = 7 * scale;
+  const spacing = 2;
+  const totalW = label.length * glyphW + (label.length - 1) * spacing;
+  const startX = Math.round((size - totalW) / 2);
+  const startY = Math.round((size - glyphH) / 2);
+
+  for (let g = 0; g < label.length; g++) {
+    const glyph = BADGE_FONT[label[g]];
+    if (!glyph) continue;
+    const gx = startX + g * (glyphW + spacing);
+    for (let row = 0; row < 7; row++) {
+      const bits = glyph[row];
+      for (let col = 0; col < 5; col++) {
+        if (!(bits & (1 << (4 - col)))) continue;
+        // Draw a `scale x scale` block in white
+        for (let dy = 0; dy < scale; dy++) {
+          for (let dx = 0; dx < scale; dx++) {
+            const px = gx + col * scale + dx;
+            const py = startY + row * scale + dy;
+            if (px < 0 || px >= size || py < 0 || py >= size) continue;
+            const idx = (py * size + px) * 4;
+            buf[idx]     = 255;
+            buf[idx + 1] = 255;
+            buf[idx + 2] = 255;
+            buf[idx + 3] = 255;
+          }
+        }
+      }
+    }
+  }
+
+  return nativeImage.createFromBuffer(buf, { width: size, height: size });
 }
 
 // --- Item 261 + Feature #23: Global Keyboard Shortcuts (configurable) ---
@@ -986,13 +1086,59 @@ function createAppMenu() {
 }
 
 app.whenReady().then(() => {
-  // Allow getDisplayMedia / desktop getUserMedia in the renderer (required on some platforms)
-  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
-    if (permission === 'media' || permission === 'display-capture' || permission === 'screen') {
+  // --- Permissions: media (mic/camera) and screen capture ---
+  // Electron 33+: getDisplayMedia() requires an explicit handler. Without it
+  // LiveKit / browser screen-share calls fail silently.
+  try {
+    session.defaultSession.setDisplayMediaRequestHandler((_request, callback) => {
+      desktopCapturer.getSources({ types: ['screen', 'window'] }).then((sources) => {
+        if (!sources.length) {
+          // Pass undefined to deny rather than crash; renderer falls back to its picker.
+          callback({});
+          return;
+        }
+        // Prefer a full screen if available; the renderer's own picker
+        // (ScreenShareModal) is still the primary UX path via getScreenSources.
+        const preferred = sources.find((s) => s.id.startsWith('screen:')) ?? sources[0];
+        callback({ video: preferred, audio: 'loopback' });
+      }).catch((err) => {
+        console.warn('setDisplayMediaRequestHandler failed:', err);
+        callback({});
+      });
+    }, { useSystemPicker: false });
+  } catch (err) {
+    console.warn('setDisplayMediaRequestHandler unavailable:', err?.message || err);
+  }
+
+  // Allow getDisplayMedia / desktop getUserMedia in the renderer (required on some platforms).
+  // On macOS we additionally trigger the OS-level permission prompt the first time the
+  // renderer asks for mic/camera; without this, calls connect but capture nothing.
+  session.defaultSession.setPermissionRequestHandler(async (_webContents, permission, callback) => {
+    if (permission === 'media' || permission === 'audioCapture' || permission === 'videoCapture') {
+      if (process.platform === 'darwin') {
+        try {
+          const mic = await systemPreferences.askForMediaAccess('microphone');
+          if (!mic) {
+            console.warn('macOS denied microphone access for renderer.');
+          }
+          // Best-effort camera ask too; harmless if the call is audio-only.
+          try { await systemPreferences.askForMediaAccess('camera'); } catch {}
+        } catch (err) {
+          console.warn('askForMediaAccess failed:', err?.message || err);
+        }
+      }
       callback(true);
-    } else {
-      callback(false);
+      return;
     }
+    if (permission === 'display-capture' || permission === 'screen' || permission === 'desktopCapture') {
+      callback(true);
+      return;
+    }
+    if (permission === 'notifications') {
+      callback(true);
+      return;
+    }
+    callback(false);
   });
 
   createAppMenu();

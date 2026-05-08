@@ -96,6 +96,7 @@ import { useDesktopDeepLinks } from './hooks/useDesktopDeepLinks';
 import { useDesktopIdleDetection } from './hooks/useDesktopIdleDetection';
 import { useDesktopMenuNavigation } from './hooks/useDesktopMenuNavigation';
 import { useDesktopNotifications } from './hooks/useDesktopNotifications';
+import { useDesktopUnreadBadge } from './hooks/useDesktopUnreadBadge';
 import { useDmNotifications } from './hooks/useDmNotifications';
 import { useGameActivity } from './hooks/useGameActivity';
 import { useKeyboardNav } from './hooks/useKeyboardNav';
@@ -3276,6 +3277,7 @@ export const AppLayout = () => {
     useDesktopIdleDetection();
     useDesktopMenuNavigation();
     useDesktopNotifications();
+    useDesktopUnreadBadge();
     useGameActivity();
 
     // Voice context for keyboard shortcuts (mute/deafen)

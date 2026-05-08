@@ -257,18 +257,18 @@ describe('badge system', () => {
     expect(mocks.mockTray.setToolTip).toHaveBeenCalledWith('Gratonite');
   });
 
-  test('badge buffer is 1024 bytes (16×16×4 RGBA)', async () => {
+  test('badge buffer is 4096 bytes (32×32×4 RGBA)', async () => {
     const mocks = await loadMain({ platform: 'win32' });
     mocks.ipcListeners['set-badge-count'](null, 5);
     const [buffer] = mocks.nativeImage.createFromBuffer.mock.calls[0];
-    expect(buffer.length).toBe(1024);
+    expect(buffer.length).toBe(4096);
   });
 
-  test('nativeImage.createFromBuffer second arg is { width: 16, height: 16 }', async () => {
+  test('nativeImage.createFromBuffer second arg is { width: 32, height: 32 }', async () => {
     const mocks = await loadMain({ platform: 'win32' });
     mocks.ipcListeners['set-badge-count'](null, 5);
     const [, opts] = mocks.nativeImage.createFromBuffer.mock.calls[0];
-    expect(opts).toEqual({ width: 16, height: 16 });
+    expect(opts).toEqual({ width: 32, height: 32 });
   });
 });
 
@@ -482,20 +482,23 @@ describe('desktop screen capture', () => {
     expect(result).toEqual([]);
   });
 
-  test('permission handler allows media, display-capture, and screen permissions', async () => {
-    const mocks = await loadMain();
+  test('permission handler allows media, display-capture, screen, and notifications', async () => {
+    const mocks = await loadMain({ platform: 'linux' });
     const permissionHandler = mocks.session.defaultSession.setPermissionRequestHandler.mock.calls[0][0];
     const allowed = vi.fn();
     const denied = vi.fn();
 
-    permissionHandler(null, 'media', allowed);
-    permissionHandler(null, 'display-capture', allowed);
-    permissionHandler(null, 'screen', allowed);
-    permissionHandler(null, 'notifications', denied);
+    // Handler is async (awaits askForMediaAccess on darwin); on non-darwin it resolves immediately.
+    await permissionHandler(null, 'media', allowed);
+    await permissionHandler(null, 'display-capture', allowed);
+    await permissionHandler(null, 'screen', allowed);
+    await permissionHandler(null, 'notifications', allowed);
+    await permissionHandler(null, 'geolocation', denied);
 
     expect(allowed).toHaveBeenNthCalledWith(1, true);
     expect(allowed).toHaveBeenNthCalledWith(2, true);
     expect(allowed).toHaveBeenNthCalledWith(3, true);
+    expect(allowed).toHaveBeenNthCalledWith(4, true);
     expect(denied).toHaveBeenCalledWith(false);
   });
 });

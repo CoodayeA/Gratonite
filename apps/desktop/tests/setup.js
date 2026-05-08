@@ -132,6 +132,7 @@ function createElectronMock() {
   const session = {
     defaultSession: {
       setPermissionRequestHandler: vi.fn(),
+      setDisplayMediaRequestHandler: vi.fn(),
     },
   };
 

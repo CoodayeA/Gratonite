@@ -142,8 +142,11 @@ export default function VoiceBar() {
       channelName,
       callType: activeCallType || 'guild',
     });
+    // The web app is mounted under the `/app` basename (see App.tsx).
+    // Build the URL relative to that so the route resolves whether we're
+    // running in the browser or inside the Electron desktop shell.
     const popout = window.open(
-      `${window.location.origin}/voice-popout?${params.toString()}`,
+      `${window.location.origin}/app/voice-popout?${params.toString()}`,
       'gratoniteVoicePopout',
       'width=420,height=580,resizable=yes,scrollbars=no'
     );
