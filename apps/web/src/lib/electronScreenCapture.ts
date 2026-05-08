@@ -13,6 +13,10 @@ export type ElectronDesktopSource = {
   thumbnailDataUrl: string;
   displayId: string;
   appIconDataUrl: string | null;
+  /** New in 1.0.13 — undefined on older builds. */
+  type?: 'screen' | 'window';
+  /** Best-effort app name parsed from the window title (only for windows). */
+  appName?: string;
 };
 
 export function isGratoniteDesktopApp(): boolean {

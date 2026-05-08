@@ -113,6 +113,9 @@ contextBridge.exposeInMainWorld('gratoniteDesktop', {
   downloadUpdate: () => ipcRenderer.send('update-download'),
   installUpdate: () => ipcRenderer.send('update-install'),
   checkForUpdates: () => ipcRenderer.send('update-check'),
+  // Pull the most recent buffered update event so the renderer can recover
+  // state after late subscribe (fixes update banner missing on cold start).
+  getUpdateState: () => ipcRenderer.invoke('get-update-state'),
 
   // Task #88: System Idle Detection
   onSystemIdleChanged: (callback) => {

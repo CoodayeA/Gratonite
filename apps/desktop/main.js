@@ -1,6 +1,12 @@
 const { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage, globalShortcut, Notification, crashReporter, powerMonitor, screen, dialog, desktopCapturer, systemPreferences, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const log = require('electron-log');
+
+// Configure electron-log: writes to userData/logs/main.log
+log.transports.file.level = 'info';
+log.transports.console.level = 'info';
+log.info('[main] Gratonite desktop boot, version', app.getVersion(), 'platform', process.platform);
 
 // In production, load from the deployed web app.
 // In dev, load from the local Vite dev server.
@@ -1291,15 +1297,37 @@ ipcMain.handle('get-screen-sources', async () => {
       thumbnailSize: { width: 320, height: 180 },
       fetchWindowIcons: true,
     });
-    return sources.map(source => ({
-      id: source.id,
-      name: source.name,
-      thumbnailDataUrl: source.thumbnail.toDataURL(),
-      displayId: source.display_id,
-      appIconDataUrl: source.appIcon ? source.appIcon.toDataURL() : null,
-    }));
+    log.info('[screen-share] getScreenSources returned', sources.length, 'sources');
+    return sources.map(source => {
+      const isScreen = source.id.startsWith('screen:');
+      // Window names look like "App Name - Window Title". Pick the trailing app
+      // segment when present so we can group windows by application in the UI.
+      let appName;
+      if (!isScreen) {
+        const parts = source.name.split(' - ');
+        if (parts.length > 1) {
+          // Heuristic: most apps put their name LAST (e.g. "Document Title - Word"),
+          // but some put it first (e.g. "Slack - General"). Treat the shorter side
+          // as the app name unless one of them matches a common app keyword.
+          const first = parts[0].trim();
+          const last = parts[parts.length - 1].trim();
+          appName = last.length <= first.length ? last : first;
+        } else {
+          appName = source.name;
+        }
+      }
+      return {
+        id: source.id,
+        name: source.name,
+        thumbnailDataUrl: source.thumbnail.toDataURL(),
+        displayId: source.display_id,
+        appIconDataUrl: source.appIcon ? source.appIcon.toDataURL() : null,
+        type: isScreen ? 'screen' : 'window',
+        appName: appName || undefined,
+      };
+    });
   } catch (err) {
-    console.error('Failed to get screen sources:', err);
+    log.error('[screen-share] Failed to get screen sources:', err);
     return [];
   }
 });
@@ -1475,82 +1503,139 @@ if (!isDev) {
   try {
     const { autoUpdater } = require('electron-updater');
 
+    // Wire electron-log so update events end up in userData/logs/main.log
+    autoUpdater.logger = log;
+    log.info('[updater] Auto-updater initialized, current version', app.getVersion());
+
     autoUpdater.autoDownload = false; // Don't auto-download; let renderer control it
     autoUpdater.autoInstallOnAppQuit = true;
 
-    autoUpdater.on('checking-for-update', () => {
+    // Buffer the latest update lifecycle event so the renderer can resync
+    // its UI on demand even if it subscribed AFTER the event fired.
+    // This fixes the race where checkForUpdates() resolves before mainWindow
+    // exists or before the renderer mounted its event handlers.
+    let lastUpdateState = { status: 'idle' };
+
+    function broadcastUpdate(channel, payload) {
+      lastUpdateState = { status: channel, payload, at: Date.now() };
+      log.info('[updater] event', channel, payload || '');
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update-checking');
+        mainWindow.webContents.send(channel, payload);
       }
+    }
+
+    autoUpdater.on('checking-for-update', () => {
+      broadcastUpdate('update-checking');
     });
 
     autoUpdater.on('update-not-available', (info) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update-not-available', {
-          version: (info && info.version) || app.getVersion(),
-        });
-      }
+      broadcastUpdate('update-not-available', {
+        version: (info && info.version) || app.getVersion(),
+      });
     });
 
     autoUpdater.on('update-available', (info) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update-available', {
-          version: info.version,
-          releaseNotes: info.releaseNotes || '',
-          releaseDate: info.releaseDate || '',
-        });
-      }
+      broadcastUpdate('update-available', {
+        version: info.version,
+        releaseNotes: info.releaseNotes || '',
+        releaseDate: info.releaseDate || '',
+      });
     });
 
     autoUpdater.on('download-progress', (progress) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update-download-progress', {
-          percent: progress.percent,
-          bytesPerSecond: progress.bytesPerSecond,
-          transferred: progress.transferred,
-          total: progress.total,
-        });
-      }
+      broadcastUpdate('update-download-progress', {
+        percent: progress.percent,
+        bytesPerSecond: progress.bytesPerSecond,
+        transferred: progress.transferred,
+        total: progress.total,
+      });
     });
 
     autoUpdater.on('update-downloaded', (info) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update-downloaded', {
-          version: info.version,
-          releaseNotes: info.releaseNotes || '',
-        });
-      }
+      broadcastUpdate('update-downloaded', {
+        version: info.version,
+        releaseNotes: info.releaseNotes || '',
+      });
     });
 
     autoUpdater.on('error', (err) => {
-      console.error('Auto-updater error:', err.message);
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update-error', { message: err.message });
-      }
+      log.error('[updater] Auto-updater error:', err && err.message);
+      broadcastUpdate('update-error', { message: err && err.message });
     });
 
     // IPC from renderer to control updates
     ipcMain.on('update-download', () => {
+      log.info('[updater] renderer requested download');
       autoUpdater.downloadUpdate();
     });
 
     ipcMain.on('update-install', () => {
+      log.info('[updater] renderer requested install + relaunch');
       autoUpdater.quitAndInstall();
     });
 
     ipcMain.on('update-check', () => {
+      log.info('[updater] renderer requested manual check');
       autoUpdater.checkForUpdates();
     });
+
+    // Replay the most recent update event so a freshly-mounted renderer can
+    // recover state without waiting for the next 4-hour cycle.
+    ipcMain.handle('get-update-state', () => lastUpdateState);
+
+    // Fire the initial check AFTER the main window exists AND finishes
+    // loading the app URL. Without this, the check can resolve before
+    // mainWindow.webContents.send is reachable, silently dropping the
+    // update-available event.
+    function scheduleInitialUpdateCheck() {
+      const delayMs = 8_000;
+      setTimeout(() => {
+        log.info('[updater] running initial deferred checkForUpdates');
+        autoUpdater.checkForUpdates().catch((err) => {
+          log.error('[updater] initial checkForUpdates threw:', err && err.message);
+        });
+      }, delayMs);
+    }
 
     app.whenReady().then(() => {
-      autoUpdater.checkForUpdates();
+      // mainWindow is created in createWindow() called separately during whenReady;
+      // wait for the app URL load (second did-finish-load after the splash), then
+      // schedule with a small grace period so the renderer can mount its update
+      // banner subscriber.
+      const tryWait = () => {
+        if (!mainWindow || mainWindow.isDestroyed()) {
+          setTimeout(tryWait, 500);
+          return;
+        }
+        let loadCount = 0;
+        const onLoad = () => {
+          loadCount += 1;
+          // First did-finish-load = splash, second = app URL.
+          if (loadCount >= 2) {
+            mainWindow.webContents.removeListener('did-finish-load', onLoad);
+            scheduleInitialUpdateCheck();
+          }
+        };
+        mainWindow.webContents.on('did-finish-load', onLoad);
+        // Safety: if for some reason fewer loads fire (already loaded), still trigger.
+        setTimeout(() => {
+          if (loadCount < 2) {
+            log.warn('[updater] did-finish-load count was', loadCount, 'after timeout; scheduling anyway');
+            scheduleInitialUpdateCheck();
+          }
+        }, 15_000);
+      };
+      tryWait();
     });
 
-    // Check for updates every 4 hours
+    // Periodic check every 4 hours
     setInterval(() => {
-      autoUpdater.checkForUpdates();
+      log.info('[updater] periodic checkForUpdates');
+      autoUpdater.checkForUpdates().catch((err) => {
+        log.error('[updater] periodic checkForUpdates threw:', err && err.message);
+      });
     }, UPDATE_CHECK_INTERVAL_MS);
   } catch (e) {
-    console.warn('Auto-updater not available:', e.message);
+    log.warn('[updater] not available:', e && e.message);
   }
 }

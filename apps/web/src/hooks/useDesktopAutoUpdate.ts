@@ -47,6 +47,46 @@ export function useDesktopAutoUpdate() {
       }));
     }
 
+    // 1.0.13: replay the most recent update event so we don't miss banners
+    // when the renderer mounts after the main process has already fired
+    // update-available / update-downloaded.
+    if (desktop.getUpdateState) {
+      desktop.getUpdateState().then((cached) => {
+        if (!cached || !cached.payload) return;
+        const p = cached.payload as Record<string, unknown>;
+        switch (cached.status) {
+          case 'update-available':
+            setUpdateState({
+              status: 'available',
+              version: String(p.version ?? ''),
+              releaseNotes: String(p.releaseNotes ?? ''),
+            });
+            break;
+          case 'update-downloaded':
+            setUpdateState({
+              status: 'ready',
+              version: String(p.version ?? ''),
+              releaseNotes: String(p.releaseNotes ?? ''),
+            });
+            break;
+          case 'update-download-progress':
+            setUpdateState({
+              status: 'downloading',
+              percent: Number(p.percent ?? 0),
+              bytesPerSecond: Number(p.bytesPerSecond ?? 0),
+            });
+            break;
+          case 'update-error':
+            setUpdateState({ status: 'error', message: String(p.message ?? 'Update failed') });
+            break;
+          default:
+            break;
+        }
+      }).catch(() => {
+        /* no-op — older desktop builds won't have getUpdateState */
+      });
+    }
+
     return () => cleanups.forEach(fn => fn());
   }, []);
 

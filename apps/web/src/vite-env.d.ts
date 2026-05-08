@@ -17,6 +17,11 @@ interface GratoniteDesktopBridge {
   downloadUpdate?: () => void;
   installUpdate?: () => void;
   checkForUpdates?: () => void;
+  getUpdateState?: () => Promise<{
+    status: 'idle' | 'update-checking' | 'update-not-available' | 'update-available' | 'update-download-progress' | 'update-downloaded' | 'update-error';
+    payload?: unknown;
+    at?: number;
+  }>;
   onSystemIdleChanged?: (cb: (data: { idle: boolean; idleSeconds: number }) => void) => (() => void);
   setIdleThreshold?: (minutes: number) => void;
   getIdleThreshold?: () => Promise<number>;
@@ -50,6 +55,8 @@ interface GratoniteDesktopBridge {
       thumbnailDataUrl: string;
       displayId: string;
       appIconDataUrl: string | null;
+      type?: 'screen' | 'window';
+      appName?: string;
     }>
   >;
 }

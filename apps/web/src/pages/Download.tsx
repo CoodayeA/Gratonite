@@ -15,13 +15,13 @@ type DesktopRelease = {
 };
 
 const FALLBACK_RELEASE: DesktopRelease = {
-    version: '1.0.12',
-    macDmg: `${BASE_URL}/Gratonite-1.0.12-universal.dmg`,
-    windowsExe: `${BASE_URL}/Gratonite%20Setup%201.0.12.exe`,
-    linuxAppImage: `${BASE_URL}/Gratonite-1.0.12.AppImage`,
-    linuxDeb: `${BASE_URL}/gratonite-desktop_1.0.12_amd64.deb`,
-    linuxArm64AppImage: `${BASE_URL}/Gratonite-1.0.12-arm64.AppImage`,
-    linuxArm64Deb: `${BASE_URL}/gratonite-desktop_1.0.12_arm64.deb`,
+    version: '1.0.13',
+    macDmg: `${BASE_URL}/Gratonite-1.0.13-universal.dmg`,
+    windowsExe: `${BASE_URL}/Gratonite%20Setup%201.0.13.exe`,
+    linuxAppImage: `${BASE_URL}/Gratonite-1.0.13.AppImage`,
+    linuxDeb: `${BASE_URL}/gratonite-desktop_1.0.13_amd64.deb`,
+    linuxArm64AppImage: `${BASE_URL}/Gratonite-1.0.13-arm64.AppImage`,
+    linuxArm64Deb: `${BASE_URL}/gratonite-desktop_1.0.13_arm64.deb`,
 };
 
 const cleanYamlValue = (value: string) => value.trim().replace(/^['"]|['"]$/g, '');

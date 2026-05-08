@@ -641,6 +641,12 @@ const VoiceChannel = () => {
         voiceCtx.syncScreenSharing(isScreenSharing);
     }, [isScreenSharing]);
 
+    useEffect(() => {
+        const mst = (localParticipant?.screenTrack as { mediaStreamTrack?: MediaStreamTrack } | undefined)?.mediaStreamTrack ?? null;
+        voiceCtx.syncLocalScreenTrack(mst);
+        return () => voiceCtx.syncLocalScreenTrack(null);
+    }, [localParticipant?.screenTrack]);
+
     // Sync local participant connection quality to VoiceContext
     useEffect(() => {
         if (!localParticipant) return;

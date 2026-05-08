@@ -1761,6 +1761,12 @@ const DirectMessage = () => {
     }, [isScreenSharing, voiceCtx]);
 
     useEffect(() => {
+        const mst = (localParticipant?.screenTrack as { mediaStreamTrack?: MediaStreamTrack } | undefined)?.mediaStreamTrack ?? null;
+        voiceCtx.syncLocalScreenTrack(mst);
+        return () => voiceCtx.syncLocalScreenTrack(null);
+    }, [localParticipant?.screenTrack, voiceCtx]);
+
+    useEffect(() => {
         if (!localParticipant) return;
         const q = localParticipant.connectionQuality;
         const mapped: 'good' | 'fair' | 'poor' =

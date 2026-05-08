@@ -81,7 +81,7 @@ describe('VoiceBar', () => {
     fireEvent.click(screen.getByRole('button', { name: /pop out call window/i }));
 
     expect(openSpy).toHaveBeenCalledWith(
-      `${window.location.origin}/voice-popout?channelId=channel-1&guildId=guild-1&channelName=General&callType=guild`,
+      `${window.location.origin}/app/voice-popout?channelId=channel-1&guildId=guild-1&channelName=General&callType=guild`,
       'gratoniteVoicePopout',
       'width=420,height=580,resizable=yes,scrollbars=no'
     );

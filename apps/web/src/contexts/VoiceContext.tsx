@@ -36,6 +36,10 @@ interface VoiceState {
   muted: boolean;
   deafened: boolean;
   screenSharing: boolean;
+  /** Raw MediaStreamTrack of the local user's screen share (if any), so the
+   *  ScreenShareModal can show a live preview regardless of which page hosts
+   *  the active LiveKit room. */
+  localScreenTrack: MediaStreamTrack | null;
   participants: VoiceParticipant[];
   /** Number of participants currently in the connected voice channel (including self) */
   participantCount: number;
@@ -69,6 +73,8 @@ interface VoiceContextValue extends VoiceState {
   syncDeafened: (deafened: boolean) => void;
   /** Called by voice views to push the authoritative screen share state into context */
   syncScreenSharing: (screenSharing: boolean) => void;
+  /** Called by voice views to push the local screen-share MediaStreamTrack into context */
+  syncLocalScreenTrack: (track: MediaStreamTrack | null) => void;
   /** Called by VoiceChannel to sync connection quality */
   syncConnectionQuality: (quality: 'good' | 'fair' | 'poor') => void;
 }
@@ -83,6 +89,7 @@ const defaultState: VoiceState = {
   muted: false,
   deafened: false,
   screenSharing: false,
+  localScreenTrack: null,
   participants: [],
   participantCount: 0,
   connectionQuality: 'good',
@@ -135,6 +142,10 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, screenSharing }));
   }, []);
 
+  const syncLocalScreenTrack = useCallback((track: MediaStreamTrack | null) => {
+    setState(prev => (prev.localScreenTrack === track ? prev : { ...prev, localScreenTrack: track }));
+  }, []);
+
   const syncConnectionQuality = useCallback((connectionQuality: 'good' | 'fair' | 'poor') => {
     setState(prev => ({ ...prev, connectionQuality }));
   }, []);
@@ -150,6 +161,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       muted: true,
       deafened: false,
       screenSharing: false,
+      localScreenTrack: null,
       participants: [],
       participantCount: 1, // self
       connectionQuality: 'good',
@@ -217,7 +229,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <VoiceContext.Provider value={{ ...state, joinCall, clearCallState, joinVoice, leaveVoice, toggleMute, toggleDeafen, startScreenShare, stopScreenShare, setParticipantCount, registerMuteHandler, registerDeafenHandler, registerDisconnectHandler, registerStartScreenShareHandler, registerStopScreenShareHandler, syncMuted, syncDeafened, syncScreenSharing, syncConnectionQuality }}>
+    <VoiceContext.Provider value={{ ...state, joinCall, clearCallState, joinVoice, leaveVoice, toggleMute, toggleDeafen, startScreenShare, stopScreenShare, setParticipantCount, registerMuteHandler, registerDeafenHandler, registerDisconnectHandler, registerStartScreenShareHandler, registerStopScreenShareHandler, syncMuted, syncDeafened, syncScreenSharing, syncLocalScreenTrack, syncConnectionQuality }}>
       {children}
     </VoiceContext.Provider>
   );

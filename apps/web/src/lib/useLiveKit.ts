@@ -421,6 +421,18 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
         }
         updateParticipants();
       });
+
+      // Mirror handler for publications. Without this, after publishTrack() resolves
+      // the track field on the publication can briefly be unset, so the manual
+      // updateParticipants() call inside startScreenShare misses it and the local
+      // screen tile never renders. This fires whenever a local publication
+      // becomes available (audio/video/screen share).
+      room.on(RoomEvent.LocalTrackPublished, (publication, participant) => {
+        if (participant.isLocal && publication.source === Track.Source.ScreenShare) {
+          setIsScreenSharing(true);
+        }
+        updateParticipants();
+      });
       
       room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
         const info = participantToInfo(participant, false);

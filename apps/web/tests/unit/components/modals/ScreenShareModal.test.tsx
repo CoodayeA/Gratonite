@@ -35,8 +35,8 @@ describe('ScreenShareModal', () => {
     const onStartScreenShare = vi.fn().mockResolvedValue(undefined);
 
     setDesktopBridge(vi.fn().mockResolvedValue([
-      { id: 'screen:1', name: 'Display 1', thumbnailDataUrl: 'data:image/png;base64,abc', displayId: '1', appIconDataUrl: null },
-      { id: 'window:2', name: 'Code', thumbnailDataUrl: 'data:image/png;base64,def', displayId: '2', appIconDataUrl: null },
+      { id: 'screen:1', name: 'Display 1', thumbnailDataUrl: 'data:image/png;base64,abc', displayId: '1', appIconDataUrl: null, type: 'screen' },
+      { id: 'window:2', name: 'Code', thumbnailDataUrl: 'data:image/png;base64,def', displayId: '2', appIconDataUrl: null, type: 'window' },
     ]));
 
     render(
@@ -47,13 +47,16 @@ describe('ScreenShareModal', () => {
       />
     );
 
+    // Switch to Application Window tab to see the "Code" window.
+    fireEvent.click(await screen.findByRole('button', { name: /application window/i }));
     fireEvent.click(await screen.findByText('Code'));
     fireEvent.click(screen.getByRole('button', { name: /start sharing/i }));
 
     await waitFor(() => {
       expect(onStartScreenShare).toHaveBeenCalledWith('window:2');
     });
-    expect(await screen.findByText('Screen share is live')).toBeInTheDocument();
+    // After share starts, header shows "Your Screen" with a Live badge.
+    expect(await screen.findByText('Your Screen')).toBeInTheDocument();
   });
 
   it('clears stale desktop selection when reopened without available sources', async () => {

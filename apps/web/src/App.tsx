@@ -4603,6 +4603,7 @@ export const AppLayout = () => {
                     onStartScreenShare={voiceCtx.startScreenShare}
                     onStopScreenShare={voiceCtx.stopScreenShare}
                     isLiveKitScreenSharing={voiceCtx.screenSharing}
+                    localScreenTrack={voiceCtx.localScreenTrack}
                 />
             </ModalWrapper>
             <ModalWrapper isOpen={activeModal === 'guildSettings'}>
