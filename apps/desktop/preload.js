@@ -80,6 +80,16 @@ contextBridge.exposeInMainWorld('gratoniteDesktop', {
   },
 
   // Task #87: Auto-Update Progress UI
+  onUpdateChecking: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('update-checking', handler);
+    return () => ipcRenderer.removeListener('update-checking', handler);
+  },
+  onUpdateNotAvailable: (callback) => {
+    const handler = (_event, info) => callback(info);
+    ipcRenderer.on('update-not-available', handler);
+    return () => ipcRenderer.removeListener('update-not-available', handler);
+  },
   onUpdateAvailable: (callback) => {
     const handler = (_event, info) => callback(info);
     ipcRenderer.on('update-available', handler);

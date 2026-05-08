@@ -1478,6 +1478,20 @@ if (!isDev) {
     autoUpdater.autoDownload = false; // Don't auto-download; let renderer control it
     autoUpdater.autoInstallOnAppQuit = true;
 
+    autoUpdater.on('checking-for-update', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-checking');
+      }
+    });
+
+    autoUpdater.on('update-not-available', (info) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-not-available', {
+          version: (info && info.version) || app.getVersion(),
+        });
+      }
+    });
+
     autoUpdater.on('update-available', (info) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('update-available', {

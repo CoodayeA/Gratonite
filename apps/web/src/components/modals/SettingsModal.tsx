@@ -27,7 +27,7 @@ import LoginHistoryPage from '../../pages/app/LoginHistory';
 import { ProfileThemeEditor } from '../guild/ProfileThemeEditor';
 import Avatar from '../ui/Avatar';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { SettingsAccountTab, SettingsFeedbackTab, SettingsAchievementsTab, SettingsStatsTab, SettingsConnectionsTab, SettingsPrivacyTab, SettingsThemeTab, SettingsAccessibilityTab, SettingsSoundTab } from './settings';
+import { SettingsAboutTab, SettingsAccountTab, SettingsFeedbackTab, SettingsAchievementsTab, SettingsStatsTab, SettingsConnectionsTab, SettingsPrivacyTab, SettingsThemeTab, SettingsAccessibilityTab, SettingsSoundTab } from './settings';
 import { SettingsFederationTab } from './settings/SettingsFederationTab';
 import { copyToClipboard } from '../../utils/clipboard';
 import type { UserProfileLike, UserThemeLike } from './settings/types';
@@ -249,7 +249,7 @@ const SettingsModal = ({
     const { addToast } = useToast();
     const isMobile = useIsMobile();
 
-    const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections' | 'federation' | 'achievements' | 'stats' | 'wardrobe' | 'notifications' | 'muted-users' | 'referrals' | 'developer' | 'dnd-schedule' | 'snippets'>(
+    const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'security' | 'sessions' | 'theme' | 'accessibility' | 'sound' | 'feedback' | 'privacy' | 'connections' | 'federation' | 'achievements' | 'stats' | 'wardrobe' | 'notifications' | 'muted-users' | 'referrals' | 'developer' | 'dnd-schedule' | 'snippets' | 'about'>(
         (initialTab as any) ?? 'account'
     );
     const [settingsSearch, setSettingsSearch] = useState('');
@@ -277,6 +277,7 @@ const SettingsModal = ({
         { tab: 'developer', label: 'Developer', keywords: ['developer', 'oauth', 'application', 'api', 'bot', 'token'] },
         { tab: 'accessibility', label: 'Accessibility', keywords: ['accessibility', 'screen reader', 'reduced motion', 'color blind', 'focus', 'underline', 'high contrast', 'link underlines'] },
         { tab: 'feedback', label: 'Send Feedback', keywords: ['feedback', 'bug', 'report', 'suggestion', 'feature request'] },
+        { tab: 'about', label: 'About', keywords: ['about', 'version', 'update', 'check for updates', 'release', 'desktop'] },
         { tab: 'dnd-schedule', label: 'DND Schedule', keywords: ['dnd', 'do not disturb', 'schedule', 'quiet hours', 'auto dnd', 'sleep'] },
         { tab: 'snippets', label: 'Snippets', keywords: ['snippets', 'quick reply', 'template', 'canned response', 'saved text'] },
     ] as const, []);
@@ -899,10 +900,11 @@ const SettingsModal = ({
                             <button className="sidebar-nav-item" onClick={() => setShowPluginStore(true)}>Plugins</button>
                         </div>
                         )}
-                        {(!matchingTabs || matchingTabs.has('feedback')) && (
+                        {(!matchingTabs || matchingTabs.has('feedback') || matchingTabs.has('about')) && (
                         <div>
                             <div className="sidebar-section-label">SUPPORT</div>
-                            <button className={`sidebar-nav-item ${activeTab === 'feedback' ? 'active' : ''}`} onClick={() => { setActiveTab('feedback'); setSettingsSearch(''); }}>Send Feedback</button>
+                            {(!matchingTabs || matchingTabs.has('feedback')) && <button className={`sidebar-nav-item ${activeTab === 'feedback' ? 'active' : ''}`} onClick={() => { setActiveTab('feedback'); setSettingsSearch(''); }}>Send Feedback</button>}
+                            {(!!(window as any).gratoniteDesktop?.isDesktop) && (!matchingTabs || matchingTabs.has('about')) && <button className={`sidebar-nav-item ${activeTab === 'about' ? 'active' : ''}`} onClick={() => { setActiveTab('about'); setSettingsSearch(''); }}>About</button>}
                         </div>
                         )}
                     </div>
@@ -912,9 +914,9 @@ const SettingsModal = ({
                         <button onClick={onClose} style={{ marginRight: 'auto', padding: '6px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--stroke)', borderRadius: '16px', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600 }}>
                             <X size={14} /> Close
                         </button>
-                        {(['account', 'profile', 'sessions', 'privacy', 'connections', 'achievements', 'stats', 'wardrobe', 'theme', 'sound', 'accessibility', 'notifications', 'muted-users', 'referrals', 'developer', 'feedback'] as const).map(tab => (
+                        {((['account', 'profile', 'sessions', 'privacy', 'connections', 'achievements', 'stats', 'wardrobe', 'theme', 'sound', 'accessibility', 'notifications', 'muted-users', 'referrals', 'developer', 'feedback'] as const) as readonly typeof activeTab[]).concat((!!(window as any).gratoniteDesktop?.isDesktop ? ['about' as const] : []) as readonly typeof activeTab[]).map(tab => (
                             <button key={tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>
-                                {tab === 'privacy' ? 'Privacy' : tab === 'connections' ? 'Connections' : tab === 'achievements' ? 'Achievements' : tab === 'wardrobe' ? 'Wardrobe' : tab === 'accessibility' ? 'A11y' : tab === 'feedback' ? 'Feedback' : tab === 'muted-users' ? 'Blocked & Muted' : tab === 'notifications' ? 'Notifs' : tab === 'developer' ? 'Developer' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                {tab === 'privacy' ? 'Privacy' : tab === 'connections' ? 'Connections' : tab === 'achievements' ? 'Achievements' : tab === 'wardrobe' ? 'Wardrobe' : tab === 'accessibility' ? 'A11y' : tab === 'feedback' ? 'Feedback' : tab === 'muted-users' ? 'Blocked & Muted' : tab === 'notifications' ? 'Notifs' : tab === 'developer' ? 'Developer' : tab === 'about' ? 'About' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                             </button>
                         ))}
                     </div>
@@ -1693,6 +1695,7 @@ const SettingsModal = ({
                         {activeTab === 'connections' && <SettingsConnectionsTab addToast={addToast} />}
                         {activeTab === 'federation' && <SettingsFederationTab />}
                         {activeTab === 'feedback' && <SettingsFeedbackTab addToast={addToast} />}
+                        {activeTab === 'about' && <SettingsAboutTab addToast={addToast} />}
                         {activeTab === 'achievements' && <SettingsAchievementsTab />}
 
                         {activeTab === 'wardrobe' && (() => {

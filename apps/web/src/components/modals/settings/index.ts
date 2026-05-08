@@ -1,3 +1,4 @@
+export { default as SettingsAboutTab } from './SettingsAboutTab';
 export { default as SettingsAccountTab } from './SettingsAccountTab';
 export { default as SettingsFeedbackTab } from './SettingsFeedbackTab';
 export { default as SettingsAchievementsTab } from './SettingsAchievementsTab';

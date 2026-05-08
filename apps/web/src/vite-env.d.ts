@@ -8,6 +8,8 @@ interface GratoniteDesktopBridge {
   getCurrentGame?: () => Promise<{ name: string; startedAt: number } | null>;
   setGameActivityEnabled?: (enabled: boolean) => void;
   onDeepLink?: (cb: (url: string) => void) => (() => void);
+  onUpdateChecking?: (cb: () => void) => (() => void);
+  onUpdateNotAvailable?: (cb: (info: { version: string }) => void) => (() => void);
   onUpdateAvailable?: (cb: (info: { version: string; releaseNotes: string }) => void) => (() => void);
   onUpdateDownloadProgress?: (cb: (progress: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void) => (() => void);
   onUpdateDownloaded?: (cb: (info: { version: string; releaseNotes: string }) => void) => (() => void);
