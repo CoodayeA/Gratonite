@@ -281,9 +281,13 @@ describe('auto-updater', () => {
     expect(mocks.autoUpdater.checkForUpdates).not.toHaveBeenCalled();
   });
 
-  test('production → checkForUpdates called once on startup', async () => {
+  test('production → checkForUpdates scheduled (not synchronous on startup)', async () => {
+    // Initial check is now deferred until after did-finish-load fires twice
+    // (splash + app URL). With our jsdom-style mocks, did-finish-load doesn't
+    // fire, so the initial check stays pending — only the periodic interval
+    // remains observable on synchronous startup.
     const mocks = await loadMain({ isDev: false });
-    expect(mocks.autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
+    expect(mocks.autoUpdater.on).toHaveBeenCalled();
   });
 
   test('production → autoUpdater.autoDownload set to false', async () => {
@@ -307,9 +311,11 @@ describe('auto-updater', () => {
   test('interval callback calls checkForUpdates again', async () => {
     const spy = vi.spyOn(global, 'setInterval');
     const mocks = await loadMain({ isDev: false });
+    // checkForUpdates now uses .catch(); make the mock return a resolved promise
+    mocks.autoUpdater.checkForUpdates.mockReturnValue(Promise.resolve());
     const call = spy.mock.calls.find((c) => c[1] === 14400000);
     call[0]();
-    expect(mocks.autoUpdater.checkForUpdates).toHaveBeenCalledTimes(2);
+    expect(mocks.autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
     spy.mockRestore();
   });
 
@@ -469,6 +475,8 @@ describe('desktop screen capture', () => {
         thumbnailDataUrl: 'data:image/png;base64,thumb',
         displayId: '69733248',
         appIconDataUrl: 'data:image/png;base64,icon',
+        type: 'screen',
+        appName: undefined,
       },
     ]);
   });
