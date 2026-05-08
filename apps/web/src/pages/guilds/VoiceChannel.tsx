@@ -9,6 +9,7 @@ import { getDeterministicGradient } from '../../utils/colors';
 import { getSocket, onStageStart, onStageEnd, onStageSpeakerAdd, onStageSpeakerRemove, onStageHandRaise, StageStartPayload, StageEndPayload, StageSpeakerAddPayload, StageSpeakerRemovePayload, StageHandRaisePayload } from '../../lib/socket';
 import { leaveVoiceSession } from '../../lib/voiceSession';
 import Avatar from '../../components/ui/Avatar';
+import AuroraBackdrop from '../../components/call/AuroraBackdrop';
 import { useVoice } from '../../contexts/VoiceContext';
 import { SpatialAudioEngine } from '../../lib/spatialAudio';
 import { useSpatialPositions } from '../../hooks/useSpatialPositions';
@@ -925,7 +926,14 @@ const VoiceChannel = () => {
     };
 
     return (
-        <main className={`main-view ${hasCustomBg ? 'has-custom-bg' : ''}`} style={{ background: hasCustomBg ? 'transparent' : 'radial-gradient(circle at center, var(--bg-tertiary) 0%, var(--bg-app) 100%)' }}>
+        <main className={`main-view ${hasCustomBg ? 'has-custom-bg' : ''}`} style={{ background: hasCustomBg ? 'transparent' : 'radial-gradient(circle at center, var(--bg-tertiary) 0%, var(--bg-app) 100%)', position: 'relative' }}>
+            {isConnected && (
+                <AuroraBackdrop
+                    anyoneSpeaking={Boolean(localParticipant?.isSpeaking || participants.some(p => p.isSpeaking))}
+                    participantCount={allParticipants.length}
+                    isScreenSharing={Boolean(screenSharer)}
+                />
+            )}
             <header className="top-bar">
                 {channelType === 'GUILD_STAGE' ? <Radio size={24} style={{ color: 'var(--accent-primary)' }} /> : <Mic size={24} style={{ color: 'var(--text-muted)' }} />}
                 <h2>{channelName}</h2>

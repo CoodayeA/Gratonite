@@ -5,7 +5,7 @@ import { useVoice } from '../../contexts/VoiceContext';
 import { buildDmRoute, buildGuildVoiceRoute } from '../../lib/routes';
 
 export default function VoiceBar() {
-  const { activeCallType, connected, channelName, guildName, guildId, channelId, muted, deafened, screenSharing, toggleMute, toggleDeafen, leaveVoice, participantCount, connectionQuality } = useVoice();
+  const { activeCallType, connected, channelName, guildName, guildId, channelId, muted, deafened, screenSharing, toggleMute, toggleDeafen, leaveVoice, participantCount, connectionQuality, participants } = useVoice();
   const navigate = useNavigate();
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
   const popoutRef = useRef<Window | null>(null);
@@ -56,7 +56,8 @@ export default function VoiceBar() {
     screenSharing,
     participantCount,
     connectionQuality,
-  }), [activeCallType, channelId, channelName, connected, connectionQuality, deafened, guildId, guildName, muted, participantCount, screenSharing]);
+    participants: (participants ?? []).map(p => ({ id: p.id, username: p.username, isSpeaking: p.isSpeaking })),
+  }), [activeCallType, channelId, channelName, connected, connectionQuality, deafened, guildId, guildName, muted, participantCount, screenSharing, participants]);
 
   useEffect(() => {
     const popout = popoutRef.current;

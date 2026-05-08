@@ -179,6 +179,8 @@ const ScreenShareModal = ({
         }
     }, [isLiveKitScreenSharing]);
 
+    const [hoveredSourceId, setHoveredSourceId] = useState<string | null>(null);
+
     // Filter sources by tab + search query, and group windows by app.
     const visibleSources = useMemo(() => {
         const ofTab = desktopSources.filter((s) => (s.type ?? 'screen') === pickerTab);
@@ -231,6 +233,8 @@ const ScreenShareModal = ({
             key={source.id}
             onClick={() => setSelectedSourceId(source.id)}
             onDoubleClick={() => { setSelectedSourceId(source.id); void handleStart(); }}
+            onMouseEnter={() => setHoveredSourceId(source.id)}
+            onMouseLeave={() => setHoveredSourceId((cur) => (cur === source.id ? null : cur))}
             style={{
                 cursor: 'pointer',
                 borderRadius: 8,
@@ -358,9 +362,18 @@ const ScreenShareModal = ({
                             </div>
                         )}
 
-                        {/* Picker (pre-share) */}
-                        {!isSharing && !isStarting && (
-                            <div style={{ flex: 1, padding: 24, overflowY: 'auto' }}>
+                        {/* Picker (pre-share) — B5 hero preview layout */}
+                        {!isSharing && !isStarting && (() => {
+                            const heroSource = (hoveredSourceId
+                                ? desktopSources.find((s) => s.id === hoveredSourceId)
+                                : null) ?? (selectedSourceId
+                                ? desktopSources.find((s) => s.id === selectedSourceId)
+                                : null);
+                            const showSplit = isDesktop && desktopSources.length > 0;
+                            return (
+                            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                                {/* LEFT — picker list */}
+                                <div style={{ flex: showSplit ? '0 0 58%' : 1, padding: 24, overflowY: 'auto', borderRight: showSplit ? '1px solid var(--stroke)' : 'none' }}>
                                 <div style={{ textAlign: 'center', marginBottom: 16 }}>
                                     <MonitorUp size={40} style={{ color: 'rgba(255,255,255,0.2)', marginBottom: 12 }} />
                                     <h3 style={{ fontSize: 18, color: 'var(--text-primary)', fontFamily: 'var(--font-display)', marginBottom: 6 }}>
@@ -368,7 +381,7 @@ const ScreenShareModal = ({
                                     </h3>
                                     <p style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 480, margin: '0 auto' }}>
                                         {isDesktop
-                                            ? 'Pick a screen or specific application window to share with everyone in this call.'
+                                            ? 'Pick a screen or specific application window. Hover any source to preview it on the right.'
                                             : 'Your browser will prompt you to choose what to share.'}
                                     </p>
                                 </div>
@@ -484,32 +497,102 @@ const ScreenShareModal = ({
                                     </>
                                 )}
 
-                                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                    <button
-                                        onClick={handleStart}
-                                        disabled={isDesktop && !selectedSourceId}
-                                        style={{
-                                            padding: '12px 32px',
-                                            borderRadius: 8,
-                                            border: 'none',
-                                            background: (isDesktop && !selectedSourceId) ? 'var(--bg-tertiary)' : 'var(--accent-primary)',
-                                            color: (isDesktop && !selectedSourceId) ? 'var(--text-muted)' : 'white',
-                                            fontSize: 15,
-                                            fontWeight: 600,
-                                            cursor: (isDesktop && !selectedSourceId) ? 'not-allowed' : 'pointer',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: 8,
-                                            transition: 'all 0.2s',
-                                        }}
-                                        className={(!isDesktop || selectedSourceId) ? 'hover-opacity-dim' : ''}
-                                    >
-                                        <MonitorUp size={18} />
-                                        Start Sharing
-                                    </button>
+                                {!showSplit && (
+                                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+                                        <button
+                                            onClick={handleStart}
+                                            disabled={isDesktop && !selectedSourceId}
+                                            style={{
+                                                padding: '12px 32px',
+                                                borderRadius: 8,
+                                                border: 'none',
+                                                background: (isDesktop && !selectedSourceId) ? 'var(--bg-tertiary)' : 'var(--accent-primary)',
+                                                color: (isDesktop && !selectedSourceId) ? 'var(--text-muted)' : 'white',
+                                                fontSize: 15,
+                                                fontWeight: 600,
+                                                cursor: (isDesktop && !selectedSourceId) ? 'not-allowed' : 'pointer',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: 8,
+                                            }}
+                                            className={(!isDesktop || selectedSourceId) ? 'hover-opacity-dim' : ''}
+                                        >
+                                            <MonitorUp size={18} />
+                                            Start Sharing
+                                        </button>
+                                    </div>
+                                )}
+
                                 </div>
+                                {/* RIGHT — hero preview pane */}
+                                {showSplit && (
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 20, gap: 14, minWidth: 0, background: 'rgba(0,0,0,0.25)' }}>
+                                        <div style={{ flex: 1, minHeight: 0, position: 'relative', borderRadius: 12, overflow: 'hidden', background: '#000', border: '1px solid var(--stroke)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            {heroSource ? (
+                                                <>
+                                                    <img
+                                                        src={heroSource.thumbnailDataUrl}
+                                                        alt={heroSource.name}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                                                    />
+                                                    <div style={{ position: 'absolute', top: 10, left: 10, padding: '4px 8px', background: 'rgba(0,0,0,0.65)', borderRadius: 6, fontSize: 11, color: 'white', display: 'inline-flex', alignItems: 'center', gap: 6, backdropFilter: 'blur(8px)' }}>
+                                                        {heroSource.type === 'window' ? <AppWindow size={11} /> : <Monitor size={11} />}
+                                                        {heroSource.type === 'window' ? 'Window' : 'Screen'}
+                                                        {hoveredSourceId && hoveredSourceId !== selectedSourceId && (
+                                                            <span style={{ marginLeft: 6, opacity: 0.7 }}>· hovering</span>
+                                                        )}
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: 20 }}>
+                                                    <MonitorUp size={32} style={{ opacity: 0.3, marginBottom: 10 }} />
+                                                    <div>Hover or select a source to preview</div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 28 }}>
+                                            {heroSource?.appIconDataUrl && (
+                                                <img src={heroSource.appIconDataUrl} alt="" style={{ width: 18, height: 18, flexShrink: 0 }} />
+                                            )}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontSize: 13, fontWeight: 600, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {heroSource?.name ?? 'No source selected'}
+                                                </div>
+                                                {heroSource?.appName && (
+                                                    <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {heroSource.appName}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={handleStart}
+                                            disabled={isDesktop && !selectedSourceId}
+                                            style={{
+                                                padding: '12px 24px',
+                                                borderRadius: 8,
+                                                border: 'none',
+                                                background: (isDesktop && !selectedSourceId) ? 'var(--bg-tertiary)' : 'var(--accent-primary)',
+                                                color: (isDesktop && !selectedSourceId) ? 'var(--text-muted)' : 'white',
+                                                fontSize: 15,
+                                                fontWeight: 600,
+                                                cursor: (isDesktop && !selectedSourceId) ? 'not-allowed' : 'pointer',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: 8,
+                                                transition: 'all 0.2s',
+                                            }}
+                                            className={(!isDesktop || selectedSourceId) ? 'hover-opacity-dim' : ''}
+                                        >
+                                            <MonitorUp size={18} />
+                                            Start sharing{heroSource?.name ? ` “${heroSource.name.length > 20 ? heroSource.name.slice(0, 20) + '…' : heroSource.name}”` : ''}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-                        )}
+                            );
+                        })()}
 
                         {/* Loading state */}
                         {isStarting && (

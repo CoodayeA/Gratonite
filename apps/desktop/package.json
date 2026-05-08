@@ -1,6 +1,6 @@
 {
   "name": "gratonite-desktop",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Gratonite Desktop — Electron wrapper for the Gratonite web app",
   "author": {
     "name": "Gratonite",
@@ -35,12 +35,17 @@
     "protocols": [
       {
         "name": "Gratonite",
-        "schemes": ["gratonite"]
+        "schemes": [
+          "gratonite"
+        ]
       }
     ],
     "mac": {
       "category": "public.app-category.social-networking",
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "assets/icon.icns",
       "gatekeeperAssess": false,
       "hardenedRuntime": true,
@@ -62,14 +67,19 @@
       "artifactName": "${productName} Setup ${version}.${ext}"
     },
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "assets/icon.ico",
       "executableName": "Gratonite",
       "artifactName": "${productName} Setup ${version}.${ext}",
       "signAndEditExecutable": false
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "category": "Network;Chat",
       "icon": "assets/icon.png"
     },

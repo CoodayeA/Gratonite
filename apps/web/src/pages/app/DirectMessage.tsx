@@ -28,6 +28,7 @@ import { getDeterministicGradient } from '../../utils/colors';
 import { copyToClipboard } from '../../utils/clipboard';
 import { useLiveKit, type LiveKitParticipant } from '../../lib/useLiveKit';
 import Avatar from '../../components/ui/Avatar';
+import AuroraBackdrop from '../../components/call/AuroraBackdrop';
 import UserProfilePopover from '../../components/ui/UserProfilePopover';
 import FriendshipStreak from '../../components/chat/FriendshipStreak';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -2636,6 +2637,11 @@ const DirectMessage = () => {
                 {/* Call Area / Chat Area */}
                 {isConnected || isConnecting ? (
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+                        <AuroraBackdrop
+                            anyoneSpeaking={Boolean(localParticipant?.isSpeaking || otherParticipant?.isSpeaking || participants.some(p => p.isSpeaking))}
+                            participantCount={(localParticipant ? 1 : 0) + participants.length}
+                            isScreenSharing={Boolean(localParticipant?.isScreenSharing || participants.some(p => p.isScreenSharing))}
+                        />
                         {connectionState === ConnectionState.Reconnecting && (
                             <div style={{ margin: '16px 24px 0', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--stroke)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'flex-start', gap: '10px', zIndex: 2 }}>
                                 <Loader2 size={16} style={{ color: 'var(--accent-primary)', animation: 'spin 1s linear infinite', flexShrink: 0, marginTop: '2px' }} />

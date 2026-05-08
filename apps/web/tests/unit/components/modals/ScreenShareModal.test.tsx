@@ -76,7 +76,7 @@ describe('ScreenShareModal', () => {
       />
     );
 
-    await screen.findByText('Display 1');
+    await screen.findAllByText('Display 1');
     expect(screen.getByRole('button', { name: /start sharing/i })).toBeEnabled();
 
     rerender(

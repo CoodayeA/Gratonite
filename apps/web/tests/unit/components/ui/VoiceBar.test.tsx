@@ -108,6 +108,7 @@ describe('VoiceBar', () => {
           screenSharing: true,
           participantCount: 3,
           connectionQuality: 'good',
+          participants: [],
         },
       }, window.location.origin);
     });
